@@ -115,6 +115,11 @@ class PengawasPkkmController {
         }
         unset($ind);
 
+        $sub_komponen_map = [];
+        foreach ($sub_komponens as $sk) {
+            $sub_komponen_map[$sk['id']] = $sk;
+        }
+
         // Ambil Berkas yang diunggah madrasah
         $berkas = [];
         $master_berkas = [];
@@ -148,7 +153,54 @@ class PengawasPkkmController {
             $currentSkor = isset($skor_map[$iid]) ? $skor_map[$iid] : (isset($fallback_skor[$iid]) ? $fallback_skor[$iid] : 0);
             $ind['skor_penilai'] = $currentSkor;
             $ind['catatan_penilai'] = $catatan_map[$iid] ?? '';
+            
+            // Berkas langsung dari pkkm_berkas
             $ind['berkas_list'] = $berkas_map[$iid] ?? [];
+
+            // Sinkronkan berkas dari Daftar Berkas PKKM (pkkm_master_berkas_file)
+            // Persis 100% sama dengan AdminPkkmController agar tidak ada berkas nyasar/dobel
+            $buktiFisikInd = $ind['bukti_fisik'] ?? '';
+            foreach ($master_berkas as $mb) {
+                $mbNama = trim($mb['nama_berkas'] ?? '');
+                if ($mbNama === '') continue;
+
+                if (stripos($buktiFisikInd, $mbNama) !== false) {
+                    if (isset($mfiles_map[$mb['id']])) {
+                        foreach ($mfiles_map[$mb['id']] as $mf) {
+                            $ind['berkas_list'][] = [
+                                'id' => 'master_' . $mf['id'],
+                                'indikator_id' => $iid,
+                                'tipe' => $mf['tipe'] ?? 'file',
+                                'url' => $mf['url'],
+                                'file_path' => $mf['url'],
+                                'nama_file' => $mf['nama_file_asli'] ?: $mbNama,
+                                'is_master' => true
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Hapus duplikasi file (berdasarkan URL/file_path dan nama_file)
+            $uniqueList = [];
+            $seen = [];
+            foreach ($ind['berkas_list'] as $bk) {
+                $uKey = trim($bk['url'] ?? $bk['file_path'] ?? '') . '::' . trim($bk['nama_file'] ?? '');
+                if (!isset($seen[$uKey])) {
+                    $seen[$uKey] = true;
+                    $uniqueList[] = $bk;
+                }
+            }
+            $ind['berkas_list'] = $uniqueList;
+
+            // Kode Juknis Hierarkis (misal 1.1.1, 1.1.2)
+            $subKomp = $sub_komponen_map[$ind['sub_komponen_id'] ?? 0] ?? null;
+            $subUrutan = $subKomp['urutan'] ?? '';
+            $indUrutan = $ind['urutan'] ?? '1';
+            $indKode = !empty($subUrutan) ? ($subUrutan . '.' . $indUrutan) : ($ind['komp_id'] . '.' . $indUrutan);
+            $ind['kode_lengkap'] = $indKode;
+            $ind['sub_urutan'] = $subUrutan;
+            $ind['sub_nama'] = $subKomp['nama_sub'] ?? ($subKomp['sub_komponen'] ?? '');
 
             if ($currentSkor > 0) {
                 $totalDinilai++;

@@ -739,7 +739,7 @@ $renderMonthEvents = function($monthNum, $defaultItems = []) use ($eventsByMonth
 
                 <!-- Stempel Resmi -->
                 <div class="stempel-badge">
-                    <span class="stempel-text-top">MIS MIFTAHUL HUDA</span>
+                    <span class="stempel-text-top">MAS MIFTAHUL HUDA</span>
                     <span class="stempel-star">★ KEMENAG ★</span>
                     <span class="stempel-text-bot">KALENDER VALID</span>
                 </div>

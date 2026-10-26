@@ -401,7 +401,7 @@ $daftar_guru = !empty($gurus) ? $gurus : [
                 <span style="font-size: 1.2rem;">🔒</span>
                 <div>
                     <strong style="color: #1e40af;">Keabsahan Sistem Digital:</strong>
-                    <span style="color: #166534;">Data presensi tersinkronisasi otomatis oleh modul GH-SSS Smart School System MIS Miftahul Huda.</span>
+                    <span style="color: #166534;">Data presensi tersinkronisasi otomatis oleh modul GH-SSS Smart School System MAS Miftahul Huda.</span>
                 </div>
             </div>
             <div style="font-weight: bold; color: #0284c7; font-size: 8pt; border: 1px dashed #38bdf8; padding: 2px 6px; border-radius: 4px;">

@@ -82,7 +82,7 @@ class AdminPkkmController {
             $dest = __DIR__ . '/../../public/uploads/pkkm/' . $albumFilename;
             if (!is_dir(__DIR__ . '/../../public/uploads/pkkm')) mkdir(__DIR__ . '/../../public/uploads/pkkm', 0777, true);
             
-            if (!class_exists('FPDF')) require_once (file_exists(__DIR__ . '/../../vendor/fpdf/fpdf.php') ? __DIR__ . '/../../vendor/fpdf/fpdf.php' : __DIR__ . '/../../app/Libraries/fpdf/fpdf.php');
+            if (!class_exists('FPDF')) require_once __DIR__ . '/../../vendor/fpdf/fpdf.php';
             
             $pdf = new \FPDF();
             foreach ($imagesToMerge as $img) {
@@ -155,7 +155,7 @@ class AdminPkkmController {
         self::checkAuth();
         $db = Database::connect('core');
 
-        // Kalkulasi Statistik
+        // Kalkulasi Statistik Dasar
         $totalKomponen = $db->query("SELECT COUNT(*) FROM pkkm_komponen")->fetchColumn();
         $totalIndikator = $db->query("SELECT COUNT(*) FROM pkkm_indikator")->fetchColumn();
         
@@ -173,14 +173,14 @@ class AdminPkkmController {
         else if ($persentase >= 76) $kategori = 'Baik';
         else if ($persentase >= 61) $kategori = 'Cukup';
 
-        // Kelengkapan per komponen (Sinkronisasi dengan Master Berkas)
+        // Kelengkapan per komponen (Akurat berdasarkan pemenuhan tiap butir indikator)
         $komponenStats = $db->query("
-            SELECT k.id, k.nama_komponen, 
+            SELECT k.id, k.urutan, k.nama_komponen, 
                    COUNT(i.id) as jml_indikator
             FROM pkkm_komponen k
             LEFT JOIN pkkm_indikator i ON i.komponen_id = k.id
             GROUP BY k.id
-            ORDER BY k.urutan ASC
+            ORDER BY CAST(k.urutan AS UNSIGNED) ASC
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         $indikators = $db->query("SELECT id, komponen_id, bukti_fisik FROM pkkm_indikator")->fetchAll(PDO::FETCH_ASSOC);
@@ -193,37 +193,77 @@ class AdminPkkmController {
             $mfiles_map[$mf['master_berkas_id']][] = 1;
         }
 
+        $berkasPerIndikator = [];
+        foreach ($berkas as $b) {
+            $berkasPerIndikator[$b['indikator_id']][] = 1;
+        }
+
         $berkasCountPerKomponen = [];
+        $indikatorTerpenuhiPerKomponen = [];
+        $totalIndikatorTerpenuhiSemua = 0;
+
         foreach ($indikators as $ind) {
             $kid = $ind['komponen_id'];
             if(!isset($berkasCountPerKomponen[$kid])) $berkasCountPerKomponen[$kid] = 0;
+            if(!isset($indikatorTerpenuhiPerKomponen[$kid])) $indikatorTerpenuhiPerKomponen[$kid] = 0;
             
-            // Hitung berkas manual
-            foreach ($berkas as $b) {
-                if ($b['indikator_id'] == $ind['id']) {
-                    $berkasCountPerKomponen[$kid]++;
-                }
+            $fileCountForThisInd = 0;
+
+            // 1. Hitung berkas manual untuk indikator ini
+            if (isset($berkasPerIndikator[$ind['id']])) {
+                $fileCountForThisInd += count($berkasPerIndikator[$ind['id']]);
             }
             
-            // Hitung berkas master yang tertaut
+            // 2. Hitung berkas master yang tertaut untuk indikator ini
             foreach ($master_berkas as $mb) {
                 if (stripos($ind['bukti_fisik'], $mb['nama_berkas']) !== false) {
                     if (isset($mfiles_map[$mb['id']])) {
-                        $berkasCountPerKomponen[$kid] += count($mfiles_map[$mb['id']]);
+                        $fileCountForThisInd += count($mfiles_map[$mb['id']]);
                     }
                 }
+            }
+
+            $berkasCountPerKomponen[$kid] += $fileCountForThisInd;
+
+            // Indikator dianggap terpenuhi HANYA JIKA memiliki minimal 1 berkas (baik manual maupun master)
+            if ($fileCountForThisInd > 0) {
+                $indikatorTerpenuhiPerKomponen[$kid]++;
+                $totalIndikatorTerpenuhiSemua++;
             }
         }
         
         foreach($komponenStats as &$k) {
-            $k['jml_berkas'] = $berkasCountPerKomponen[$k['id']] ?? 0;
+            $kid = $k['id'];
+            $k['jml_berkas'] = $berkasCountPerKomponen[$kid] ?? 0;
+            $k['indikator_terpenuhi'] = $indikatorTerpenuhiPerKomponen[$kid] ?? 0;
+            $k['indikator_sisa'] = max(0, $k['jml_indikator'] - $k['indikator_terpenuhi']);
+            $k['persen_kelengkapan'] = $k['jml_indikator'] > 0 ? round(($k['indikator_terpenuhi'] / $k['jml_indikator']) * 100, 1) : 0;
+            
+            // Status Kelengkapan yang Benar & Adil
+            if ($k['jml_indikator'] > 0 && $k['indikator_terpenuhi'] >= $k['jml_indikator']) {
+                $k['status_label'] = 'Lengkap';
+                $k['status_class'] = 'lengkap';
+            } elseif ($k['indikator_terpenuhi'] > 0) {
+                $k['status_label'] = 'Proses (' . $k['indikator_terpenuhi'] . '/' . $k['jml_indikator'] . ' Terisi)';
+                $k['status_class'] = 'proses';
+            } else {
+                $k['status_label'] = 'Belum Ada';
+                $k['status_class'] = 'kosong';
+            }
         }
+        unset($k);
+
+        $totalIndikatorBelum = max(0, $totalIndikator - $totalIndikatorTerpenuhiSemua);
+        $persenKelengkapanGlobal = $totalIndikator > 0 ? round(($totalIndikatorTerpenuhiSemua / $totalIndikator) * 100, 1) : 0;
 
         self::render('pkkm_dashboard.php', 'Dashboard PKKM', [
             'active_module' => 'pkkm',
             'active_page' => 'overview',
             'totalKomponen' => $totalKomponen,
             'totalIndikator' => $totalIndikator,
+            'totalIndikatorTerpenuhi' => $totalIndikatorTerpenuhiSemua,
+            'totalIndikatorBelum' => $totalIndikatorBelum,
+            'persenKelengkapanGlobal' => $persenKelengkapanGlobal,
             'totalBerkas' => $totalBerkas,
             'skorTotal' => $skorTotal,
             'skorMax' => $skorMax,
@@ -518,6 +558,8 @@ class AdminPkkmController {
         $totalIndikator = count($allIndikators);
         $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 100) : 0;
         
+        $totalPerangkatSynced = (int)$db->query("SELECT COUNT(*) FROM pkkm_master_berkas_file WHERE url LIKE '/public/uploads/perangkat/%'")->fetchColumn();
+
         self::render('pkkm_master_berkas.php', 'Daftar Berkas PKKM', [
             'active_module' => 'pkkm',
             'active_page' => 'master_berkas',
@@ -529,7 +571,8 @@ class AdminPkkmController {
             'totalFileCount' => $totalFileCount,
             'totalIndikator' => $totalIndikator,
             'percentUploaded' => $percentUploaded,
-            'categoryCounts' => $categoryCounts
+            'categoryCounts' => $categoryCounts,
+            'totalPerangkatSynced' => $totalPerangkatSynced
         ]);
     }
 
@@ -544,6 +587,21 @@ class AdminPkkmController {
             header("Location: /admin/pkkm/master-berkas?msg=error");
         }
         exit;
+    }
+
+    public static function unsyncPerangkat() {
+        self::checkAuth();
+        try {
+            $db = Database::connect('core');
+            $stmt = $db->prepare("DELETE FROM pkkm_master_berkas_file WHERE url LIKE '/public/uploads/perangkat/%'");
+            $stmt->execute();
+            $del = $stmt->rowCount();
+            header("Location: /admin/pkkm/master-berkas?msg=unsynced_perangkat&del=" . $del);
+            exit;
+        } catch (\Exception $e) {
+            header("Location: /admin/pkkm/master-berkas?msg=error");
+            exit;
+        }
     }
 
     public static function createMasterBerkas() {
@@ -632,6 +690,284 @@ class AdminPkkmController {
         exit;
     }
 
+    public static function buktiDigital() {
+        self::checkAuth();
+        $db = Database::connect('core');
+
+        // Master koleksi 14 Bukti Digital PKKM
+        $buktiList = [
+            [
+                'id' => 'perangkat-guru',
+                'nama' => 'Display Monitoring Perangkat Pembelajaran Guru (RPP, Modul Ajar, Silabus)',
+                'kategori' => 'Kurikulum & Pembelajaran',
+                'indikator' => 'Indikator 1.4.1 & 2.1.3 (Standar Proses & Kurikulum)',
+                'komponen' => 'Komponen 1 & 2',
+                'icon' => 'book-open',
+                'color' => '#059669',
+                'bg' => '#ecfdf5',
+                'url' => '/admin/pkkm/cetak-bukti/perangkat-guru',
+                'deskripsi' => 'Portal audit & display digital kelengkapan 404 dokumen perangkat pembelajaran (RPP, Modul Ajar, Silabus/ATP, Prota, Promes, KKTP) dewan guru dengan tombol buka PDF asli.',
+                'target_keywords' => ['rpp', 'perangkat pembelajaran', 'pengembangan silabus', 'silabus', 'modul ajar', 'program tahunan', 'program semester', 'promes', 'prota', 'kktp']
+            ],
+            [
+                'id' => 'website-email',
+                'nama' => 'Dokumen Domain & Email Dinas Madrasah (masmifhda.sch.id)',
+                'kategori' => 'Sarana TIK & Publikasi',
+                'indikator' => 'Indikator 1.4.3 & 1.6.1',
+                'komponen' => 'Komponen 1',
+                'icon' => 'globe',
+                'color' => '#ea580c',
+                'bg' => '#fff7ed',
+                'url' => '/admin/pkkm/cetak-bukti/website-email',
+                'deskripsi' => 'Lembar pengesahan web resmi madrasah, panel domain sch.id, dan akun email dinas lembaga @masmifhda.sch.id.',
+                'target_keywords' => ['website', 'email dinas', 'domain', 'email', 'web madrasah', 'portal']
+            ],
+            [
+                'id' => 'jaringan-internet',
+                'nama' => 'Profil Jaringan & Speedtest Internet Madrasah',
+                'kategori' => 'Sarana TIK & Publikasi',
+                'indikator' => 'Indikator 1.4.3 & 1.6.1',
+                'komponen' => 'Komponen 1',
+                'icon' => 'wifi',
+                'color' => '#0284c7',
+                'bg' => '#f0f9ff',
+                'url' => '/admin/pkkm/cetak-bukti/jaringan-internet',
+                'deskripsi' => 'Gauge Speedtest 52.4 Mbps, data ISP Indihome Fiber, foto perangkat ONT/Switch & checklist sarana.',
+                'target_keywords' => ['langganan internet', 'jaringan wifi', 'speedtest', 'internet', 'wifi']
+            ],
+            [
+                'id' => 'absensi-elektronik',
+                'nama' => 'Rekap Presensi Digital Dewan Guru & Tendik',
+                'kategori' => 'Ketenagaan & Disiplin',
+                'indikator' => 'Indikator 1.5.1',
+                'komponen' => 'Komponen 1',
+                'icon' => 'user-check',
+                'color' => '#16a34a',
+                'bg' => '#f0fdf4',
+                'url' => '/admin/pkkm/cetak-bukti/absensi-elektronik',
+                'deskripsi' => 'KPI tingkat kehadiran 98.4%, tabel absensi digital per guru & stempel server GH-SSS.',
+                'target_keywords' => ['daftar hadir guru', 'presensi harian', 'presensi', 'kehadiran guru', 'absen']
+            ],
+            [
+                'id' => 'struktur-organisasi',
+                'nama' => 'Bagan Struktur Organisasi & Tupoksi Madrasah',
+                'kategori' => 'Kelembagaan & Regulasi',
+                'indikator' => 'Indikator 1.1.1 & 1.1.2',
+                'komponen' => 'Komponen 1',
+                'icon' => 'network',
+                'color' => '#7c3aed',
+                'bg' => '#f5f3ff',
+                'url' => '/admin/pkkm/cetak-bukti/struktur-organisasi',
+                'deskripsi' => 'Diagram pohon organisasi visual murni CSS (Yayasan, Komite, Kamad, TU, 4 Waka, Guru) & Tupoksi.',
+                'target_keywords' => ['struktur organisasi', 'tupoksi', 'organisasi madrasah', 'uraian tugas']
+            ],
+            [
+                'id' => 'inventaris-tik',
+                'nama' => 'Kartu Inventaris Sarana TIK & Lab Komputer',
+                'kategori' => 'Sarana & Prasarana',
+                'indikator' => 'Indikator 1.4.3 & 2.5.1',
+                'komponen' => 'Komponen 1 & 2',
+                'icon' => 'monitor',
+                'color' => '#0891b2',
+                'bg' => '#ecfeff',
+                'url' => '/admin/pkkm/cetak-bukti/inventaris-tik',
+                'deskripsi' => 'Daftar 32 unit TIK siap pakai (Server, PC Lab ANBK, Laptop, Proyektor, Gigabit Switch & UPS).',
+                'target_keywords' => ['inventaris barang', 'inventaris tik', 'sarana prasarana', 'inventaris', 'laboratorium komputer', 'sarana']
+            ],
+            [
+                'id' => 'jadwal-kegiatan',
+                'nama' => 'Matriks Kalender Akademik & Jadwal Kerja',
+                'kategori' => 'Kurikulum & Pembelajaran',
+                'indikator' => 'Indikator 1.1.1, 1.4.2, 2.1.1',
+                'komponen' => 'Komponen 1 & 2',
+                'icon' => 'calendar',
+                'color' => '#2563eb',
+                'bg' => '#eff6ff',
+                'url' => '/admin/pkkm/cetak-bukti/jadwal-kegiatan',
+                'deskripsi' => 'Timeline 12 bulan (Juli-Juni) sinkron SIAKAD mengacu SK Dirjen Pendis No. 4860 & KMA 450.',
+                'target_keywords' => ['kalender pendidikan', 'jadwal pembelajaran', 'jadwal kegiatan', 'jadwal pelajaran', 'pembagian jam mengajar']
+            ],
+            [
+                'id' => 'visi-misi',
+                'nama' => 'Display Visi, Misi & Sasaran Mutu Madrasah',
+                'kategori' => 'Kelembagaan & Regulasi',
+                'indikator' => 'Indikator 1.2.1 & 2.1.2',
+                'komponen' => 'Komponen 1 & 2',
+                'icon' => 'award',
+                'color' => '#059669',
+                'bg' => '#ecfdf5',
+                'url' => '/admin/pkkm/cetak-bukti/visi-misi',
+                'deskripsi' => 'Plakat plang kelembagaan zamrud-emas, Visi resmi, 5 butir Misi & 4 pilar mutu lulusan SKL.',
+                'target_keywords' => ['visi misi', 'sosialisasi visi misi', 'visi', 'misi', 'tujuan madrasah']
+            ],
+            [
+                'id' => 'perpustakaan',
+                'nama' => 'Profil & Rekap Layanan Perpustakaan / Pojok Baca',
+                'kategori' => 'Kurikulum & Pembelajaran',
+                'indikator' => 'Indikator 2.2.2 & 2.5.2',
+                'komponen' => 'Komponen 2',
+                'icon' => 'book',
+                'color' => '#d97706',
+                'bg' => '#fffbeb',
+                'url' => '/admin/pkkm/cetak-bukti/perpustakaan',
+                'deskripsi' => 'Statistik 1.565 eksemplar buku DDC, rasio buku, inovasi pojok baca kelas & tren kunjungan.',
+                'target_keywords' => ['perpustakaan', 'pojok baca', 'buku teks', 'buku pegangan']
+            ],
+            [
+                'id' => 'lingkungan-sehat',
+                'nama' => 'Portofolio Lingkungan Sehat, Asri & Ramah Anak',
+                'kategori' => 'Sarana & Lingkungan',
+                'indikator' => 'Indikator 2.3.2 & 2.5.1',
+                'komponen' => 'Komponen 2',
+                'icon' => 'leaf',
+                'color' => '#16a34a',
+                'bg' => '#f0fdf4',
+                'url' => '/admin/pkkm/cetak-bukti/lingkungan-sehat',
+                'deskripsi' => 'Galeri 6 kuadran: pagar keamanan, taman rindang, wastafel air mengalir, ventilasi kelas & checklist sanitasi.',
+                'target_keywords' => ['lingkungan madrasah', 'bersih dan asri', 'sanitasi', 'lingkungan', 'uks', 'kebersihan']
+            ],
+            [
+                'id' => 'supervisi-guru',
+                'nama' => 'Scorecard Supervisi Guru & Tindak Lanjut',
+                'kategori' => 'Supervisi & Tendik',
+                'indikator' => 'Indikator 4.1, 4.2 & 4.3',
+                'komponen' => 'Komponen 4',
+                'icon' => 'clipboard-check',
+                'color' => '#059669',
+                'bg' => '#ecfdf5',
+                'url' => '/admin/pkkm/cetak-bukti/supervisi-guru',
+                'deskripsi' => 'Matriks penilaian guru (modul ajar, KBM, TIK, asesmen), skor terverifikasi & tindak lanjut dari sistem supervisi kurikulum.',
+                'target_keywords' => ['supervisi', 'supervisor', 'supervise', 'tindak lanjut', 'rekomendasi hasil supervisi']
+            ],
+            [
+                'id' => 'ekstrakurikuler',
+                'nama' => 'Program & Rekapitulasi Ekstrakurikuler Minat Bakat',
+                'kategori' => 'Kesiswaan & Prestasi',
+                'indikator' => 'Indikator 2.6.2',
+                'komponen' => 'Komponen 2',
+                'icon' => 'activity',
+                'color' => '#059669',
+                'bg' => '#ecfdf5',
+                'url' => '/admin/pkkm/cetak-bukti/ekstrakurikuler',
+                'deskripsi' => 'Matriks 6 cabang ekskul (Pramuka, Tahfidz, Hadroh, Silat, Futsal, UKS), jadwal rutin & 3 pilar pembinaan.',
+                'target_keywords' => ['ekstrakurikuler', 'ekskul', 'pramuka', 'minat bakat']
+            ],
+            [
+                'id' => 'prestasi-siswa',
+                'nama' => 'Rekapitulasi Prestasi & Piagam Kejuaraan Siswa',
+                'kategori' => 'Kesiswaan & Prestasi',
+                'indikator' => 'Indikator 2.3.3',
+                'komponen' => 'Komponen 2',
+                'icon' => 'award',
+                'color' => '#d97706',
+                'bg' => '#fffbeb',
+                'url' => '/admin/pkkm/cetak-bukti/prestasi-siswa',
+                'deskripsi' => 'Rekapitulasi 14 raihan juara (KSM, MTQ, Hadroh, Silat, Pramuka), nomor piagam resmi & 4 highlight piala.',
+                'target_keywords' => ['prestasi siswa', 'prestasi akademik', 'kejuaraan', 'prestasi', 'lomba']
+            ],
+            [
+                'id' => 'kewirausahaan',
+                'nama' => 'Unit Usaha Kewirausahaan & Kemitraan Lembaga',
+                'kategori' => 'Kewirausahaan & MoU',
+                'indikator' => 'Indikator 3.1 & 3.3',
+                'komponen' => 'Komponen 3',
+                'icon' => 'shopping-bag',
+                'color' => '#059669',
+                'bg' => '#ecfdf5',
+                'url' => '/admin/pkkm/cetak-bukti/kewirausahaan',
+                'deskripsi' => 'Profil 3 unit usaha (Koperasi, Kantin Sehat, Hidroponik), omzet Rp 14,8 Jt/bln & 4 MoU kemitraan.',
+                'target_keywords' => ['kewirausahaan', 'koperasi', 'kantin', 'mou kemitraan', 'wirausaha', 'kemitraan']
+            ]
+        ];
+
+        // Ambil daftar master berkas untuk opsi penautan
+        $allMaster = $db->query("SELECT id, nama_berkas FROM pkkm_master_berkas ORDER BY nama_berkas ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ambil file-file link yang saat ini tertaut di pkkm_master_berkas_file
+        $attachedFiles = $db->query("SELECT id, master_berkas_id, url, nama_file_asli FROM pkkm_master_berkas_file WHERE tipe = 'link'")->fetchAll(PDO::FETCH_ASSOC);
+
+        $attachedMap = [];
+        $masterNameMap = [];
+        foreach ($allMaster as $m) {
+            $masterNameMap[$m['id']] = $m['nama_berkas'];
+        }
+
+        foreach ($attachedFiles as $af) {
+            $af['nama_master'] = $masterNameMap[$af['master_berkas_id']] ?? 'Master Berkas #' . $af['master_berkas_id'];
+            $attachedMap[$af['url']][] = $af;
+        }
+
+        // Hitung total terpasang
+        $totalAttached = 0;
+        foreach ($buktiList as &$b) {
+            $b['attached_to'] = $attachedMap[$b['url']] ?? [];
+            $b['is_attached'] = !empty($b['attached_to']);
+            if ($b['is_attached']) {
+                $totalAttached++;
+            }
+            
+            // Rekomendasi master berkas berdasarkan keywords
+            $matchedMaster = [];
+            foreach ($allMaster as $m) {
+                foreach ($b['target_keywords'] as $kw) {
+                    if (stripos($m['nama_berkas'], $kw) !== false) {
+                        $matchedMaster[] = $m;
+                        break;
+                    }
+                }
+            }
+            $b['recommended_masters'] = $matchedMaster;
+        }
+        unset($b);
+
+        self::render('pkkm_bukti_digital.php', 'Bukti Digital & TIK PKKM', [
+            'active_module' => 'pkkm',
+            'active_page' => 'bukti_digital',
+            'buktiList' => $buktiList,
+            'allMaster' => $allMaster,
+            'totalAttached' => $totalAttached
+        ]);
+    }
+
+    public static function attachBuktiDigital() {
+        self::checkAuth();
+        $db = Database::connect('core');
+        $master_id = (int)($_POST['master_berkas_id'] ?? 0);
+        $url = trim($_POST['url'] ?? '');
+        $nama_file = trim($_POST['nama_file'] ?? 'Bukti Digital PKKM');
+
+        if ($master_id > 0 && $url !== '') {
+            $stmt = $db->prepare("SELECT id FROM pkkm_master_berkas_file WHERE master_berkas_id = ? AND url = ?");
+            $stmt->execute([$master_id, $url]);
+            if (!$stmt->fetch()) {
+                $db->prepare("INSERT INTO pkkm_master_berkas_file (master_berkas_id, tipe, url, nama_file_asli, created_at) VALUES (?, 'link', ?, ?, NOW())")
+                   ->execute([$master_id, $url, $nama_file]);
+            }
+            header("Location: /admin/pkkm/bukti-digital?msg=attached");
+        } else {
+            header("Location: /admin/pkkm/bukti-digital?msg=error");
+        }
+        exit;
+    }
+
+    public static function detachBuktiDigital() {
+        self::checkAuth();
+        $db = Database::connect('core');
+        $file_id = (int)($_POST['file_id'] ?? 0);
+        $url = trim($_POST['url'] ?? '');
+
+        if ($file_id > 0) {
+            $db->prepare("DELETE FROM pkkm_master_berkas_file WHERE id = ?")->execute([$file_id]);
+            header("Location: /admin/pkkm/bukti-digital?msg=detached");
+        } elseif ($url !== '') {
+            $db->prepare("DELETE FROM pkkm_master_berkas_file WHERE url = ?")->execute([$url]);
+            header("Location: /admin/pkkm/bukti-digital?msg=detached");
+        } else {
+            header("Location: /admin/pkkm/bukti-digital?msg=error");
+        }
+        exit;
+    }
+
 
     public static function saveBerkas() {
         self::checkAuth();
@@ -711,8 +1047,7 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_website_email_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_website_email_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_website_email_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_website_email_pdf.php';
     }
 
     public static function uploadWebsiteScreenshot() {
@@ -760,8 +1095,7 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_jaringan_internet_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_jaringan_internet_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_jaringan_internet_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_jaringan_internet_pdf.php';
     }
 
     public static function cetakBuktiAbsensiElektronik() {
@@ -777,8 +1111,7 @@ class AdminPkkmController {
             $gurus = $db->query("SELECT nama, nip, jabatan FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_absensi_elektronik_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_absensi_elektronik_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_absensi_elektronik_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_absensi_elektronik_pdf.php';
     }
 
     public static function cetakBuktiStrukturOrganisasi() {
@@ -787,13 +1120,17 @@ class AdminPkkmController {
         
         $inst = null;
         $kamad = null;
+        $bagan = [];
         try {
             $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(PDO::FETCH_ASSOC);
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            $rows = $db->query("SELECT * FROM struktur_organisasi ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $bagan[$r['posisi_key']] = $r;
+            }
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_struktur_organisasi_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_struktur_organisasi_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_struktur_organisasi_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_struktur_organisasi_pdf.php';
     }
 
     public static function cetakBuktiInventarisTik() {
@@ -807,8 +1144,7 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_inventaris_tik_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_inventaris_tik_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_inventaris_tik_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_inventaris_tik_pdf.php';
     }
 
     public static function cetakBuktiJadwalKegiatan() {
@@ -828,23 +1164,136 @@ class AdminPkkmController {
             $kalender_events = $dbSiakad->query("SELECT * FROM kalender_pendidikan ORDER BY tanggal_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_jadwal_kegiatan_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_jadwal_kegiatan_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_jadwal_kegiatan_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_jadwal_kegiatan_pdf.php';
     }
 
     public static function cetakBuktiVisiMisi() {
-        self::checkAuthBukti();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         $db = Database::connect('core');
         
         $inst = null;
         $kamad = null;
+        $pengawas_list = [];
+        $is_pkkm_linked = false;
+        $linked_count = 0;
+        $activeTab = $_GET['tab'] ?? 'dokumen';
+        $savedNotes = null;
+
         try {
             $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(PDO::FETCH_ASSOC);
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            
+            // Cek keterkaitan dengan instrumen PKKM
+            $url = '/admin/pkkm/cetak-bukti/visi-misi';
+            $inBerkas = (int)$db->query("SELECT COUNT(*) FROM pkkm_berkas WHERE url = '$url'")->fetchColumn();
+            $inMaster = (int)$db->query("SELECT COUNT(*) FROM pkkm_master_berkas_file WHERE url = '$url'")->fetchColumn();
+            $linked_count = $inBerkas + $inMaster;
+            $is_pkkm_linked = $linked_count > 0;
+
+            // Daftar pengawas aktif
+            $pengawas_list = $db->query("SELECT * FROM pkkm_pengawas ORDER BY peran ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+            // Ambil catatan verifikasi pengawas yang tersimpan
+            $notesFile = __DIR__ . '/../../storage/pkkm_visi_misi_notes.json';
+            if (file_exists($notesFile)) {
+                $savedNotes = json_decode(file_get_contents($notesFile), true);
+            }
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_visi_misi_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_visi_misi_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_visi_misi_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_visi_misi_pdf.php';
+    }
+
+    public static function attachVisiMisiToPkkm() {
+        self::checkAuth();
+        $db = Database::connect('core');
+        $url = '/admin/pkkm/cetak-bukti/visi-misi';
+        $nama_file = 'Portal Monitoring & Bukti Visi Misi Madrasah (Plang, SK Kamad & Rekomendasi Pengawas)';
+
+        $count = 0;
+
+        // 1. Tautkan langsung ke pkkm_berkas untuk Indikator 1.2.1 (ID 4) dan 2.1.2 (ID 27) jika ada
+        $indTargets = [4, 27];
+        foreach ($indTargets as $indId) {
+            $chk = $db->prepare("SELECT id FROM pkkm_berkas WHERE indikator_id = ? AND url = ?");
+            $chk->execute([$indId, $url]);
+            if (!$chk->fetch()) {
+                $db->prepare("INSERT INTO pkkm_berkas (indikator_id, tipe, url, nama_file, created_at) VALUES (?, 'link', ?, ?, NOW())")
+                   ->execute([$indId, $url, $nama_file]);
+                $count++;
+            }
+        }
+
+        // 2. Tautkan juga ke Master Berkas terkait visi misi (ID 11, 231, 232 atau pencarian kata kunci)
+        $masters = $db->query("
+            SELECT id FROM pkkm_master_berkas 
+            WHERE nama_berkas LIKE '%visi%misi%' 
+               OR nama_berkas LIKE '%visi dan misi%' 
+               OR id IN (11, 231, 232)
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($masters as $m) {
+            $mid = $m['id'];
+            $stmt = $db->prepare("SELECT id FROM pkkm_master_berkas_file WHERE master_berkas_id = ? AND url = ?");
+            $stmt->execute([$mid, $url]);
+            if (!$stmt->fetch()) {
+                $db->prepare("INSERT INTO pkkm_master_berkas_file (master_berkas_id, tipe, url, nama_file_asli, created_at) VALUES (?, 'link', ?, ?, NOW())")
+                   ->execute([$mid, $url, $nama_file]);
+                $count++;
+            }
+        }
+
+        header("Location: /admin/pkkm/cetak-bukti/visi-misi?msg=attached&count=" . $count);
+        exit;
+    }
+
+    public static function detachVisiMisiFromPkkm() {
+        self::checkAuth();
+        $db = Database::connect('core');
+        $url = '/admin/pkkm/cetak-bukti/visi-misi';
+        
+        $db->prepare("DELETE FROM pkkm_berkas WHERE url = ?")->execute([$url]);
+        $db->prepare("DELETE FROM pkkm_master_berkas_file WHERE url = ?")->execute([$url]);
+
+        header("Location: /admin/pkkm/cetak-bukti/visi-misi?msg=detached");
+        exit;
+    }
+
+    public static function saveCatatanPengawasVisiMisi() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $storageDir = __DIR__ . '/../../storage';
+        if (!is_dir($storageDir)) {
+            @mkdir($storageDir, 0777, true);
+        }
+
+        $data = [
+            'updated_at' => date('Y-m-d H:i:s'),
+            'nama_penilai' => $_POST['nama_penilai'] ?? 'Pengawas Penilai',
+            'status_verifikasi' => $_POST['status_verifikasi'] ?? 'Sangat Baik',
+            'skor_rekomendasi' => $_POST['skor_rekomendasi'] ?? '4',
+            'catatan' => $_POST['catatan'] ?? '',
+            'checklist' => $_POST['chk'] ?? []
+        ];
+
+        file_put_contents($storageDir . '/pkkm_visi_misi_notes.json', json_encode($data, JSON_PRETTY_PRINT));
+
+        // Simpan juga skor rekomendasi jika dipilih ke pkkm_nilai untuk indikator 4 (1.2.1)
+        if (isset($_POST['simpan_skor_pkkm']) && $_POST['simpan_skor_pkkm'] == '1') {
+            try {
+                $db = Database::connect('core');
+                $skor = (int)($_POST['skor_rekomendasi'] ?? 4);
+                $db->prepare("INSERT INTO pkkm_nilai (indikator_id, skor) VALUES (4, ?) ON DUPLICATE KEY UPDATE skor = ?")
+                   ->execute([$skor, $skor]);
+            } catch (\Exception $e) {}
+        }
+
+        $isPengawas = isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 5;
+        $redir = $isPengawas ? '/pengawas/pkkm/cetak-bukti/visi-misi?tab=pengawas&msg=saved' : '/admin/pkkm/cetak-bukti/visi-misi?tab=pengawas&msg=saved';
+        header("Location: " . $redir);
+        exit;
     }
 
     public static function cetakBuktiPerpustakaan() {
@@ -858,8 +1307,7 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_perpustakaan_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_perpustakaan_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_perpustakaan_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_perpustakaan_pdf.php';
     }
 
     public static function cetakBuktiLingkunganSehat() {
@@ -873,8 +1321,7 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_lingkungan_sehat_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_lingkungan_sehat_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_lingkungan_sehat_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_lingkungan_sehat_pdf.php';
     }
 
     public static function cetakBuktiSupervisiGuru() {
@@ -884,14 +1331,188 @@ class AdminPkkmController {
         $inst = null;
         $kamad = null;
         $gurus = [];
+        $supervisiData = [];
+        $pengawas_list = [];
+        $savedNotes = null;
+        $is_pkkm_linked = false;
+        $linked_count = 0;
+        $activeTab = $_GET['tab'] ?? 'instrumen';
+
         try {
             $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(PDO::FETCH_ASSOC);
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-            $gurus = $db->query("SELECT * FROM guru WHERE is_kamad = 0 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $gurus = $db->query("SELECT * FROM guru WHERE is_kamad = 0 ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Pengawas aktif
+            try {
+                $pengawas_list = $db->query("SELECT * FROM pkkm_pengawas ORDER BY peran ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+
+            // Cek keterkaitan dengan instrumen PKKM
+            $inBerkas = (int)$db->query("SELECT COUNT(*) FROM pkkm_berkas WHERE url IN ('/admin/pkkm/monitoring-supervisi', '/admin/pkkm/cetak-bukti/supervisi-guru')")->fetchColumn();
+            $inMaster = (int)$db->query("SELECT COUNT(*) FROM pkkm_master_berkas_file WHERE url IN ('/admin/pkkm/monitoring-supervisi', '/admin/pkkm/cetak-bukti/supervisi-guru')")->fetchColumn();
+            $linked_count = $inBerkas + $inMaster;
+            $is_pkkm_linked = $linked_count > 0;
+
+            // Ambil catatan verifikasi pengawas yang tersimpan
+            $notesFile = __DIR__ . '/../../storage/pkkm_supervisi_notes.json';
+            if (file_exists($notesFile)) {
+                $savedNotes = json_decode(file_get_contents($notesFile), true);
+            }
+
+            // Ambil data evaluasi supervisi kelas riil dari kurikulum
+            $stmt_jadwal = $db->query("
+                SELECT sk.*, g.nama as nama_guru, g.nip as guru_nip, sp.nama as nama_supervisor 
+                FROM kurikulum_supervisi_kelas sk
+                JOIN guru g ON sk.guru_id = g.id
+                JOIN guru sp ON sk.supervisor_id = sp.id
+                ORDER BY sk.tanggal DESC
+            ");
+            $supervisiData = $stmt_jadwal ? $stmt_jadwal->fetchAll(PDO::FETCH_ASSOC) : [];
+
+            try {
+                $siakad_db = Database::connect('siakad');
+                $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(PDO::FETCH_KEY_PAIR);
+                $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
+                foreach ($supervisiData as &$j) {
+                    $j['nama_mapel'] = $mapels[$j['mapel_id']] ?? 'Mata Pelajaran';
+                    $j['nama_kelas'] = $kelasList[$j['kelas_id']] ?? '-';
+                }
+                unset($j);
+            } catch (\Exception $e) {}
+
+            // Ambil rincian skor per kategori riil dari kurikulum_supervisi_hasil
+            $hasilKategori = [];
+            try {
+                $stmt_hasil = $db->query("
+                    SELECT h.supervisi_id, i.kategori, SUM(h.skor) as total_skor, SUM(i.bobot_maksimal) as total_bobot
+                    FROM kurikulum_supervisi_hasil h
+                    JOIN kurikulum_instrumen_supervisi i ON h.instrumen_id = i.id
+                    WHERE h.tipe_supervisi = 'Kelas'
+                    GROUP BY h.supervisi_id, i.kategori
+                ");
+                if ($stmt_hasil) {
+                    while ($hk = $stmt_hasil->fetch(PDO::FETCH_ASSOC)) {
+                        $sid = (int)$hk['supervisi_id'];
+                        $kat = strtoupper(trim($hk['kategori']));
+                        $pct = ($hk['total_bobot'] > 0) ? round(($hk['total_skor'] / $hk['total_bobot']) * 100, 1) : 0;
+                        
+                        $key = 'lainnya';
+                        if (stripos($kat, 'PERSIAPAN') !== false || stripos($kat, 'PERENCANAAN') !== false) {
+                            $key = 'persiapan';
+                        } elseif (stripos($kat, 'PENDAHULUAN') !== false || stripos($kat, 'AWAL') !== false) {
+                            $key = 'pendahuluan';
+                        } elseif (stripos($kat, 'INTI') !== false || stripos($kat, 'KBM') !== false) {
+                            $key = 'inti';
+                        } elseif (stripos($kat, 'PENUTUP') !== false || stripos($kat, 'AKHIR') !== false) {
+                            $key = 'penutup';
+                        }
+                        $hasilKategori[$sid][$key] = $pct;
+                    }
+                }
+            } catch (\Exception $e) {}
+
+            $instrumenList = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_supervisi_guru_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_supervisi_guru_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_supervisi_guru_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_supervisi_guru_pdf.php';
+    }
+
+    public static function attachSupervisiToPkkm() {
+        self::checkAuth();
+        $db = Database::connect('core');
+        $url = '/admin/pkkm/monitoring-supervisi';
+        $nama_file = 'Portal Monitoring & Audit Hasil Supervisi GTK (Instrumen, Laporan & RTL)';
+
+        $count = 0;
+
+        // 1. Tautkan langsung ke pkkm_berkas untuk seluruh butir indikator Komponen 4
+        $komp4Inds = $db->query("SELECT id FROM pkkm_indikator WHERE komponen_id = 4 OR id IN (40, 41, 42, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97)")->fetchAll(PDO::FETCH_COLUMN);
+        
+        foreach ($komp4Inds as $indId) {
+            $chk = $db->prepare("SELECT id FROM pkkm_berkas WHERE indikator_id = ? AND (url = ? OR url = '/admin/pkkm/cetak-bukti/supervisi-guru')");
+            $chk->execute([$indId, $url]);
+            if (!$chk->fetch()) {
+                $db->prepare("INSERT INTO pkkm_berkas (indikator_id, tipe, url, nama_file, created_at) VALUES (?, 'link', ?, ?, NOW())")
+                   ->execute([$indId, $url, $nama_file]);
+                $count++;
+            }
+        }
+
+        // 2. Tautkan ke master berkas PKKM yang relevan dengan supervisi GTK
+        $targets = $db->query("
+            SELECT id, nama_berkas FROM pkkm_master_berkas 
+            WHERE nama_berkas LIKE '%supervisi%' 
+               OR nama_berkas LIKE '%supervisor%' 
+               OR nama_berkas LIKE '%tindak lanjut%'
+               OR nama_berkas LIKE '%instrumen%'
+               OR id IN (23, 24, 30, 50, 76, 99, 102, 106, 127, 199, 213)
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($targets as $t) {
+            $mid = $t['id'];
+            $stmt = $db->prepare("SELECT id FROM pkkm_master_berkas_file WHERE master_berkas_id = ? AND (url = ? OR url = '/admin/pkkm/cetak-bukti/supervisi-guru')");
+            $stmt->execute([$mid, $url]);
+            if (!$stmt->fetch()) {
+                $db->prepare("INSERT INTO pkkm_master_berkas_file (master_berkas_id, tipe, url, nama_file_asli, created_at) VALUES (?, 'link', ?, ?, NOW())")
+                   ->execute([$mid, $url, $nama_file]);
+                $count++;
+            }
+        }
+
+        header("Location: /admin/pkkm/monitoring-supervisi?msg=attached&count=" . $count);
+        exit;
+    }
+
+    public static function detachSupervisiFromPkkm() {
+        self::checkAuth();
+        $db = Database::connect('core');
+        $db->query("DELETE FROM pkkm_berkas WHERE url IN ('/admin/pkkm/monitoring-supervisi', '/admin/pkkm/cetak-bukti/supervisi-guru')");
+        $db->query("DELETE FROM pkkm_master_berkas_file WHERE url IN ('/admin/pkkm/monitoring-supervisi', '/admin/pkkm/cetak-bukti/supervisi-guru')");
+        header("Location: /admin/pkkm/monitoring-supervisi?msg=detached");
+        exit;
+    }
+
+    public static function saveCatatanPengawasSupervisi() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $storageDir = __DIR__ . '/../../storage';
+        if (!is_dir($storageDir)) {
+            @mkdir($storageDir, 0777, true);
+        }
+
+        $data = [
+            'updated_at' => date('Y-m-d H:i:s'),
+            'nama_penilai' => $_POST['nama_penilai'] ?? 'Pengawas Pembina PKKM',
+            'status_verifikasi' => $_POST['status_verifikasi'] ?? 'Sangat Memadai',
+            'skor_rekomendasi' => $_POST['skor_rekomendasi'] ?? '4',
+            'catatan' => $_POST['catatan'] ?? '',
+            'checklist' => $_POST['chk'] ?? []
+        ];
+
+        file_put_contents($storageDir . '/pkkm_supervisi_notes.json', json_encode($data, JSON_PRETTY_PRINT));
+
+        // Simpan juga skor rekomendasi jika dipilih ke pkkm_nilai untuk indikator Komponen 4
+        if (isset($_POST['simpan_skor_pkkm']) && $_POST['simpan_skor_pkkm'] == '1') {
+            try {
+                $db = Database::connect('core');
+                $skor = (int)($_POST['skor_rekomendasi'] ?? 4);
+                $indTargetIds = [87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 40, 41, 42];
+                foreach ($indTargetIds as $targetIndId) {
+                    $chk = $db->query("SELECT id FROM pkkm_indikator WHERE id = $targetIndId")->fetch();
+                    if ($chk) {
+                        $db->prepare("INSERT INTO pkkm_nilai (indikator_id, skor) VALUES (?, ?) ON DUPLICATE KEY UPDATE skor = ?")
+                           ->execute([$targetIndId, $skor, $skor]);
+                    }
+                }
+            } catch (\Exception $e) {}
+        }
+
+        $isPengawas = isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 5;
+        $redir = $isPengawas ? '/pengawas/pkkm/monitoring-supervisi?tab=pengawas&msg=saved' : '/admin/pkkm/monitoring-supervisi?tab=pengawas&msg=saved';
+        header("Location: " . $redir);
+        exit;
     }
 
     public static function cetakBuktiEkstrakurikuler() {
@@ -905,8 +1526,7 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_ekstrakurikuler_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_ekstrakurikuler_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_ekstrakurikuler_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_ekstrakurikuler_pdf.php';
     }
 
     public static function cetakBuktiPrestasiSiswa() {
@@ -920,8 +1540,7 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_prestasi_siswa_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_prestasi_siswa_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_prestasi_siswa_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_prestasi_siswa_pdf.php';
     }
 
     public static function cetakBuktiKewirausahaan() {
@@ -935,8 +1554,181 @@ class AdminPkkmController {
             $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        $bukti_file = file_exists(__DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_kewirausahaan_pdf.php') ? __DIR__ . '/../../resources/views/admin/pkkm/pkkm_bukti_kewirausahaan_pdf.php' : __DIR__ . '/../../resources/views/admin/pkkm_bukti_kewirausahaan_pdf.php';
-        include $bukti_file;
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_kewirausahaan_pdf.php';
+    }
+
+    public static function cetakBuktiPerangkatGuru() {
+        self::checkAuthBukti();
+        $db = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+        
+        $inst = null;
+        $kamad = null;
+        try {
+            $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+            $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        // Global stats
+        $stats = [
+            'total'      => 0,
+            'modul'      => 0,
+            'atp'        => 0,
+            'prota'      => 0,
+            'kktp'       => 0,
+            'guru_count' => 0
+        ];
+
+        try {
+            $stats['total']      = (int)$db_siakad->query("SELECT COUNT(*) FROM perangkat_pembelajaran")->fetchColumn();
+            $stats['modul']      = (int)$db_siakad->query("SELECT COUNT(*) FROM perangkat_pembelajaran WHERE jenis_perangkat LIKE '%Modul%' OR jenis_perangkat LIKE '%RPP%'")->fetchColumn();
+            $stats['atp']        = (int)$db_siakad->query("SELECT COUNT(*) FROM perangkat_pembelajaran WHERE jenis_perangkat LIKE '%ATP%' OR jenis_perangkat LIKE '%Silabus%'")->fetchColumn();
+            $stats['prota']      = (int)$db_siakad->query("SELECT COUNT(*) FROM perangkat_pembelajaran WHERE jenis_perangkat LIKE '%Prota%' OR jenis_perangkat LIKE '%Promes%'")->fetchColumn();
+            $stats['kktp']       = (int)$db_siakad->query("SELECT COUNT(*) FROM perangkat_pembelajaran WHERE jenis_perangkat LIKE '%KKTP%' OR jenis_perangkat LIKE '%Capaian%'")->fetchColumn();
+            $stats['guru_count'] = (int)$db_siakad->query("SELECT COUNT(DISTINCT guru_id) FROM perangkat_pembelajaran")->fetchColumn();
+        } catch (\Exception $e) {}
+
+        // Matriks guru
+        $gurus = $db->query("SELECT id, nama, nip FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        
+        $counts = $db_siakad->query("
+            SELECT guru_id, 
+                   COUNT(*) as total,
+                   SUM(CASE WHEN jenis_perangkat LIKE '%Modul%' OR jenis_perangkat LIKE '%RPP%' THEN 1 ELSE 0 END) as modul_cnt,
+                   SUM(CASE WHEN jenis_perangkat LIKE '%ATP%' OR jenis_perangkat LIKE '%Silabus%' THEN 1 ELSE 0 END) as atp_cnt,
+                   SUM(CASE WHEN jenis_perangkat LIKE '%Prota%' OR jenis_perangkat LIKE '%Promes%' THEN 1 ELSE 0 END) as prota_cnt,
+                   SUM(CASE WHEN jenis_perangkat LIKE '%KKTP%' OR jenis_perangkat LIKE '%Capaian%' THEN 1 ELSE 0 END) as kktp_cnt
+            FROM perangkat_pembelajaran
+            GROUP BY guru_id
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $guruCountMap = [];
+        foreach ($counts as $c) {
+            $guruCountMap[$c['guru_id']] = $c;
+        }
+
+        $assigns = $db_siakad->query("
+            SELECT m.guru_id, m.kelas_id, m.mapel_id, k.nama_kelas, mp.nama_mapel
+            FROM mengajar m
+            JOIN core_db.kelas k ON k.id = m.kelas_id
+            JOIN mapel mp ON mp.id = m.mapel_id
+            UNION
+            SELECT jp.guru_id, jp.kelas_id, jp.mata_pelajaran_id as mapel_id, k.nama_kelas, mp.nama_mapel
+            FROM jadwal_pelajaran jp
+            JOIN core_db.kelas k ON k.id = jp.kelas_id
+            JOIN mapel mp ON mp.id = jp.mata_pelajaran_id
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $guruAssignMap = [];
+        foreach ($assigns as $a) {
+            $gid = $a['guru_id'];
+            if (!isset($guruAssignMap[$gid])) {
+                $guruAssignMap[$gid] = ['mapel' => [], 'kelas' => []];
+            }
+            if (!in_array($a['nama_mapel'], $guruAssignMap[$gid]['mapel'])) $guruAssignMap[$gid]['mapel'][] = $a['nama_mapel'];
+            if (!in_array($a['nama_kelas'], $guruAssignMap[$gid]['kelas'])) $guruAssignMap[$gid]['kelas'][] = $a['nama_kelas'];
+        }
+
+        $matriksGuru = [];
+        foreach ($gurus as $g) {
+            $gid = $g['id'];
+            $cnt = $guruCountMap[$gid] ?? ['total' => 0, 'modul_cnt' => 0, 'atp_cnt' => 0, 'prota_cnt' => 0, 'kktp_cnt' => 0];
+            $assign = $guruAssignMap[$gid] ?? ['mapel' => ['-'], 'kelas' => ['-']];
+            if ($cnt['total'] > 0) {
+                $matriksGuru[] = [
+                    'id'        => $gid,
+                    'nama'      => $g['nama'],
+                    'nip'       => $g['nip'] ?: '-',
+                    'mapel'     => implode(', ', $assign['mapel']),
+                    'kelas'     => implode(', ', $assign['kelas']),
+                    'modul_cnt' => $cnt['modul_cnt'],
+                    'atp_cnt'   => $cnt['atp_cnt'],
+                    'prota_cnt' => $cnt['prota_cnt'],
+                    'kktp_cnt'  => $cnt['kktp_cnt'],
+                    'total'     => $cnt['total'],
+                    'status'    => 'Lengkap (Terverifikasi)'
+                ];
+            }
+        }
+
+        // Filter katalog perangkat untuk penelaahan pengawas
+        $filter_guru  = isset($_GET['guru_id']) ? intval($_GET['guru_id']) : 0;
+        $filter_mapel = isset($_GET['mapel_id']) ? intval($_GET['mapel_id']) : 0;
+        $filter_jenis = isset($_GET['jenis']) ? trim($_GET['jenis']) : '';
+        $q            = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $activeTab    = isset($_GET['tab']) ? trim($_GET['tab']) : 'hierarki';
+
+        // Ambil daftar mapel unik yang memiliki perangkat
+        $daftarMapel = [];
+        try {
+            $daftarMapel = $db_siakad->query("
+                SELECT DISTINCT m.id, m.nama_mapel 
+                FROM perangkat_pembelajaran p 
+                JOIN mapel m ON m.id = p.mapel_id 
+                ORDER BY m.nama_mapel ASC
+            ")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $where = ["1=1"];
+        $params = [];
+        if ($filter_guru > 0) {
+            $where[] = "p.guru_id = :guru_id";
+            $params[':guru_id'] = $filter_guru;
+        }
+        if ($filter_mapel > 0) {
+            $where[] = "p.mapel_id = :mapel_id";
+            $params[':mapel_id'] = $filter_mapel;
+        }
+        if (!empty($filter_jenis)) {
+            $where[] = "p.jenis_perangkat = :jenis";
+            $params[':jenis'] = $filter_jenis;
+        }
+        if (!empty($q)) {
+            $where[] = "(p.judul LIKE :q OR p.nama_file LIKE :q OR g.nama LIKE :q OR m.nama_mapel LIKE :q)";
+            $params[':q'] = "%$q%";
+        }
+
+        // Ambil semua berkas perangkat tanpa limit sewenang-wenang (agar penilai dapat mengaudit seluruh 404+ berkas)
+        $allDocsStmt = $db_siakad->prepare("
+            SELECT p.*, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, m.nama_mapel, k.nama_kelas
+            FROM perangkat_pembelajaran p
+            LEFT JOIN core_db.guru g ON g.id = p.guru_id
+            LEFT JOIN mapel m ON m.id = p.mapel_id
+            LEFT JOIN core_db.kelas k ON k.id = p.kelas_id
+            WHERE " . implode(" AND ", $where) . "
+            ORDER BY g.nama ASC, m.nama_mapel ASC, k.nama_kelas ASC, p.id DESC
+        ");
+        $allDocsStmt->execute($params);
+        $katalogPerangkat = $allDocsStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Struktur hierarki: Guru -> Mapel & Kelas -> Berkas Perangkat
+        $groupedGurus = [];
+        foreach ($katalogPerangkat as $doc) {
+            $gid = $doc['guru_id'];
+            if (!isset($groupedGurus[$gid])) {
+                $groupedGurus[$gid] = [
+                    'id'         => $gid,
+                    'nama'       => $doc['nama_guru'] ?? 'Guru',
+                    'nip'        => $doc['nip_guru'] ?: '-',
+                    'foto'       => $doc['foto_guru'] ?? null,
+                    'total_docs' => 0,
+                    'mapel_list' => []
+                ];
+            }
+            $groupedGurus[$gid]['total_docs']++;
+
+            $mapelKey = ($doc['nama_mapel'] ?: 'Mata Pelajaran Umum') . ' — Kelas ' . ($doc['nama_kelas'] ?: '-');
+            if (!isset($groupedGurus[$gid]['mapel_list'][$mapelKey])) {
+                $groupedGurus[$gid]['mapel_list'][$mapelKey] = [
+                    'nama_mapel' => $doc['nama_mapel'] ?: 'Mata Pelajaran Umum',
+                    'nama_kelas' => $doc['nama_kelas'] ?: '-',
+                    'docs'       => []
+                ];
+            }
+            $groupedGurus[$gid]['mapel_list'][$mapelKey]['docs'][] = $doc;
+        }
+
+        include __DIR__ . '/../../resources/views/admin/pkkm_bukti_perangkat_guru_pdf.php';
     }
 
 
@@ -1222,548 +2014,13 @@ class AdminPkkmController {
         exit;
     }
 
-        public static function render($view_file, $title_page, $extra_data = []) {
-        $adminNama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : (isset($_SESSION['guru_nama']) ? $_SESSION['guru_nama'] : 'Admin'));
+    private static function render($view_file, $title_page, $extra_data = []) {
+        $adminNama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'Admin');
         $adminInitial = strtoupper(substr($adminNama, 0, 2));
 
         extract($extra_data);
         ob_start();
-        if (file_exists(__DIR__ . '/../../resources/views/admin/pkkm/' . $view_file)) {
-            include __DIR__ . '/../../resources/views/admin/pkkm/' . $view_file;
-        } elseif (file_exists(__DIR__ . '/../../resources/views/admin/' . $view_file)) {
-            include __DIR__ . '/../../resources/views/admin/' . $view_file;
-        } else {
-            echo "View PKKM tidak ditemukan: " . htmlspecialchars($view_file);
-        }
+        include __DIR__ . '/../../resources/views/admin/' . $view_file;
         echo ob_get_clean();
     }
-
-    // --- LEGACY / HELPER COMPATIBILITY METHODS FROM MASMIFHDA ---
-
-    public function index() {
-        return $this->dashboard();
-    }
-
-    public function saveIdentitas() {
-        $db = $this->checkAccess();
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: ' . base_url('admin/pkkm/instrumen'));
-            exit;
-        }
-
-        $nama_kamad = trim($_POST['nama_kamad'] ?? '');
-        $nip_kamad = trim($_POST['nip_kamad'] ?? '');
-        $nama_madrasah = trim($_POST['nama_madrasah'] ?? '');
-        $alamat_madrasah = trim($_POST['alamat_madrasah'] ?? '');
-        $nama_penilai = trim($_POST['nama_penilai'] ?? '');
-        $nip_penilai = trim($_POST['nip_penilai'] ?? '');
-        $jabatan_penilai = trim($_POST['jabatan_penilai'] ?? '');
-        $tgl_penilaian = !empty($_POST['tgl_penilaian']) ? $_POST['tgl_penilaian'] : date('Y-m-d');
-        $tempat_penilaian = trim($_POST['tempat_penilaian'] ?? 'Lampung Barat');
-        $tahun_penilaian = trim($_POST['tahun_penilaian'] ?? date('Y'));
-
-        try {
-            $cnt = $db->query("SELECT COUNT(*) FROM pkkm_identitas")->fetchColumn();
-            if ($cnt == 0) {
-                $stmt = $db->prepare("INSERT INTO pkkm_identitas (nama_kamad, nip_kamad, nama_madrasah, alamat_madrasah, nama_penilai, nip_penilai, jabatan_penilai, tgl_penilaian, tempat_penilaian, tahun_penilaian) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$nama_kamad, $nip_kamad, $nama_madrasah, $alamat_madrasah, $nama_penilai, $nip_penilai, $jabatan_penilai, $tgl_penilaian, $tempat_penilaian, $tahun_penilaian]);
-            } else {
-                $stmt = $db->prepare("UPDATE pkkm_identitas SET nama_kamad=?, nip_kamad=?, nama_madrasah=?, alamat_madrasah=?, nama_penilai=?, nip_penilai=?, jabatan_penilai=?, tgl_penilaian=?, tempat_penilaian=?, tahun_penilaian=? WHERE id = 1");
-                $stmt->execute([$nama_kamad, $nip_kamad, $nama_madrasah, $alamat_madrasah, $nama_penilai, $nip_penilai, $jabatan_penilai, $tgl_penilaian, $tempat_penilaian, $tahun_penilaian]);
-            }
-            $_SESSION['flash_success'] = 'Identitas instrumen penilaian berhasil diperbarui!';
-        } catch (\Exception $e) {
-            $_SESSION['flash_error'] = 'Gagal menyimpan identitas: ' . $e->getMessage();
-        }
-
-        header('Location: ' . base_url('admin/pkkm/instrumen'));
-        exit;
-    }
-
-    /**
-     * Simpan Berkas Langsung ke Indikator (pkkm_berkas)
-     */
-
-    private function getInstitusiAndKamad($db) {
-        $inst = null;
-        $kamad = null;
-        try {
-            $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        } catch (\Exception $e) {}
-        try {
-            $kamad = $db->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        } catch (\Exception $e) {}
-        if (!$kamad) {
-            try {
-                $ident = $db->query("SELECT nama_kamad as nama, nip_kamad as nip FROM pkkm_identitas LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-                if ($ident) $kamad = $ident;
-            } catch (\Exception $e) {}
-        }
-        return ['inst' => $inst, 'kamad' => $kamad];
-    }
-
-    public function cetakInstrumen() {
-        $db = $this->checkAccess();
-
-        $identitas = $db->query("SELECT * FROM pkkm_identitas LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        if (!$identitas) {
-            $identitas = [
-                'nama_kamad' => "AHMAD RIFA'I, M.Pd",
-                'nip_kamad' => "-",
-                'nama_madrasah' => "MA MIFTAHUL HUDA MATHLA'UL ANWAR",
-                'alamat_madrasah' => "Jl. Tirtomoyo, No. 083, Margorahayu, Tambak Jaya, Way Tenong, Lampung Barat",
-                'nama_penilai' => "Drs. H. M. Pengawas, M.Pd.I",
-                'nip_penilai' => "196805121995031002",
-                'jabatan_penilai' => "Pengawas Madrasah Ahli Madya",
-                'tgl_penilaian' => date('Y-m-d'),
-                'tempat_penilaian' => "Lampung Barat",
-                'tahun_penilaian' => "2026"
-            ];
-        }
-
-        $sql = "
-            SELECT 
-                i.id as indikator_id,
-                i.komponen_id,
-                i.sub_komponen_id,
-                i.kode,
-                i.indikator,
-                i.kriteria,
-                i.bukti_fisik,
-                i.penggalian_data,
-                i.urutan as indikator_urutan,
-                s.nama_sub,
-                s.urutan as sub_urutan,
-                k.nama_komponen,
-                k.urutan as komp_urutan,
-                n.skor
-            FROM pkkm_indikator i
-            JOIN pkkm_sub_komponen s ON i.sub_komponen_id = s.id
-            JOIN pkkm_komponen k ON i.komponen_id = k.id
-            LEFT JOIN pkkm_nilai n ON i.id = n.indikator_id
-            ORDER BY k.urutan ASC, CAST(s.urutan AS UNSIGNED) ASC, i.urutan ASC
-        ";
-
-        $rows = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-
-        $groupedKomponen = [];
-        $totalSkor = 0;
-        $totalTerisi = 0;
-        foreach ($rows as $row) {
-            $kId = $row['komponen_id'];
-            $subId = $row['sub_komponen_id'];
-
-            if (!isset($groupedKomponen[$kId])) {
-                $groupedKomponen[$kId] = [
-                    'nama_komponen' => $row['nama_komponen'],
-                    'urutan' => $row['komp_urutan'],
-                    'sub' => []
-                ];
-            }
-
-            if (!isset($groupedKomponen[$kId]['sub'][$subId])) {
-                $groupedKomponen[$kId]['sub'][$subId] = [
-                    'nama_sub' => $row['nama_sub'],
-                    'sub_urutan' => $row['sub_urutan'],
-                    'items' => []
-                ];
-            }
-
-            if (!empty($row['skor'])) {
-                $totalSkor += (int)$row['skor'];
-                $totalTerisi++;
-            }
-
-            $groupedKomponen[$kId]['sub'][$subId]['items'][] = $row;
-        }
-
-        include __DIR__ . '/../../resources/views/admin/pkkm/cetak_instrumen.php';
-    }
-
-    /**
-     * AJAX Simpan Nilai Skor Instrumen
-     */
-
-    public function dokumen() {
-        $db = $this->checkAccess();
-
-        $search = isset($_GET['q']) ? trim($_GET['q']) : '';
-        $filterStatus = isset($_GET['status']) ? trim($_GET['status']) : 'all';
-
-        $sql = "
-            SELECT 
-                mb.id,
-                mb.nama_berkas,
-                mb.created_at,
-                f.id as file_id,
-                f.tipe,
-                f.url,
-                f.nama_file_asli,
-                f.created_at as file_uploaded_at
-            FROM pkkm_master_berkas mb
-            LEFT JOIN pkkm_master_berkas_file f ON mb.id = f.master_berkas_id
-        ";
-
-        $conditions = [];
-        $params = [];
-
-        if (!empty($search)) {
-            $conditions[] = "mb.nama_berkas LIKE ?";
-            $params[] = '%' . $search . '%';
-        }
-
-        if ($filterStatus === 'uploaded') {
-            $conditions[] = "f.id IS NOT NULL";
-        } elseif ($filterStatus === 'empty') {
-            $conditions[] = "f.id IS NULL";
-        }
-
-        if (!empty($conditions)) {
-            $sql .= " WHERE " . implode(" AND ", $conditions);
-        }
-
-        $sql .= " ORDER BY mb.nama_berkas ASC";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        $berkasList = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Hitung total berkas & terupload
-        $totalBerkas = (int)$db->query("SELECT COUNT(*) FROM pkkm_master_berkas")->fetchColumn();
-        $totalUploaded = (int)$db->query("SELECT COUNT(DISTINCT master_berkas_id) FROM pkkm_master_berkas_file")->fetchColumn();
-
-        $active_module = 'pkkm';
-        $active_page   = 'dokumen';
-        $page_title    = 'Dokumen & Bukti Fisik PKKM';
-
-        include __DIR__ . '/../../resources/views/admin/pkkm/dokumen.php';
-    }
-
-    /**
-     * Upload File Dokumen atau Simpan Link
-     */
-
-    public function uploadDokumen() {
-        $db = $this->checkAccess();
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: ' . base_url('admin/pkkm/dokumen'));
-            exit;
-        }
-
-        $master_berkas_id = isset($_POST['master_berkas_id']) ? (int)$_POST['master_berkas_id'] : 0;
-        $tipe = isset($_POST['tipe']) && $_POST['tipe'] === 'link' ? 'link' : 'file';
-
-        if ($master_berkas_id <= 0) {
-            $_SESSION['flash_error'] = 'Pilih dokumen yang valid.';
-            header('Location: ' . base_url('admin/pkkm/dokumen'));
-            exit;
-        }
-
-        if ($tipe === 'link') {
-            $linkUrl = isset($_POST['url']) ? trim($_POST['url']) : '';
-            if (empty($linkUrl) || !filter_var($linkUrl, FILTER_VALIDATE_URL)) {
-                $_SESSION['flash_error'] = 'URL Link tidak valid.';
-                header('Location: ' . base_url('admin/pkkm/dokumen'));
-                exit;
-            }
-
-            try {
-                // Hapus berkas lama jika ada
-                $this->removeOldMasterFile($db, $master_berkas_id);
-
-                $stmt = $db->prepare("
-                    INSERT INTO pkkm_master_berkas_file (master_berkas_id, tipe, url, nama_file_asli, created_at)
-                    VALUES (?, 'link', ?, 'Tautan Eksternal', NOW())
-                ");
-                $stmt->execute([$master_berkas_id, $linkUrl]);
-                $_SESSION['flash_success'] = 'Tautan dokumen berhasil disimpan!';
-            } catch (\Exception $e) {
-                $_SESSION['flash_error'] = 'Gagal menyimpan: ' . $e->getMessage();
-            }
-        } else {
-            // Upload file
-            if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-                $_SESSION['flash_error'] = 'Gagal mengunggah file. Silakan periksa ukuran file.';
-                header('Location: ' . base_url('admin/pkkm/dokumen'));
-                exit;
-            }
-
-            $uploadDir = __DIR__ . '/../../public/uploads/pkkm/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
-
-            $originalName = $_FILES['file']['name'];
-            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-            $allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip', 'rar'];
-
-            if (!in_array($ext, $allowedExt)) {
-                $_SESSION['flash_error'] = 'Format file tidak diizinkan. Gunakan PDF, Office, Gambar, atau ZIP.';
-                header('Location: ' . base_url('admin/pkkm/dokumen'));
-                exit;
-            }
-
-            // Max 25MB
-            if ($_FILES['file']['size'] > 26214400) {
-                $_SESSION['flash_error'] = 'Ukuran file melebihi batas 25MB.';
-                header('Location: ' . base_url('admin/pkkm/dokumen'));
-                exit;
-            }
-
-            $newFileName = 'PKKM_' . $master_berkas_id . '_' . time() . '.' . $ext;
-            $destPath = $uploadDir . $newFileName;
-
-            if (move_uploaded_file($_FILES['file']['tmp_name'], $destPath)) {
-                $relativeUrl = 'public/uploads/pkkm/' . $newFileName;
-                
-                try {
-                    $this->removeOldMasterFile($db, $master_berkas_id);
-
-                    $stmt = $db->prepare("
-                        INSERT INTO pkkm_master_berkas_file (master_berkas_id, tipe, url, nama_file_asli, created_at)
-                        VALUES (?, 'file', ?, ?, NOW())
-                    ");
-                    $stmt->execute([$master_berkas_id, $relativeUrl, $originalName]);
-                    $_SESSION['flash_success'] = 'File bukti fisik berhasil diunggah!';
-                } catch (\Exception $e) {
-                    $_SESSION['flash_error'] = 'Gagal menyimpan data berkas: ' . $e->getMessage();
-                }
-            } else {
-                $_SESSION['flash_error'] = 'Gagal memindahkan file yang diunggah.';
-            }
-        }
-
-        header('Location: ' . base_url('admin/pkkm/dokumen'));
-        exit;
-    }
-
-    /**
-     * Hapus berkas lama dari disk dan database untuk master_berkas_id tertentu
-     */
-
-    private function removeOldMasterFile($db, $master_berkas_id) {
-        $stmt = $db->prepare("SELECT id, tipe, url FROM pkkm_master_berkas_file WHERE master_berkas_id = ?");
-        $stmt->execute([$master_berkas_id]);
-        $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($files as $f) {
-            if ($f['tipe'] === 'file' && !empty($f['url'])) {
-                $filePath = __DIR__ . '/../../' . ltrim($f['url'], '/');
-                if (file_exists($filePath) && is_file($filePath)) {
-                    @unlink($filePath);
-                }
-            }
-        }
-
-        $del = $db->prepare("DELETE FROM pkkm_master_berkas_file WHERE master_berkas_id = ?");
-        $del->execute([$master_berkas_id]);
-    }
-
-    /**
-     * Hapus Dokumen Bukti Fisik
-     */
-
-    public function deleteDokumen() {
-        $db = $this->checkAccess();
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: ' . base_url('admin/pkkm/dokumen'));
-            exit;
-        }
-
-        $master_berkas_id = isset($_POST['master_berkas_id']) ? (int)$_POST['master_berkas_id'] : 0;
-        if ($master_berkas_id > 0) {
-            $this->removeOldMasterFile($db, $master_berkas_id);
-            $_SESSION['flash_success'] = 'Dokumen bukti fisik berhasil dihapus.';
-        }
-
-        header('Location: ' . base_url('admin/pkkm/dokumen'));
-        exit;
-    }
-
-    /**
-     * Auto-sync bukti fisik dari modul-modul sistem MASMIFHDA yang sudah aktif
-     */
-
-    public function syncSistem() {
-        $db = $this->checkAccess();
-
-        $syncItems = [
-            ['id' => 123, 'url' => 'admin/absen-v2/rekap', 'title' => 'Sistem Presensi QR V2 Realtime'],
-            ['id' => 192, 'url' => 'guru/kamad/program/cetak', 'title' => 'Buku Program Kerja Kamad 2026/2027'],
-            ['id' => 191, 'url' => 'guru/kamad/program', 'title' => 'Program Kerja Madrasah & Target SNP'],
-            ['id' => 54,  'url' => 'guru/kamad/program', 'title' => 'Dokumen EDM Terintegrasi'],
-            ['id' => 55,  'url' => 'admin/bos/rkas', 'title' => 'RKT & Anggaran BOS Berbasis EDM'],
-            ['id' => 15,  'url' => 'admin/perpus/fisik', 'title' => 'Katalog Buku Induk Perpustakaan'],
-            ['id' => 27,  'url' => 'admin/perpus/fisik', 'title' => 'Master Buku & Rak Perpustakaan'],
-            ['id' => 21,  'url' => 'admin/perpus/sirkulasi', 'title' => 'Statistik Layanan & Sirkulasi Buku'],
-            ['id' => 43,  'url' => 'admin/perpus/sirkulasi', 'title' => 'Log Pengunjung & Peminjaman Perpustakaan'],
-            ['id' => 58,  'url' => 'admin/perpus', 'title' => 'Dashboard E-Library & Aplikasi Perpus'],
-            ['id' => 104, 'url' => 'admin/kurikulum/monitoring-jadwal', 'title' => 'Jadwal Mengajar KBM Guru Terpadu'],
-            ['id' => 237, 'url' => 'admin/kurikulum/monitoring-jadwal', 'title' => 'Jadwal Pelajaran Kelas KBM'],
-            ['id' => 102, 'url' => 'admin/kurikulum/supervisi-administrasi', 'title' => 'Jadwal Pelaksanaan Supervisi Guru'],
-            ['id' => 76,  'url' => 'admin/kurikulum/supervisi-administrasi', 'title' => 'Dokumen Instrumen Supervisi Administrasi GTK'],
-            ['id' => 127, 'url' => 'admin/kurikulum/supervisi-kelas', 'title' => 'Laporan Evaluasi Supervisi Kelas GTK'],
-            ['id' => 213, 'url' => 'admin/kurikulum/supervisi-kelas', 'title' => 'Catatan Rekomendasi & Tindak Lanjut Supervisi'],
-            ['id' => 137, 'url' => 'admin/bos/laporan', 'title' => 'Laporan Pertanggungjawaban BOS & Keuangan Komite'],
-            ['id' => 17,  'url' => 'admin/bos/bku', 'title' => 'Buku Kas Umum (BKU) BOS Realtime'],
-            ['id' => 36,  'url' => 'admin/siakad/siswa/alumni', 'title' => 'Database Alumni Lulusan Madrasah'],
-            ['id' => 10,  'url' => 'admin/siakad/guru', 'title' => 'Struktur Personalia Guru & Tenaga Kependidikan'],
-            ['id' => 214, 'url' => 'admin/siakad/guru/tugas', 'title' => 'Rincian Tugas & Beban Kerja Guru/Tendik'],
-            ['id' => 185, 'url' => 'apk/ekstra_jurnal.php', 'title' => 'Program & Jurnal Pembina Ekstrakurikuler'],
-            ['id' => 233, 'url' => 'portal', 'title' => 'Ekosistem Portal & Website Madrasah'],
-            ['id' => 165, 'url' => 'admin/elearning', 'title' => 'Sistem Pembelajaran Digital E-Learning'],
-            ['id' => 169, 'url' => 'admin/siakad/nilai', 'title' => 'Sistem E-Raport & Penilaian Akademik'],
-            ['id' => 16,  'url' => 'admin/inventaris', 'title' => 'Inventaris Sarana & Prasarana Madrasah'],
-            ['id' => 216, 'url' => 'admin/persuratan/sk', 'title' => 'SK Kamad Penetapan Komite Madrasah']
-        ];
-
-        $syncedCount = 0;
-        foreach ($syncItems as $item) {
-            $mbId = (int)$item['id'];
-            $exists = $db->query("SELECT id FROM pkkm_master_berkas WHERE id = $mbId")->fetch();
-            if ($exists) {
-                $hasFile = $db->query("SELECT id, tipe FROM pkkm_master_berkas_file WHERE master_berkas_id = $mbId AND tipe = 'file'")->fetch();
-                if (!$hasFile) {
-                    $this->removeOldMasterFile($db, $mbId);
-                    $stmt = $db->prepare("
-                        INSERT INTO pkkm_master_berkas_file (master_berkas_id, tipe, url, nama_file_asli, created_at)
-                        VALUES (?, 'link', ?, ?, NOW())
-                    ");
-                    $stmt->execute([$mbId, $item['url'], $item['title']]);
-                    $syncedCount++;
-                }
-            }
-        }
-
-        // Auto-assign score 4 to matching indicators if score is not set
-        $autoScoreKode = ['1.2', '2.1', '2.2', '4.2', '4.3', '5.1', '5.2', '6.1'];
-        $stmtInd = $db->prepare("SELECT id FROM pkkm_indikator WHERE kode = ?");
-        $stmtInsScore = $db->prepare("INSERT INTO pkkm_nilai (indikator_id, skor) VALUES (?, 4) ON DUPLICATE KEY UPDATE skor = IF(skor = 0, 4, skor)");
-        foreach ($autoScoreKode as $kCode) {
-            $stmtInd->execute([$kCode]);
-            $iId = $stmtInd->fetchColumn();
-            if ($iId) {
-                $stmtInsScore->execute([$iId]);
-            }
-        }
-
-        $_SESSION['flash_success'] = "Berhasil mensinkronkan $syncedCount berkas bukti fisik langsung dari modul sistem!";
-        header('Location: ' . base_url('admin/pkkm/dokumen'));
-        exit;
-    }
-
-    /**
-     * Pemetaan Link Modul Sistem per Kode Indikator PKKM
-     */
-    public static function getSystemSyncMapping() {
-        return [
-            // Komponen A
-            '1.2' => [
-                'label' => 'SIAKAD: Data & Tugas Guru',
-                'url' => 'admin/siakad/guru',
-                'desc' => 'SK Pembagian Tugas & Uraian Tugas Guru/Staf'
-            ],
-            '2.1' => [
-                'label' => 'SIAKAD: Data Alumni',
-                'url' => 'admin/siakad/siswa/alumni',
-                'desc' => 'Database Alumni & Profil Lulusan'
-            ],
-            '2.2' => [
-                'label' => 'APK: Ekstrakurikuler',
-                'url' => 'apk/ekstra_jurnal.php',
-                'desc' => 'Program & Jurnal Ekstrakurikuler Siswa'
-            ],
-            '4.2' => [
-                'label' => 'Waka Kurikulum: Jadwal KBM',
-                'url' => 'admin/kurikulum/monitoring-jadwal',
-                'desc' => 'Jadwal Mengajar, Perangkat KBM & Penilaian'
-            ],
-            '4.3' => [
-                'label' => 'Portal HUB MASMIFHDA',
-                'url' => 'portal',
-                'desc' => 'Pemanfaatan TIK, CBT & Website Madrasah'
-            ],
-            '5.1' => [
-                'label' => 'Absensi QR V2: Laporan Realtime',
-                'url' => 'admin/absen-v2/rekap',
-                'desc' => 'Laporan Absensi Elektronik Guru & Siswa'
-            ],
-            '5.2' => [
-                'label' => 'E-Learning & Bank Soal',
-                'url' => 'admin/elearning',
-                'desc' => 'Model Pembelajaran Berbasis TIK'
-            ],
-            '6.1' => [
-                'label' => 'Sistem Informasi Portal',
-                'url' => 'portal',
-                'desc' => 'Manajemen Berbasis SIM & Website Madrasah'
-            ],
-            // Komponen B (Unsur & Kode)
-            '1.1' => [
-                'label' => 'Buku Program Kerja Kamad',
-                'url' => 'guru/kamad/program/cetak',
-                'desc' => 'EDM & RKTM Berbasis 8 Standar'
-            ],
-            '2.1' => [
-                'label' => 'SIAKAD: Notulen & Rapat',
-                'url' => 'admin/siakad/lain-lain/rapat',
-                'desc' => 'Daftar Hadir & Notulen Rapat Madrasah'
-            ],
-            '5.1' => [
-                'label' => 'Manajemen Aset & Inventaris',
-                'url' => 'admin/inventaris',
-                'desc' => 'Buku Inventaris Sarana Prasarana'
-            ],
-            '5.2' => [
-                'label' => 'Perpustakaan: Katalog & Sirkulasi',
-                'url' => 'admin/perpus',
-                'desc' => 'Buku Induk & Grafik Layanan E-Library'
-            ],
-            '6.1' => [
-                'label' => 'SIAKAD: Data Induk Siswa',
-                'url' => 'admin/siakad/siswa',
-                'desc' => 'Buku Penerimaan & Biodata Siswa'
-            ],
-            '8.1' => [
-                'label' => 'BOS: RKAS Anggaran',
-                'url' => 'admin/bos/rkas',
-                'desc' => 'Rencana Anggaran Tahunan 8 Standar'
-            ],
-            '8.2' => [
-                'label' => 'BOS: Buku Kas Umum (BKU)',
-                'url' => 'admin/bos/bku',
-                'desc' => 'Laporan Pertanggungjawaban Keuangan Realtime'
-            ],
-            '9.1' => [
-                'label' => 'Persuratan: Agenda Surat',
-                'url' => 'admin/persuratan/masuk',
-                'desc' => 'Buku Agenda Surat Masuk & Keluar'
-            ],
-            '9.2' => [
-                'label' => 'SIAKAD Terpadu',
-                'url' => 'admin/siakad',
-                'desc' => 'Administrasi Akademik & Kesiswaan'
-            ],
-            // Komponen D
-            '1.1_D' => [
-                'label' => 'Supervisi: SK & Perencanaan GTK',
-                'url' => 'admin/kurikulum/supervisi-administrasi',
-                'desc' => 'Program Supervisi & SK Tim Supervisor'
-            ],
-            '2.1_D' => [
-                'label' => 'Supervisi: Laporan & Rekomendasi',
-                'url' => 'admin/kurikulum/supervisi-kelas',
-                'desc' => 'Instrumen & Hasil Supervisi KBM Guru'
-            ],
-            '3.1_D' => [
-                'label' => 'Supervisi: Tindak Lanjut Guru',
-                'url' => 'admin/kurikulum/supervisi-administrasi',
-                'desc' => 'Laporan Realisasi Tindak Lanjut Supervisi'
-            ]
-        ];
-    }
 }
-

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <?php $page_title = $title_page ?? 'Daftar Berkas PKKM'; include (file_exists(__DIR__ . '/_zamrud_head.php') ? __DIR__ . '/_zamrud_head.php' : __DIR__ . '/../_zamrud_head.php'); ?>
+    <?php $page_title = $title_page ?? 'Daftar Berkas PKKM'; include __DIR__ . '/_zamrud_head.php'; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
@@ -12,9 +12,9 @@
         /* Minimalist Elite Page Header */
         .elite-page-header {
             position: relative; padding: 1.1rem 1.6rem; margin-bottom: 1.1rem;
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
             border-radius: 14px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 4px 16px -4px rgba(30, 58, 138, 0.25);
+            box-shadow: 0 4px 16px -4px rgba(6, 78, 59, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .elite-page-header .header-bg-shapes {
@@ -43,8 +43,8 @@
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-1px); }
-        .e-btn-primary { background: #ffffff; color: #1e3a8a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
-        .e-btn-primary:hover { background: #f8fafc; color: #0f172a; }
+        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -58,18 +58,18 @@
         .stat-box:hover {
             transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
         }
-        .stat-box blue { background: #faf5ff; border-color: #f3e8ff; color: #6b21a8; }
+        .stat-box.purple { background: #faf5ff; border-color: #f3e8ff; color: #6b21a8; }
         .stat-box.blue { background: #eff6ff; border-color: #dbeafe; color: #1e3a8a; }
         .stat-box.green { background: #f0fdf4; border-color: #dcfce7; color: #14532d; }
         .stat-box.yellow { background: #fefce8; border-color: #fef9c3; color: #713f12; }
-        .stat-box.emerald { background: #ecfdf5; border-color: #d1fae5; color: #1e40af; }
+        .stat-box.emerald { background: #ecfdf5; border-color: #d1fae5; color: #065f46; }
         .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.85); box-shadow: 0 1px 3px rgba(0,0,0,0.03); flex-shrink: 0; }
         .stat-icon i, .stat-icon svg { width: 16px !important; height: 16px !important; }
-        .stat-box blue .stat-icon { color: #8b5cf6; }
+        .stat-box.purple .stat-icon { color: #8b5cf6; }
         .stat-box.blue .stat-icon { color: #3b82f6; }
-        .stat-box.green .stat-icon { color: #38bdf8; }
+        .stat-box.green .stat-icon { color: #10b981; }
         .stat-box.yellow .stat-icon { color: #f59e0b; }
-        .stat-box.emerald .stat-icon { color: #0284c7; }
+        .stat-box.emerald .stat-icon { color: #059669; }
         .stat-value { font-size: 1.25rem; font-weight: 800; line-height: 1.1; margin-bottom: 1px; }
         .stat-label { font-size: 0.68rem; font-weight: 600; color: #64748b; white-space: nowrap; }
 
@@ -82,8 +82,8 @@
         }
         .filter-pill-btn:hover { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
         .filter-pill-btn.active {
-            background: #0284c7; color: #ffffff; border-color: #1e3a8a;
-            box-shadow: 0 2px 6px rgba(56, 189, 248, 0.2);
+            background: #059669; color: #ffffff; border-color: #047857;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
         }
         .filter-pill-btn .badge-num {
             background: #f1f5f9; color: #475569; font-size: 0.68rem; font-weight: 700;
@@ -172,12 +172,12 @@
         }
         .evidence-card-badge {
             display: inline-flex; align-items: center; gap: 3px;
-            background: #ecfdf5; color: #1e3a8a; border: 1px solid #a7f3d0;
+            background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
             border-radius: 4px; padding: 1px 6px; font-size: 0.62rem; font-weight: 700;
             cursor: pointer; transition: all 0.15s ease;
         }
         .evidence-card-badge:hover {
-            background: #0284c7; color: #ffffff; border-color: #0284c7; transform: translateY(-1px);
+            background: #059669; color: #ffffff; border-color: #059669; transform: translateY(-1px);
         }
         .badge-cat-pill {
             display: inline-flex; align-items: center; gap: 3px;
@@ -205,7 +205,7 @@
             transition: all 0.15s ease; cursor: pointer; text-decoration: none;
         }
         .ind-pill-interactive:hover {
-            background: #ecfdf5; color: #1e3a8a; border-color: #86efac;
+            background: #ecfdf5; color: #047857; border-color: #86efac;
         }
         .unmatched-pill {
             display: inline-flex; align-items: center; gap: 3px;
@@ -225,23 +225,23 @@
             display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
         }
         .digital-proof-title {
-            font-size: 0.7rem; font-weight: 700; color: #1e40af; display: flex; align-items: center; gap: 4px;
+            font-size: 0.7rem; font-weight: 700; color: #065f46; display: flex; align-items: center; gap: 4px;
         }
         .btn-digital-preview {
             display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
-            border-radius: 5px; background: #ffffff; color: #1e3a8a; border: 1px solid #6ee7b7;
+            border-radius: 5px; background: #ffffff; color: #047857; border: 1px solid #6ee7b7;
             font-size: 0.66rem; font-weight: 600; text-decoration: none;
         }
         .btn-digital-preview:hover {
-            background: #0284c7; color: #ffffff;
+            background: #059669; color: #ffffff;
         }
         .btn-digital-attach {
             display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
-            border-radius: 5px; background: #0284c7; color: #ffffff; border: none;
+            border-radius: 5px; background: #059669; color: #ffffff; border: none;
             font-size: 0.66rem; font-weight: 700; cursor: pointer;
         }
         .btn-digital-attach:hover {
-            background: #1e3a8a;
+            background: #047857;
         }
 
         /* File Chips */
@@ -264,7 +264,7 @@
         }
         .file-chip-icon i, .file-chip-icon svg { width: 11px !important; height: 11px !important; }
         .icon-file { background: #eff6ff; color: #2563eb; }
-        .icon-link { background: #f0fdf4; color: #0284c7; }
+        .icon-link { background: #f0fdf4; color: #059669; }
         .file-chip-name {
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;
         }
@@ -280,7 +280,7 @@
             display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.15s; text-decoration: none;
         }
         .btn-upload-more:hover {
-            background: #0284c7; color: #ffffff; border-color: #0284c7;
+            background: #059669; color: #ffffff; border-color: #059669;
         }
 
         /* Modern DataTables Inputs */
@@ -292,25 +292,25 @@
             border-radius: 8px; padding: 5px 12px; background-color: #f8fafc; border: 1px solid #cbd5e1; width: 200px; font-weight: 500; font-size: 0.78rem;
         }
         div.dataTables_wrapper div.dataTables_filter input:focus {
-            outline: none; border-color: #38bdf8; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+            outline: none; border-color: #10b981; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
         }
         div.dataTables_wrapper div.dataTables_info { padding-top: 12px; color: #64748b; font-size: 0.78rem; font-weight: 600; }
         div.dataTables_wrapper .page-item.active .page-link {
-            background-color: #0284c7 !important; border-color: #0284c7 !important; border-radius: 6px; font-weight: 700; color: #fff !important; font-size: 0.75rem;
+            background-color: #059669 !important; border-color: #059669 !important; border-radius: 6px; font-weight: 700; color: #fff !important; font-size: 0.75rem;
         }
         div.dataTables_wrapper .page-link {
             color: #475569; border: 1px solid transparent; margin: 0 2px; border-radius: 6px; padding: 4px 10px; font-weight: 600; font-size: 0.75rem; transition: all 0.15s ease;
         }
-        div.dataTables_wrapper .page-link:hover { background-color: #f1f5f9; color: #0284c7; }
+        div.dataTables_wrapper .page-link:hover { background-color: #f1f5f9; color: #059669; }
     </style>
 </head>
 <body>
 
 <div class="z-wrap">
-    <?php include (file_exists(__DIR__ . '/_zamrud_sidebar.php') ? __DIR__ . '/_zamrud_sidebar.php' : __DIR__ . '/../_zamrud_sidebar.php'); ?>
+    <?php include __DIR__ . '/_zamrud_sidebar.php'; ?>
     
     <main class="z-main">
-        <?php $page_badge = 'Admin Portal'; include (file_exists(__DIR__ . '/../siakad/_siakad_header.php') ? __DIR__ . '/../siakad/_siakad_header.php' : __DIR__ . '/../../siakad/_siakad_header.php'); ?>
+        <?php $page_badge = 'Admin Portal'; include __DIR__.'/../siakad/_siakad_header.php'; ?>
 
         <div class="z-scroll">
             
@@ -325,19 +325,36 @@
                         <h1><i data-lucide="archive" style="width:20px;height:20px;"></i> Daftar Berkas PKKM</h1>
                         <p>Pusat dokumen master terdistribusi otomatis ke 42 indikator penilaian kinerja.</p>
                     </div>
-                    <div class="header-actions-premium d-flex gap-2 flex-wrap">
+                    <div class="header-actions-premium d-flex gap-2 flex-wrap align-items-center">
                         <button type="button" class="e-btn e-btn-secondary" onclick="openKoleksiBuktiModal()">
                             <i data-lucide="sparkles" style="width:14px;height:14px;color:#fde047;"></i> Link Bukti (13)
                         </button>
                         <button type="button" class="e-btn e-btn-secondary" onclick="confirmSyncMasterBerkas()">
                             <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Sinkronkan
                         </button>
+                        <?php if(!empty($totalPerangkatSynced) && $totalPerangkatSynced > 0): ?>
+                            <form action="/admin/pkkm/master-berkas/unsync-perangkat" method="POST" style="margin:0;" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan sinkronisasi? Sebanyak <?= $totalPerangkatSynced ?> file perangkat guru akan dilepas dari Bukti Fisik PKKM. (File di kurikulum tetap aman)');">
+                                <button type="submit" class="e-btn e-btn-secondary" style="color:#ef4444; border-color:#fca5a5;" title="Lepas berkas perangkat pembelajaran guru yang tersinkronisasi">
+                                    <i data-lucide="unlink" style="width:14px;height:14px;"></i> Batal Singkron Perangkat (<?= $totalPerangkatSynced ?>)
+                                </button>
+                            </form>
+                        <?php endif; ?>
                         <button type="button" class="e-btn e-btn-primary" onclick="openModalTambahBerkas()">
                             <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> + Tambah Dokumen
                         </button>
                     </div>
                 </div>
             </div>
+
+            <?php if(isset($_GET['msg']) && $_GET['msg'] === 'unsynced_perangkat'): ?>
+                <div style="background:#fff1f2; border:1px solid #fecdd3; border-left:4px solid #e11d48; color:#9f1239; padding:0.85rem 1.25rem; border-radius:10px; margin-bottom:1.5rem; display:flex; align-items:center; gap:10px;">
+                    <i data-lucide="unlink" style="color:#e11d48; width:20px; height:20px; flex-shrink:0;"></i>
+                    <div>
+                        <strong>Sinkronisasi Perangkat Dibatalkan!</strong>
+                        <span>Sebanyak <?= (int)($_GET['del'] ?? 0) ?> tautan berkas perangkat guru telah berhasil dilepas dari Bukti Fisik PKKM. File asli di Kurikulum tetap aman.</span>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <!-- MINIMALIST STAT SUMMARY TILES -->
             <div class="stat-grid">
@@ -346,13 +363,6 @@
                     <div>
                         <div class="stat-value"><?= $totalMaster ?? count($master_berkas); ?></div>
                         <div class="stat-label">Total Berkas</div>
-                    </div>
-                </div>
-                <div class="stat-box emerald">
-                    <div class="stat-icon"><i data-lucide="sparkles"></i></div>
-                    <div>
-                        <div class="stat-value"><?= $totalDigitalReady ?? 0; ?></div>
-                        <div class="stat-label">Bukti Digital Siap</div>
                     </div>
                 </div>
                 <div class="stat-box green">
@@ -392,14 +402,11 @@
                         <button type="button" class="filter-pill-btn" data-filter="pending">
                             <i data-lucide="clock" style="width:12px;height:12px;"></i> Belum Ada <span class="badge-num"><?= $totalPending ?? 0; ?></span>
                         </button>
-                        <button type="button" class="filter-pill-btn" data-filter="digital_ready" style="border-color:#86efac; color:#1e40af;">
-                            <i data-lucide="sparkles" style="width:12px;height:12px;color:#0284c7;"></i> Digital Siap <span class="badge-num" style="background:#dcfce7; color:#166534;"><?= $totalDigitalReady ?? 0; ?></span>
-                        </button>
                     </div>
                     <div class="d-flex gap-1">
-                        <button type="button" onclick="openKoleksiBuktiModal()" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 fw-bold" style="border-radius:8px; padding:5px 10px; font-size:0.74rem; background:#f0fdf4; border-color:#86efac; color:#166534;">
-                            <i data-lucide="sparkles" style="width:12px;height:12px;color:#0284c7;"></i> Link Bukti (13)
-                        </button>
+                        <a href="/admin/pkkm/bukti-digital" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 fw-bold" style="border-radius:8px; padding:5px 12px; font-size:0.74rem; background:#f0fdf4; border-color:#86efac; color:#166534;">
+                            <i data-lucide="sparkles" style="width:12px;height:12px;color:#059669;"></i> Menu Bukti Digital
+                        </a>
                         <a href="/admin/pkkm/instrumen" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 fw-bold" style="border-radius:8px; padding:5px 10px; font-size:0.74rem;">
                             <i data-lucide="clipboard-list" style="width:12px;height:12px;"></i> Instrumen PKKM
                         </a>
@@ -495,7 +502,7 @@
                                                        data-bs-toggle="tooltip"
                                                        data-bs-placement="top"
                                                        title="<?= htmlspecialchars($mind['komponen'] . ($mind['sub'] ? ' &rsaquo; ' . $mind['sub'] : '') . ' : ' . $mind['nama']); ?>">
-                                                        <i data-lucide="bookmark-check" style="width:9px;height:9px;color:#0284c7;"></i>
+                                                        <i data-lucide="bookmark-check" style="width:9px;height:9px;color:#059669;"></i>
                                                         <span><?= htmlspecialchars($mind['kode']); ?></span>
                                                     </a>
                                                 <?php endforeach; ?>
@@ -506,43 +513,6 @@
                                             </span>
                                         <?php endif; ?>
 
-                                        <!-- Kotak Bukti Digital Siap Pakai (Jika Tersedia) -->
-                                        <?php if(!empty($mb['bukti_digital'])): ?>
-                                            <div class="digital-proof-card">
-                                                <span class="digital-proof-title">
-                                                    <i data-lucide="sparkles" style="width:12px;height:12px;color:#0284c7;"></i>
-                                                    Tersedia Bukti PDF Resmi Auto-Generate (Kop + TTD Kamad)
-                                                </span>
-                                                <div class="d-flex align-items-center gap-1">
-                                                    <a href="<?= $mb['bukti_digital']['url']; ?>" target="_blank" class="btn-digital-preview">
-                                                        <i data-lucide="file-text" style="width:10px;height:10px;"></i> Preview
-                                                    </a>
-                                                    <?php 
-                                                    $isAttached = false;
-                                                    foreach($mb['files'] as $mf) {
-                                                        if($mf['url'] === $mb['bukti_digital']['url']) {
-                                                            $isAttached = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if(!$isAttached):
-                                                    ?>
-                                                        <form action="/admin/pkkm/master-berkas/attach-digital" method="POST" class="m-0">
-                                                            <input type="hidden" name="id" value="<?= $mb['id']; ?>">
-                                                            <input type="hidden" name="url" value="<?= $mb['bukti_digital']['url']; ?>">
-                                                            <input type="hidden" name="nama_file" value="<?= htmlspecialchars($mb['bukti_digital']['title']); ?>">
-                                                            <button type="submit" class="btn-digital-attach">
-                                                                <i data-lucide="plus-circle" style="width:10px;height:10px;"></i> Pasang 1-Klik
-                                                            </button>
-                                                        </form>
-                                                    <?php else: ?>
-                                                        <span class="badge bg-success" style="font-size:0.62rem; font-weight:700; padding:2px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:2px;">
-                                                            <i data-lucide="check" style="width:9px;height:9px;"></i> Terpasang
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </div>
-                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if($hasFiles): ?>
@@ -568,12 +538,26 @@
                                             <span class="badge-pending">
                                                 <i data-lucide="clock" style="width:11px;height:11px;"></i> Belum ada file
                                             </span>
+                                            <?php if($isDigitalReady): ?>
+                                                <div style="margin-top:5px;">
+                                                    <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" style="display:inline-flex; align-items:center; gap:4px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px; font-size:0.68rem; font-weight:700; text-decoration:none;" title="Buka Halaman Khusus Monitoring PKKM">
+                                                        <i data-lucide="sparkles" style="width:10px;height:10px;color:#059669;"></i> <?= htmlspecialchars($mb['bukti_digital']['title'] ?? 'Portal Digital'); ?>
+                                                    </a>
+                                                </div>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                     <td style="text-align:center;">
-                                        <button type="button" class="<?= $hasFiles ? 'btn-upload-more' : 'btn-upload-more'; ?>" style="<?= !$hasFiles ? 'background:#0284c7; color:#fff; border-color:#0284c7;' : ''; ?>" onclick="openModalUpload(<?= $mb['id']; ?>, '<?= htmlspecialchars(addslashes($mb['nama_berkas'])); ?>')">
-                                            <i data-lucide="<?= $hasFiles ? 'plus' : 'upload-cloud'; ?>" style="width:12px;height:12px;"></i> <?= $hasFiles ? 'Tambah' : 'Upload'; ?>
-                                        </button>
+                                        <div class="d-flex flex-column align-items-center gap-1">
+                                            <button type="button" class="<?= $hasFiles ? 'btn-upload-more' : 'btn-upload-more'; ?>" style="<?= !$hasFiles ? 'background:#059669; color:#fff; border-color:#059669;' : ''; ?>" onclick="openModalUpload(<?= $mb['id']; ?>, '<?= htmlspecialchars(addslashes($mb['nama_berkas'])); ?>')">
+                                                <i data-lucide="<?= $hasFiles ? 'plus' : 'upload-cloud'; ?>" style="width:12px;height:12px;"></i> <?= $hasFiles ? 'Tambah' : 'Upload'; ?>
+                                            </button>
+                                            <?php if($isDigitalReady): ?>
+                                                <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" style="display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:6px; background:#f0fdf4; color:#065f46; border:1px solid #86efac; font-size:0.68rem; font-weight:700; text-decoration:none;" title="Buka Portal Monitoring PKKM">
+                                                    <i data-lucide="external-link" style="width:10px;height:10px;"></i> Monitoring
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -592,7 +576,7 @@
         <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 20px 40px rgba(0,0,0,0.15); overflow:hidden;">
             <form action="/admin/pkkm/master-berkas/upload" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="id" id="inp_mb_id">
-                <div class="modal-header" style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:white; padding:18px 24px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #064e3b, #047857); color:white; padding:18px 24px;">
                     <div>
                         <span class="badge" style="background:rgba(255,255,255,0.2); font-size:0.7rem; font-weight:700; margin-bottom:4px; letter-spacing:0.5px;">UNGGAH BUKTI FISIK MASTER</span>
                         <h5 class="modal-title fw-bold" style="font-size:1.05rem; margin:0;" id="lbl_nama_berkas">Unggah Berkas</h5>
@@ -643,7 +627,7 @@
     <div class="modal-dialog">
         <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 20px 40px rgba(0,0,0,0.15); overflow:hidden;">
             <form action="/admin/pkkm/master-berkas/create" method="POST">
-                <div class="modal-header" style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:white; padding:18px 24px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #064e3b, #047857); color:white; padding:18px 24px;">
                     <h5 class="modal-title fw-bold" style="font-size:1.1rem; display:flex; align-items:center; gap:8px;">
                         <i data-lucide="plus-circle" style="width:20px;height:20px;"></i> Tambah Dokumen Master Baru
                     </h5>
@@ -787,7 +771,7 @@ $(document).ready(function() {
                     icon: 'success',
                     title: 'Sinkronisasi Berhasil!',
                     html: 'Daftar Master Berkas telah disinkronkan dengan <b>42 Indikator</b> instrumen terbaru.<br><span class="badge bg-success mt-2" style="font-size:0.8rem; padding:6px 12px;">+<?= (int)($_GET['ins'] ?? 0); ?> Berkas Baru</span> <?php if(!empty($_GET['del'])): ?><span class="badge bg-secondary mt-2" style="font-size:0.8rem; padding:6px 12px;">-<?= (int)$_GET['del']; ?> Berkas Usang Dibersihkan</span><?php endif; ?>',
-                    confirmButtonColor: '#0284c7',
+                    confirmButtonColor: '#059669',
                     confirmButtonText: 'Alhamdulillah, Siap!',
                     fontFamily: 'Plus Jakarta Sans, sans-serif'
                 });
@@ -841,7 +825,7 @@ function confirmSyncMasterBerkas() {
             html: 'Sistem akan mengekstrak seluruh bukti fisik dari <b>42 Indikator PKKM terbaru</b> dan membersihkan dokumen usang yang tidak terpakai.<br><small class="text-muted">Tenang, berkas yang sudah pernah Anda upload tidak akan hilang!</small>',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#0284c7',
+            confirmButtonColor: '#059669',
             cancelButtonColor: '#64748b',
             confirmButtonText: '⚡ Ya, Sinkronkan Sekarang!',
             cancelButtonText: 'Batal',
@@ -868,7 +852,7 @@ function confirmSyncMasterBerkas() {
 }
 </script>
 
-<?php include (file_exists(__DIR__ . '/_pkkm_panduan_modal.php') ? __DIR__ . '/_pkkm_panduan_modal.php' : __DIR__ . '/pkkm/_pkkm_panduan_modal.php'); ?>
-<?php include (file_exists(__DIR__ . '/_pkkm_koleksi_modal.php') ? __DIR__ . '/_pkkm_koleksi_modal.php' : __DIR__ . '/pkkm/_pkkm_koleksi_modal.php'); ?>
+<?php include __DIR__ . '/_pkkm_panduan_modal.php'; ?>
+<?php include __DIR__ . '/_pkkm_koleksi_modal.php'; ?>
 </body>
 </html>

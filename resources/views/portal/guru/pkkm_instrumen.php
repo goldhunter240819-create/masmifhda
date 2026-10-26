@@ -36,9 +36,9 @@ $myTasks = [];
         /* Banner Header */
         .elite-page-header {
             position: relative; padding: 2rem 2.5rem; margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
             border-radius: 20px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 12px 30px -8px rgba(30, 58, 138, 0.35);
+            box-shadow: 0 12px 30px -8px rgba(6, 78, 59, 0.35);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .elite-page-header .header-bg-shapes {
@@ -58,8 +58,8 @@ $myTasks = [];
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-2px); }
-        .e-btn-primary { background: #ffffff; color: #1e3a8a; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
-        .e-btn-primary:hover { background: #f8fafc; color: #0f172a; }
+        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
+        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -71,12 +71,12 @@ $myTasks = [];
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
         }
         .assignment-icon {
-            width: 48px; height: 48px; border-radius: 14px; background: #38bdf8; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            width: 48px; height: 48px; border-radius: 14px; background: #10b981; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .assignment-title { font-size: 1rem; font-weight: 800; color: #1e40af; margin-bottom: 4px; }
-        .assignment-desc { font-size: 0.85rem; color: #1e3a8a; margin: 0; }
+        .assignment-title { font-size: 1rem; font-weight: 800; color: #065f46; margin-bottom: 4px; }
+        .assignment-desc { font-size: 0.85rem; color: #047857; margin: 0; }
         .assignment-chip {
-            background: #ffffff; border: 1px solid #6ee7b7; color: #1e40af; padding: 4px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
+            background: #ffffff; border: 1px solid #6ee7b7; color: #065f46; padding: 4px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
         }
 
         /* Stat Grid */
@@ -88,7 +88,7 @@ $myTasks = [];
         }
         .stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); flex-shrink: 0; }
         .stat-box.green { background: linear-gradient(135deg, #f0fdf4, #ffffff); border-color: #bbf7d0; color: #14532d; }
-        .stat-box.green .stat-icon { color: #38bdf8; }
+        .stat-box.green .stat-icon { color: #10b981; }
         .stat-box.blue { background: linear-gradient(135deg, #eff6ff, #ffffff); border-color: #bfdbfe; color: #1e3a8a; }
         .stat-box.blue .stat-icon { color: #3b82f6; }
         .stat-box.amber { background: linear-gradient(135deg, #fffbeb, #ffffff); border-color: #fde68a; color: #92400e; }
@@ -102,19 +102,19 @@ $myTasks = [];
         }
         .nav-pills .nav-link:hover { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
         .nav-pills .nav-link.active {
-            background: linear-gradient(135deg, #0284c7, #1e3a8a) !important; color: #ffffff !important; border-color: #1e3a8a !important; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
+            background: linear-gradient(135deg, #059669, #047857) !important; color: #ffffff !important; border-color: #047857 !important; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25) !important;
         }
 
         /* Card Komponen */
         .pkkm-card { background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 24px; border: 1px solid #e2e8f0; }
         .komponen-header {
-            background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border-left: 5px solid #0284c7; padding: 14px 18px; font-weight: 800; color: #0f172a; display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-radius: 0 10px 10px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border-left: 5px solid #059669; padding: 14px 18px; font-weight: 800; color: #064e3b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-radius: 0 10px 10px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
         }
         .sub-komponen-box { border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; padding: 18px; background: #fff; }
         .sub-komponen-header {
             font-weight: 700; color: #1e293b; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1; font-size: 0.95rem;
         }
-        .badge-num { background: #0284c7; color: #ffffff; padding: 3px 8px; border-radius: 6px; margin-right: 8px; font-size: 0.75rem; font-weight: 700; }
+        .badge-num { background: #059669; color: #ffffff; padding: 3px 8px; border-radius: 6px; margin-right: 8px; font-size: 0.75rem; font-weight: 700; }
 
         /* Table Indikator */
         .table-custom { width: 100%; border-collapse: separate; border-spacing: 0; }
@@ -125,13 +125,23 @@ $myTasks = [];
         .table-custom tr:hover td { background-color: #fbfcfe; }
 
         .btn-upload {
-            background: #ecfdf5; color: #0284c7; border: 1px solid #6ee7b7; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; transition: 0.2s;
+            background: #ecfdf5; color: #059669; border: 1px solid #6ee7b7; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; transition: 0.2s;
         }
-        .btn-upload:hover { background: #d1fae5; color: #1e3a8a; }
+        .btn-upload:hover { background: #d1fae5; color: #047857; }
         .berkas-item {
             font-size: 0.78rem; background: #f8fafc; padding: 6px 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border: 1px solid #e2e8f0;
         }
         .badge-master { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+
+        .evidence-card-badge {
+            display: inline-flex; align-items: center; gap: 3px;
+            background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
+            border-radius: 4px; padding: 1px 6px; font-size: 0.62rem; font-weight: 700;
+            cursor: pointer; transition: all 0.15s ease;
+        }
+        .evidence-card-badge:hover {
+            background: #059669; color: #ffffff; border-color: #059669; transform: translateY(-1px);
+        }
 
         /* Modal Custom */
         .modal-custom {
@@ -185,7 +195,7 @@ $myTasks = [];
                             <div class="d-flex gap-2 flex-wrap">
                                 <?php foreach($myAssignments as $assign): ?>
                                     <div class="assignment-chip">
-                                        <i data-lucide="tag" style="width:13px;height:13px;color:#0284c7;"></i>
+                                        <i data-lucide="tag" style="width:13px;height:13px;color:#059669;"></i>
                                         <strong>Komponen <?php echo $assign['komponen_urutan']; ?></strong>: <?php echo htmlspecialchars($assign['nama_komponen']); ?>
                                         <span class="badge bg-success ms-1" style="font-size:0.7rem;"><?php echo htmlspecialchars($assign['peran']); ?></span>
                                         <?php if(!empty($assign['tugas_keterangan'])): ?>
@@ -314,8 +324,14 @@ $myTasks = [];
                                         <div style="font-weight: 700; color: #0f172a; margin-bottom: 6px; font-size: 0.9rem;">
                                             <?php echo htmlspecialchars($ind['indikator']); ?>
                                         </div>
-                                        <div style="font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border-left: 3px solid #0284c7;">
-                                            <strong style="color:#1e40af;"><i data-lucide="file-text" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Bukti Fisik Juknis:</strong><br>
+                                        <div style="font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border-left: 3px solid #059669;">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <strong style="color:#065f46;"><i data-lucide="file-text" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Bukti Fisik Juknis:</strong>
+                                                <span class="evidence-card-badge" onclick="showPanduanBukti('<?php echo htmlspecialchars(addslashes($ind['indikator'])); ?>', <?php echo $ind['id']; ?>)" role="button" title="Petunjuk & Checklist Bukti Fisik" style="cursor:pointer; padding:1px 6px; font-size:0.62rem;">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                                    <span>Panduan</span>
+                                                </span>
+                                            </div>
                                             <?php echo nl2br(htmlspecialchars($ind['bukti_fisik'])); ?>
                                         </div>
                                     </td>
@@ -324,7 +340,7 @@ $myTasks = [];
                                             <?php foreach ($ind['berkas'] as $b): ?>
                                                 <div class="berkas-item">
                                                     <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;" title="<?php echo htmlspecialchars($b['nama_file']); ?>">
-                                                        <i data-lucide="<?php echo $b['tipe'] === 'link' ? 'link' : 'file-text'; ?>" style="width: 13px; height: 13px; margin-right: 4px; color:#0284c7; vertical-align:middle;"></i>
+                                                        <i data-lucide="<?php echo $b['tipe'] === 'link' ? 'link' : 'file-text'; ?>" style="width: 13px; height: 13px; margin-right: 4px; color:#059669; vertical-align:middle;"></i>
                                                         <a href="<?php echo $b['url']; ?>" target="_blank" style="text-decoration:none; color:#1e293b; font-weight:600;">
                                                             <?php echo htmlspecialchars($b['nama_file']); ?>
                                                         </a>
@@ -457,7 +473,7 @@ $myTasks = [];
 
             <div style="padding:14px 24px; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" onclick="closeUploadModal()" class="btn btn-light" style="border-radius:10px; font-weight:700; font-size:0.85rem;">Batal</button>
-                <button type="submit" class="btn btn-success" style="border-radius:10px; font-weight:700; font-size:0.85rem; background:#1e3a8a; border-color:#1e3a8a;">
+                <button type="submit" class="btn btn-success" style="border-radius:10px; font-weight:700; font-size:0.85rem; background:#047857; border-color:#047857;">
                     <i data-lucide="check" style="width:16px;height:16px;vertical-align:text-bottom;"></i> Simpan Berkas
                 </button>
             </div>
@@ -468,8 +484,8 @@ $myTasks = [];
 <!-- Form Pasang Web Madrasah -->
 <form id="attachWebForm" method="POST" action="/guru/pkkm/bukti-attach-website" style="display:none;">
     <input type="hidden" name="indikator_id" id="web_indikator_id">
-    <input type="hidden" name="url" value="https://mismifhda.sch.id">
-    <input type="hidden" name="nama_file" value="Portal Resmi Madrasah (mismifhda.sch.id)">
+    <input type="hidden" name="url" value="https://masmifhda.sch.id">
+    <input type="hidden" name="nama_file" value="Portal Resmi Madrasah (masmifhda.sch.id)">
 </form>
 
 <script>
@@ -533,10 +549,10 @@ $myTasks = [];
     function attachWebLink(indikatorId) {
         Swal.fire({
             title: 'Pasang Tautan Website?',
-            text: 'Tautan portal resmi https://mismifhda.sch.id akan otomatis ditautkan ke butir indikator ini.',
+            text: 'Tautan portal resmi https://masmifhda.sch.id akan otomatis ditautkan ke butir indikator ini.',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#0284c7',
+            confirmButtonColor: '#059669',
             confirmButtonText: 'Ya, Pasang 1-Klik',
             cancelButtonText: 'Batal'
         }).then((res) => {
@@ -548,5 +564,7 @@ $myTasks = [];
     }
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<?php include __DIR__ . '/../../admin/_pkkm_panduan_modal.php'; ?>
 </body>
 </html>

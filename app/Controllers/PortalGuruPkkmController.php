@@ -95,7 +95,7 @@ class PortalGuruPkkmController {
         }
 
         if (count($imagesToMerge) > 1) {
-            require_once (file_exists(__DIR__ . '/../../vendor/fpdf/fpdf.php') ? __DIR__ . '/../../vendor/fpdf/fpdf.php' : __DIR__ . '/../../app/Libraries/fpdf/fpdf.php');
+            require_once __DIR__ . '/../../app/Libraries/fpdf/fpdf.php';
             $pdf = new \FPDF('P', 'mm', 'A4');
             $albumFilename = 'pkkm_album_' . time() . '_' . rand(100,999) . '.pdf';
             $dest = __DIR__ . '/../../public/uploads/pkkm/' . $albumFilename;

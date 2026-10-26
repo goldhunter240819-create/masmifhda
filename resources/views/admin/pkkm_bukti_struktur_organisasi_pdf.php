@@ -484,7 +484,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
             <div class="chart-node node-guru">
                 <div class="chart-node-role">Dewan Guru & Wali Kelas (Kelas I s.d VI) | Tenaga Kependidikan</div>
                 <div style="font-size: 0.65rem; color: #64748b; margin-top: 2px;">
-                    Membina seluruh Peserta Didik MIS Miftahul Huda Mathla'ul Anwar didampingi Paguyuban Wali Murid
+                    Membina seluruh Peserta Didik MAS Miftahul Huda Mathla'ul Anwar didampingi Paguyuban Wali Murid
                 </div>
             </div>
         </div>
@@ -556,7 +556,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
 
                 <!-- Stempel Resmi Digital -->
                 <div class="stempel-badge">
-                    <span class="stempel-text-top">MIS MIFTAHUL HUDA</span>
+                    <span class="stempel-text-top">MAS MIFTAHUL HUDA</span>
                     <span class="stempel-star">★ KEMENAG ★</span>
                     <span class="stempel-text-bot">TERVALIDASI RESMI</span>
                 </div>

@@ -884,7 +884,7 @@ $kejuaraanList = [
 
                 <!-- FOOTER NOTE -->
                 <div class="footer-note">
-                    <span>Dokumen Bukti Fisik PKKM &bull; Komponen 2: Pengembangan Madrasah (Indikator 2.3.3) &bull; MIS Miftahul Huda Mathla'ul Anwar</span>
+                    <span>Dokumen Bukti Fisik PKKM &bull; Komponen 2: Pengembangan Madrasah (Indikator 2.3.3) &bull; MAS Miftahul Huda Mathla'ul Anwar</span>
                     <span style="font-weight:700; color:#0284c7;">https://masmifhda.sch.id</span>
                 </div>
             </div>

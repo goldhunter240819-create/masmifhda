@@ -2270,7 +2270,18 @@ $router->add('GET', '/admin/pkkm/dokumen/sync', [\App\Controllers\AdminPkkmContr
 $router->add('POST', '/admin/pkkm/identitas/save', [\App\Controllers\AdminPkkmController::class, 'saveIdentitas']);
 $router->add('GET', '/admin/pkkm/instrumen/cetak', [\App\Controllers\AdminPkkmController::class, 'cetakInstrumen']);
 
-// Bukti Fisik Visual Digital (Semua 13 Generator A4)
+// PKKM Bukti Digital Hub & Integrasi 1-Klik
+$router->add('GET', '/admin/pkkm/bukti-digital', [\App\Controllers\AdminPkkmController::class, 'buktiDigital']);
+$router->add('POST', '/admin/pkkm/bukti-digital/attach', [\App\Controllers\AdminPkkmController::class, 'attachBuktiDigital']);
+$router->add('POST', '/admin/pkkm/bukti-digital/detach', [\App\Controllers\AdminPkkmController::class, 'detachBuktiDigital']);
+$router->add('GET', '/pengawas/pkkm/bukti-digital', [\App\Controllers\AdminPkkmController::class, 'buktiDigital']);
+$router->add('GET', '/admin/pkkm/cetak-bukti/perangkat-guru', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiPerangkatGuru']);
+$router->add('GET', '/pengawas/pkkm/bukti/perangkat-guru', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiPerangkatGuru']);
+$router->add('GET', '/migrate-pkkm', function() {
+    require_once __DIR__ . '/../migrate_pkkm.php';
+});
+
+// Bukti Fisik Visual Digital (Semua 14 Generator A4 & Audit Display)
 $router->add('GET', '/admin/pkkm/cetak-bukti/website-email', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiWebsiteEmail']);
 $router->add('GET', '/admin/pkkm/cetak-bukti/jaringan-internet', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiJaringanInternet']);
 $router->add('GET', '/admin/pkkm/cetak-bukti/absensi-elektronik', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiAbsensiElektronik']);
@@ -2321,6 +2332,7 @@ $router->add('GET', '/pengawas/pkkm/cetak-bukti/supervisi-guru', [\App\Controlle
 $router->add('GET', '/pengawas/pkkm/cetak-bukti/ekstrakurikuler', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiEkstrakurikuler']);
 $router->add('GET', '/pengawas/pkkm/cetak-bukti/prestasi-siswa', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiPrestasiSiswa']);
 $router->add('GET', '/pengawas/pkkm/cetak-bukti/kewirausahaan', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiKewirausahaan']);
+$router->add('GET', '/pengawas/pkkm/cetak-bukti/perangkat-guru', [\App\Controllers\AdminPkkmController::class, 'cetakBuktiPerangkatGuru']);
 
 // Portal Guru - PKKM (Penilaian Kinerja Kepala Madrasah)
 $router->add('GET', '/guru/pkkm/instrumen', [\App\Controllers\PortalGuruPkkmController::class, 'instrumen']);

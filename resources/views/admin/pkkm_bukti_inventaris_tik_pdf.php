@@ -486,7 +486,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
 
                 <!-- Stempel Resmi -->
                 <div class="stempel-badge">
-                    <span class="stempel-text-top">MIS MIFTAHUL HUDA</span>
+                    <span class="stempel-text-top">MAS MIFTAHUL HUDA</span>
                     <span class="stempel-star">★ KEMENAG ★</span>
                     <span class="stempel-text-bot">INVENTARIS VALID</span>
                 </div>

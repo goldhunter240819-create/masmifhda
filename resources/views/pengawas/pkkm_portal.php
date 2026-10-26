@@ -4,7 +4,7 @@ use App\Core\Branding;
 $brand = Branding::get();
 $logoUrl = Branding::getInstitusiLogo();
 
-$sekolah_nama = $inst['nama'] ?? 'MIS MIFTAHUL HUDA MATHLA\'UL ANWAR';
+$sekolah_nama = $inst['nama'] ?? 'MAS MIFTAHUL HUDA MATHLA\'UL ANWAR';
 $npsn = $inst['npsn'] ?? '60705617';
 $nsm = $inst['nsm'] ?? '111218040009';
 $kepala_nama = $kamad['nama'] ?? 'SAMSUL ARIFIN, M.Pd';
@@ -45,9 +45,9 @@ $curTab = $active_tab ?? 'dashboard';
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
-            --primary-emerald: #0284c7;
-            --emerald-hover: #1e3a8a;
-            --dark-emerald: #0f172a;
+            --primary-emerald: #059669;
+            --emerald-hover: #047857;
+            --dark-emerald: #064e3b;
             --sidebar-width: 235px;
             --sidebar-collapsed-width: 66px;
             --bg-canvas: #edf2f7;
@@ -78,7 +78,7 @@ $curTab = $active_tab ?? 'dashboard';
         /* ─── SIDEBAR ULTRA MINIMALIS (COLLAPSIBLE) ─── */
         .sidebar-asesor {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, #0f172a 0%, #032b20 100%);
+            background: linear-gradient(180deg, #064e3b 0%, #032b20 100%);
             color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -162,7 +162,7 @@ $curTab = $active_tab ?? 'dashboard';
             width: 30px;
             height: 30px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: #ffffff;
             display: flex;
             align-items: center;
@@ -179,7 +179,7 @@ $curTab = $active_tab ?? 'dashboard';
             width: 9px;
             height: 9px;
             border-radius: 50%;
-            border: 1.5px solid #0f172a;
+            border: 1.5px solid #064e3b;
         }
         .user-status-dot.ready { background: #34d399; }
         .user-status-dot.pending { background: #f59e0b; }
@@ -242,10 +242,10 @@ $curTab = $active_tab ?? 'dashboard';
             color: #ffffff;
         }
         .side-nav-btn.active {
-            background: #0284c7;
+            background: #059669;
             color: #ffffff;
             font-weight: 700;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);
         }
         .side-nav-btn .pill-badge {
             font-size: 0.66rem;
@@ -355,11 +355,11 @@ $curTab = $active_tab ?? 'dashboard';
             z-index: 1000;
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.12), 0 4px 10px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.12), 0 4px 10px rgba(0, 0, 0, 0.03);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .portal-topbar:hover {
-            box-shadow: 0 12px 28px -4px rgba(56, 189, 248, 0.16), 0 4px 10px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 12px 28px -4px rgba(5, 150, 105, 0.16), 0 4px 10px rgba(0, 0, 0, 0.04);
             border-color: #6ee7b7;
         }
 
@@ -392,7 +392,7 @@ $curTab = $active_tab ?? 'dashboard';
         .badge-tp-meta {
             font-size: 0.64rem;
             background: #ecfdf5;
-            color: #1e3a8a;
+            color: #047857;
             font-weight: 700;
             padding: 1px 7px;
             border-radius: 999px;
@@ -419,7 +419,7 @@ $curTab = $active_tab ?? 'dashboard';
         .topbar-kpi-pill.emerald-glow {
             background: #ecfdf5;
             border-color: #a7f3d0;
-            color: #1e40af;
+            color: #065f46;
         }
         .topbar-kpi-lbl {
             font-size: 0.64rem;
@@ -450,17 +450,17 @@ $curTab = $active_tab ?? 'dashboard';
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
         .btn-topbar-print:hover {
-            background: #0284c7;
+            background: #059669;
             color: #ffffff;
-            border-color: #0284c7;
-            box-shadow: 0 3px 10px rgba(56, 189, 248, 0.25);
+            border-color: #059669;
+            box-shadow: 0 3px 10px rgba(5, 150, 105, 0.25);
         }
 
         .topbar-user-avatar {
             width: 30px;
             height: 30px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #0284c7 0%, #0f172a 100%);
+            background: linear-gradient(135deg, #059669 0%, #064e3b 100%);
             color: #ffffff;
             font-weight: 800;
             font-size: 0.78rem;
@@ -468,7 +468,7 @@ $curTab = $active_tab ?? 'dashboard';
             align-items: center;
             justify-content: center;
             border: 2px solid #ffffff;
-            box-shadow: 0 2px 6px rgba(56, 189, 248, 0.2);
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
         }
 
         /* PAGE BODY CONTAINER (FLUID & RESPONSIF SEJAJAR DENGAN HEADER) */
@@ -497,12 +497,12 @@ $curTab = $active_tab ?? 'dashboard';
 
         /* ─── GREEN BANNER TARGET EVALUASI (TAB PENILAIAN) ─── */
         .banner-penilaian-green {
-            background: linear-gradient(135deg, #082f49 0%, #0f172a 45%, #1e3a8a 100%);
+            background: linear-gradient(135deg, #022c22 0%, #064e3b 45%, #047857 100%);
             border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 16px;
             padding: 16px 22px;
             color: #ffffff;
-            box-shadow: 0 8px 24px -4px rgba(30, 58, 138, 0.28), 0 2px 6px rgba(0,0,0,0.04);
+            box-shadow: 0 8px 24px -4px rgba(6, 78, 59, 0.28), 0 2px 6px rgba(0,0,0,0.04);
             position: relative;
             overflow: hidden;
             margin-bottom: 16px;
@@ -574,10 +574,10 @@ $curTab = $active_tab ?? 'dashboard';
                 radial-gradient(circle at 95% 5%, rgba(52, 211, 153, 0.22) 0%, transparent 45%),
                 radial-gradient(circle at 5% 95%, rgba(16, 185, 129, 0.16) 0%, transparent 40%),
                 radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                linear-gradient(135deg, #082f49 0%, #0f172a 45%, #1e3a8a 100%);
+                linear-gradient(135deg, #022c22 0%, #064e3b 45%, #047857 100%);
             background-size: 100% 100%, 100% 100%, 18px 18px, 100% 100%;
             border-radius: 18px;
-            box-shadow: 0 12px 32px -4px rgba(30, 58, 138, 0.3), 0 4px 12px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 12px 32px -4px rgba(6, 78, 59, 0.3), 0 4px 12px rgba(0, 0, 0, 0.05);
             color: #ffffff;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.18);
@@ -725,7 +725,7 @@ $curTab = $active_tab ?? 'dashboard';
         }
         .hero-card-bar {
             height: 100%;
-            background: linear-gradient(90deg, #38bdf8 0%, #34d399 100%);
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
             border-radius: 999px;
             box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
             transition: width 0.3s ease;
@@ -738,7 +738,7 @@ $curTab = $active_tab ?? 'dashboard';
 
         .btn-hero-primary {
             background: #ffffff;
-            color: #0f172a;
+            color: #064e3b;
             font-weight: 800;
             font-size: 0.8rem;
             padding: 7px 13px;
@@ -758,11 +758,11 @@ $curTab = $active_tab ?? 'dashboard';
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
             background: #f8fafc;
-            color: #1e3a8a;
+            color: #047857;
         }
         .btn-hero-primary .badge-count {
             background: #ecfdf5;
-            color: #0284c7;
+            color: #059669;
             padding: 1.5px 6px;
             border-radius: 999px;
             font-size: 0.68rem;
@@ -834,7 +834,7 @@ $curTab = $active_tab ?? 'dashboard';
             flex-shrink: 0;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
         }
-        .stat-card-box.emerald .stat-icon-wrap { background: #ecfdf5; color: #0284c7; }
+        .stat-card-box.emerald .stat-icon-wrap { background: #ecfdf5; color: #059669; }
         .stat-card-box.blue .stat-icon-wrap { background: #eff6ff; color: #2563eb; }
         .stat-card-box.purple .stat-icon-wrap { background: #faf5ff; color: #7c3aed; }
         .stat-card-box.amber .stat-icon-wrap { background: #fffbeb; color: #d97706; }
@@ -929,7 +929,7 @@ $curTab = $active_tab ?? 'dashboard';
             border-color: #cbd5e1; 
             box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03); 
         }
-        .ind-card.scored { border-left: 4.5px solid #38bdf8; }
+        .ind-card.scored { border-left: 4.5px solid #10b981; }
 
         .ind-num-pill {
             background: #f1f5f9;
@@ -943,7 +943,7 @@ $curTab = $active_tab ?? 'dashboard';
 
         .berkas-pill-link {
             background: #ffffff;
-            color: #1e3a8a;
+            color: #047857;
             border: 1px solid #d1fae5;
             font-size: 0.72rem;
             font-weight: 600;
@@ -958,7 +958,7 @@ $curTab = $active_tab ?? 'dashboard';
         .berkas-pill-link:hover {
             background: #ecfdf5;
             border-color: #a7f3d0;
-            color: #0f172a;
+            color: #064e3b;
         }
 
         /* SCORING PANEL RAPIH & MODERN */
@@ -1007,7 +1007,7 @@ $curTab = $active_tab ?? 'dashboard';
         }
         .scoring-status-badge.scored {
             background: #ecfdf5;
-            color: #1e3a8a;
+            color: #047857;
             border: 1px solid #a7f3d0;
         }
 
@@ -1033,10 +1033,10 @@ $curTab = $active_tab ?? 'dashboard';
             text-align: center;
         }
         .score-option-btn:hover {
-            border-color: #0284c7;
+            border-color: #059669;
             background: #ecfdf5;
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(56, 189, 248, 0.15);
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.15);
         }
         .score-option-btn .opt-num {
             font-size: 1.05rem;
@@ -1055,10 +1055,10 @@ $curTab = $active_tab ?? 'dashboard';
             text-align: center;
         }
         .score-option-btn.active {
-            background: #0284c7;
-            border-color: #1e3a8a;
+            background: #059669;
+            border-color: #047857;
             color: #ffffff;
-            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
             transform: translateY(-1px);
         }
         .score-option-btn.active .opt-num,
@@ -1333,7 +1333,7 @@ $curTab = $active_tab ?? 'dashboard';
                         ?>
                     </h5>
                     <div class="topbar-sub-badges">
-                        <span class="badge-school-meta"><i data-lucide="building" style="width:12px;height:12px;color:#0284c7;"></i> <?php echo htmlspecialchars($sekolah_nama); ?></span>
+                        <span class="badge-school-meta"><i data-lucide="building" style="width:12px;height:12px;color:#059669;"></i> <?php echo htmlspecialchars($sekolah_nama); ?></span>
                         <span class="badge-tp-meta">TP 2026/2027</span>
                     </div>
                 </div>
@@ -1342,13 +1342,13 @@ $curTab = $active_tab ?? 'dashboard';
             <div class="d-flex align-items-center gap-2">
                 <!-- KPI Skor Badges Executive Capsule -->
                 <div class="topbar-kpi-pill d-none d-sm-flex">
-                    <i data-lucide="check-circle-2" style="width:13px;height:13px;color:#0284c7;"></i>
+                    <i data-lucide="check-circle-2" style="width:13px;height:13px;color:#059669;"></i>
                     <span class="topbar-kpi-lbl">Dinilai:</span>
                     <span class="topbar-kpi-val" id="topDinilai"><?php echo $totalDinilai; ?> <span style="font-size:0.68rem;color:#94a3b8;font-weight:600;">/ 42</span></span>
                 </div>
                 <div class="topbar-kpi-pill emerald-glow d-none d-sm-flex">
-                    <i data-lucide="activity" style="width:13px;height:13px;color:#0284c7;"></i>
-                    <span class="topbar-kpi-lbl" style="color:#1e40af;">NKKM:</span>
+                    <i data-lucide="activity" style="width:13px;height:13px;color:#059669;"></i>
+                    <span class="topbar-kpi-lbl" style="color:#065f46;">NKKM:</span>
                     <span class="topbar-kpi-val text-success" id="topPersen"><?php echo $persentase; ?>%</span>
                 </div>
                 <div class="d-none d-md-block">
@@ -1359,7 +1359,7 @@ $curTab = $active_tab ?? 'dashboard';
 
                 <!-- Tombol Cetak BAP -->
                 <a href="/pengawas/pkkm/cetak-rekap" target="_blank" class="btn-topbar-print ms-1" title="Cetak Berita Acara & Rekapitulasi Nilai">
-                    <i data-lucide="printer" style="width:13px;height:13px;color:#0284c7;"></i>
+                    <i data-lucide="printer" style="width:13px;height:13px;color:#059669;"></i>
                     <span class="d-none d-md-inline">Cetak Rekap</span>
                 </a>
 
@@ -1494,7 +1494,7 @@ $curTab = $active_tab ?? 'dashboard';
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2.5 border-bottom">
                         <div>
                             <h6 class="fw-bold text-dark mb-0.5 d-flex align-items-center gap-2" style="font-size: 0.95rem;">
-                                <i data-lucide="bar-chart-2" style="width:18px;height:18px;color:#0284c7;"></i>
+                                <i data-lucide="bar-chart-2" style="width:18px;height:18px;color:#059669;"></i>
                                 Capaian Evaluasi Berdasarkan 4 Komponen
                             </h6>
                             <div style="font-size: 0.74rem; color: #64748b;">
@@ -1595,7 +1595,7 @@ $curTab = $active_tab ?? 'dashboard';
                     <div class="col-lg-5">
                         <div class="executive-card p-3 p-md-4 h-100">
                             <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size: 0.95rem;">
-                                <i data-lucide="building" style="width:18px;height:18px;color:#0284c7;"></i>
+                                <i data-lucide="building" style="width:18px;height:18px;color:#059669;"></i>
                                 Satuan Pendidikan yang Dinilai
                             </h6>
 
@@ -1611,7 +1611,7 @@ $curTab = $active_tab ?? 'dashboard';
                             </div>
 
                             <div class="d-grid gap-2">
-                                <button type="button" class="btn btn-success fw-bold rounded-3 py-2" style="background:#0284c7; border:none;" onclick="switchTab('penilaian')">
+                                <button type="button" class="btn btn-success fw-bold rounded-3 py-2" style="background:#059669; border:none;" onclick="switchTab('penilaian')">
                                     <i data-lucide="edit-3" style="width:15px;height:15px;vertical-align:middle;"></i> Lanjut Penilaian (42 Butir)
                                 </button>
                                 <a href="/pengawas/pkkm/cetak-rekap" target="_blank" class="btn btn-outline-secondary fw-bold rounded-3 py-2">
@@ -1677,14 +1677,15 @@ $curTab = $active_tab ?? 'dashboard';
                     </div>
                 </div>
 
-                <!-- Tab Filter Komponen -->
+                <!-- Tab Filter Komponen (Per-Komponen) -->
                 <div class="nav-tabs-komp">
-                    <button class="tab-komp-btn active" onclick="filterKomponen('all', this)">
-                        <i data-lucide="layers" style="width:14px;height:14px;"></i> Seluruh Komponen (42)
-                    </button>
-                    <?php foreach ($komponens as $k): ?>
-                        <?php $namaKomp = $k['nama'] ?? ($k['nama_komponen'] ?? ('Komponen ' . ($k['urutan'] ?? ''))); ?>
-                        <button class="tab-komp-btn" onclick="filterKomponen(<?php echo $k['id']; ?>, this)">
+                    <?php 
+                    $firstKompId = !empty($komponens) ? $komponens[0]['id'] : 1;
+                    foreach ($komponens as $idx => $k): 
+                        $namaKomp = $k['nama'] ?? ($k['nama_komponen'] ?? ('Komponen ' . ($k['urutan'] ?? ''))); 
+                        $isActive = ($idx === 0);
+                    ?>
+                        <button class="tab-komp-btn <?php echo $isActive ? 'active' : ''; ?>" onclick="filterKomponen(<?php echo $k['id']; ?>, this)">
                             <span class="badge bg-secondary-subtle text-dark" style="font-size:0.68rem;"><?php echo $k['urutan']; ?></span>
                             <?php echo htmlspecialchars($namaKomp); ?>
                         </button>
@@ -1693,16 +1694,33 @@ $curTab = $active_tab ?? 'dashboard';
 
                 <!-- Indikator Cards List -->
                 <div id="indicator_list_container">
-                    <?php foreach ($indikators as $ind): ?>
-                        <?php 
-                            $isScored = !empty($ind['skor_penilai']);
-                            $kompId = $ind['komp_id'] ?? ($ind['komponen_id'] ?? 1);
-                        ?>
-                        <div class="ind-card <?php echo $isScored ? 'scored' : ''; ?>" data-komp="<?php echo $kompId; ?>" id="card_ind_<?php echo $ind['id']; ?>">
+                    <?php 
+                    $lastSubKompId = null;
+                    foreach ($indikators as $ind): 
+                        $isScored = !empty($ind['skor_penilai']);
+                        $kompId = $ind['komp_id'] ?? ($ind['komponen_id'] ?? 1);
+                        $subKompId = $ind['sub_komponen_id'] ?? 0;
+                        $isInitialHidden = ($kompId != $firstKompId);
+                    ?>
+                        <?php if ($subKompId !== $lastSubKompId && !empty($ind['sub_nama'])): ?>
+                            <div class="ind-card sub-komp-header-divider" data-komp="<?php echo $kompId; ?>" style="<?php echo $isInitialHidden ? 'display:none;' : 'display:block;'; ?> background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%); border-left: 4.5px solid #059669; border-radius: 14px; padding: 12px 18px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge" style="background: #059669; color: #ffffff; font-size: 0.82rem; font-weight: 800; padding: 4px 10px; border-radius: 8px;"><?php echo htmlspecialchars($ind['sub_urutan'] ?? ''); ?></span>
+                                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem; line-height: 1.4;">
+                                        <?php echo htmlspecialchars($ind['sub_nama']); ?>
+                                    </h6>
+                                </div>
+                            </div>
+                            <?php $lastSubKompId = $subKompId; ?>
+                        <?php endif; ?>
+
+                        <div class="ind-card <?php echo $isScored ? 'scored' : ''; ?>" data-komp="<?php echo $kompId; ?>" id="card_ind_<?php echo $ind['id']; ?>" style="<?php echo $isInitialHidden ? 'display:none;' : 'display:block;'; ?>">
                             <div class="row align-items-center">
                                 <div class="col-lg-8 col-md-12 mb-3 mb-lg-0">
                                     <div class="d-flex align-items-start gap-2 mb-2">
-                                        <span class="ind-num-pill"><?php echo htmlspecialchars($ind['urutan']); ?></span>
+                                        <span class="ind-num-pill" style="min-width: 48px; text-align: center; font-size: 0.80rem; font-weight: 800; background: #065f46; color: #fff; padding: 4px 10px; border-radius: 8px;">
+                                            <?php echo htmlspecialchars($ind['kode_lengkap'] ?? ($kompId . '.' . $ind['urutan'])); ?>
+                                        </span>
                                         <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem; line-height: 1.45;">
                                             <?php echo htmlspecialchars($ind['indikator']); ?>
                                         </h6>
@@ -1747,7 +1765,7 @@ $curTab = $active_tab ?? 'dashboard';
                                                 <ul class="mb-0 ps-3" style="padding-left: 1.15rem; margin-bottom: 0;">
                                                     <?php foreach($expected_items as $ei): ?>
                                                         <li style="margin-bottom: 3px;">
-                                                            <?php echo htmlspecialchars(ltrim($ei, '- ')); ?>
+                                                             <?php echo htmlspecialchars(ltrim($ei, '- ')); ?>
                                                         </li>
                                                     <?php endforeach; ?>
                                                 </ul>
@@ -1759,77 +1777,30 @@ $curTab = $active_tab ?? 'dashboard';
                                     <?php endif; ?>
 
                                     <!-- Bukti Fisik & Berkas yang Disiapkan Madrasah -->
-                                    <div class="p-2.5 rounded-3" style="background: #fafafa; border: 1px dashed #e2e8f0; font-size: 0.8rem;">
-                                        <div class="fw-bold text-muted mb-1.5 d-flex align-items-center gap-1.5" style="font-size: 0.78rem;">
-                                            <i data-lucide="folder" style="width:14px;height:14px;color:#0284c7;"></i> Dokumen Bukti Fisik yang Disiapkan Madrasah:
+                                    <div class="p-3 rounded-3" style="background: #fafafa; border: 1px dashed #cbd5e1; font-size: 0.8rem;">
+                                        <div class="fw-bold text-dark mb-2 d-flex align-items-center justify-content-between flex-wrap gap-1" style="font-size: 0.78rem;">
+                                            <span class="d-flex align-items-center gap-1.5" style="color: #047857;">
+                                                <i data-lucide="folder-check" style="width:15px;height:15px;color:#059669;"></i>
+                                                <span>Dokumen Bukti Fisik yang Disiapkan Madrasah:</span>
+                                            </span>
+                                            <?php if (!empty($ind['berkas_list'])): ?>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem; font-weight: 700;">
+                                                    <?php echo count($ind['berkas_list']); ?> Berkas Terlampir
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
-                                        <div class="d-flex flex-wrap gap-1 mt-1">
+                                        <div class="d-flex flex-wrap gap-2 mt-1">
                                             <?php if (!empty($ind['berkas_list'])): ?>
                                                 <?php foreach ($ind['berkas_list'] as $bk): ?>
-                                                    <a href="<?php echo htmlspecialchars($bk['file_path'] ?? $bk['url']); ?>" target="_blank" class="berkas-pill-link">
-                                                        <i data-lucide="file-text" style="width:12px;height:12px;"></i>
-                                                        <?php echo htmlspecialchars($bk['nama_file'] ?: 'Berkas Bukti'); ?>
+                                                    <a href="<?php echo htmlspecialchars($bk['file_path'] ?? $bk['url']); ?>" target="_blank" class="berkas-pill-link" style="background: #ffffff; border: 1.5px solid #a7f3d0; color: #065f46; font-weight: 700; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease;">
+                                                        <i data-lucide="<?php echo ($bk['tipe'] ?? '') === 'link' ? 'external-link' : 'file-text'; ?>" style="width:14px;height:14px;color:#059669;"></i>
+                                                        <span><?php echo htmlspecialchars($bk['nama_file'] ?: 'Berkas Bukti'); ?></span>
                                                     </a>
                                                 <?php endforeach; ?>
                                             <?php else: ?>
                                                 <span class="text-muted fst-italic" style="font-size: 0.78rem;">
-                                                    (Madrasah menyiapkan bukti fisik fisik/cetak saat telaah dokumen)
+                                                    Belum ada berkas yang diunggah madrasah untuk butir ini. (Madrasah menyiapkan bukti fisik cetak saat telaah dokumen)
                                                 </span>
-                                            <?php endif; ?>
-
-                                            <!-- Link Cepat ke Auto-Generated Proof jika relevan -->
-                                            <?php if (preg_match('/struktur|organisasi|bagan/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/struktur-organisasi" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Bagan Struktur (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/internet|wifi|jaringan/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/jaringan-internet" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Speedtest & ISP (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/absensi/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/absensi-elektronik" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Presensi Digital (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/komputer|laptop|inventaris/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/inventaris-tik" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Kartu Inventaris TIK (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/jadwal|kalender|program tahunan/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/jadwal-kegiatan" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Matriks Kalender (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/webset|website|email/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/website-email" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Bukti Web & Email (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/visi|misi|tujuan madrasah/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/visi-misi" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Display Visi Misi (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/perpustakaan|buku|literasi/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/perpustakaan" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Profil Perpustakaan (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/lingkungan|sehat|asri|rindang|sarana prasarana|kondusif/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/lingkungan-sehat" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Portofolio Lingkungan Sehat (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/supervisi|gtk/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/supervisi-guru" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Scorecard Supervisi Guru (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/ekstrakurikuler|ekskul|minat|bakat|potensi diri/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/ekstrakurikuler" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Program Ekstrakurikuler (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/prestasi|kejuaraan|lomba|piagam|kompetisi/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/prestasi-siswa" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Rekapitulasi Prestasi Siswa (A4)
-                                                </a>
-                                            <?php elseif (preg_match('/kewirausahaan|wirausaha|unit usaha|kemitraan|mou/i', $ind['indikator'])): ?>
-                                                <a href="/pengawas/pkkm/cetak-bukti/kewirausahaan" target="_blank" class="berkas-pill-link text-success fw-bold">
-                                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Lihat Portofolio Kewirausahaan (A4)
-                                                </a>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -1840,7 +1811,7 @@ $curTab = $active_tab ?? 'dashboard';
                                     <div class="scoring-box" id="scoring_box_<?php echo $ind['id']; ?>">
                                         <div class="scoring-box-header">
                                             <span class="scoring-label">
-                                                <i data-lucide="award" style="width:13px;height:13px;color:#0284c7;"></i>
+                                                <i data-lucide="award" style="width:13px;height:13px;color:#059669;"></i>
                                                 Skor Evaluasi Asesor
                                                 <span class="badge bg-white text-muted border ms-1" style="font-size:0.6rem; cursor:pointer;" onclick="showRubrikModal()" title="Lihat Petunjuk Penskoran Juknis">
                                                     <i data-lucide="help-circle" style="width:10px;height:10px;vertical-align:middle;"></i> Juknis
@@ -1918,7 +1889,7 @@ $curTab = $active_tab ?? 'dashboard';
                     <div class="col-lg-7">
                         <div class="executive-card p-4">
                                 <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                                    <i data-lucide="pen-tool" style="width:20px;height:20px;color:#0284c7;"></i>
+                                    <i data-lucide="pen-tool" style="width:20px;height:20px;color:#059669;"></i>
                                     Atur Tanda Tangan Digital Asesor
                                 </h5>
                                 <p class="text-muted mb-4" style="font-size: 0.85rem;">
@@ -1996,7 +1967,7 @@ $curTab = $active_tab ?? 'dashboard';
                                     </div>
 
                                     <div class="mt-4 pt-2">
-                                        <button type="submit" id="btnSimpanTtd" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background:#0284c7; border:none;">
+                                        <button type="submit" id="btnSimpanTtd" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background:#059669; border:none;">
                                             <i data-lucide="check-circle" style="width:18px;height:18px;"></i> Simpan Tanda Tangan Digital
                                         </button>
                                     </div>
@@ -2302,7 +2273,7 @@ function submitSkor(indikatorId, skorVal) {
 function showRubrikModal() {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
-            title: '<div class="d-flex align-items-center justify-content-center gap-2" style="font-size:1.1rem;color:#0f172a;"><i class="bi bi-journal-bookmark-fill text-success"></i> <span>Pedoman Penskoran Resmi PKKM</span></div>',
+            title: '<div class="d-flex align-items-center justify-content-center gap-2" style="font-size:1.1rem;color:#064e3b;"><i class="bi bi-journal-bookmark-fill text-success"></i> <span>Pedoman Penskoran Resmi PKKM</span></div>',
             html: `
                 <div class="text-start" style="font-size: 0.85rem; line-height: 1.5;">
                     <div class="alert alert-success py-2 px-3 mb-3 border-0 rounded-3 text-dark fw-medium" style="background:#ecfdf5;font-size:0.8rem;">
@@ -2345,7 +2316,7 @@ function showRubrikModal() {
                 </div>
             `,
             confirmButtonText: 'Tutup Panduan',
-            confirmButtonColor: '#0284c7',
+            confirmButtonColor: '#059669',
             customClass: {
                 popup: 'rounded-4 shadow-lg border-0 p-3'
             },
@@ -2447,7 +2418,7 @@ function showToast(msg) {
             showConfirmButton: false,
             timer: 1600,
             timerProgressBar: true,
-            background: '#0f172a',
+            background: '#064e3b',
             color: '#ffffff',
             iconColor: '#34d399',
             customClass: {
@@ -2681,7 +2652,7 @@ document.getElementById('formTtd').addEventListener('submit', function(e) {
                 icon: 'success',
                 title: 'Berhasil Disimpan!',
                 text: 'Tanda tangan digital Anda telah tersimpan dan siap dibubuhkan otomatis pada dokumen cetak Berita Acara.',
-                confirmButtonColor: '#0284c7'
+                confirmButtonColor: '#059669'
             });
 
             if (data.ttd_url) {

@@ -7,7 +7,7 @@ $daftarBuktiDigital = [
         'indikator' => 'Indikator 1.2.1 & 2.1.2',
         'komponen' => 'Komponen 1 & 2',
         'icon' => 'award',
-        'color' => '#0284c7',
+        'color' => '#059669',
         'bg' => '#ecfdf5',
         'url' => '/admin/pkkm/cetak-bukti/visi-misi',
         'deskripsi' => 'Plakat plang kelembagaan zamrud-emas, Visi resmi, 5 butir Misi & 4 pilar mutu lulusan SKL.'
@@ -65,7 +65,7 @@ $daftarBuktiDigital = [
         'color' => '#ea580c',
         'bg' => '#fff7ed',
         'url' => '/admin/pkkm/cetak-bukti/website-email',
-        'deskripsi' => 'Kop resmi + pernyataan + mockup browser website masmifhda.sch.id & webmail dinas resmi.'
+        'deskripsi' => 'Kop resmi + pernyataan + mockup browser website mismifhda.sch.id & webmail dinas resmi.'
     ],
     [
         'id' => 'perpustakaan',
@@ -95,7 +95,7 @@ $daftarBuktiDigital = [
         'indikator' => 'Indikator 4.1, 4.2 & 4.3',
         'komponen' => 'Komponen 4',
         'icon' => 'clipboard-check',
-        'color' => '#0284c7',
+        'color' => '#059669',
         'bg' => '#ecfdf5',
         'url' => '/admin/pkkm/cetak-bukti/supervisi-guru',
         'deskripsi' => 'Matriks penilaian 10 guru (modul ajar, KBM, TIK, asesmen), rata-rata 92.6 (Amat Baik) & tindak lanjut.'
@@ -106,7 +106,7 @@ $daftarBuktiDigital = [
         'indikator' => 'Indikator 2.6.2',
         'komponen' => 'Komponen 2',
         'icon' => 'activity',
-        'color' => '#0284c7',
+        'color' => '#059669',
         'bg' => '#ecfdf5',
         'url' => '/admin/pkkm/cetak-bukti/ekstrakurikuler',
         'deskripsi' => 'Matriks 6 cabang ekskul (Pramuka, Tahfidz, Hadroh, Silat, Futsal, UKS), jadwal rutin & 3 pilar pembinaan.'
@@ -128,7 +128,7 @@ $daftarBuktiDigital = [
         'indikator' => 'Indikator 3.1 & 3.3',
         'komponen' => 'Komponen 3',
         'icon' => 'shopping-bag',
-        'color' => '#0284c7',
+        'color' => '#059669',
         'bg' => '#ecfdf5',
         'url' => '/admin/pkkm/cetak-bukti/kewirausahaan',
         'deskripsi' => 'Profil 3 unit usaha (Koperasi, Kantin Sehat, Hidroponik), omzet Rp 14,8 Jt/bln & 4 MoU kemitraan.'
@@ -144,8 +144,20 @@ $daftarBuktiDigital = [
         'url' => '/admin/pkkm/cetak-bukti/jaringan-internet',
         'deskripsi' => 'Gauge Speedtest 52.4 Mbps, data ISP Indihome Fiber, foto perangkat ONT/Switch & checklist.'
     ],
+    [
+        'id' => 'perangkat-guru',
+        'nama' => 'Display Monitoring Perangkat Guru (RPP, Modul Ajar, Silabus)',
+        'indikator' => 'Indikator 1.4.1 & 2.1.3 (Standar Proses)',
+        'komponen' => 'Komponen 1 & 2',
+        'icon' => 'book-open',
+        'color' => '#059669',
+        'bg' => '#ecfdf5',
+        'url' => '/admin/pkkm/cetak-bukti/perangkat-guru',
+        'deskripsi' => 'Portal audit & display digital kelengkapan 404 dokumen perangkat pembelajaran (RPP, Modul Ajar, Silabus/ATP, Prota, Promes, KKTP) seluruh dewan guru.'
+    ],
 ];
 ?>
+
 
 <!-- Modal Koleksi Bukti Fisik PKKM (Vanilla & Bootstrap Compatible) -->
 <div id="modalKoleksiBuktiOverlay" class="koleksi-modal-overlay" style="display: none;">
@@ -229,7 +241,7 @@ $daftarBuktiDigital = [
             <!-- Modal Footer -->
             <div class="koleksi-modal-footer">
                 <div class="koleksi-footer-tip">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     <span>Klik <strong>Salin Link</strong> lalu tempel pada modal Upload (pilih Tipe: <em>Tautan Eksternal</em>).</span>
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -285,7 +297,7 @@ $daftarBuktiDigital = [
     border: 1px solid rgba(226, 232, 240, 0.9);
 }
 .koleksi-modal-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
     color: #ffffff;
     padding: 18px 24px;
     display: flex;
@@ -357,8 +369,8 @@ $daftarBuktiDigital = [
     transition: all 0.2s;
 }
 .koleksi-search-bar input:focus {
-    border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+    border-color: #059669;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
     background: #ffffff;
 }
 .koleksi-modal-body {
@@ -415,7 +427,7 @@ $daftarBuktiDigital = [
 .koleksi-tag-komponen {
     font-size: 0.65rem;
     font-weight: 800;
-    color: #1e40af;
+    color: #065f46;
     background: #d1fae5;
     padding: 1px 6px;
     border-radius: 4px;
@@ -465,10 +477,10 @@ $daftarBuktiDigital = [
 }
 .koleksi-btn-view:hover {
     background: #e2e8f0;
-    color: #0f172a;
+    color: #064e3b;
 }
 .koleksi-btn-copy {
-    background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
     color: #ffffff;
     border: none;
     padding: 6px 12px;
@@ -479,12 +491,12 @@ $daftarBuktiDigital = [
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    box-shadow: 0 2px 6px rgba(56, 189, 248, 0.25);
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
     transition: all 0.2s;
 }
 .koleksi-btn-copy:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(56, 189, 248, 0.35);
+    box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
 }
 .koleksi-modal-footer {
     padding: 12px 20px;
@@ -507,7 +519,7 @@ $daftarBuktiDigital = [
 }
 .koleksi-btn-master {
     background: #ecfdf5;
-    color: #1e40af;
+    color: #065f46;
     border: 1px solid #a7f3d0;
     padding: 7px 14px;
     border-radius: 8px;
@@ -521,7 +533,7 @@ $daftarBuktiDigital = [
 }
 .koleksi-btn-master:hover {
     background: #d1fae5;
-    color: #0f172a;
+    color: #064e3b;
 }
 .koleksi-btn-close {
     background: #e2e8f0;
@@ -606,7 +618,7 @@ function fallbackCopy(text, btnEl) {
 function showCopySuccess(btnEl) {
     var origHtml = btnEl.innerHTML;
     btnEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Tersalin! ✓';
-    btnEl.style.background = '#1e3a8a';
+    btnEl.style.background = '#047857';
     
     setTimeout(function() {
         btnEl.innerHTML = origHtml;

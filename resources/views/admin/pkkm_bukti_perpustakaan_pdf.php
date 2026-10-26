@@ -36,7 +36,7 @@ $isPengawas = isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 5;
 $backUrl = $isPengawas ? '/pengawas/pkkm?tab=penilaian' : '/admin/pkkm/instrumen';
 $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
 
-// Data Rekapitulasi Koleksi DDC (Dewey Decimal Classification) Perpustakaan MIS Miftahul Huda
+// Data Rekapitulasi Koleksi DDC (Dewey Decimal Classification) Perpustakaan MAS Miftahul Huda
 $koleksiDDC = [
     ['kode' => '000-099', 'bidang' => 'Karya Umum, TIK & Referensi Komputer', 'judul' => 45, 'eks' => 120, 'persen' => '7.7%'],
     ['kode' => '100-199', 'bidang' => 'Filsafat, Moral & Psikologi Pendidikan Anak', 'judul' => 25, 'eks' => 65, 'persen' => '4.2%'],
@@ -709,7 +709,7 @@ $totalKunjungan = array_sum(array_column($trenKunjungan, 'kunjungan'));
                         </tfoot>
                     </table>
                     <div style="font-size:6.2pt; color:#64748b; font-style:italic; margin-top:3px; line-height:1.2;">
-                        * Sumber data: Buku Induk Perpustakaan MIS Miftahul Huda No. Reg. 001/PST-MFH/2026. Koleksi mencakup Buku Teks Utama, Buku Pengayaan PAI, Ensiklopedia, Kamus, dan Sastra/Fiksi Anak Islami.
+                        * Sumber data: Buku Induk Perpustakaan MAS Miftahul Huda No. Reg. 001/PST-MFH/2026. Koleksi mencakup Buku Teks Utama, Buku Pengayaan PAI, Ensiklopedia, Kamus, dan Sastra/Fiksi Anak Islami.
                     </div>
                 </div>
 
@@ -810,7 +810,7 @@ $totalKunjungan = array_sum(array_column($trenKunjungan, 'kunjungan'));
 
             <!-- FOOTER NOTE -->
             <div class="footer-note">
-                <span>Dokumen Bukti Fisik PKKM &bull; Standar Sarana Prasarana & Budaya Mutu Literasi &bull; MIS Miftahul Huda Mathla'ul Anwar</span>
+                <span>Dokumen Bukti Fisik PKKM &bull; Standar Sarana Prasarana & Budaya Mutu Literasi &bull; MAS Miftahul Huda Mathla'ul Anwar</span>
                 <span style="font-weight:700; color:#0284c7;">https://masmifhda.sch.id</span>
             </div>
         </div>

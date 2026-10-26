@@ -6,13 +6,13 @@ $rulesJson = PkkmPanduanService::getJsonRules();
 <div class="modal fade" id="modalPanduanBukti" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
         <div class="modal-content" style="border-radius: 18px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: white; padding: 20px 24px; position: relative;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); color: white; padding: 20px 24px; position: relative;">
                 <div style="z-index: 2; width: 100%;">
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <span class="badge" style="background: rgba(255, 255, 255, 0.2); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; border-radius: 6px; padding: 4px 8px;">
                             <i data-lucide="lightbulb" style="width: 12px; height: 12px; vertical-align: middle;"></i> PANDUAN BUKTI FISIK PKKM
                         </span>
-                        <span id="lbl_panduan_kategori_badge" class="badge" style="background: #ffffff; color: #1e3a8a; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 4px 8px;">
+                        <span id="lbl_panduan_kategori_badge" class="badge" style="background: #ffffff; color: #047857; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 4px 8px;">
                             Foto & Dokumen
                         </span>
                     </div>
@@ -34,14 +34,14 @@ $rulesJson = PkkmPanduanService::getJsonRules();
                         Format yang Disarankan:
                     </div>
                     <div id="lbl_panduan_format" style="font-size: 0.82rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 5px;">
-                        <i data-lucide="file-check" style="width: 14px; height: 14px; color: #38bdf8;"></i> PDF / JPG / PNG
+                        <i data-lucide="file-check" style="width: 14px; height: 14px; color: #10b981;"></i> PDF / JPG / PNG
                     </div>
                 </div>
 
                 <!-- Daftar Contoh Bukti Riil -->
                 <div class="mb-3">
                     <label class="form-label fw-bold d-flex align-items-center gap-2" style="font-size: 0.88rem; color: #0f172a; margin-bottom: 8px;">
-                        <i data-lucide="check-circle-2" style="width: 16px; height: 16px; color: #0284c7;"></i>
+                        <i data-lucide="check-circle-2" style="width: 16px; height: 16px; color: #059669;"></i>
                         Contoh Bukti Riil yang Dapat Diunggah:
                     </label>
                     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 16px;">
@@ -145,12 +145,12 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     transition: all 0.2s ease;
 }
 .evidence-card:hover .evidence-card-letter {
-    background: #0284c7;
+    background: #059669;
     color: #ffffff;
-    border-color: #0284c7;
+    border-color: #059669;
 }
 .evidence-card-bullet {
-    color: #0284c7;
+    color: #059669;
     font-weight: bold;
     font-size: 1rem;
     line-height: 1;
@@ -165,7 +165,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     transition: color 0.2s ease;
 }
 .evidence-card:hover .evidence-card-text {
-    color: #0f172a;
+    color: #064e3b;
 }
 .evidence-card-badge {
     display: inline-flex;
@@ -183,10 +183,10 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     letter-spacing: 0.2px;
 }
 .evidence-card:hover .evidence-card-badge {
-    background: #0284c7;
+    background: #059669;
     color: #ffffff;
-    border-color: #0284c7;
-    box-shadow: 0 2px 6px rgba(56, 189, 248, 0.3);
+    border-color: #059669;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
 }
 .evidence-card-plain {
     color: #64748b;
@@ -210,9 +210,9 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     background: #f0fdf4;
 }
 .evidence-card-sm:hover .evidence-card-badge {
-    background: #0284c7;
+    background: #059669;
     color: #ffffff;
-    border-color: #0284c7;
+    border-color: #059669;
 }
 
 .guide-box-alert {
@@ -251,7 +251,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     flex-wrap: wrap;
 }
 .btn-banner-upload {
-    background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
     color: #ffffff;
     border: none;
     padding: 6px 14px;
@@ -262,13 +262,13 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(56, 189, 248, 0.25);
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
     transition: all 0.2s ease;
 }
 .btn-banner-upload:hover {
-    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    background: linear-gradient(135deg, #047857 0%, #064e3b 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(56, 189, 248, 0.35);
+    box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
     color: #ffffff;
 }
 .btn-banner-edit {
@@ -313,7 +313,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     align-items: center;
     gap: 6px;
     background: #ffffff;
-    color: #1e3a8a;
+    color: #047857;
     border: 1px solid #a7f3d0;
     border-radius: 6px;
     padding: 3px 9px;
@@ -339,7 +339,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     min-height: 80px;
 }
 .empty-file-dropzone:hover {
-    border-color: #38bdf8;
+    border-color: #10b981;
     background: #f0fdf4;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
@@ -349,7 +349,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
     transition: color 0.2s ease;
 }
 .empty-file-dropzone:hover .empty-file-icon {
-    color: #0284c7;
+    color: #059669;
 }
 .empty-file-title {
     font-size: 0.78rem;
@@ -359,7 +359,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
 .empty-file-hint {
     font-size: 0.72rem;
     font-weight: 700;
-    color: #0284c7;
+    color: #059669;
 }
 
 /* File list modern */
@@ -408,7 +408,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
 .badge-auto {
     font-size: 0.65rem;
     font-weight: 700;
-    background-color: #38bdf8;
+    background-color: #10b981;
     color: white;
     padding: 2px 6px;
     border-radius: 4px;
@@ -431,7 +431,7 @@ $rulesJson = PkkmPanduanService::getJsonRules();
 }
 .btn-add-more-file:hover {
     background: #e2e8f0;
-    color: #0f172a;
+    color: #064e3b;
     border-color: #94a3b8;
 }
 </style>
@@ -494,7 +494,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
 
     document.getElementById('lbl_panduan_title').innerText = namaDokumen;
     document.getElementById('lbl_panduan_kategori_badge').innerText = p.kategori;
-    document.getElementById('lbl_panduan_format').innerHTML = '<i data-lucide="file-check" style="width:14px;height:14px;color:#38bdf8;"></i> ' + p.format;
+    document.getElementById('lbl_panduan_format').innerHTML = '<i data-lucide="file-check" style="width:14px;height:14px;color:#10b981;"></i> ' + p.format;
     document.getElementById('lbl_panduan_tips').innerText = p.tips;
 
     let ul = document.getElementById('list_panduan_contoh');
@@ -514,7 +514,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 attachFormHtml = `
                     <form action="/admin/pkkm/bukti-attach-website" method="POST" style="margin: 0;">
                         <input type="hidden" name="indikator_id" value="${optionalIndikatorId}">
-                        <button type="submit" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1" style="border-radius: 8px; font-size: 0.76rem; padding: 7px 12px;" title="Tambahkan tautan https://masmifhda.sch.id langsung ke daftar berkas">
+                        <button type="submit" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1" style="border-radius: 8px; font-size: 0.76rem; padding: 7px 12px;" title="Tambahkan tautan https://mismifhda.sch.id langsung ke daftar berkas">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                             Pasang Link Langsung
                         </button>
@@ -526,11 +526,11 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 <div style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate PDF Resmi Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -539,7 +539,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <a href="/admin/pkkm/cetak-bukti/website-email" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/website-email" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak PDF Resmi
                             </a>
@@ -554,11 +554,11 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" x2="12.01" y1="20" y2="20"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate Lembar Speedtest Jaringan Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -567,7 +567,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div>
-                            <a href="/admin/pkkm/cetak-bukti/jaringan-internet" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/jaringan-internet" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak Lembar Jaringan (A4)
                             </a>
@@ -608,11 +608,11 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 <div style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="8" y="2" rx="1"/><rect width="8" height="8" x="2" y="14" rx="1"/><rect width="8" height="8" x="14" y="14" rx="1"/><path d="M12 10v4"/><path d="M6 14h12"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate Bagan Struktur & Tupoksi Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -621,7 +621,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div>
-                            <a href="/admin/pkkm/cetak-bukti/struktur-organisasi" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/struktur-organisasi" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak Bagan Struktur (A4)
                             </a>
@@ -632,14 +632,14 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
             specialBox.style.display = 'block';
         } else if (p.key === 'komputer' || p.key === 'sarpras_inventaris' || /inventaris|komputer|laptop|laboratorium/i.test(namaDokumen)) {
             specialBox.innerHTML = `
-                <div style="background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%); border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.08);">
+                <div style="background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%); border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #1e3a8a; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(4,120,87,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #047857; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(4,120,87,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate Kartu Inventaris TIK Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -648,7 +648,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div>
-                            <a href="/admin/pkkm/cetak-bukti/inventaris-tik" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/inventaris-tik" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak Kartu TIK (A4)
                             </a>
@@ -689,11 +689,11 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 <div style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate Plang Display Visi & Misi Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -702,7 +702,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div>
-                            <a href="/admin/pkkm/cetak-bukti/visi-misi" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/visi-misi" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak Display Visi Misi (A4)
                             </a>
@@ -770,11 +770,11 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 <div style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate Scorecard Supervisi Guru Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -783,7 +783,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div>
-                            <a href="/admin/pkkm/cetak-bukti/supervisi-guru" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/supervisi-guru" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak Scorecard Supervisi (A4)
                             </a>
@@ -797,11 +797,11 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 <div style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate Program Ekstrakurikuler Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -810,7 +810,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div>
-                            <a href="/admin/pkkm/cetak-bukti/ekstrakurikuler" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/ekstrakurikuler" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak Program Ekskul (A4)
                             </a>
@@ -851,11 +851,11 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                 <div style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 13px 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 220px;">
-                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                            <div style="width: 36px; height: 36px; border-radius: 9px; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                             </div>
                             <div>
-                                <div style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">
+                                <div style="font-size: 0.85rem; font-weight: 800; color: #064e3b;">
                                     Auto-Generate Portofolio Kewirausahaan Tersedia!
                                 </div>
                                 <div style="font-size: 0.75rem; color: #166534; line-height: 1.35;">
@@ -864,7 +864,7 @@ function showPanduanBukti(namaDokumen, optionalIndikatorId, optionalMasterId) {
                             </div>
                         </div>
                         <div>
-                            <a href="/admin/pkkm/cetak-bukti/kewirausahaan" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
+                            <a href="/admin/pkkm/cetak-bukti/kewirausahaan" target="_blank" class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; box-shadow: 0 3px 8px rgba(5,150,105,0.25); color: #fff; text-decoration: none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                 Cetak Portofolio Wirausaha (A4)
                             </a>

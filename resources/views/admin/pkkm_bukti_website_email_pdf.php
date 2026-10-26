@@ -672,7 +672,7 @@ $hasScreenshot = file_exists($screenshotPath);
                             <img src="/public/uploads/website/screenshot_landing.png?v=<?php echo filemtime($screenshotPath); ?>" alt="Screenshot Landing Page masmifhda.sch.id" class="screenshot-img">
                         </a>
                     <?php else: ?>
-                        <!-- Tampilan Preview Visual Landing Page Asli MIS Miftahul Huda -->
+                        <!-- Tampilan Preview Visual Landing Page Asli MAS Miftahul Huda -->
                         <a href="https://masmifhda.sch.id" target="_blank" class="landing-mock-content" title="Klik untuk membuka website masmifhda.sch.id">
                             <div class="mock-nav">
                                 <div class="mock-brand">
@@ -691,7 +691,7 @@ $hasScreenshot = file_exists($screenshotPath);
                             <div class="mock-hero-text">
                                 <div class="mock-hero-badge">Portal Digital Madrasah Terintegrasi</div>
                                 <h4 class="mock-hero-title">Madrasah Maju, Bermutu, dan Berkelanjutan</h4>
-                                <p class="mock-hero-sub">Pusat Informasi & Layanan Digital Resmi MIS Miftahul Huda Mathla'ul Anwar</p>
+                                <p class="mock-hero-sub">Pusat Informasi & Layanan Digital Resmi MAS Miftahul Huda Mathla'ul Anwar</p>
                             </div>
 
                             <div class="mock-modules-bar">
@@ -740,7 +740,7 @@ $hasScreenshot = file_exists($screenshotPath);
 
             <!-- FOOTER DOKUMEN RINGKAS -->
             <div style="margin-top: 14px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 0.72rem; color: #64748b; display: flex; justify-content: space-between; align-items: center; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
-                <span>Dokumen Bukti Fisik Digital &bull; MIS Miftahul Huda Mathla'ul Anwar</span>
+                <span>Dokumen Bukti Fisik Digital &bull; MAS Miftahul Huda Mathla'ul Anwar</span>
                 <span style="font-weight:600; color:#0284c7;">https://masmifhda.sch.id</span>
             </div>
     </div>

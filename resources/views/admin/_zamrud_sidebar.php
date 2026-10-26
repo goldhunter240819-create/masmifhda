@@ -332,6 +332,7 @@ $sub_menus = array(
         array('icon'=>'layout-dashboard',  'label'=>'Dashboard',           'url'=>base_url('admin/pkkm'),                     'page'=>'overview'),
         array('icon'=>'file-check-2',      'label'=>'Instrumen Penilaian', 'url'=>base_url('admin/pkkm/instrumen'),           'page'=>'instrumen'),
         array('icon'=>'folder-open',       'label'=>'Daftar Berkas',       'url'=>base_url('admin/pkkm/master-berkas'),       'page'=>'master_berkas'),
+        array('icon'=>'sparkles',          'label'=>'Bukti Digital',       'url'=>base_url('admin/pkkm/bukti-digital'),       'page'=>'bukti_digital'),
         array('icon'=>'users-2',           'label'=>'Tim Penanggung Jawab','url'=>base_url('admin/pkkm/tim'),                 'page'=>'tim_pkkm'),
         array('icon'=>'user-check',        'label'=>'Akun Pengawas',       'url'=>base_url('admin/pkkm/pengawas'),            'page'=>'pengawas'),
     ),
@@ -344,7 +345,7 @@ $module_labels = array(
     'bos'            => 'BOS',
     'osim'           => 'OSIM',
     'perpus'         => 'Perpustakaan',
-    'pkkm'           => 'PKKM',
+    'pkkm'           => 'Aplikasi PKKM',
 );
 $current_label = isset($module_labels[$am]) ? $module_labels[$am] : 'Admin';
 ?>

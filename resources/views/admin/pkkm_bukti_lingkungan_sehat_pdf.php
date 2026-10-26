@@ -758,7 +758,7 @@ $checklistSanitasi = [
 
             <!-- FOOTER NOTE -->
             <div class="footer-note">
-                <span>Dokumen Bukti Fisik PKKM &bull; Standar Sarana Prasarana & Budaya Lingkungan Sehat &bull; MIS Miftahul Huda Mathla'ul Anwar</span>
+                <span>Dokumen Bukti Fisik PKKM &bull; Standar Sarana Prasarana & Budaya Lingkungan Sehat &bull; MAS Miftahul Huda Mathla'ul Anwar</span>
                 <span style="font-weight:700; color:#0284c7;">https://masmifhda.sch.id</span>
             </div>
         </div>
