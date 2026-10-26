@@ -10,7 +10,7 @@
     <style>
         :root {
             --primary-rgb: <?php 
-                $tc = isset($theme_color) ? $theme_color : '10b981';
+                $tc = isset($theme_color) ? $theme_color : '0ea5e9';
                 if(strpos($tc, '#') === false) $tc = '#' . $tc;
                 list($r, $g, $b) = sscanf($tc, "#%02x%02x%02x");
                 echo "$r, $g, $b";

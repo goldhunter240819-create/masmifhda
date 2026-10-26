@@ -19,7 +19,7 @@ class Branding {
             'name'    => !empty($portal['app_name']) ? $portal['app_name'] : 'GH-SSS Portal',
             'logo'    => $instLogo,
             'favicon' => $instFavicon,
-            'theme'   => !empty($portal['theme_color']) ? "#" . $portal['theme_color'] : "#10b981",
+            'theme'   => !empty($portal['theme_color']) ? "#" . $portal['theme_color'] : "#0ea5e9",
             'title'   => !empty($portal['tab_title']) ? $portal['tab_title'] : 'GH-SSS Portal - MAS MIFHDA',
             // Logo & favicon langsung dari institusi (dipakai sidebar/favicon SIAKAD)
             'inst_logo'    => $instLogo,
