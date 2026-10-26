@@ -1,0 +1,16 @@
+/* CBT Specific Overrides & Components */
+.cbt-card {
+    border-top: 4px solid var(--z-primary);
+    background: #fff;
+    border-radius: var(--z-radius);
+    padding: 1.5rem;
+    box-shadow: var(--z-shadow);
+}
+.exam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid var(--z-border);
+}

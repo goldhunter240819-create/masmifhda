@@ -1,0 +1,70 @@
+{
+  "system_name": "GH Smart School System",
+  "system_abbr": "GH-SSS",
+  "download_base": "/public/assets/releases/",
+  "versions": [
+    {
+      "version": "2.5.0",
+      "release_date": "2026-05-21",
+      "is_latest": true,
+      "title": "Sultan Hub & Premium Dark Theme",
+      "summary": "Update besar dengan tampilan dashboard baru, tema phpMyAdmin premium, dan peningkatan keamanan sistem.",
+      "download_file": "GH-SSS-v2.5.0.zip",
+      "file_size": "52 MB",
+      "min_php": "7.4",
+      "min_mysql": "5.7",
+      "changes": [
+        { "type": "new",  "text": "Sultan Hub: Dashboard developer premium dengan glassmorphism dark UI" },
+        { "type": "new",  "text": "Tema phpMyAdmin Sultan Dark — konsisten dengan tampilan sistem" },
+        { "type": "new",  "text": "Halaman landing publik untuk pengguna yang belum login" },
+        { "type": "new",  "text": "Halaman changelog & panduan update resmi" },
+        { "type": "update", "text": "Navigasi portal diperbarui dengan animasi hover yang lebih halus" },
+        { "type": "update", "text": "Keamanan phpMyAdmin: akses dibatasi hanya user Maul" },
+        { "type": "fix",  "text": "Perbaikan bug form login phpMyAdmin yang tersembunyi (class .hide)" },
+        { "type": "fix",  "text": "Perbaikan kontras tabel dan editor SQL di phpMyAdmin" }
+      ]
+    },
+    {
+      "version": "2.4.2",
+      "release_date": "2026-04-15",
+      "is_latest": false,
+      "title": "Piagam Digital & Absensi QR V2",
+      "summary": "Penambahan modul piagam digital otomatis dan sistem absensi QR generasi kedua.",
+      "download_file": "GH-SSS-v2.4.2.zip",
+      "file_size": "49 MB",
+      "min_php": "7.4",
+      "min_mysql": "5.7",
+      "changes": [
+        { "type": "new",    "text": "Modul Piagam Digital: cetak sertifikat massal dengan QR verifikasi" },
+        { "type": "new",    "text": "Absensi QR V2: sinkronisasi otomatis dengan SIAKAD" },
+        { "type": "update", "text": "Peningkatan performa query database pada modul SIAKAD" },
+        { "type": "fix",    "text": "Perbaikan bug export data siswa format Excel" }
+      ]
+    },
+    {
+      "version": "2.4.0",
+      "release_date": "2026-03-01",
+      "is_latest": false,
+      "title": "E-Learning & Perpustakaan Digital",
+      "summary": "Modul E-Learning dan Perpustakaan Digital resmi diluncurkan.",
+      "download_file": "GH-SSS-v2.4.0.zip",
+      "file_size": "46 MB",
+      "min_php": "7.4",
+      "min_mysql": "5.7",
+      "changes": [
+        { "type": "new",    "text": "Modul E-Learning: materi, tugas, dan forum diskusi" },
+        { "type": "new",    "text": "Perpustakaan Digital: katalog buku dan peminjaman mandiri" },
+        { "type": "new",    "text": "Modul Inventaris: pencatatan aset sekolah" },
+        { "type": "update", "text": "Tampilan portal utama didesain ulang dengan card premium" }
+      ]
+    }
+  ],
+  "install_steps": [
+    { "step": 1, "title": "Backup Data", "desc": "Backup seluruh folder GH-SSS dan database MySQL sebelum memulai proses update.", "icon": "database-backup", "color": "#f59e0b" },
+    { "step": 2, "title": "Download File Update", "desc": "Unduh file .zip versi terbaru dari tombol download di atas.", "icon": "download-cloud", "color": "#3b82f6" },
+    { "step": 3, "title": "Ekstrak & Timpa", "desc": "Ekstrak isi zip ke dalam folder GH-SSS, pilih 'Timpa semua file' saat diminta.", "icon": "folder-open", "color": "#8b5cf6" },
+    { "step": 4, "title": "Jalankan Migrasi", "desc": "Buka browser dan akses /setup untuk menjalankan migrasi database otomatis.", "icon": "terminal", "color": "#10b981" },
+    { "step": 5, "title": "Restart Apache", "desc": "Restart Apache melalui XAMPP Control Panel agar perubahan konfigurasi diterapkan.", "icon": "refresh-cw", "color": "#ef4444" },
+    { "step": 6, "title": "Verifikasi", "desc": "Login ke sistem dan pastikan semua modul berjalan normal. Cek log jika ada error.", "icon": "check-circle", "color": "#10b981" }
+  ]
+}

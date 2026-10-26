@@ -1,0 +1,16 @@
+/* SIAKAD Specific Overrides & Components */
+.siakad-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+.siakad-main {
+    flex: 1;
+    padding: var(--z-gap);
+}
+.z-panel-siakad {
+    background: var(--z-card);
+    border: 1px solid var(--z-border);
+    border-radius: var(--z-radius);
+    padding: 1.5rem;
+}

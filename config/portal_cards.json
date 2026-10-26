@@ -1,0 +1,173 @@
+{
+    "cards": {
+        "siakad": {
+            "label": "SIAKAD",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                3,
+                99
+            ]
+        },
+        "ghcbt": {
+            "label": "GHCBT System",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                3,
+                99
+            ]
+        },
+        "website": {
+            "label": "Website Admin",
+            "enabled": true,
+            "roles": [
+                1,
+                99
+            ]
+        },
+        "ai_generator": {
+            "label": "AI Generator Soal",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                99
+            ]
+        },
+        "spmb": {
+            "label": "Penerimaan Siswa Baru",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                3,
+                99
+            ]
+        },
+        "keuangan": {
+            "label": "Keuangan",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                3,
+                99
+            ]
+        },
+        "tabungan": {
+            "label": "Tabungan Siswa",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                3,
+                99
+            ]
+        },
+        "bos": {
+            "label": "Dana BOS",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                99
+            ]
+        },
+        "absensi": {
+            "label": "Absensi QR V2",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                99
+            ]
+        },
+        "persuratan": {
+            "label": "Persuratan",
+            "enabled": true,
+            "roles": [
+                1,
+                99
+            ]
+        },
+        "inventaris": {
+            "label": "Inventaris",
+            "enabled": true,
+            "roles": [
+                1,
+                99
+            ]
+        },
+        "perpustakaan": {
+            "label": "Perpustakaan Digital",
+            "enabled": true,
+            "roles": [
+                1,
+                99
+            ]
+        },
+        "elearning": {
+            "label": "E-Learning",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                99
+            ]
+        },
+        "piagam": {
+            "label": "Piagam Digital",
+            "enabled": true,
+            "roles": [
+                1,
+                99
+            ]
+        },
+        "ujian_madrasah": {
+            "label": "Ujian Madrasah",
+            "enabled": true,
+            "roles": [
+                1,
+                99
+            ]
+        },
+        "rekap_soal": {
+            "label": "Rekap Soal",
+            "enabled": false,
+            "roles": [
+                1,
+                2,
+                99
+            ]
+        },
+        "rekap_jadwal": {
+            "label": "Rekap Jadwal",
+            "enabled": false,
+            "roles": [
+                1,
+                2,
+                99
+            ]
+        },
+        "pkkm": {
+            "label": "Penilaian Kinerja Kepala Madrasah",
+            "enabled": true,
+            "roles": [
+                1,
+                2,
+                99
+            ]
+        },
+        "rdm": {
+            "label": "RDM Madrasah",
+            "enabled": true,
+            "roles": [
+                1,
+                99
+            ]
+        }
+    }
+}

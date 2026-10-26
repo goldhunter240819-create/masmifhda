@@ -1,0 +1,398 @@
+[
+    {
+        "id": 1,
+        "nama": "Mengenal karakteristik peserta didik",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru dapat mengidentifikasi karakteristik belajar setiap peserta didik di kelasnya."
+            },
+            {
+                "no": 2,
+                "teks": "Guru memastikan bahwa semua peserta didik mendapatkan kesempatan yang sama untuk berpartisipasi aktif dalam kegiatan pembelajaran."
+            },
+            {
+                "no": 3,
+                "teks": "Guru dapat mengatur kelas untuk memberikan kesempatan belajar yang sama pada semua peserta didik dengan kelainan fisik dan kemampuan belajar yang berbeda."
+            },
+            {
+                "no": 4,
+                "teks": "Guru mencoba mengetahui penyebab penyimpangan perilaku peserta didik untuk mencegah agar perilaku tersebut tidak merugikan peserta didik lainnya."
+            },
+            {
+                "no": 5,
+                "teks": "Guru membantu mengembangkan potensi dan mengatasi kekurangan peserta didik."
+            },
+            {
+                "no": 6,
+                "teks": "Guru memperhatikan peserta didik dengan kelemahan fisik tertentu agar dapat mengikuti aktivitas pembelajaran, sehingga peserta didik tersebut tidak termarginalkan (tersisihkan, diolok‐ olok, minder, dsb.)."
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "nama": "Menguasai teori belajar dan prinsip‐prinsip    pembelajaran yang mendidik",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru memberi kesempatan kepada peserta didik untuk menguasai materi pembelajaran sesuai usia dan kemampuan belajarnya melalui pengaturan proses pembelajaran dan aktivitas yang bervariasi."
+            },
+            {
+                "no": 2,
+                "teks": "Guru selalu memastikan tingkat pemahaman peserta didik terhadap materi pembelajaran tertentu dan menyesuaikan aktivitas pembelajaran berikutnya berdasarkan tingkat pemahaman tersebut."
+            },
+            {
+                "no": 3,
+                "teks": "Guru dapat menjelaskan alasan pelaksanaan kegiatan/aktivitas yang dilakukannya, baik yang sesuai maupun yang berbeda dengan rencana, terkait keberhasilan pembelajaran."
+            },
+            {
+                "no": 4,
+                "teks": "Guru menggunakan berbagai teknik untuk memotiviasi kemauan belajar peserta didik."
+            },
+            {
+                "no": 5,
+                "teks": "Guru merencanakan kegiatan pembelajaran yang saling terkait satu sama lain, dengan memperhatikan tujuan pembelajaran maupun proses belajar peserta didik."
+            },
+            {
+                "no": 6,
+                "teks": "Guru memperhatikan respon peserta didik yang belum/kurang memahami materi pembelajaran yang diajarkan dan mengguna- kannya untuk memperbaiki rancangan pem-belajaran berikutnya."
+            }
+        ]
+    },
+    {
+        "id": 3,
+        "nama": "Pengembangan Kurikulum",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru dapat menyusun silabus yang sesuai dengan kurikulum"
+            },
+            {
+                "no": 2,
+                "teks": "Guru merancang rencana pembelajaran yang sesuai dengan silabus untuk membahas materi ajar tertentu agar peserta didik dapat mencapai kompetensi dasar yang ditetapkan."
+            },
+            {
+                "no": 3,
+                "teks": "Guru mengikuti urutan materi pembelajaran dengan memperhatikan tujuan pembelajaran."
+            },
+            {
+                "no": 4,
+                "teks": "Guru memilih materi pembelajaran yang: a) sesuai dengan tujuan pembelajaran, b) tepat dan mutakhir, c) sesuai dengan usia dan tingkat kemampuan belajar peserta didik, dan d) dapat dilaksanakan di kelas e) sesuai dengan konteks kehidupan sehari‐hari peserta didik."
+            }
+        ]
+    },
+    {
+        "id": 4,
+        "nama": "Kegiatan Pembelajaran yang Mendidik",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru melaksanakan aktivitas pembelajaran sesuai dengan rancangan yang telah disusun secara lengkap dan pelaksanaan aktivitas tersebut mengindikasikan bahwa guru mengerti tentang tujuannya."
+            },
+            {
+                "no": 2,
+                "teks": "Guru melaksanakan aktivitas pembelajaran yang bertujuan untuk membantu proses belajar peserta didik, bukan untuk menguji sehingga membuat peserta didik merasa tertekan."
+            },
+            {
+                "no": 3,
+                "teks": "Guru mengkomunikasikan informasi baru (misalnya materi tambahan) sesuai dengan usia dan tingkat kemampuan belajar peserta didik."
+            },
+            {
+                "no": 4,
+                "teks": "Guru menyikapi kesalahan yang dilakukan peserta didik sebagai tahapan proses pembelajaran, bukan semata‐mata kesalahan yang harus dikoreksi. Misalnya: dengan mengetahui terlebih dahulu peserta didik lain yang setuju atau tidak setuju dengan jawaban tersebut, sebelum memberikan penjelasan tentang jawaban yang benar."
+            },
+            {
+                "no": 5,
+                "teks": "Guru melaksanakan kegiatan pembelajaran sesuai isi kurikulum dan mengkaitkannya dengan konteks kehidupan sehari‐hari peserta didik."
+            },
+            {
+                "no": 6,
+                "teks": "Guru melakukan aktivitas pembelajaran secara bervariasi dengan waktu yang cukup untuk kegiatan pembelajaran yang sesuai dengan usia dan tingkat kemampuan belajar dan mempertahankan perhatian peserta didik"
+            },
+            {
+                "no": 7,
+                "teks": "Guru mengelola kelas dengan efektif tanpa mendominasi atau sibuk dengan kegiatannya sendiri agar semua waktu peserta dapat termanfaatkan secara produktif."
+            },
+            {
+                "no": 8,
+                "teks": "Guru mampu menyesuaikan aktivitas pembelajaran yang dirancang dengan kondisi kelas."
+            },
+            {
+                "no": 9,
+                "teks": "Guru memberikan banyak kesempatan kepada peserta didik untuk bertanya, mempraktekkan dan berinteraksi dengan peserta didik lain"
+            },
+            {
+                "no": 10,
+                "teks": "Guru mengatur pelaksanaan aktivitas pembelajaran secara sistematis untuk membantu proses belajar peserta didik. Sebagai contoh: guru menambah informasi baru setelah mengevaluasi pemahaman peserta didik terhadap materi sebelumnya."
+            },
+            {
+                "no": 11,
+                "teks": "Guru menggunakan alat bantu mengajar, dan/atau audio‐ visual (termasuk TIK) untuk meningkatkan motivasi belajar peserta didik dalam mencapai tujuan pembelajaran."
+            }
+        ]
+    },
+    {
+        "id": 5,
+        "nama": "Memahami dan mengembangkan potensi",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru menganalisis hasil belajar berdasarkan segala bentuk penilaian terhadap setiap peserta didik untuk mengetahui tingkat kemajuan masing‐ masing."
+            },
+            {
+                "no": 2,
+                "teks": "Guru merancang dan melaksanakan aktivitas pembelajaran yang mendorong peserta didik untuk belajar sesuai dengan kecakapan dan pola belajar masing‐masing."
+            },
+            {
+                "no": 3,
+                "teks": "Guru merancang dan melaksanakan aktivitas pembelajaran untuk memunculkan daya kreativitas dan kemampuan berfikir kritis peserta didik."
+            },
+            {
+                "no": 4,
+                "teks": "Guru secara aktif membantu peserta didik dalam proses pembelajaran dengan memberikan perhatian kepada setiap individu, sebagai tahapan proses pembelajaran, bukan semata‐mata kesalahan yang harus dikoreksi. Misalnya: dengan mengetahui terlebih dahulu peserta didik lain yang setuju atau tidak setuju dengan jawaban tersebut, sebelum memberikan penjelasan tentang jawaban yang benar."
+            },
+            {
+                "no": 5,
+                "teks": "Guru dapat mengidentifikasi dengan benar tentang bakat, minat, potensi, dan kesulitan belajar masing‐masing peserta didik."
+            },
+            {
+                "no": 6,
+                "teks": "Guru memberikan kesempatan belajar kepada peserta didik sesuai dengan cara belajarnya masing‐masing."
+            },
+            {
+                "no": 7,
+                "teks": "Guru memusatkan perhatian pada interaksi dengan peserta didik dan mendorongnya untuk memahami dan menggunakan informasi yang disampaikan."
+            }
+        ]
+    },
+    {
+        "id": 6,
+        "nama": "Komunikasi dengan peserta didik",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru menggunakan pertanyaan untuk mengetahui pemahaman dan menjaga partisipasi peserta didik, termasuk memberikan pertanyaan terbuka yang menuntut peserta didik untuk menjawab dengan ide dan pengetahuan mereka."
+            },
+            {
+                "no": 2,
+                "teks": "Guru memberikan perhatian dan mendengarkan semua pertanyaan dan tanggapan peserta didik, tanpa menginterupsi, kecuali jika diperlukan untuk membantu atau mengklarifikasi pertanyaan/tanggapan tersebut."
+            },
+            {
+                "no": 3,
+                "teks": "Guru menanggapinya pertanyaan peserta didik secara tepat, benar, dan mutakhir, sesuai tujuan pembelajaran dan isi kurikulum, tanpa mempermalukannya."
+            },
+            {
+                "no": 4,
+                "teks": "Guru menyajikan kegiatan pembelajaran yang dapat menumbuhkan kerja sama yang baik antar pesertadidik."
+            },
+            {
+                "no": 5,
+                "teks": "Guru mendengarkan dan memberikan perhatian terhadap semua jawaban peserta didik baik yang benar maupun yang dianggap salah untuk mengukur tingkat pemahaman peserta didik."
+            },
+            {
+                "no": 6,
+                "teks": "Guru memberikan perhatian terhadap pertanyaan peserta didik dan meresponnya secara lengkap dan relevan untuk menghilangkan kebingungan pada peserta didik."
+            }
+        ]
+    },
+    {
+        "id": 7,
+        "nama": "Penilaian dan evaluasi",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru menyusun alat penilaian yang sesuai dengan tujuan pembelajaran untuk mencapai kompetensi tertentu seperti yang tertulis dalam RPP."
+            },
+            {
+                "no": 2,
+                "teks": "Guru melaksanakan penilaian dengan berbagai teknik dan jenis penilaian, selain penilaian formal yang dilaksanakan sekolah, dan mengumumkan hasil serta implikasinya kepada peserta didik, tentang tingkat pemahaman terhadap materi pembelajaran yang telah dan akan dipelajari."
+            },
+            {
+                "no": 3,
+                "teks": "Guru menganalisis hasil penilaian untuk mengidentifikasi topik/kompetensi dasar yang sulit sehingga diketahui kekuatan dan kelemahan masing‐masing peserta didik untuk keperluan remedial dan pengayaan."
+            },
+            {
+                "no": 4,
+                "teks": "Guru memanfaatkan masukan dari peserta didik dan merefleksikannya untuk meningkatkan pembelajaran selanjutnya, dan dapat membuktikannya melalui catatan, jurnal pembelajaran, rancangan pembelajaran, materi tambahan, dan sebagainya."
+            },
+            {
+                "no": 5,
+                "teks": "Guru memanfatkan hasil penilaian sebagai bahan penyusunan rancangan pembelajaran yang akan dilakukan selanjutnya."
+            }
+        ]
+    },
+    {
+        "id": 8,
+        "nama": "Bertindak sesuai dengan norma agama, hukum, sosial dan kebudayaan nasional Indonesia",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru menghargai dan mempromosikan prinsip‐prinsip Pancasila sebagai dasar ideologi dan etika bagi semua warga Indonesia."
+            },
+            {
+                "no": 2,
+                "teks": "Guru mengembangkan kerjasama dan membina kebersamaan dengan teman sejawat tanpa memperhatikan perbedaan yang ada (misalnya: suku, agama, dan gender)."
+            },
+            {
+                "no": 3,
+                "teks": "Guru saling menghormati dan menghargai teman sejawat sesuai dengan kondisi dan keberadaan masing‐masing."
+            },
+            {
+                "no": 4,
+                "teks": "Guru memiliki rasa persatuan dan kesatuan sebagai bangsa Indonesia."
+            },
+            {
+                "no": 5,
+                "teks": "Guru mempunyai pandangan yang luas tentang keberagaman bangsa Indonesia (misalnya: budaya, suku, agama)."
+            }
+        ]
+    },
+    {
+        "id": 9,
+        "nama": "Menunjukkan pribadi yang dewasa dan teladan",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru bertingkah laku sopan dalam berbicara, berpenampilan, dan berbuat terhadap semua peserta didik, orang tua, dan teman sejawat."
+            },
+            {
+                "no": 2,
+                "teks": "Guru mau membagi pengalamannya dengan teman sejawat, termasuk mengundang mereka untuk mengobservasi cara mengajarnya dan memberikan masukan."
+            },
+            {
+                "no": 3,
+                "teks": "Guru mampu mengelola pembelajaran yang membuktikan bahwa guru dihormati oleh peserta didik, sehingga semua peserta didik selalu memperhatikan guru dan berpartisipasi aktif dalam proses pembelajaran."
+            },
+            {
+                "no": 4,
+                "teks": "Guru bersikap dewasa dalam menerima masukan dari peserta didik dan memberikan kesempatan kepada peserta didik untuk berpartisipasi dalam proses pembelajaran."
+            },
+            {
+                "no": 5,
+                "teks": "Guru berperilaku baik untuk mencitrakan nama baik sekolah."
+            }
+        ]
+    },
+    {
+        "id": 10,
+        "nama": "Penilaian  untuk  Kompetensi  10:  Etos  kerja,  tanggung  jawab  yang  tinggi, dan  rasa  bangga menjadi guru",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru mengawali dan mengakhiri pembelajaran dengan tepat waktu."
+            },
+            {
+                "no": 2,
+                "teks": "Jika guru harus meninggalkan kelas, guru mengaktifkan siswa dengan melakukan hal‐hal produktif terkait dengan mata pelajaran, dan meminta guru piket atau guru lain untuk mengawasi kelas."
+            },
+            {
+                "no": 3,
+                "teks": "Guru memenuhi jam mengajar dan dapat melakukan semua kegiatan lain di luar jam mengajar berdasarkan ijin dan persetujuan pengelola sekolah."
+            },
+            {
+                "no": 4,
+                "teks": "Guru meminta ijin dan memberitahu lebih awal, dengan memberikan alasan dan bukti yang sah jika tidak menghadiri kegiatan yang telah direncanakan, termasuk proses pembelajaran di kelas. sebagai tahapan proses pembelajaran, bukan semata‐mata kesalahan yang harus dikoreksi. Misalnya: dengan mengetahui terlebih dahulu peserta didik lain yang setuju atau tidak setuju dengan jawaban tersebut, sebelum memberikan penjelasan tentang jawaban yang benar."
+            },
+            {
+                "no": 5,
+                "teks": "Guru menyelesaikan semua tugas administratif dan non‐pembelajaran dengan tepat waktu sesuai standar yang ditetapkan."
+            },
+            {
+                "no": 6,
+                "teks": "Guru memanfaatkan waktu luang selain mengajar untuk kegiatan yang produktif terkait dengan tugasnya."
+            },
+            {
+                "no": 7,
+                "teks": "Guru memberikan kontribusi terhadap pengembangan sekolah dan mempunyai prestasi yang berdampak positif terhadap nama baik sekolah."
+            },
+            {
+                "no": 8,
+                "teks": "Guru merasa bangga dengan profesinya sebagai guru."
+            }
+        ]
+    },
+    {
+        "id": 11,
+        "nama": "Bersikap inklusif, bertindak objektif, serta tidak Diskriminatif",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru memperlakukan semua peserta didik secara adil, memberikan perhatian dan bantuan sesuai kebutuhan masing‐masing, tanpa memperdulikan faktor personal."
+            },
+            {
+                "no": 2,
+                "teks": "Guru menjaga hubungan baik dan peduli dengan teman sejawat (bersifat inklusif), serta berkontribusi positif terhadap semua diskusi formal dan informal terkait dengan pekerjaannya."
+            },
+            {
+                "no": 3,
+                "teks": "Guru sering berinteraksi dengan peserta didik dan tidak membatasi perhatiannya hanya pada kelompok tertentu (misalnya: peserta didik yang pandai, kaya, berasal dari daerah yang sama dengan guru)."
+            }
+        ]
+    },
+    {
+        "id": 12,
+        "nama": "Penilaian  untuk  Kompetensi  12:  Komunikasi  dengan  sesama  guru,  tenaga  kependidikan,  orang tua peserta didik, dan masyarakat",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru menyampaikan informasi tentang kemajuan, kesulitan, dan potensi peserta didik kepada orang tuanya, baik dalam pertemuan formal maupun tidak formal antara guru dan orang tua, teman sejawat,dan dapat menunjukkan buktinya."
+            },
+            {
+                "no": 2,
+                "teks": "Guru ikut berperan aktif dalam kegiatan di luar pembelajaran yang diselenggarakan oleh sekolah dan masyarakat dan dapat memberikan bukti keikutsertaannya."
+            },
+            {
+                "no": 3,
+                "teks": "Guru memperhatikan sekolah sebagai bagian dari masyarakat, berkomunikasi dengan masyarakat sekitar, serta berperan dalam kegiatan sosial di masyarakat."
+            }
+        ]
+    },
+    {
+        "id": 13,
+        "nama": "Penguasaan materi, struktur, konsep, dan pola pikir keilmuan yang mendukung mata pelajaran yang diampu",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru melakukan pemetaan standar kompetensi dan kompetensi dasar untuk mata pelajaran yang diampunya, untuk mengidentifikasi materi pembelajaran yang dianggap sulit, melakukan perencanaan dan pelaksanaan pembelajaran, dan memperkirakan alokasi waktu yang diperlukan."
+            },
+            {
+                "no": 2,
+                "teks": "Guru menyertakan informasi yang tepat dan mutakhir di dalam perencanaan dan pelaksanaan pembelajaran."
+            },
+            {
+                "no": 3,
+                "teks": "Guru menyusun materi, perencanaan dan pelaksanaan pembelajaran yang berisi informasi yang tepat, mutakhir, dan yang membantu peserta didik untuk memahami konsep materi pembelajaran."
+            }
+        ]
+    },
+    {
+        "id": 14,
+        "nama": "Mengembangkan keprofesionalan melalui tindakan reflektif",
+        "indikator": [
+            {
+                "no": 1,
+                "teks": "Guru melakukan evaluasi diri secara spesifik, lengkap, dan didukung dengan contoh pengalaman diri sendiri."
+            },
+            {
+                "no": 2,
+                "teks": "Guru memiliki jurnal pembelajaran, catatan masukan dari kolega atau hasil penilaian proses pembelajaran sebagai bukti yang menggambarkan kinerjanya."
+            },
+            {
+                "no": 3,
+                "teks": "Guru memanfaatkan bukti gambaran kinerjanya untuk mengembangkan perencanaan dan pelaksanaan pembelajaran selanjutnya dalam program Pengembangan Keprofesian Berkelanjutan (PKB)."
+            },
+            {
+                "no": 4,
+                "teks": "Guru dapat mengaplikasikan pengalaman PKB dalam perencanaan, pelaksanaan, penilaian pembelajaran dan tindak lanjutnya."
+            },
+            {
+                "no": 5,
+                "teks": "Guru melakukan penelitian, mengembangkan karya inovasi, mengikuti kegiatan ilmiah (misalnya seminar, konferensi), dan aktif dalam melaksanakan PKB."
+            },
+            {
+                "no": 6,
+                "teks": "Guru dapat memanfaatkan TIK dalam berkomunikasi dan pelaksanaan PKB."
+            }
+        ]
+    }
+]

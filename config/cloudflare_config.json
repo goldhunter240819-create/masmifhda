@@ -1,0 +1,14 @@
+﻿{
+    "tunnels": [
+        {
+            "id": "cf_6a344da8d2e64",
+            "name": "Aula System (apk.ghsystem.my.id)",
+            "token": "eyJhIjoiNTc4OWU0ZjlkZjc1Yzk4OGNjODg3NDQyNTQ2ZThmNjUiLCJ0IjoiMmYxMmUxYjctMTcxNS00ZGM5LWFlNDktZTFiZjc2NzBkOGYwIiwicyI6Ik5UUXdaRFEyTWpndE9ETTBaQzAwT1RjeUxUaGlOelF0TVRrMFpUZG1OMlJtWXpBeiJ9",
+            "domain": "apk.ghsystem.my.id",
+            "local_target": "http:\/\/localhost",
+            "target_folder": "masmifhda",
+            "auto_start": true,
+            "created_at": "2026-06-19 02:57:28"
+        }
+    ]
+}

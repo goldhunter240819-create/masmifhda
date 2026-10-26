@@ -1,0 +1,19 @@
+{
+  "siakad": {
+    "dashboard": [1, 2, 3, 99],
+    "data_master": [1, 99],
+    "manajemen_guru": [1, 99],
+    "manajemen_siswa": [1, 99],
+    "manajemen_nilai": [1, 99],
+    "input_nilai_guru": [2, 99],
+    "raport": [1, 2, 3, 99]
+  },
+  "cbt": {
+    "dashboard": [1, 99],
+    "bank_soal": [1, 2, 99],
+    "manajemen_ujian": [1, 2, 99],
+    "peserta_ujian": [1, 99],
+    "hasil_evaluasi": [1, 2, 99],
+    "pengawasan": [1, 2, 99]
+  }
+}

@@ -1,0 +1,1 @@
+{"hari":"Selasa","jam_mulai":"07:30:00","jam_selesai":"08:10:00","mapel_id":"5","guru_id":"12","jadwal_id":""}

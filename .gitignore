@@ -1,0 +1,41 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Storage & Temporary Files
+/storage/
+*.log
+.env
+/.agents/
+/scratch/
+.gemini/
+
+# Large binaries & Archives
+*.exe
+*.zip
+*.rar
+*.tar.gz
+*.apk
+
+# User uploads (too large for GitHub, stay local only)
+/public/uploads/
+/uploads/
+
+# Face recognition model (large binary)
+/public/absen/assets/models/
+
+# Temp, Scanner & Debug dumps
+CamScanner*.pdf
+debug_*.txt
+temp*
+html_output*.txt
+webhook.log
+scanner_debug.log
+scanner_guru_debug.log
+
+# Misc files
+$path
+*.sql
+core_siswa.txt
+aula_siswa.txt
+mistakes.json

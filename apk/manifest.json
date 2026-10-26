@@ -1,0 +1,21 @@
+{
+  "name": "MAS Mifhda System",
+  "short_name": "MAS Mifhda",
+  "start_url": "/apk/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/public/logo_kemenag.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/public/logo_kemenag.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

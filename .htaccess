@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Allow direct access to piagam/ folder (bypass router)
+    RewriteCond %{REQUEST_URI} ^/piagam [NC]
+    RewriteRule ^ - [L]
+
+    # Do not rewrite real files or directories (e.g. index.php, public assets)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Redirect everything else to public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+DirectoryIndex index.php
