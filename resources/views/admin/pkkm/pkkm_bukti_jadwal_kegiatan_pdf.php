@@ -313,7 +313,7 @@ $renderMonthEvents = function($monthNum, $defaultItems = []) use ($eventsByMonth
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -458,7 +458,7 @@ $renderMonthEvents = function($monthNum, $defaultItems = []) use ($eventsByMonth
             font-weight: 600;
             word-break: break-word;
         }
-        .tag-green { background: #dcfce7; color: #166534; border-left: 2.5px solid #16a34a; }
+        .tag-green { background: #e0f2fe; color: #0c4a6e; border-left: 2.5px solid #16a34a; }
         .tag-blue { background: #dbeafe; color: #1e40af; border-left: 2.5px solid #2563eb; }
         .tag-purple { background: #f3e8ff; color: #6b21a8; border-left: 2.5px solid #9333ea; }
         .tag-amber { background: #fef3c7; color: #92400e; border-left: 2.5px solid #d97706; }

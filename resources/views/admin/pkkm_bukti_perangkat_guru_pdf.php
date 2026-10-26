@@ -53,9 +53,9 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
     <script src="/public/assets/js/lucide.min.js"></script>
     <style>
         :root {
-            --primary: #059669;
-            --primary-dark: #047857;
-            --primary-light: #ecfdf5;
+            --primary: #0284c7;
+            --primary-dark: #0284c7;
+            --primary-light: #f0f9ff;
             --secondary: #0284c7;
             --slate-800: #1e293b;
             --slate-900: #0f172a;
@@ -102,7 +102,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             gap: 8px;
         }
         .pkkm-badge {
-            background: #10b981;
+            background: #0ea5e9;
             color: #ffffff;
             font-size: 0.72rem;
             font-weight: 800;
@@ -130,8 +130,8 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             border: none;
             transition: all 0.15s ease;
         }
-        .nav-btn-primary { background: #059669; color: #ffffff; }
-        .nav-btn-primary:hover { background: #047857; color: #ffffff; }
+        .nav-btn-primary { background: #0284c7; color: #ffffff; }
+        .nav-btn-primary:hover { background: #0284c7; color: #ffffff; }
         .nav-btn-secondary { background: #334155; color: #f8fafc; }
         .nav-btn-secondary:hover { background: #475569; color: #ffffff; }
         .nav-btn-outline { background: transparent; border: 1px solid #475569; color: #cbd5e1; }
@@ -146,7 +146,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 
         /* Hero Banner */
         .hero-banner {
-            background: linear-gradient(135deg, #065f46 0%, #047857 50%, #0f766e 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0f766e 100%);
             border-radius: 14px;
             padding: 24px 28px;
             color: #ffffff;
@@ -202,7 +202,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         }
         .hero-sub {
             font-size: 0.88rem;
-            color: #d1fae5;
+            color: #e0f2fe;
             margin: 4px 0 0 0;
         }
         .hero-verified-badge {
@@ -253,7 +253,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         }
         .metric-lbl {
             font-size: 0.75rem;
-            color: #d1fae5;
+            color: #e0f2fe;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -292,14 +292,14 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             transition: all 0.2s ease;
         }
         .tab-btn:hover {
-            color: #059669;
+            color: #0284c7;
             background: #ffffff;
         }
         .tab-btn.active {
-            color: #059669;
+            color: #0284c7;
             background: #ffffff;
-            border-color: #059669;
-            border-bottom: 3px solid #059669;
+            border-color: #0284c7;
+            border-bottom: 3px solid #0284c7;
             margin-bottom: -6px;
             box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
         }
@@ -312,8 +312,8 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             border-radius: 12px;
         }
         .tab-btn.active .tab-counter {
-            background: #ecfdf5;
-            color: #059669;
+            background: #f0f9ff;
+            color: #0284c7;
         }
 
         /* Filter Section */
@@ -348,13 +348,13 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         }
         .filter-select:focus, .filter-input:focus {
             outline: none;
-            border-color: #10b981;
+            border-color: #0ea5e9;
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
         }
         .filter-btn-submit {
             padding: 9px 18px;
-            background: #059669;
+            background: #0284c7;
             color: #ffffff;
             border: none;
             border-radius: 8px;
@@ -366,7 +366,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             gap: 6px;
             transition: background 0.15s;
         }
-        .filter-btn-submit:hover { background: #047857; }
+        .filter-btn-submit:hover { background: #0284c7; }
         .filter-btn-reset {
             padding: 9px 14px;
             background: #f1f5f9;
@@ -415,7 +415,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             width: 46px;
             height: 46px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
             color: #ffffff;
             display: flex;
             align-items: center;
@@ -423,7 +423,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             font-weight: 800;
             font-size: 1.1rem;
             flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(5,150,105,0.25);
+            box-shadow: 0 2px 6px rgba(2,132,199,0.25);
         }
         .teacher-name {
             font-size: 1.05rem;
@@ -443,9 +443,9 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             gap: 10px;
         }
         .docs-count-pill {
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
+            background: #f0f9ff;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.82rem;
@@ -472,7 +472,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             background: #f1f5f9;
             padding: 8px 14px;
             border-radius: 8px;
-            border-left: 4px solid #059669;
+            border-left: 4px solid #0284c7;
         }
         .mapel-title-text {
             font-size: 0.92rem;
@@ -529,7 +529,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             white-space: nowrap;
         }
         .badge-modul { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .badge-atp   { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        .badge-atp   { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
         .badge-prota { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
         .badge-kktp  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
         .badge-other { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
@@ -539,7 +539,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #059669;
+            background: #0284c7;
             color: #ffffff;
             padding: 6px 12px;
             border-radius: 6px;
@@ -547,14 +547,14 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             font-weight: 700;
             text-decoration: none;
             transition: all 0.15s ease;
-            box-shadow: 0 1px 3px rgba(5,150,105,0.25);
+            box-shadow: 0 1px 3px rgba(2,132,199,0.25);
             white-space: nowrap;
         }
         .btn-open-pdf:hover {
-            background: #047857;
+            background: #0284c7;
             color: #ffffff;
             transform: translateY(-1px);
-            box-shadow: 0 3px 6px rgba(5,150,105,0.3);
+            box-shadow: 0 3px 6px rgba(2,132,199,0.3);
         }
         .btn-preview-modal {
             display: inline-flex;
@@ -657,12 +657,12 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             color: #0f172a;
         }
         .sheet-outer-frame {
-            border: 2px solid #059669;
+            border: 2px solid #0284c7;
             padding: 4px;
             height: 100%;
         }
         .sheet-inner-frame {
-            border: 1px solid #10b981;
+            border: 1px solid #0ea5e9;
             padding: 18px 20px;
             height: 100%;
         }
@@ -670,7 +670,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             display: flex;
             align-items: center;
             gap: 16px;
-            border-bottom: 3px double #059669;
+            border-bottom: 3px double #0284c7;
             padding-bottom: 12px;
             margin-bottom: 16px;
         }
@@ -687,7 +687,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         .kop-text h1 {
             font-size: 11pt;
             font-weight: 700;
-            color: #065f46;
+            color: #0369a1;
             margin: 0;
             letter-spacing: 0.5px;
             text-transform: uppercase;
@@ -741,7 +741,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
     <header class="top-navbar">
         <div class="top-nav-left">
             <div class="top-nav-title">
-                <i data-lucide="shield-check" style="color: #34d399; width: 22px; height: 22px;"></i>
+                <i data-lucide="shield-check" style="color: #38bdf8; width: 22px; height: 22px;"></i>
                 <span>Audit & Monitoring Perangkat Pembelajaran Guru</span>
             </div>
             <span class="pkkm-badge">Bukti Fisik PKKM 2026</span>
@@ -778,7 +778,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                 </div>
 
                 <div class="hero-verified-badge">
-                    <i data-lucide="check-circle-2" style="color: #34d399; width: 18px; height: 18px;"></i>
+                    <i data-lucide="check-circle-2" style="color: #38bdf8; width: 18px; height: 18px;"></i>
                     <span>Tersimpan di Cloud Server — Dapat Dibuka Langsung</span>
                 </div>
             </div>
@@ -872,7 +872,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             </div>
 
             <div style="font-size: 0.82rem; color: #64748b; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="info" style="width: 14px; height: 14px; color: #059669;"></i>
+                <i data-lucide="info" style="width: 14px; height: 14px; color: #0284c7;"></i>
                 <span>Klik tombol <strong>Buka PDF</strong> untuk memverifikasi dokumen fisik secara langsung.</span>
             </div>
         </div>
@@ -981,7 +981,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                     <div class="mapel-group">
                         <div class="mapel-group-title">
                             <div class="mapel-title-text">
-                                <i data-lucide="book" style="width: 16px; height: 16px; color: #059669;"></i>
+                                <i data-lucide="book" style="width: 16px; height: 16px; color: #0284c7;"></i>
                                 <span><?= htmlspecialchars($mGroup['nama_mapel']) ?></span>
                                 <span style="color:#64748b; font-weight:500;">(Kelas <?= htmlspecialchars($mGroup['nama_kelas']) ?>)</span>
                             </div>
@@ -1010,9 +1010,9 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                                         elseif (stripos($jenis, 'kktp') !== false || stripos($jenis, 'capaian') !== false) $badgeClass = 'badge-kktp';
                                         
                                         $status = $doc['status'] ?: 'Menunggu';
-                                        $statusColor = ($status === 'Disetujui') ? '#059669' : '#d97706';
-                                        $statusBg = ($status === 'Disetujui') ? '#ecfdf5' : '#fffbeb';
-                                        $statusBorder = ($status === 'Disetujui') ? '#a7f3d0' : '#fde68a';
+                                        $statusColor = ($status === 'Disetujui') ? '#0284c7' : '#d97706';
+                                        $statusBg = ($status === 'Disetujui') ? '#f0f9ff' : '#fffbeb';
+                                        $statusBorder = ($status === 'Disetujui') ? '#bae6fd' : '#fde68a';
                                     ?>
                                     <tr>
                                         <td align="center" style="color: #64748b; font-weight: 600;"><?= $dNo++ ?></td>
@@ -1029,7 +1029,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                                                 <i data-lucide="file" style="width: 12px; height: 12px; color: #ef4444;"></i>
                                                 <span><?= htmlspecialchars($doc['nama_file']) ?></span>
                                                 <span style="color:#cbd5e1;">&bull;</span>
-                                                <span style="color:#059669; font-weight:600;">✓ PDF Asli Server</span>
+                                                <span style="color:#0284c7; font-weight:600;">✓ PDF Asli Server</span>
                                             </div>
                                         </td>
                                         <td style="font-size: 0.78rem; color: #64748b; white-space: nowrap;">
@@ -1075,7 +1075,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
             <div class="flat-table-card">
                 <div style="padding: 14px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; display:flex; align-items:center; gap:8px;">
-                        <i data-lucide="list" style="color: #059669;"></i>
+                        <i data-lucide="list" style="color: #0284c7;"></i>
                         <span>Daftar Seluruh Dokumen Perangkat Pembelajaran Guru</span>
                     </div>
                     <div style="font-size: 0.82rem; color: #64748b;">
@@ -1114,9 +1114,9 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                                     elseif (stripos($jenis, 'kktp') !== false || stripos($jenis, 'capaian') !== false) $badgeClass = 'badge-kktp';
                                     
                                     $status = $row['status'] ?: 'Menunggu';
-                                    $statusColor = ($status === 'Disetujui') ? '#059669' : '#d97706';
-                                    $statusBg = ($status === 'Disetujui') ? '#ecfdf5' : '#fffbeb';
-                                    $statusBorder = ($status === 'Disetujui') ? '#a7f3d0' : '#fde68a';
+                                    $statusColor = ($status === 'Disetujui') ? '#0284c7' : '#d97706';
+                                    $statusBg = ($status === 'Disetujui') ? '#f0f9ff' : '#fffbeb';
+                                    $statusBorder = ($status === 'Disetujui') ? '#bae6fd' : '#fde68a';
                                 ?>
                                 <tr>
                                     <td align="center" style="color: #64748b; font-weight: 600;"><?= $tNo++ ?></td>
@@ -1195,8 +1195,8 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                         </div>
 
                         <!-- Judul Lembar -->
-                        <div style="text-align: center; margin-bottom: 16px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-                            <h3 style="margin: 0; font-size: 11pt; font-weight: 800; color: #065f46; text-transform: uppercase;">
+                        <div style="text-align: center; margin-bottom: 16px; padding: 8px 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
+                            <h3 style="margin: 0; font-size: 11pt; font-weight: 800; color: #0369a1; text-transform: uppercase;">
                                 LEMBAR REKAPITULASI & VERIFIKASI PERANGKAT PEMBELAJARAN GURU
                             </h3>
                             <p style="margin: 3px 0 0 0; font-size: 8.5pt; color: #475569;">
@@ -1231,9 +1231,9 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                                     <td align="center" style="border: 1px solid #cbd5e1; padding: 5px;"><?= $mg['atp_cnt'] ?></td>
                                     <td align="center" style="border: 1px solid #cbd5e1; padding: 5px;"><?= $mg['prota_cnt'] ?></td>
                                     <td align="center" style="border: 1px solid #cbd5e1; padding: 5px;"><?= $mg['kktp_cnt'] ?></td>
-                                    <td align="center" style="border: 1px solid #cbd5e1; padding: 5px; background: #f0fdf4; font-weight: 700; color: #065f46;"><?= $mg['total'] ?></td>
+                                    <td align="center" style="border: 1px solid #cbd5e1; padding: 5px; background: #f0f9ff; font-weight: 700; color: #0369a1;"><?= $mg['total'] ?></td>
                                     <td align="center" style="border: 1px solid #cbd5e1; padding: 5px;">
-                                        <span style="background:#ecfdf5; color:#065f46; font-size:7pt; font-weight:700; padding:2px 5px; border-radius:3px;">Lengkap</span>
+                                        <span style="background:#f0f9ff; color:#0369a1; font-size:7pt; font-weight:700; padding:2px 5px; border-radius:3px;">Lengkap</span>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -1241,7 +1241,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
                         </table>
 
                         <!-- Catatan & Pengesahan -->
-                        <div style="font-size: 7.8pt; color: #475569; border-left: 3px solid #10b981; padding-left: 8px; margin-bottom: 20px;">
+                        <div style="font-size: 7.8pt; color: #475569; border-left: 3px solid #0ea5e9; padding-left: 8px; margin-bottom: 20px;">
                             <strong>Catatan Penelaahan Asesor/Pengawas:</strong> Seluruh berkas digital RPP, Modul Ajar, Silabus/ATP, Prota, Promes, dan KKTP guru di atas telah tersimpan secara resmi pada server MAS Miftahul Huda dan dapat dibuka serta ditelaah secara daring melalui portal audit sistem PKKM.
                         </div>
 
@@ -1281,7 +1281,7 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         <div class="pdf-modal-box">
             <div class="pdf-modal-header">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <i data-lucide="file-text" style="color: #34d399; width: 20px; height: 20px;"></i>
+                    <i data-lucide="file-text" style="color: #38bdf8; width: 20px; height: 20px;"></i>
                     <div>
                         <div id="pdfModalTitle" style="font-weight: 700; font-size: 0.95rem;">-</div>
                         <div id="pdfModalSub" style="font-size: 0.75rem; color: #94a3b8;">-</div>

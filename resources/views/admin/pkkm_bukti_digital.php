@@ -15,9 +15,9 @@ $active_page = 'bukti_digital';
         /* Banner Header */
         .elite-page-header {
             position: relative; padding: 2rem 2.5rem; margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #0f766e 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
             border-radius: 20px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 12px 30px -8px rgba(6, 78, 59, 0.35);
+            box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.35);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .elite-page-header .header-bg-shapes {
@@ -45,8 +45,8 @@ $active_page = 'bukti_digital';
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-2px); }
-        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
-        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
+        .e-btn-primary { background: #ffffff; color: #0284c7; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
+        .e-btn-primary:hover { background: #f0f9ff; color: #0369a1; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -57,7 +57,7 @@ $active_page = 'bukti_digital';
         .stat-box {
             padding: 14px 18px; border-radius: 14px; display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
         }
-        .stat-box.green { background: #f0fdf4; border-color: #dcfce7; color: #14532d; }
+        .stat-box.green { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
         .stat-box.blue { background: #eff6ff; border-color: #dbeafe; color: #1e3a8a; }
         .stat-box.yellow { background: #fffbeb; border-color: #fef3c7; color: #92400e; }
         .stat-box.purple { background: #faf5ff; border-color: #f3e8ff; color: #6b21a8; }
@@ -80,8 +80,8 @@ $active_page = 'bukti_digital';
         }
         .cat-pill:hover { background: #e2e8f0; color: #0f172a; }
         .cat-pill.active {
-            background: #059669; color: #ffffff; border-color: #059669;
-            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+            background: #0284c7; color: #ffffff; border-color: #0284c7;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
         }
         .search-input-box {
             position: relative; min-width: 240px; flex: 1; max-width: 360px;
@@ -92,8 +92,8 @@ $active_page = 'bukti_digital';
             background: #f8fafc; transition: all 0.2s;
         }
         .search-input-box input:focus {
-            outline: none; border-color: #10b981; background: #fff;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+            outline: none; border-color: #0284c7; background: #fff;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
         }
         .search-input-box i {
             position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
@@ -132,7 +132,7 @@ $active_page = 'bukti_digital';
         }
         .badge-ind {
             font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;
-            background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;
+            background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd;
         }
         .digital-title {
             font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.35;
@@ -149,7 +149,7 @@ $active_page = 'bukti_digital';
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;
         }
         .btn-copy-url {
-            background: transparent; border: none; color: #059669; font-weight: 700;
+            background: transparent; border: none; color: #0284c7; font-weight: 700;
             font-size: 0.72rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;
             display: inline-flex; align-items: center; gap: 4px;
         }
@@ -162,7 +162,7 @@ $active_page = 'bukti_digital';
             margin-bottom: 14px;
         }
         .status-attached {
-            background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;
+            background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1;
         }
         .status-unattached {
             background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
@@ -175,10 +175,10 @@ $active_page = 'bukti_digital';
         }
         .btn-action-view {
             padding: 7px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 700;
-            background: #059669; color: #ffffff; text-decoration: none; display: inline-flex;
+            background: #0284c7; color: #ffffff; text-decoration: none; display: inline-flex;
             align-items: center; gap: 6px; transition: background 0.15s;
         }
-        .btn-action-view:hover { background: #047857; color: #ffffff; }
+        .btn-action-view:hover { background: #0369a1; color: #ffffff; }
         .btn-action-attach {
             padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
             background: #ffffff; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;
@@ -317,7 +317,7 @@ $active_page = 'bukti_digital';
                         <?php if($b['is_attached']): ?>
                             <div class="attachment-status-bar status-attached">
                                 <div style="display:flex; align-items:center; gap:6px; overflow:hidden;">
-                                    <i data-lucide="check-circle" style="width:14px; height:14px; color:#059669; flex-shrink:0;"></i>
+                                    <i data-lucide="check-circle" style="width:14px; height:14px; color:#0284c7; flex-shrink:0;"></i>
                                     <span style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                         Tertaut: <?= htmlspecialchars($b['attached_to'][0]['nama_master'] ?? 'Master Berkas'); ?>
                                         <?php if(count($b['attached_to']) > 1): ?>

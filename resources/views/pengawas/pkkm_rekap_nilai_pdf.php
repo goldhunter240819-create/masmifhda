@@ -79,7 +79,7 @@ if ($nkkm >= 91) {
         }
 
         .no-print-bar {
-            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
             color: #ffffff;
             padding: 12px 24px;
             display: flex;
@@ -100,7 +100,7 @@ if ($nkkm >= 91) {
         }
         .bar-btn {
             background: #ffffff;
-            color: #064e3b;
+            color: #0369a1;
             border: none;
             padding: 8px 18px;
             border-radius: 8px;
@@ -113,7 +113,7 @@ if ($nkkm >= 91) {
             text-decoration: none;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .bar-btn:hover { background: #f0fdf4; }
+        .bar-btn:hover { background: #f0f9ff; }
 
         .page {
             width: 210mm;
@@ -133,7 +133,7 @@ if ($nkkm >= 91) {
         .kop-text { text-align: center; line-height: 1.2; padding-left: 10px; }
         .kop-text .inst-kemenag { font-size: 10.5pt; font-weight: bold; }
         .kop-text .inst-yayasan { font-size: 11.5pt; font-weight: bold; }
-        .kop-text .inst-nama { font-size: 13.5pt; font-weight: bold; margin: 2px 0; color: #064e3b; }
+        .kop-text .inst-nama { font-size: 13.5pt; font-weight: bold; margin: 2px 0; color: #0369a1; }
         .kop-text .inst-status { font-size: 8.5pt; font-weight: bold; letter-spacing: 0.3px; }
         .kop-text .inst-kontak { font-size: 8pt; font-style: italic; margin-top: 2px; }
         .kop-line { border-top: 3px solid #000; border-bottom: 1px solid #000; height: 2px; margin: 3px 0 12px 0; }
@@ -173,8 +173,8 @@ if ($nkkm >= 91) {
 
         /* Final Score Box */
         .score-summary-box {
-            border: 2px solid #059669;
-            background: #f0fdf4;
+            border: 2px solid #0284c7;
+            background: #f0f9ff;
             border-radius: 8px;
             padding: 10px 14px;
             display: flex;
@@ -186,7 +186,7 @@ if ($nkkm >= 91) {
         .score-summary-val {
             font-size: 1.45rem;
             font-weight: 900;
-            color: #064e3b;
+            color: #0369a1;
         }
 
         /* Tanda Tangan */
@@ -314,7 +314,7 @@ if ($nkkm >= 91) {
                     <td style="text-align: center;"><?php echo $k['total_ind']; ?></td>
                     <td style="text-align: center;"><?php echo $k['skor_maks']; ?></td>
                     <td style="text-align: center; font-weight: bold;"><?php echo $k['skor_perolehan']; ?></td>
-                    <td style="text-align: center; font-weight: bold; color: #064e3b;"><?php echo $k['nilai_komponen']; ?>%</td>
+                    <td style="text-align: center; font-weight: bold; color: #0369a1;"><?php echo $k['nilai_komponen']; ?>%</td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -323,8 +323,8 @@ if ($nkkm >= 91) {
                     <td colspan="2" style="text-align: center;">TOTAL PEROLEHAN</td>
                     <td style="text-align: center;"><?php echo $total_ind_all; ?></td>
                     <td style="text-align: center;"><?php echo $total_skor_maks; ?></td>
-                    <td style="text-align: center; color: #064e3b;"><?php echo $total_skor_riil; ?></td>
-                    <td style="text-align: center; color: #064e3b;"><?php echo $nkkm; ?>%</td>
+                    <td style="text-align: center; color: #0369a1;"><?php echo $total_skor_riil; ?></td>
+                    <td style="text-align: center; color: #0369a1;"><?php echo $nkkm; ?>%</td>
                 </tr>
             </tfoot>
         </table>
@@ -332,16 +332,16 @@ if ($nkkm >= 91) {
         <!-- HASIL AKHIR & PREDIKAT -->
         <div class="score-summary-box">
             <div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: #065f46; text-transform: uppercase;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #0369a1; text-transform: uppercase;">
                     Nilai Kinerja Kepala Madrasah (NKKM):
                 </div>
                 <div class="score-summary-val"><?php echo $nkkm; ?> / 100</div>
             </div>
             <div style="text-align: right;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #065f46; text-transform: uppercase;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #0369a1; text-transform: uppercase;">
                     Predikat Hasil Penilaian:
                 </div>
-                <div style="font-size: 1.25rem; font-weight: 900; color: #047857; text-transform: uppercase;">
+                <div style="font-size: 1.25rem; font-weight: 900; color: #0284c7; text-transform: uppercase;">
                     <?php echo $predikat; ?>
                 </div>
             </div>

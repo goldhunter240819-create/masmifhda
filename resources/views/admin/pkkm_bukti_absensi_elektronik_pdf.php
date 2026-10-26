@@ -128,7 +128,7 @@ $daftar_guru = !empty($gurus) ? $gurus : [
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -213,7 +213,7 @@ $daftar_guru = !empty($gurus) ? $gurus : [
             padding: 8px 10px;
             text-align: center;
         }
-        .kpi-card.green { border-color: #86efac; background: #f0fdf4; }
+        .kpi-card.green { border-color: #7dd3fc; background: #f0f9ff; }
         .kpi-label { font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
         .kpi-val { font-size: 1.3rem; font-weight: 800; color: #0284c7; line-height: 1.2; margin: 2px 0; }
         .kpi-desc { font-size: 0.68rem; color: #475569; }
@@ -238,8 +238,8 @@ $daftar_guru = !empty($gurus) ? $gurus : [
         .absen-table td.center { text-align: center; }
 
         .badge-disiplin {
-            background: #dcfce7;
-            color: #15803d;
+            background: #e0f2fe;
+            color: #0284c7;
             font-weight: 700;
             padding: 2px 6px;
             border-radius: 4px;
@@ -248,8 +248,8 @@ $daftar_guru = !empty($gurus) ? $gurus : [
         }
 
         .system-meta-box {
-            border: 1px solid #bbf7d0;
-            background: #f0fdf4;
+            border: 1px solid #bae6fd;
+            background: #f0f9ff;
             border-radius: 8px;
             padding: 8px 12px;
             display: flex;
@@ -401,7 +401,7 @@ $daftar_guru = !empty($gurus) ? $gurus : [
                 <span style="font-size: 1.2rem;">🔒</span>
                 <div>
                     <strong style="color: #1e40af;">Keabsahan Sistem Digital:</strong>
-                    <span style="color: #166534;">Data presensi tersinkronisasi otomatis oleh modul GH-SSS Smart School System MAS Miftahul Huda.</span>
+                    <span style="color: #0c4a6e;">Data presensi tersinkronisasi otomatis oleh modul GH-SSS Smart School System MAS Miftahul Huda.</span>
                 </div>
             </div>
             <div style="font-weight: bold; color: #0284c7; font-size: 8pt; border: 1px dashed #38bdf8; padding: 2px 6px; border-radius: 4px;">

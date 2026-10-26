@@ -14,7 +14,7 @@
         }
         .stat-box blue { background: linear-gradient(135deg, #f3e8ff, #faf5ff); border: 1px solid #e9d5ff; color: #6b21a8; }
         .stat-box.blue { background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 1px solid #bfdbfe; color: #1e3a8a; }
-        .stat-box.green { background: linear-gradient(135deg, #f0fdf4, #f8fafc); border: 1px solid #bbf7d0; color: #14532d; }
+        .stat-box.green { background: linear-gradient(135deg, #f0f9ff, #f8fafc); border: 1px solid #bae6fd; color: #0c4a6e; }
         .stat-box.yellow { background: linear-gradient(135deg, #fefce8, #f8fafc); border: 1px solid #fef08a; color: #713f12; }
         
         .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.6); }
@@ -102,7 +102,7 @@
                                 <td style="padding:12px; text-align:center; color:#475569;"><?php echo $k['jml_berkas']; ?> File</td>
                                 <td style="padding:12px; text-align:center;">
                                     <?php if ($k['jml_indikator'] > 0 && $k['jml_berkas'] >= $k['jml_indikator']): ?>
-                                        <span class="badge" style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:50px; font-weight:600;">Lengkap</span>
+                                        <span class="badge" style="background:#e0f2fe; color:#0c4a6e; padding:6px 12px; border-radius:50px; font-weight:600;">Lengkap</span>
                                     <?php else: ?>
                                         <span class="badge" style="background:#fef3c7; color:#92400e; padding:6px 12px; border-radius:50px; font-weight:600;">Proses</span>
                                     <?php endif; ?>

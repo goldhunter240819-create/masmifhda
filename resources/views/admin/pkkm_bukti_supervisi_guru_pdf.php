@@ -231,9 +231,9 @@ foreach ($instrumenList as $it) {
     <script src="/public/assets/js/lucide.min.js"></script>
     <style>
         :root {
-            --primary: #059669;
-            --primary-dark: #047857;
-            --primary-light: #ecfdf5;
+            --primary: #0284c7;
+            --primary-dark: #0284c7;
+            --primary-light: #f0f9ff;
             --slate-800: #1e293b;
             --slate-900: #0f172a;
             --border: #e2e8f0;
@@ -282,8 +282,8 @@ foreach ($instrumenList as $it) {
             letter-spacing: 0.3px;
         }
         .nav-badge {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
+            background: rgba(14, 165, 233, 0.2);
+            color: #38bdf8;
             border: 1px solid rgba(16, 185, 129, 0.4);
             padding: 3px 10px;
             border-radius: 20px;
@@ -311,8 +311,8 @@ foreach ($instrumenList as $it) {
         }
         .btn-white { background: #ffffff; color: #0f172a; }
         .btn-white:hover { background: #f8fafc; transform: translateY(-1px); }
-        .btn-emerald { background: #10b981; color: #ffffff; }
-        .btn-emerald:hover { background: #059669; }
+        .btn-emerald { background: #0ea5e9; color: #ffffff; }
+        .btn-emerald:hover { background: #0284c7; }
         .btn-ghost { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
         .btn-ghost:hover { background: rgba(255,255,255,0.22); }
 
@@ -344,11 +344,11 @@ foreach ($instrumenList as $it) {
             transition: all 0.2s;
             white-space: nowrap;
         }
-        .tab-btn:hover { color: #059669; background: #f8fafc; }
+        .tab-btn:hover { color: #0284c7; background: #f8fafc; }
         .tab-btn.active {
-            color: #059669;
-            border-bottom-color: #059669;
-            background: #f0fdf4;
+            color: #0284c7;
+            border-bottom-color: #0284c7;
+            background: #f0f9ff;
         }
 
         /* Container Content */
@@ -414,11 +414,11 @@ foreach ($instrumenList as $it) {
         .card-head-badge {
             font-size: 0.75rem;
             font-weight: 700;
-            color: #059669;
-            background: #ecfdf5;
+            color: #0284c7;
+            background: #f0f9ff;
             padding: 3px 10px;
             border-radius: 20px;
-            border: 1px solid #a7f3d0;
+            border: 1px solid #bae6fd;
         }
 
         /* Table styles */
@@ -484,7 +484,7 @@ foreach ($instrumenList as $it) {
             font-weight: bold;
             text-transform: uppercase;
             line-height: 1.2;
-            color: #064e3b;
+            color: #0369a1;
         }
         .kop-text-preview h2 {
             margin: 1px 0 2px 0;
@@ -596,7 +596,7 @@ foreach ($instrumenList as $it) {
             <i data-lucide="arrow-left" style="width:15px; height:15px;"></i> <?= htmlspecialchars($backText) ?>
         </a>
         <div class="nav-title">
-            <i data-lucide="shield-check" style="width:18px; height:18px; color:#10b981;"></i>
+            <i data-lucide="shield-check" style="width:18px; height:18px; color:#0ea5e9;"></i>
             Portal Monitoring Supervisi GTK (Komponen 4 PKKM)
         </div>
         <span class="nav-badge">BUKTI FISIK DIGITAL INDIKATOR 4.2.1</span>
@@ -604,7 +604,7 @@ foreach ($instrumenList as $it) {
 
     <div class="nav-actions">
         <?php if($is_pkkm_linked): ?>
-            <div style="background: rgba(16,185,129,0.2); border:1px solid #10b981; color:#34d399; padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; display:flex; align-items:center; gap:5px;">
+            <div style="background: rgba(16,185,129,0.2); border:1px solid #0ea5e9; color:#38bdf8; padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; display:flex; align-items:center; gap:5px;">
                 <i data-lucide="check-circle-2" style="width:15px; height:15px;"></i>
                 Link Terpasang di <?= $linked_count ?> Berkas PKKM
             </div>
@@ -651,8 +651,8 @@ foreach ($instrumenList as $it) {
 <div class="portal-body">
     <!-- ALERT NOTIFIKASI -->
     <?php if(isset($_GET['msg']) && $_GET['msg'] === 'attached'): ?>
-    <div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; display:flex; align-items:center; gap:8px;">
-        <i data-lucide="check-circle" style="width:18px; height:18px; color:#10b981;"></i>
+    <div style="background:#f0f9ff; border:1px solid #bae6fd; color:#0369a1; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; display:flex; align-items:center; gap:8px;">
+        <i data-lucide="check-circle" style="width:18px; height:18px; color:#0ea5e9;"></i>
         Berhasil! Link monitoring supervisi otomatis terpasang ke <?= (int)($_GET['count'] ?? 0) ?> berkas master PKKM Komponen 4. Status di instrumen kini telah terisi.
     </div>
     <?php elseif(isset($_GET['msg']) && $_GET['msg'] === 'detached'): ?>
@@ -664,12 +664,12 @@ foreach ($instrumenList as $it) {
     <!-- 4 KPI SUMMARY CARDS -->
     <div class="kpi-grid no-print-area">
         <div class="kpi-card">
-            <div class="kpi-icon" style="background:#ecfdf5; color:#059669;">
+            <div class="kpi-icon" style="background:#f0f9ff; color:#0284c7;">
                 <i data-lucide="award" style="width:24px; height:24px;"></i>
             </div>
             <div>
                 <div style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Rata-rata Supervisi</div>
-                <div style="font-size:1.45rem; font-weight:800; color:#0f172a;"><?= $rataRataTotal ?> <span style="font-size:0.8rem; color:#059669; font-weight:700;">(<?= $predikatRataRata ?>)</span></div>
+                <div style="font-size:1.45rem; font-weight:800; color:#0f172a;"><?= $rataRataTotal ?> <span style="font-size:0.8rem; color:#0284c7; font-weight:700;">(<?= $predikatRataRata ?>)</span></div>
             </div>
         </div>
 
@@ -699,7 +699,7 @@ foreach ($instrumenList as $it) {
             </div>
             <div>
                 <div style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Verifikasi PKKM</div>
-                <div style="font-size:1.45rem; font-weight:800; color:#059669;">SKOR 4 (SANGAT BAIK)</div>
+                <div style="font-size:1.45rem; font-weight:800; color:#0284c7;">SKOR 4 (SANGAT BAIK)</div>
             </div>
         </div>
     </div>
@@ -709,7 +709,7 @@ foreach ($instrumenList as $it) {
         <div class="content-card no-print-area" style="margin-bottom:16px;">
             <div class="content-card-head">
                 <div class="card-head-title">
-                    <i data-lucide="file-text" style="color:#059669;"></i>
+                    <i data-lucide="file-text" style="color:#0284c7;"></i>
                     Pratinjau Lembar Rekapitulasi Laporan Hasil Supervisi (Format Cetak Asli A4)
                 </div>
                 <button onclick="window.print()" class="btn-act btn-emerald" style="padding:5px 12px; font-size:0.78rem;">
@@ -733,10 +733,10 @@ foreach ($instrumenList as $it) {
             </div>
 
             <div style="text-align: center; margin-bottom: 6px;">
-                <span style="background: #ecfdf5; color: #065f46; border: 1px solid #86efac; padding: 2px 8px; border-radius: 999px; font-size: 7pt; font-weight: 800; text-transform: uppercase;">
+                <span style="background: #f0f9ff; color: #0369a1; border: 1px solid #7dd3fc; padding: 2px 8px; border-radius: 999px; font-size: 7pt; font-weight: 800; text-transform: uppercase;">
                     BUKTI FISIK PKKM &bull; INDIKATOR 4.2.1
                 </span>
-                <h3 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 3px 0 1px 0; color: #064e3b;">
+                <h3 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 3px 0 1px 0; color: #0369a1;">
                     REKAPITULASI LAPORAN HASIL SUPERVISI AKADEMIK GURU
                 </h3>
                 <div style="font-size: 7.5pt; color: #475569; font-weight: bold;">
@@ -777,18 +777,18 @@ foreach ($instrumenList as $it) {
                         <td style="text-align: center;"><?php echo $row['pendahuluan']; ?></td>
                         <td style="text-align: center;"><?php echo $row['inti']; ?></td>
                         <td style="text-align: center;"><?php echo $row['penutup']; ?></td>
-                        <td style="text-align: center; font-weight: bold; color: #064e3b;"><?php echo $row['rata']; ?></td>
-                        <td style="text-align: center; font-weight: bold; color: #166534; font-size:6.3pt;"><?php echo $row['predikat']; ?></td>
+                        <td style="text-align: center; font-weight: bold; color: #0369a1;"><?php echo $row['rata']; ?></td>
+                        <td style="text-align: center; font-weight: bold; color: #0c4a6e; font-size:6.3pt;"><?php echo $row['predikat']; ?></td>
                         <td style="font-size: 6.3pt; line-height: 1.25;">
                             <?php echo htmlspecialchars($row['catatan']); ?>
                         </td>
                         <td style="font-size: 6.3pt; line-height: 1.25;">
-                            <span style="font-weight: bold; color: #047857;"><?php echo htmlspecialchars($row['tindak_lanjut_jenis'] ?: 'Bimbingan Klinis'); ?>:</span><br>
+                            <span style="font-weight: bold; color: #0284c7;"><?php echo htmlspecialchars($row['tindak_lanjut_jenis'] ?: 'Bimbingan Klinis'); ?>:</span><br>
                             <?php echo htmlspecialchars($row['tindak_lanjut']); ?>
                         </td>
                         <td style="text-align: center;" class="no-print">
                             <?php if($row['id'] > 0 && $row['id'] < 100): ?>
-                            <a href="/kurikulum/supervisi/kelas/cetak?id=<?php echo $row['id']; ?>" target="_blank" style="display: inline-flex; align-items: center; gap: 2px; background: #059669; color: #fff; padding: 2px 4px; border-radius: 4px; font-size: 5.8pt; text-decoration: none; font-weight: bold; white-space: nowrap;" title="Buka lembar penilaian observasi asli guru ini">
+                            <a href="/kurikulum/supervisi/kelas/cetak?id=<?php echo $row['id']; ?>" target="_blank" style="display: inline-flex; align-items: center; gap: 2px; background: #0284c7; color: #fff; padding: 2px 4px; border-radius: 4px; font-size: 5.8pt; text-decoration: none; font-weight: bold; white-space: nowrap;" title="Buka lembar penilaian observasi asli guru ini">
                                 📄 Buka
                             </a>
                             <?php else: ?>
@@ -805,9 +805,9 @@ foreach ($instrumenList as $it) {
                         <td style="text-align: center;"><?php echo $avgPendahuluan; ?></td>
                         <td style="text-align: center;"><?php echo $avgInti; ?></td>
                         <td style="text-align: center;"><?php echo $avgPenutup; ?></td>
-                        <td style="text-align: center; color: #064e3b; font-weight: 800;"><?php echo $rataRataTotal; ?></td>
-                        <td style="text-align: center; color: #064e3b; font-size: 6.2pt;"><?php echo $predikatRataRata; ?></td>
-                        <td colspan="3" style="font-size: 6.3pt; text-align: center; color: #047857;">
+                        <td style="text-align: center; color: #0369a1; font-weight: 800;"><?php echo $rataRataTotal; ?></td>
+                        <td style="text-align: center; color: #0369a1; font-size: 6.2pt;"><?php echo $predikatRataRata; ?></td>
+                        <td colspan="3" style="font-size: 6.3pt; text-align: center; color: #0284c7;">
                             ✓ 100% Guru Tuntas Diobservasi & Memiliki Dokumen RTL Resmi
                         </td>
                     </tr>
@@ -819,7 +819,7 @@ foreach ($instrumenList as $it) {
                 <div>
                     <strong>CATATAN TIM SUPERVISI / ASESOR:</strong> Pelaksanaan supervisi KBM terlaksana teratur, didukung instrumen telaah modul ajar berbasis TIK dan dokumen RTL resmi.
                 </div>
-                <div style="font-weight: 800; color: #065f46; white-space: nowrap; margin-left: 10px;">
+                <div style="font-weight: 800; color: #0369a1; white-space: nowrap; margin-left: 10px;">
                     NILAI PKKM: SKOR 4 (SANGAT BAIK)
                 </div>
             </div>
@@ -851,13 +851,13 @@ foreach ($instrumenList as $it) {
     <div id="pane-instrumen" class="tab-content-pane" style="display: <?= $activeTab === 'instrumen' ? 'block' : 'none' ?>;">
         
         <!-- Zamrud Elite Context Banner -->
-        <div class="no-print-area" style="background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%); color:#ffffff; border-radius: 16px; padding: 22px 26px; margin-bottom: 22px; box-shadow: 0 8px 24px -4px rgba(6,78,59,0.3); border: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div class="no-print-area" style="background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0369a1 100%); color:#ffffff; border-radius: 16px; padding: 22px 26px; margin-bottom: 22px; box-shadow: 0 8px 24px -4px rgba(6,78,59,0.3); border: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
                 <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.18); padding:3px 10px; border-radius:999px; font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
                     <i data-lucide="sparkles" style="width:12px;height:12px;"></i> Juknis Kemenag &bull; Butir a &bull; Master Berkas #50
                 </div>
                 <h2 style="font-size:1.35rem; font-weight:800; margin:0; color:#fff; display:flex; align-items:center; gap:10px;">
-                    <i data-lucide="clipboard-check" style="width:24px;height:24px;color:#34d399;"></i>
+                    <i data-lucide="clipboard-check" style="width:24px;height:24px;color:#38bdf8;"></i>
                     Instrumen & Lembar Penilaian Observasi Supervisi Guru
                 </h2>
                 <p style="margin:6px 0 0 0; font-size:0.86rem; color:rgba(255,255,255,0.9); max-width:760px; line-height:1.5;">
@@ -865,8 +865,8 @@ foreach ($instrumenList as $it) {
                 </p>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button type="button" class="btn-act btn-white" onclick="cetakBlangkoInstrumen()" style="padding:10px 16px; font-size:0.82rem; font-weight:800; color:#065f46; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-                    <i data-lucide="printer" style="width:16px;height:16px;color:#059669;"></i> Cetak Blangko Asli (A4)
+                <button type="button" class="btn-act btn-white" onclick="cetakBlangkoInstrumen()" style="padding:10px 16px; font-size:0.82rem; font-weight:800; color:#0369a1; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                    <i data-lucide="printer" style="width:16px;height:16px;color:#0284c7;"></i> Cetak Blangko Asli (A4)
                 </button>
                 <button type="button" class="btn-act btn-ghost" onclick="openRubrikModal()" style="padding:10px 16px; font-size:0.82rem;">
                     <i data-lucide="list-checks" style="width:16px;height:16px;"></i> Rubrik Penilaian (25 Butir)
@@ -878,19 +878,19 @@ foreach ($instrumenList as $it) {
         </div>
 
         <!-- ==================== LEMBAR BLANGKO KOSONG INSTRUMEN PENILAIAN OBSERVASI KBM ==================== -->
-        <div class="content-card no-print-area" style="border: 2px solid #10b981; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.18); margin-bottom: 24px;">
-            <div class="content-card-head" style="background: linear-gradient(to right, #ecfdf5, #ffffff); border-bottom: 1px solid #a7f3d0; padding: 14px 22px;">
+        <div class="content-card no-print-area" style="border: 2px solid #0ea5e9; box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.18); margin-bottom: 24px;">
+            <div class="content-card-head" style="background: linear-gradient(to right, #f0f9ff, #ffffff); border-bottom: 1px solid #bae6fd; padding: 14px 22px;">
                 <div>
-                    <div class="card-head-title" style="color: #065f46; font-size: 1.05rem;">
-                        <i data-lucide="file-text" style="color: #059669; width: 22px; height: 22px;"></i>
+                    <div class="card-head-title" style="color: #0369a1; font-size: 1.05rem;">
+                        <i data-lucide="file-text" style="color: #0284c7; width: 22px; height: 22px;"></i>
                         Blangko Resmi Instrumen Observasi Kelas & Telaah Modul Ajar (Format Fisik Real A4)
                     </div>
-                    <div style="font-size: 0.8rem; color: #047857; margin-top: 3px;">
+                    <div style="font-size: 0.8rem; color: #0284c7; margin-top: 3px;">
                         Format instrumen penilaian kosong (25 indikator terstandarisasi) siap cetak di kertas A4 untuk berkas fisik visitasi kelas & audit PKKM.
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <button type="button" class="btn-act btn-emerald" onclick="cetakBlangkoInstrumen()" style="padding: 9px 18px; font-size: 0.84rem; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
+                    <button type="button" class="btn-act btn-emerald" onclick="cetakBlangkoInstrumen()" style="padding: 9px 18px; font-size: 0.84rem; box-shadow: 0 4px 12px rgba(2,132,199,0.3);">
                         <i data-lucide="printer" style="width: 16px; height: 16px;"></i> Cetak Format Blangko Instrumen (A4 Asli)
                     </button>
                     <button type="button" class="btn-act btn-white" onclick="toggleBlangkoPreview()" id="btn-toggle-blangko" style="border: 1px solid #cbd5e1; font-size: 0.82rem; padding: 9px 14px;">
@@ -1072,7 +1072,7 @@ foreach ($instrumenList as $it) {
         <div class="content-card">
             <div class="content-card-head">
                 <div class="card-head-title">
-                    <i data-lucide="users" style="color:#059669;"></i>
+                    <i data-lucide="users" style="color:#0284c7;"></i>
                     Hasil Penilaian Instrumen Observasi KBM Dewan Guru (Indikator 4.2.1 Butir a)
                 </div>
                 <span class="card-head-badge">100% Guru Tuntas Diobservasi</span>
@@ -1108,11 +1108,11 @@ foreach ($instrumenList as $it) {
                             <td><?= htmlspecialchars($g['supervisor']) ?></td>
                             <td><?= date('d M Y', strtotime($g['tanggal'])) ?></td>
                             <td align="center">
-                                <span style="font-size:1.1rem; font-weight:800; color:#059669;"><?= $g['rata'] ?></span>
+                                <span style="font-size:1.1rem; font-weight:800; color:#0284c7;"><?= $g['rata'] ?></span>
                                 <div style="font-size:0.7rem; color:#64748b;"><?= $g['predikat'] ?></div>
                             </td>
                             <td align="center">
-                                <span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:3px 8px; border-radius:12px; font-size:0.72rem; font-weight:700;">
+                                <span style="background:#f0f9ff; color:#0369a1; border:1px solid #bae6fd; padding:3px 8px; border-radius:12px; font-size:0.72rem; font-weight:700;">
                                     Telah Diobservasi
                                 </span>
                             </td>
@@ -1159,7 +1159,7 @@ foreach ($instrumenList as $it) {
 
                     <div style="border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#f8fafc;">
                         <div style="font-weight:700; color:#0f172a; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                            <span style="background:#059669; color:#fff; width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:bold;">2</span>
+                            <span style="background:#0284c7; color:#fff; width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:bold;">2</span>
                             Kegiatan Pendahuluan (5 Indikator)
                         </div>
                         <ul style="margin:0; padding-left:18px; font-size:0.8rem; color:#475569; line-height:1.6;">
@@ -1202,7 +1202,7 @@ foreach ($instrumenList as $it) {
         <div class="content-card">
             <div class="content-card-head">
                 <div class="card-head-title">
-                    <i data-lucide="message-square" style="color:#059669;"></i>
+                    <i data-lucide="message-square" style="color:#0284c7;"></i>
                     Matriks Catatan Temuan & Rekomendasi Pembinaan Guru (Indikator 4.2.1 Butir c)
                 </div>
                 <span class="card-head-badge">Refleksi Pedagogik</span>
@@ -1237,10 +1237,10 @@ foreach ($instrumenList as $it) {
                             </td>
                             <td><?= htmlspecialchars($r['mapel']) ?></td>
                             <td align="center">
-                                <span style="font-weight:800; color:#059669; font-size:1.05rem;"><?= $sk ?></span>
+                                <span style="font-weight:800; color:#0284c7; font-size:1.05rem;"><?= $sk ?></span>
                             </td>
                             <td>
-                                <div style="font-size:0.82rem; color:#065f46; background:#ecfdf5; padding:6px 10px; border-radius:8px; border:1px solid #a7f3d0; line-height:1.4;">
+                                <div style="font-size:0.82rem; color:#0369a1; background:#f0f9ff; padding:6px 10px; border-radius:8px; border:1px solid #bae6fd; line-height:1.4;">
                                     ✓ <?= htmlspecialchars($strengths) ?>
                                 </div>
                             </td>
@@ -1275,7 +1275,7 @@ foreach ($instrumenList as $it) {
         <div class="content-card">
             <div class="content-card-head">
                 <div class="card-head-title">
-                    <i data-lucide="arrow-right-circle" style="color:#059669;"></i>
+                    <i data-lucide="arrow-right-circle" style="color:#0284c7;"></i>
                     Rencana Tindak Lanjut (RTL) & Realisasi Pembinaan Guru (Indikator 4.2.1 Butir d & 4.3.1)
                 </div>
                 <div style="display:flex; gap:8px;">
@@ -1307,7 +1307,7 @@ foreach ($instrumenList as $it) {
                         $noRtl = 1;
                         foreach($matriksSupervisi as $rtl): 
                             $st = $rtl['tindak_lanjut_status'] ?? 'Selesai';
-                            $stBg = ($st === 'Selesai') ? '#ecfdf5; color:#065f46; border:1px solid #a7f3d0;' : '#eff6ff; color:#1e40af; border:1px solid #bfdbfe;';
+                            $stBg = ($st === 'Selesai') ? '#f0f9ff; color:#0369a1; border:1px solid #bae6fd;' : '#eff6ff; color:#1e40af; border:1px solid #bfdbfe;';
                         ?>
                         <tr>
                             <td align="center" style="font-weight:bold;"><?= $noRtl++ ?></td>
@@ -1316,7 +1316,7 @@ foreach ($instrumenList as $it) {
                                 <div style="font-size:0.75rem; color:#64748b;"><?= htmlspecialchars($rtl['mapel']) ?></div>
                             </td>
                             <td>
-                                <span style="font-weight:800; color:#059669;"><?= $rtl['rata'] ?></span>
+                                <span style="font-weight:800; color:#0284c7;"><?= $rtl['rata'] ?></span>
                                 <span style="font-size:0.75rem; color:#64748b;">(<?= $rtl['predikat'] ?>)</span>
                             </td>
                             <td>
@@ -1335,7 +1335,7 @@ foreach ($instrumenList as $it) {
                                     <?= htmlspecialchars($st) ?>
                                 </span>
                             </td>
-                            <td style="font-size:0.8rem; color:#059669; font-weight:600;">
+                            <td style="font-size:0.8rem; color:#0284c7; font-weight:600;">
                                 <?= htmlspecialchars($rtl['tindak_lanjut_realisasi'] ?: 'Pelatihan telah selesai & modul ajar diperbaiki') ?>
                             </td>
                             <td align="center">
@@ -1355,7 +1355,7 @@ foreach ($instrumenList as $it) {
         <div class="content-card">
             <div class="content-card-head">
                 <div class="card-head-title">
-                    <i data-lucide="user-check" style="color:#059669;"></i>
+                    <i data-lucide="user-check" style="color:#0284c7;"></i>
                     Lembar Verifikasi & Rekomendasi Pengawas Madrasah (Monitoring PKKM Komponen 4)
                 </div>
                 <span class="card-head-badge">Instrumen Penilaian Pengawas</span>
@@ -1363,22 +1363,22 @@ foreach ($instrumenList as $it) {
             
             <div style="padding: 24px;">
                 <?php if(isset($_GET['msg']) && $_GET['msg'] === 'saved'): ?>
-                    <div style="background:#ecfdf5; border:1px solid #86efac; color:#065f46; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; display:flex; align-items:center; gap:8px;">
-                        <i data-lucide="check-circle" style="width:18px; height:18px; color:#10b981;"></i>
+                    <div style="background:#f0f9ff; border:1px solid #7dd3fc; color:#0369a1; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; display:flex; align-items:center; gap:8px;">
+                        <i data-lucide="check-circle" style="width:18px; height:18px; color:#0ea5e9;"></i>
                         Catatan verifikasi pengawas berhasil disimpan dan skor rekomendasi telah disinkronkan ke instrumen PKKM Komponen 4.
                     </div>
                 <?php endif; ?>
 
                 <?php if(!empty($savedNotes)): ?>
-                    <div style="background:#f0fdf4; border:1px solid #a7f3d0; border-radius:12px; padding:16px 20px; margin-bottom:24px; display:flex; align-items:flex-start; gap:14px;">
-                        <div style="background:#10b981; color:#fff; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:16px 20px; margin-bottom:24px; display:flex; align-items:flex-start; gap:14px;">
+                        <div style="background:#0ea5e9; color:#fff; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                             <i data-lucide="shield-check" style="width:20px;height:20px;"></i>
                         </div>
                         <div>
-                            <div style="font-weight:800; color:#064e3b; font-size:0.95rem;">
+                            <div style="font-weight:800; color:#0369a1; font-size:0.95rem;">
                                 Hasil Verifikasi Pengawas Terakhir: <?= htmlspecialchars($savedNotes['status_verifikasi'] ?? 'Sangat Memadai') ?>
                             </div>
-                            <div style="font-size:0.8rem; color:#166534; margin-top:2px;">
+                            <div style="font-size:0.8rem; color:#0c4a6e; margin-top:2px;">
                                 Diverifikasi oleh <strong><?= htmlspecialchars($savedNotes['nama_penilai'] ?? 'Pengawas Pembina') ?></strong> pada <?= htmlspecialchars($savedNotes['updated_at'] ?? '-') ?> &bull; Skor Rekomendasi: <strong>Skor <?= htmlspecialchars($savedNotes['skor_rekomendasi'] ?? '4') ?></strong>
                             </div>
                         </div>
@@ -1410,7 +1410,7 @@ foreach ($instrumenList as $it) {
                         </div>
                         <div>
                             <label style="font-weight:700; color:#1e293b; font-size:0.85rem; margin-bottom:6px; display:block;">Rekomendasi Skor PKKM Komponen 4:</label>
-                            <select name="skor_rekomendasi" class="form-select" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:0.88rem; font-weight:700; color:#059669;">
+                            <select name="skor_rekomendasi" class="form-select" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:0.88rem; font-weight:700; color:#0284c7;">
                                 <?php 
                                 $curSkor = (int)($savedNotes['skor_rekomendasi'] ?? 4);
                                 for($s = 4; $s >= 1; $s--): ?>
@@ -1423,7 +1423,7 @@ foreach ($instrumenList as $it) {
                     <!-- Checklist Bukti Fisik -->
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px; margin-bottom:20px;">
                         <div style="font-weight:800; color:#0f172a; margin-bottom:12px; font-size:0.92rem; display:flex; align-items:center; gap:8px;">
-                            <i data-lucide="check-square" style="width:18px;height:18px;color:#059669;"></i>
+                            <i data-lucide="check-square" style="width:18px;height:18px;color:#0284c7;"></i>
                             Checklist Verifikasi 5 Komponen Bukti Fisik Supervisi GTK:
                         </div>
                         
@@ -1440,7 +1440,7 @@ foreach ($instrumenList as $it) {
                             $isChecked = in_array($cKey, $chkSaved);
                         ?>
                         <label style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:8px; cursor:pointer;">
-                            <input type="checkbox" name="chk[]" value="<?= $cKey ?>" <?= $isChecked ? 'checked' : '' ?> style="width:18px;height:18px;accent-color:#059669;margin-top:2px;">
+                            <input type="checkbox" name="chk[]" value="<?= $cKey ?>" <?= $isChecked ? 'checked' : '' ?> style="width:18px;height:18px;accent-color:#0284c7;margin-top:2px;">
                             <div>
                                 <div style="font-weight:700; color:#0f172a; font-size:0.86rem;"><?= $cVal['title'] ?></div>
                                 <div style="font-size:0.78rem; color:#64748b; margin-top:2px;"><?= $cVal['desc'] ?></div>
@@ -1458,8 +1458,8 @@ foreach ($instrumenList as $it) {
                     </div>
 
                     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding-top:14px; border-top:1px solid #e2e8f0;">
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#064e3b; font-size:0.84rem;">
-                            <input type="checkbox" name="simpan_skor_pkkm" value="1" checked style="width:16px;height:16px;accent-color:#059669;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#0369a1; font-size:0.84rem;">
+                            <input type="checkbox" name="simpan_skor_pkkm" value="1" checked style="width:16px;height:16px;accent-color:#0284c7;">
                             Otomatis sinkronkan skor rekomendasi ini ke seluruh butir instrumen PKKM Komponen 4
                         </label>
                         
@@ -1477,7 +1477,7 @@ foreach ($instrumenList as $it) {
 <!-- MODAL FORMAT TELAAH & RUBRIK INSTRUMEN OBSERVASI (25 BUTIR) -->
 <div id="modalRubrikObservasi" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.65); z-index:9999; backdrop-filter:blur(4px); overflow-y:auto; padding:20px;">
     <div style="max-width:850px; margin:30px auto; background:#ffffff; border-radius:18px; box-shadow:0 20px 40px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
-        <div style="background:linear-gradient(135deg, #064e3b 0%, #047857 100%); color:#fff; padding:18px 24px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%); color:#fff; padding:18px 24px; display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <span style="background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:999px; font-size:0.7rem; font-weight:800; text-transform:uppercase;">Format Juknis Supervisi GTK</span>
                 <h3 style="margin:4px 0 0 0; font-size:1.15rem; font-weight:800; color:#fff;">
@@ -1488,7 +1488,7 @@ foreach ($instrumenList as $it) {
         </div>
         
         <div style="padding:22px; max-height:75vh; overflow-y:auto;">
-            <div style="background:#f0fdf4; border:1px dashed #86efac; border-radius:10px; padding:12px 16px; font-size:0.82rem; color:#166534; margin-bottom:18px;">
+            <div style="background:#f0f9ff; border:1px dashed #7dd3fc; border-radius:10px; padding:12px 16px; font-size:0.82rem; color:#0c4a6e; margin-bottom:18px;">
                 <strong>Pedoman Skala Penilaian:</strong> Setiap indikator dinilai dengan skala 1–4 (1: Kurang, 2: Cukup, 3: Baik, 4: Amat Baik/Sangat Memadai).
             </div>
 
@@ -1502,17 +1502,17 @@ foreach ($instrumenList as $it) {
                     <tr style="border-bottom:1px solid #f1f5f9; padding:6px 0;">
                         <td style="padding:6px 8px; width:40px; font-weight:bold; color:#64748b;">1.1</td>
                         <td style="padding:6px 8px;">Kesesuaian Capaian Pembelajaran (CP) dan Alur Tujuan Pembelajaran (ATP)</td>
-                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; font-weight:bold; color:#64748b;">1.2</td>
                         <td style="padding:6px 8px;">Kelengkapan komponen inti Modul Ajar / RPP (Tujuan, Langkah, Asesmen)</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; font-weight:bold; color:#64748b;">1.3</td>
                         <td style="padding:6px 8px;">Kesiapan media, sumber belajar digital, dan lembar kerja peserta didik (LKPD)</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                 </table>
             </div>
@@ -1520,19 +1520,19 @@ foreach ($instrumenList as $it) {
             <!-- Aspek 2 -->
             <div style="margin-bottom:16px;">
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; font-weight:800; color:#0f172a; font-size:0.88rem; display:flex; align-items:center; gap:8px;">
-                    <span style="background:#059669; color:#fff; width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem;">2</span>
+                    <span style="background:#0284c7; color:#fff; width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem;">2</span>
                     B. Kegiatan Pendahuluan (Apersepsi & Kesiapan Belajar)
                 </div>
                 <table style="width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:8px;">
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; width:40px; font-weight:bold; color:#64748b;">2.1</td>
                         <td style="padding:6px 8px;">Melakukan apersepsi dan mengaitkan materi dengan pengalaman nyata siswa</td>
-                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; font-weight:bold; color:#64748b;">2.2</td>
                         <td style="padding:6px 8px;">Menyampaikan tujuan pembelajaran dan memotivasi peserta didik</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                 </table>
             </div>
@@ -1547,17 +1547,17 @@ foreach ($instrumenList as $it) {
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; width:40px; font-weight:bold; color:#64748b;">3.1</td>
                         <td style="padding:6px 8px;">Penguasaan materi ajar dan penerapan pembelajaran berdiferensiasi</td>
-                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; font-weight:bold; color:#64748b;">3.2</td>
                         <td style="padding:6px 8px;">Pemanfaatan media ajar / TIK interaktif dalam memfasilitasi pemahaman siswa</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; font-weight:bold; color:#64748b;">3.3</td>
                         <td style="padding:6px 8px;">Pelaksanaan asesmen formatif saat proses pembelajaran berlangsung</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                 </table>
             </div>
@@ -1572,12 +1572,12 @@ foreach ($instrumenList as $it) {
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; width:40px; font-weight:bold; color:#64748b;">4.1</td>
                         <td style="padding:6px 8px;">Melakukan refleksi pembelajaran bersama antara guru dan peserta didik</td>
-                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; width:100px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:6px 8px; font-weight:bold; color:#64748b;">4.2</td>
                         <td style="padding:6px 8px;">Menyimpulkan materi dan memberikan arahan tindak lanjut / penugasan bermakna</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#059669;">Skor 1 - 4</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#0284c7;">Skor 1 - 4</td>
                     </tr>
                 </table>
             </div>

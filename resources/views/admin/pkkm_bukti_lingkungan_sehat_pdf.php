@@ -43,8 +43,8 @@ $kuadranLingkungan = [
         'zona' => 'Pagar Permanen & Gerbang Pengaman Utama',
         'icon' => '🛡️',
         'color' => '#0284c7',
-        'bg' => '#ecfdf5',
-        'border' => '#86efac',
+        'bg' => '#f0f9ff',
+        'border' => '#7dd3fc',
         'foto' => '/public/uploads/website/hero1_1779991701.jpeg',
         'spesifikasi' => 'Pagar keliling permanen mengitari seluruh area madrasah. Gerbang besi dengan pos piket kontrol ketat guna menjamin keselamatan peserta didik.',
         'status' => 'Sangat Aman & Terkendali',
@@ -55,8 +55,8 @@ $kuadranLingkungan = [
         'zona' => 'Halaman Upacara, Olahraga & Taman Rindang',
         'icon' => '🌳',
         'color' => '#16a34a',
-        'bg' => '#f0fdf4',
-        'border' => '#bbf7d0',
+        'bg' => '#f0f9ff',
+        'border' => '#bae6fd',
         'foto' => '/public/uploads/website/hero2_1779991701.jpeg',
         'spesifikasi' => 'Halaman paving block bebas genangan air, dilengkapi deretan pohon peneduh rindang dan tanaman hijau penyejuk iklim mikro pembelajaran.',
         'status' => 'Asri, Bersih & Teduh',
@@ -200,7 +200,7 @@ $checklistSanitasi = [
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -282,9 +282,9 @@ $checklistSanitasi = [
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: #f0fdf4;
+            background: #f0f9ff;
             color: #1e40af;
-            border: 1px solid #86efac;
+            border: 1px solid #7dd3fc;
             padding: 2px 8px;
             border-radius: 999px;
             font-size: 6.8pt;
@@ -458,7 +458,7 @@ $checklistSanitasi = [
             border: 1px dashed #0284c7;
             border-radius: 5px;
             padding: 4px 8px;
-            background: #f0fdf4;
+            background: #f0f9ff;
             font-size: 6.8pt;
             color: #0f172a;
             font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -636,8 +636,8 @@ $checklistSanitasi = [
 
             <!-- 4 KPI STATS CARD -->
             <div class="stats-grid">
-                <div class="stat-card" style="border-left: 3.5px solid #0284c7; background: #ecfdf5;">
-                    <div class="stat-icon" style="background:#d1fae5; color:#1e40af;">🌿</div>
+                <div class="stat-card" style="border-left: 3.5px solid #0284c7; background: #f0f9ff;">
+                    <div class="stat-icon" style="background:#e0f2fe; color:#1e40af;">🌿</div>
                     <div class="stat-content">
                         <div class="stat-val">PREDIKAT A</div>
                         <div class="stat-lbl">Sanitasi Madrasah Sehat</div>
@@ -650,8 +650,8 @@ $checklistSanitasi = [
                         <div class="stat-lbl">Air Bersih & Wastafel Rombel</div>
                     </div>
                 </div>
-                <div class="stat-card" style="border-left: 3.5px solid #16a34a; background: #f0fdf4;">
-                    <div class="stat-icon" style="background:#dcfce7; color:#15803d;">🛡️</div>
+                <div class="stat-card" style="border-left: 3.5px solid #16a34a; background: #f0f9ff;">
+                    <div class="stat-icon" style="background:#e0f2fe; color:#0284c7;">🛡️</div>
                     <div class="stat-content">
                         <div class="stat-val">ZONA AMAN</div>
                         <div class="stat-lbl">Zero Accident & Pagar Keliling</div>

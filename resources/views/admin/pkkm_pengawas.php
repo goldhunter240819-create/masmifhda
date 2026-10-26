@@ -14,9 +14,9 @@ $active_page = 'pengawas';
         /* Banner Header */
         .elite-page-header {
             position: relative; padding: 2rem 2.5rem; margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
             border-radius: 20px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 12px 30px -8px rgba(6, 78, 59, 0.35);
+            box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.35);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .elite-page-header .header-bg-shapes {
@@ -44,8 +44,8 @@ $active_page = 'pengawas';
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-2px); }
-        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
-        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
+        .e-btn-primary { background: #ffffff; color: #0284c7; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
+        .e-btn-primary:hover { background: #f8fafc; color: #0369a1; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -58,8 +58,8 @@ $active_page = 'pengawas';
         }
         .stat-box:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06); }
         .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); box-shadow: 0 2px 6px rgba(0,0,0,0.04); flex-shrink: 0; }
-        .stat-box.green { background: linear-gradient(135deg, #f0fdf4, #ffffff); border-color: #bbf7d0; color: #14532d; }
-        .stat-box.green .stat-icon { color: #10b981; }
+        .stat-box.green { background: linear-gradient(135deg, #f0f9ff, #ffffff); border-color: #bae6fd; color: #0c4a6e; }
+        .stat-box.green .stat-icon { color: #0ea5e9; }
         .stat-box.blue { background: linear-gradient(135deg, #eff6ff, #ffffff); border-color: #bfdbfe; color: #1e3a8a; }
         .stat-box.blue .stat-icon { color: #3b82f6; }
         .stat-box.purple { background: linear-gradient(135deg, #faf5ff, #ffffff); border-color: #e9d5ff; color: #6b21a8; }
@@ -76,7 +76,7 @@ $active_page = 'pengawas';
         }
 
         .badge-role-p1 {
-            background: #dcfce7; color: #15803d; border: 1px solid #86efac;
+            background: #e0f2fe; color: #0284c7; border: 1px solid #7dd3fc;
             padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 0.75rem;
             display: inline-flex; align-items: center; gap: 4px;
         }
@@ -120,7 +120,7 @@ $active_page = 'pengawas';
                     </div>
                 <?php elseif (isset($_GET['msg']) && $_GET['msg'] === 'generated'): ?>
                     <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm d-flex align-items-center gap-2 mb-3" role="alert">
-                        <i data-lucide="sparkles" style="width:20px;height:20px;color:#059669;"></i>
+                        <i data-lucide="sparkles" style="width:20px;height:20px;color:#0284c7;"></i>
                         <div><strong>Selesai!</strong> Akun standar Penilai 1 & Penilai 2 berhasil digenerate otomatis.</div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -204,13 +204,13 @@ $active_page = 'pengawas';
                 </div>
 
                 <!-- Info Box Untuk Hari-H -->
-                <div class="glass-card mb-4" style="background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-left: 5px solid #059669;">
+                <div class="glass-card mb-4" style="background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%); border-left: 5px solid #0284c7;">
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width: 44px; height: 44px; border-radius: 12px; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(5,150,105,0.3);">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(2,132,199,0.3);">
                             <i data-lucide="laptop" style="width:22px;height:22px;"></i>
                         </div>
                         <div style="flex: 1;">
-                            <h6 class="fw-bold mb-1" style="color: #064e3b; font-size: 0.95rem;">
+                            <h6 class="fw-bold mb-1" style="color: #0369a1; font-size: 0.95rem;">
                                 Cara Menggunakan Saat Hari-H PKKM:
                             </h6>
                             <p class="mb-0 text-muted" style="font-size: 0.85rem; line-height: 1.5;">
@@ -225,7 +225,7 @@ $active_page = 'pengawas';
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
                             <h5 class="fw-bold mb-1" style="color: #0f172a;">
-                                <i data-lucide="list" style="width: 18px; height: 18px; vertical-align: middle; color: #059669;"></i>
+                                <i data-lucide="list" style="width: 18px; height: 18px; vertical-align: middle; color: #0284c7;"></i>
                                 Daftar Asesor / Pengawas Terdaftar
                             </h5>
                             <p class="text-muted mb-0" style="font-size: 0.82rem;">
@@ -243,7 +243,7 @@ $active_page = 'pengawas';
                             <p class="text-muted mb-3" style="font-size: 0.85rem; max-width: 420px; margin: 0 auto;">
                                 Anda belum menambahkan akun untuk pengawas penilai PKKM. Klik tombol di bawah untuk membuat akun otomatis.
                             </p>
-                            <a href="/admin/pkkm/pengawas/generate-default" class="btn btn-sm btn-success fw-bold px-3 py-2 rounded-3 shadow-sm" onclick="return confirm('Buat akun default untuk Penilai 1 & 2?')">
+                            <a href="/admin/pkkm/pengawas/generate-default" class="btn btn-sm btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm" onclick="return confirm('Buat akun default untuk Penilai 1 & 2?')">
                                 <i data-lucide="wand-2" style="width: 15px; height: 15px; vertical-align: middle;"></i> Auto-Generate Penilai 1 & 2
                             </a>
                         </div>
@@ -272,7 +272,7 @@ $active_page = 'pengawas';
                                                 NIP: <span class="font-monospace"><?php echo htmlspecialchars($row['nip']); ?></span>
                                             </div>
                                             <?php if (!empty($row['no_hp'])): ?>
-                                                <div style="font-size: 0.74rem; color: #059669;">
+                                                <div style="font-size: 0.74rem; color: #0284c7;">
                                                     <i data-lucide="phone" style="width:11px;height:11px;vertical-align:middle;"></i> <?php echo htmlspecialchars($row['no_hp']); ?>
                                                 </div>
                                             <?php endif; ?>
@@ -298,7 +298,7 @@ $active_page = 'pengawas';
                                         </td>
                                         <td>
                                             <div class="credential-pill">
-                                                <i data-lucide="user" style="width:12px;height:12px;color:#059669;"></i>
+                                                <i data-lucide="user" style="width:12px;height:12px;color:#0284c7;"></i>
                                                 <span><?php echo htmlspecialchars($row['username'] ?? '-'); ?></span>
                                             </div>
                                             <div style="font-size: 0.72rem; color: #64748b; margin-top: 3px;">
@@ -335,7 +335,7 @@ $active_page = 'pengawas';
 <div class="modal fade" id="modalPengawas" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 18px; border: none; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.15);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); color: #fff; padding: 18px 24px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%); color: #fff; padding: 18px 24px;">
                 <h5 class="modal-title fw-bold" id="modalPengawasTitle">
                     <i data-lucide="user-check" style="width:20px;height:20px;vertical-align:middle;"></i> Tambah Akun Pengawas Penilai
                 </h5>
@@ -391,7 +391,7 @@ $active_page = 'pengawas';
 
                 <div class="modal-footer" style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 24px;">
                     <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal" style="border-radius: 10px;">Batal</button>
-                    <button type="submit" class="btn btn-success fw-bold px-4" style="border-radius: 10px; background: #059669; border: none;">Simpan Akun</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 10px; background: #0284c7; border: none;">Simpan Akun</button>
                 </div>
             </form>
         </div>

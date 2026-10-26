@@ -32,9 +32,9 @@ foreach($komponens as $k) {
         /* Banner Header */
         .elite-page-header {
             position: relative; padding: 2rem 2.5rem; margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
             border-radius: 20px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 12px 30px -8px rgba(6, 78, 59, 0.35);
+            box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.35);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .elite-page-header .header-bg-shapes {
@@ -62,8 +62,8 @@ foreach($komponens as $k) {
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-2px); }
-        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
-        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
+        .e-btn-primary { background: #ffffff; color: #0284c7; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
+        .e-btn-primary:hover { background: #f8fafc; color: #0369a1; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -76,8 +76,8 @@ foreach($komponens as $k) {
         }
         .stat-box:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06); }
         .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); box-shadow: 0 2px 6px rgba(0,0,0,0.04); flex-shrink: 0; }
-        .stat-box.green { background: linear-gradient(135deg, #f0fdf4, #ffffff); border-color: #bbf7d0; color: #14532d; }
-        .stat-box.green .stat-icon { color: #10b981; }
+        .stat-box.green { background: linear-gradient(135deg, #f0f9ff, #ffffff); border-color: #bae6fd; color: #0c4a6e; }
+        .stat-box.green .stat-icon { color: #0ea5e9; }
         .stat-box.blue { background: linear-gradient(135deg, #eff6ff, #ffffff); border-color: #bfdbfe; color: #1e3a8a; }
         .stat-box.blue .stat-icon { color: #3b82f6; }
         .stat-box.amber { background: linear-gradient(135deg, #fffbeb, #ffffff); border-color: #fde68a; color: #92400e; }
@@ -100,7 +100,7 @@ foreach($komponens as $k) {
         .komp-card-header {
             padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
         }
-        .komp-card-1 .komp-card-header { background: linear-gradient(135deg, #ecfdf5, #ffffff); border-top: 4px solid #10b981; }
+        .komp-card-1 .komp-card-header { background: linear-gradient(135deg, #f0f9ff, #ffffff); border-top: 4px solid #0ea5e9; }
         .komp-card-2 .komp-card-header { background: linear-gradient(135deg, #eff6ff, #ffffff); border-top: 4px solid #3b82f6; }
         .komp-card-3 .komp-card-header { background: linear-gradient(135deg, #fffbeb, #ffffff); border-top: 4px solid #f59e0b; }
         .komp-card-4 .komp-card-header { background: linear-gradient(135deg, #faf5ff, #ffffff); border-top: 4px solid #8b5cf6; }
@@ -109,7 +109,7 @@ foreach($komponens as $k) {
         .komp-number-badge {
             width: 28px; height: 28px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .komp-card-1 .komp-number-badge { background: #dcfce7; color: #15803d; }
+        .komp-card-1 .komp-number-badge { background: #e0f2fe; color: #0284c7; }
         .komp-card-2 .komp-number-badge { background: #dbeafe; color: #1e40af; }
         .komp-card-3 .komp-number-badge { background: #fef3c7; color: #b45309; }
         .komp-card-4 .komp-number-badge { background: #f3e8ff; color: #6b21a8; }
@@ -127,7 +127,7 @@ foreach($komponens as $k) {
         }
         .member-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .member-role-tag { font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-block; margin-top: 2px; }
-        .tag-koor { background: #dcfce7; color: #166534; }
+        .tag-koor { background: #e0f2fe; color: #0c4a6e; }
         .tag-pj { background: #dbeafe; color: #1e40af; }
         .tag-anggota { background: #f1f5f9; color: #475569; }
 
@@ -137,7 +137,7 @@ foreach($komponens as $k) {
         .btn-assign-komp {
             width: 100%; padding: 8px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: 1px dashed #cbd5e1; background: #ffffff; color: #475569; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: 0.2s;
         }
-        .btn-assign-komp:hover { border-color: #10b981; color: #047857; background: #f0fdf4; }
+        .btn-assign-komp:hover { border-color: #0ea5e9; color: #0284c7; background: #f0f9ff; }
 
         /* Glass Card & Table */
         .glass-card {
@@ -158,7 +158,7 @@ foreach($komponens as $k) {
         .badge-komp {
             font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;
         }
-        .b-komp-1 { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .b-komp-1 { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
         .b-komp-2 { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
         .b-komp-3 { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
         .b-komp-4 { background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; }
@@ -240,7 +240,7 @@ foreach($komponens as $k) {
 
             <!-- Komponen Grid Cards -->
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 style="font-weight: 800; margin:0; font-size:1.15rem; color:#0f172a;"><i data-lucide="grid" style="width:20px;height:20px;color:#047857;vertical-align:middle;"></i> Pembagian Tim Berdasarkan Komponen</h4>
+                <h4 style="font-weight: 800; margin:0; font-size:1.15rem; color:#0f172a;"><i data-lucide="grid" style="width:20px;height:20px;color:#0284c7;vertical-align:middle;"></i> Pembagian Tim Berdasarkan Komponen</h4>
                 <span class="text-muted" style="font-size:0.85rem;">4 Komponen Utama Penilaian Kinerja Kepala Madrasah</span>
             </div>
 
@@ -316,7 +316,7 @@ foreach($komponens as $k) {
             <div class="glass-card">
                 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                     <div>
-                        <h4 style="font-weight: 800; margin:0; font-size:1.15rem; color:#0f172a;"><i data-lucide="list" style="width:20px;height:20px;color:#047857;vertical-align:middle;"></i> Daftar Lengkap Personil Tim PKKM</h4>
+                        <h4 style="font-weight: 800; margin:0; font-size:1.15rem; color:#0f172a;"><i data-lucide="list" style="width:20px;height:20px;color:#0284c7;vertical-align:middle;"></i> Daftar Lengkap Personil Tim PKKM</h4>
                         <span class="text-muted" style="font-size:0.85rem;">Seluruh guru yang memiliki tanggung jawab pengumpulan berkas fisik</span>
                     </div>
                     <div class="d-flex gap-2">
@@ -348,7 +348,7 @@ foreach($komponens as $k) {
                                 <td colspan="6" class="text-center py-5 text-muted">
                                     <i data-lucide="users" style="width:40px;height:40px;margin-bottom:10px;opacity:0.5;"></i>
                                     <p style="margin:0; font-weight:600;">Belum ada data penugasan tim PKKM.</p>
-                                    <button onclick="openTimModal()" class="btn btn-sm btn-success mt-2" style="border-radius:8px;">+ Tambah Penugasan Sekarang</button>
+                                    <button onclick="openTimModal()" class="btn btn-sm btn-primary mt-2" style="border-radius:8px;">+ Tambah Penugasan Sekarang</button>
                                 </td>
                             </tr>
                             <?php else: ?>
@@ -423,9 +423,9 @@ foreach($komponens as $k) {
     <div class="modal-dialog-custom">
         <form method="POST" action="/admin/pkkm/tim/save" style="margin:0;">
             <input type="hidden" name="id" id="form_id" value="0">
-            <div style="padding:20px 24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, #f0fdf4, #ffffff);">
+            <div style="padding:20px 24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, #f0f9ff, #ffffff);">
                 <div class="d-flex align-items-center gap-2">
-                    <div style="width:36px; height:36px; border-radius:10px; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e0f2fe; color:#0284c7; display:flex; align-items:center; justify-content:center;">
                         <i data-lucide="user-plus" style="width:18px;height:18px;"></i>
                     </div>
                     <div>
@@ -486,7 +486,7 @@ foreach($komponens as $k) {
 
             <div style="padding:16px 24px; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" onclick="closeTimModal()" class="btn btn-light" style="border-radius:10px; font-weight:700; font-size:0.85rem;">Batal</button>
-                <button type="submit" class="btn btn-success" style="border-radius:10px; font-weight:700; font-size:0.85rem; background:#047857; border-color:#047857;">
+                <button type="submit" class="btn btn-primary" style="border-radius:10px; font-weight:700; font-size:0.85rem; background:#0284c7; border-color:#0284c7;">
                     <i data-lucide="check" style="width:16px;height:16px;vertical-align:text-bottom;"></i> Simpan Penugasan
                 </button>
             </div>

@@ -124,7 +124,7 @@ $hasScreenshot = file_exists($screenshotPath);
             transition: all 0.2s ease;
         }
         .bar-btn:hover {
-            background: #f0fdf4;
+            background: #f0f9ff;
             transform: translateY(-1px);
         }
         .bar-btn-secondary {
@@ -236,7 +236,7 @@ $hasScreenshot = file_exists($screenshotPath);
         }
         .info-box.web {
             border-left: 4px solid #0284c7;
-            background: #ecfdf5;
+            background: #f0f9ff;
         }
         .info-box.mail {
             border-left: 4px solid #2563eb;
@@ -327,13 +327,13 @@ $hasScreenshot = file_exists($screenshotPath);
             text-decoration: underline;
         }
         .badge-live-ssl {
-            background: #dcfce7;
-            color: #15803d;
+            background: #e0f2fe;
+            color: #0284c7;
             font-size: 0.62rem;
             font-weight: 700;
             padding: 1px 6px;
             border-radius: 999px;
-            border: 1px solid #bbf7d0;
+            border: 1px solid #bae6fd;
         }
 
         .browser-body {
@@ -398,7 +398,7 @@ $hasScreenshot = file_exists($screenshotPath);
             color: #fff;
         }
         .mock-brand-name span {
-            color: #34d399;
+            color: #38bdf8;
         }
         .mock-nav-links {
             display: flex;
@@ -414,7 +414,7 @@ $hasScreenshot = file_exists($screenshotPath);
             display: inline-block;
             background: rgba(16,185,129,0.15);
             border: 1px solid rgba(16,185,129,0.3);
-            color: #34d399;
+            color: #38bdf8;
             font-size: 0.62rem;
             font-weight: 800;
             padding: 2px 8px;
@@ -684,7 +684,7 @@ $hasScreenshot = file_exists($screenshotPath);
                                     <span>Profil</span>
                                     <span>Akademik</span>
                                     <span>PPDB</span>
-                                    <span style="color:#34d399; font-weight:700;">Portal Masuk ↗</span>
+                                    <span style="color:#38bdf8; font-weight:700;">Portal Masuk ↗</span>
                                 </div>
                             </div>
 

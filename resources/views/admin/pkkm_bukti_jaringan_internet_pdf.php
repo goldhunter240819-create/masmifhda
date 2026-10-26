@@ -114,7 +114,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -188,7 +188,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
         .speedtest-container {
             border: 2px solid #0284c7;
             border-radius: 10px;
-            background: #f0fdf4;
+            background: #f0f9ff;
             padding: 12px 16px;
             margin-bottom: 14px;
             font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -197,7 +197,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px dashed #86efac;
+            border-bottom: 1px dashed #7dd3fc;
             padding-bottom: 8px;
             margin-bottom: 10px;
         }
@@ -228,7 +228,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
         }
         .metric-card {
             background: #ffffff;
-            border: 1px solid #bbf7d0;
+            border: 1px solid #bae6fd;
             border-radius: 8px;
             padding: 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.02);
@@ -397,7 +397,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
                     <div class="metric-unit">ms (Jitter: 2 ms • Loss: 0%)</div>
                 </div>
             </div>
-            <div style="font-size: 0.72rem; color: #166534; font-weight: 600; text-align: center;">
+            <div style="font-size: 0.72rem; color: #0c4a6e; font-weight: 600; text-align: center;">
                 ✔ Koneksi memenuhi standar operasional Asesmen Nasional (ANBK), Sinkronisasi EMIS 4.0, RDM, dan CBT Madrasah.
             </div>
         </div>

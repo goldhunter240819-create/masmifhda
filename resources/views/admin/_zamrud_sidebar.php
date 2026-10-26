@@ -272,9 +272,12 @@ $sub_menus = array(
         array('icon'=>'shield-check',      'label'=>'Hak Akses',           'url'=>base_url('admin/tabungan/akses'),           'page'=>'akses', 'admin_only'=>true),
     ),
     'pkkm' => array(
-        array('icon'=>'layout-dashboard',  'label'=>'Dashboard', 'url'=>base_url('admin/pkkm'),           'page'=>'dashboard'),
-        array('icon'=>'file-check-2',      'label'=>'Instrumen', 'url'=>base_url('admin/pkkm/instrumen'), 'page'=>'instrumen'),
-        array('icon'=>'folder-open',       'label'=>'Dokumen',   'url'=>base_url('admin/pkkm/dokumen'),   'page'=>'dokumen'),
+        array('icon'=>'layout-dashboard',  'label'=>'Dashboard',     'url'=>base_url('admin/pkkm'),               'page'=>'overview'),
+        array('icon'=>'file-check-2',      'label'=>'Instrumen',     'url'=>base_url('admin/pkkm/instrumen'),     'page'=>'instrumen'),
+        array('icon'=>'archive',           'label'=>'Master Berkas', 'url'=>base_url('admin/pkkm/master-berkas'), 'page'=>'master_berkas'),
+        array('icon'=>'sparkles',          'label'=>'Bukti Digital', 'url'=>base_url('admin/pkkm/bukti-digital'), 'page'=>'bukti_digital'),
+        array('icon'=>'users-2',           'label'=>'Tim Madrasah',  'url'=>base_url('admin/pkkm/tim'),           'page'=>'tim'),
+        array('icon'=>'shield-check',      'label'=>'Pengawas / Tim', 'url'=>base_url('admin/pkkm/pengawas'),     'page'=>'pengawas'),
     ),
     'perpus' => array(
         array('icon'=>'layout-dashboard',  'label'=>'Dashboard Utama',     'url'=>base_url('admin/perpus'), 'page'=>'dashboard_utama'),

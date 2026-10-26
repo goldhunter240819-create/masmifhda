@@ -168,7 +168,7 @@ $ekskulList = [
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -272,8 +272,8 @@ $ekskulList = [
 
         /* Header Judul Bukti Fisik */
         .doc-header-box {
-            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-            border: 1.2px solid #a7f3d0;
+            background: linear-gradient(135deg, #f0f9ff 0%, #f0f9ff 100%);
+            border: 1.2px solid #bae6fd;
             border-left: 4px solid #0284c7;
             border-radius: 6px;
             padding: 4px 10px;
@@ -458,13 +458,13 @@ $ekskulList = [
 
         /* Evaluasi Asesor Box */
         .eval-box {
-            background: #f0fdf4;
-            border: 1px solid #86efac;
+            background: #f0f9ff;
+            border: 1px solid #7dd3fc;
             border-radius: 5px;
             padding: 4px 8px;
             margin-bottom: 6px;
             font-size: 6.8pt;
-            color: #14532d;
+            color: #0c4a6e;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -539,9 +539,9 @@ $ekskulList = [
         }
         .stempel-badge {
             display: inline-block;
-            background: #dcfce7;
-            color: #15803d;
-            border: 1px solid #86efac;
+            background: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #7dd3fc;
             font-size: 5.6pt;
             font-weight: 800;
             padding: 1px 4px;

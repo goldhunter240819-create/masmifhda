@@ -60,9 +60,9 @@
         }
         .stat-box blue { background: #faf5ff; border-color: #f3e8ff; color: #6b21a8; }
         .stat-box.blue { background: #eff6ff; border-color: #dbeafe; color: #1e3a8a; }
-        .stat-box.green { background: #f0fdf4; border-color: #dcfce7; color: #14532d; }
+        .stat-box.green { background: #f0f9ff; border-color: #e0f2fe; color: #0c4a6e; }
         .stat-box.yellow { background: #fefce8; border-color: #fef9c3; color: #713f12; }
-        .stat-box.emerald { background: #ecfdf5; border-color: #d1fae5; color: #1e40af; }
+        .stat-box.emerald { background: #f0f9ff; border-color: #e0f2fe; color: #1e40af; }
         .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.85); box-shadow: 0 1px 3px rgba(0,0,0,0.03); flex-shrink: 0; }
         .stat-icon i, .stat-icon svg { width: 16px !important; height: 16px !important; }
         .stat-box blue .stat-icon { color: #8b5cf6; }
@@ -172,7 +172,7 @@
         }
         .evidence-card-badge {
             display: inline-flex; align-items: center; gap: 3px;
-            background: #ecfdf5; color: #1e3a8a; border: 1px solid #a7f3d0;
+            background: #f0f9ff; color: #1e3a8a; border: 1px solid #bae6fd;
             border-radius: 4px; padding: 1px 6px; font-size: 0.62rem; font-weight: 700;
             cursor: pointer; transition: all 0.15s ease;
         }
@@ -186,9 +186,9 @@
         }
         .cat-sk { background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; }
         .cat-notulen { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .cat-program { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .cat-program { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
         .cat-laporan { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-        .cat-digital { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+        .cat-digital { background: #f0f9ff; color: #0f766e; border: 1px solid #99f6e4; }
         .cat-sarpras { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
         .cat-umum { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
@@ -205,7 +205,7 @@
             transition: all 0.15s ease; cursor: pointer; text-decoration: none;
         }
         .ind-pill-interactive:hover {
-            background: #ecfdf5; color: #1e3a8a; border-color: #86efac;
+            background: #f0f9ff; color: #1e3a8a; border-color: #7dd3fc;
         }
         .unmatched-pill {
             display: inline-flex; align-items: center; gap: 3px;
@@ -264,7 +264,7 @@
         }
         .file-chip-icon i, .file-chip-icon svg { width: 11px !important; height: 11px !important; }
         .icon-file { background: #eff6ff; color: #2563eb; }
-        .icon-link { background: #f0fdf4; color: #0284c7; }
+        .icon-link { background: #f0f9ff; color: #0284c7; }
         .file-chip-name {
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;
         }
@@ -292,7 +292,7 @@
             border-radius: 8px; padding: 5px 12px; background-color: #f8fafc; border: 1px solid #cbd5e1; width: 200px; font-weight: 500; font-size: 0.78rem;
         }
         div.dataTables_wrapper div.dataTables_filter input:focus {
-            outline: none; border-color: #38bdf8; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+            outline: none; border-color: #38bdf8; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
         }
         div.dataTables_wrapper div.dataTables_info { padding-top: 12px; color: #64748b; font-size: 0.78rem; font-weight: 600; }
         div.dataTables_wrapper .page-item.active .page-link {

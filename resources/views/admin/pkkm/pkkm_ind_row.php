@@ -23,7 +23,7 @@ foreach($bf_lines as $l) {
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 280px;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <span class="badge" style="background: #0284c7; color: #ffffff; font-size: 0.8rem; font-weight: 800; padding: 4px 10px; border-radius: 7px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(5,150,105,0.2);">
+                    <span class="badge" style="background: #0284c7; color: #ffffff; font-size: 0.8rem; font-weight: 800; padding: 4px 10px; border-radius: 7px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">
                         <?php echo htmlspecialchars($indCode); ?>
                     </span>
                     <span style="color: #0f172a; font-size: 0.92rem; font-weight: 700; line-height: 1.45;">

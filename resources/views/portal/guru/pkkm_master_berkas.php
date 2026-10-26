@@ -39,9 +39,9 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
         /* Minimalist Banner Header */
         .elite-page-header {
             position: relative; padding: 1.1rem 1.6rem; margin-bottom: 1.1rem;
-            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
             border-radius: 14px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 4px 16px -4px rgba(6, 78, 59, 0.25);
+            box-shadow: 0 4px 16px -4px rgba(2, 132, 199, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .elite-page-header .header-bg-shapes {
@@ -61,8 +61,8 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-1px); }
-        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
-        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
+        .e-btn-primary { background: #ffffff; color: #0284c7; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+        .e-btn-primary:hover { background: #f8fafc; color: #0369a1; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -78,10 +78,10 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
         .stat-icon i, .stat-icon svg { width: 16px !important; height: 16px !important; }
         .stat-box.purple { background: #faf5ff; border-color: #f3e8ff; color: #6b21a8; }
         .stat-box.purple .stat-icon { color: #8b5cf6; }
-        .stat-box.emerald { background: #ecfdf5; border-color: #d1fae5; color: #065f46; }
-        .stat-box.emerald .stat-icon { color: #059669; }
-        .stat-box.green { background: #f0fdf4; border-color: #dcfce7; color: #14532d; }
-        .stat-box.green .stat-icon { color: #10b981; }
+        .stat-box.emerald { background: #f0f9ff; border-color: #e0f2fe; color: #0369a1; }
+        .stat-box.emerald .stat-icon { color: #0284c7; }
+        .stat-box.green { background: #f0f9ff; border-color: #e0f2fe; color: #0c4a6e; }
+        .stat-box.green .stat-icon { color: #0ea5e9; }
         .stat-box.yellow { background: #fefce8; border-color: #fef9c3; color: #713f12; }
         .stat-box.yellow .stat-icon { color: #f59e0b; }
         .stat-value { font-size: 1.25rem; font-weight: 800; line-height: 1.1; margin-bottom: 1px; }
@@ -94,7 +94,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
         }
         .filter-pill-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
         .filter-pill-btn.active {
-            background: #047857 !important; color: #ffffff !important; border-color: #047857 !important;
+            background: #0284c7 !important; color: #ffffff !important; border-color: #0284c7 !important;
             box-shadow: 0 2px 6px rgba(4, 120, 87, 0.2);
         }
         .filter-pill-btn.active .badge-num { background: rgba(255,255,255,0.25); color: #fff; }
@@ -127,25 +127,25 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
         }
         .cat-sk { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
         .cat-notulen { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-        .cat-program { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .cat-program { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
         .cat-laporan { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
         .cat-digital { background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
         .cat-sarpras { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
         .cat-umum { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
         .btn-upload-direct {
-            background: #059669; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.73rem; font-weight: 600; border: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.15s;
+            background: #0284c7; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.73rem; font-weight: 600; border: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.15s;
         }
-        .btn-upload-direct:hover { background: #047857; }
+        .btn-upload-direct:hover { background: #0284c7; }
 
         .evidence-card-badge {
             display: inline-flex; align-items: center; gap: 3px;
-            background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
+            background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd;
             border-radius: 4px; padding: 1px 6px; font-size: 0.62rem; font-weight: 700;
             cursor: pointer; transition: all 0.15s ease;
         }
         .evidence-card-badge:hover {
-            background: #059669; color: #ffffff; border-color: #059669; transform: translateY(-1px);
+            background: #0284c7; color: #ffffff; border-color: #0284c7; transform: translateY(-1px);
         }
 
         .file-pill {
@@ -157,7 +157,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
 
         /* Slim Auto Digital Box */
         .digital-box-ready {
-            background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 4px 8px; margin-top: 4px; font-size: 0.7rem;
+            background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 6px; padding: 4px 8px; margin-top: 4px; font-size: 0.7rem;
         }
 
         /* Modal Custom */
@@ -268,8 +268,8 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
                         <button type="button" class="filter-pill-btn" data-filter="pending">
                             <i data-lucide="clock" style="width:12px;height:12px;"></i> Belum Ada <span class="badge-num"><?php echo $totalPending; ?></span>
                         </button>
-                        <button type="button" class="filter-pill-btn" data-filter="digital_ready" style="border-color:#86efac; color:#065f46;">
-                            <i data-lucide="sparkles" style="width:12px;height:12px;color:#059669;"></i> Digital Siap <span class="badge-num" style="background:#dcfce7; color:#166534;"><?php echo $totalDigitalReady; ?></span>
+                        <button type="button" class="filter-pill-btn" data-filter="digital_ready" style="border-color:#7dd3fc; color:#0369a1;">
+                            <i data-lucide="sparkles" style="width:12px;height:12px;color:#0284c7;"></i> Digital Siap <span class="badge-num" style="background:#e0f2fe; color:#0c4a6e;"><?php echo $totalDigitalReady; ?></span>
                         </button>
                     </div>
                 </div>
@@ -356,7 +356,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
                                             </span>
                                             <?php foreach(array_slice($mb['indikators_terkait'], 0, 4) as $it): ?>
                                                 <span class="ind-chip" title="<?php echo htmlspecialchars($it['komponen']); ?>">
-                                                    <i data-lucide="bookmark-check" style="width:9px;height:9px;color:#059669;"></i> <?php echo $it['kode']; ?>
+                                                    <i data-lucide="bookmark-check" style="width:9px;height:9px;color:#0284c7;"></i> <?php echo $it['kode']; ?>
                                                 </span>
                                             <?php endforeach; ?>
                                             <?php if(count($mb['indikators_terkait']) > 4): ?>
@@ -369,15 +369,15 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
                                     <?php if($hasDigital): ?>
                                         <div class="digital-box-ready">
                                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
-                                                <div style="font-size:0.7rem; font-weight:700; color:#065f46; display:flex; align-items:center; gap:4px;">
-                                                    <i data-lucide="sparkles" style="width:11px;height:11px;color:#10b981;"></i>
+                                                <div style="font-size:0.7rem; font-weight:700; color:#0369a1; display:flex; align-items:center; gap:4px;">
+                                                    <i data-lucide="sparkles" style="width:11px;height:11px;color:#0ea5e9;"></i>
                                                     Tersedia Bukti PDF Resmi Auto-Generate (Kop + TTD Kamad)
                                                 </div>
                                                 <div class="d-flex gap-1">
-                                                    <a href="<?php echo $mb['bukti_digital']['url']; ?>" target="_blank" class="btn btn-sm btn-outline-success p-1 px-2" style="font-size:0.66rem; padding:2px 7px !important; border-radius:5px;">
+                                                    <a href="<?php echo $mb['bukti_digital']['url']; ?>" target="_blank" class="btn btn-sm btn-outline-primary p-1 px-2" style="font-size:0.66rem; padding:2px 7px !important; border-radius:5px;">
                                                         <i data-lucide="file-text" style="width:10px;height:10px;"></i> Preview
                                                     </a>
-                                                    <button type="button" onclick="attachDigital('<?php echo $mb['id']; ?>', '<?php echo $mb['bukti_digital']['url']; ?>', '<?php echo htmlspecialchars(addslashes($mb['bukti_digital']['title'] ?? 'Bukti Digital Resmi')); ?>')" class="btn btn-sm btn-success p-1 px-2" style="font-size:0.66rem; padding:2px 7px !important; border-radius:5px; background:#059669; border-color:#059669;">
+                                                    <button type="button" onclick="attachDigital('<?php echo $mb['id']; ?>', '<?php echo $mb['bukti_digital']['url']; ?>', '<?php echo htmlspecialchars(addslashes($mb['bukti_digital']['title'] ?? 'Bukti Digital Resmi')); ?>')" class="btn btn-sm btn-primary p-1 px-2" style="font-size:0.66rem; padding:2px 7px !important; border-radius:5px; background:#0284c7; border-color:#0284c7;">
                                                         <i data-lucide="plus-circle" style="width:10px;height:10px;"></i> Pasang 1-Klik
                                                     </button>
                                                 </div>
@@ -390,7 +390,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
                                         <?php foreach($mb['files'] as $f): ?>
                                             <div class="file-pill">
                                                 <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:170px;" title="<?php echo htmlspecialchars($f['nama_file_asli']); ?>">
-                                                    <i data-lucide="<?php echo $f['tipe'] === 'link' ? 'link' : 'file-text'; ?>" style="width:11px;height:11px;color:#059669;vertical-align:middle;"></i>
+                                                    <i data-lucide="<?php echo $f['tipe'] === 'link' ? 'link' : 'file-text'; ?>" style="width:11px;height:11px;color:#0284c7;vertical-align:middle;"></i>
                                                     <a href="<?php echo $f['url']; ?>" target="_blank" style="text-decoration:none; color:#1e293b; font-weight:600;">
                                                         <?php echo htmlspecialchars($f['nama_file_asli']); ?>
                                                     </a>
@@ -420,7 +420,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
                                             <i data-lucide="upload-cloud" style="width:12px;height:12px;"></i> Upload
                                         </button>
                                         <?php if(!empty($mb['bukti_digital'])): ?>
-                                            <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" class="btn btn-sm btn-outline-success" style="font-size:0.68rem; padding:2px 7px; border-radius:6px; text-decoration:none;">
+                                            <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:0.68rem; padding:2px 7px; border-radius:6px; text-decoration:none;">
                                                 <i data-lucide="external-link" style="width:10px;height:10px;"></i> Monitoring
                                             </a>
                                         <?php endif; ?>
@@ -443,9 +443,9 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
         <form method="POST" action="/guru/pkkm/master-berkas/upload" enctype="multipart/form-data" style="margin:0;">
             <input type="hidden" name="master_berkas_id" id="modal_master_id">
             
-            <div style="padding:18px 24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, #f0fdf4, #ffffff);">
+            <div style="padding:18px 24px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, #f0f9ff, #ffffff);">
                 <div class="d-flex align-items-center gap-2">
-                    <div style="width:34px; height:34px; border-radius:10px; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center;">
+                    <div style="width:34px; height:34px; border-radius:10px; background:#e0f2fe; color:#0284c7; display:flex; align-items:center; justify-content:center;">
                         <i data-lucide="upload-cloud" style="width:18px;height:18px;"></i>
                     </div>
                     <div>
@@ -479,7 +479,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
 
             <div style="padding:14px 24px; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" onclick="closeUploadModal()" class="btn btn-light" style="border-radius:10px; font-weight:700; font-size:0.85rem;">Batal</button>
-                <button type="submit" class="btn btn-success" style="border-radius:10px; font-weight:700; font-size:0.85rem; background:#047857; border-color:#047857;">
+                <button type="submit" class="btn btn-primary" style="border-radius:10px; font-weight:700; font-size:0.85rem; background:#0284c7; border-color:#0284c7;">
                     <i data-lucide="check" style="width:16px;height:16px;vertical-align:text-bottom;"></i> Upload Sekarang
                 </button>
             </div>
@@ -621,7 +621,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
             text: 'Dokumen auto-generate resmi dengan Kop Madrasah dan TTD Kamad akan otomatis dipasang ke berkas ini.',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#059669',
+            confirmButtonColor: '#0284c7',
             confirmButtonText: 'Ya, Pasang!',
             cancelButtonText: 'Batal'
         }).then((res) => {

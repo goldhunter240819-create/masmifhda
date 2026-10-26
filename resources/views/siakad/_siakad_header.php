@@ -14,15 +14,15 @@ $_sh_label = ($_sh_role == 1 || $_sh_role == 99) ? 'Administrator' : ($_sh_role 
             <i data-lucide="menu"></i>
         </button>
         <div style="display:flex; align-items:center; gap: 8px; font-weight: 700; font-size: 0.95rem;">
-            <span style="color: #10b981; text-transform: uppercase; letter-spacing: 1px;"><?php echo htmlspecialchars($_sh_badge); ?></span>
+            <span style="color: #0284c7; text-transform: uppercase; letter-spacing: 1px;"><?php echo htmlspecialchars($_sh_badge); ?></span>
             <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: #94a3b8;"></i>
             <span style="color: #1e293b;"><?php echo htmlspecialchars($_sh_title); ?></span>
         </div>
     </div>
     <div class="z-header-user" style="gap: 15px; display: flex; align-items: center;">
         <!-- System Online Indicator -->
-        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #ecfdf5; color: #059669; border-radius: 20px; font-size: 0.75rem; font-weight: 700; border: 1px solid #a7f3d0;">
-            <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);"></span>
+        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f0f9ff; color: #0284c7; border-radius: 20px; font-size: 0.75rem; font-weight: 700; border: 1px solid #bae6fd;">
+            <span style="width: 8px; height: 8px; background: #0ea5e9; border-radius: 50%; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);"></span>
             System Online
         </div>
         
@@ -34,7 +34,7 @@ $_sh_label = ($_sh_role == 1 || $_sh_role == 99) ? 'Administrator' : ($_sh_role 
             <div class="name" style="font-weight:800;font-size:0.85rem;color:#0f172a;line-height:1.2;"><?php echo htmlspecialchars($_sh_nama); ?></div>
             <div class="role" style="font-size:0.7rem;color:#64748b;"><?php echo $_sh_label; ?></div>
         </div>
-        <div class="z-avatar" style="width:36px;height:36px;background:linear-gradient(135deg,#10b981,#059669);color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 4px 12px rgba(16,185,129,0.3);"><?php echo $_sh_init; ?></div>
+        <div class="z-avatar" style="width:36px;height:36px;background:linear-gradient(135deg,#38bdf8,#0284c7);color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 4px 12px rgba(2,132,199,0.3);"><?php echo $_sh_init; ?></div>
         <a href="<?php echo function_exists('base_url') ? base_url('logout') : '/logout'; ?>" title="Logout" style="background: rgba(239,68,68,.1); color: #f87171; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s;" onmouseover="this.style.background='rgba(239,68,68,.2)'" onmouseout="this.style.background='rgba(239,68,68,.1)'">
             <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
         </a>

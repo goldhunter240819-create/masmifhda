@@ -45,9 +45,9 @@ $curTab = $active_tab ?? 'dashboard';
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
-            --primary-emerald: #059669;
-            --emerald-hover: #047857;
-            --dark-emerald: #064e3b;
+            --primary-emerald: #0284c7;
+            --emerald-hover: #0284c7;
+            --dark-emerald: #0369a1;
             --sidebar-width: 235px;
             --sidebar-collapsed-width: 66px;
             --bg-canvas: #edf2f7;
@@ -78,7 +78,7 @@ $curTab = $active_tab ?? 'dashboard';
         /* ─── SIDEBAR ULTRA MINIMALIS (COLLAPSIBLE) ─── */
         .sidebar-asesor {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, #064e3b 0%, #032b20 100%);
+            background: linear-gradient(180deg, #0c4a6e 0%, #0f172a 100%);
             color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -121,7 +121,7 @@ $curTab = $active_tab ?? 'dashboard';
         }
         .sidebar-brand .brand-sub {
             font-size: 0.62rem;
-            color: #34d399;
+            color: #38bdf8;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.8px;
@@ -162,7 +162,7 @@ $curTab = $active_tab ?? 'dashboard';
             width: 30px;
             height: 30px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
             color: #ffffff;
             display: flex;
             align-items: center;
@@ -179,9 +179,9 @@ $curTab = $active_tab ?? 'dashboard';
             width: 9px;
             height: 9px;
             border-radius: 50%;
-            border: 1.5px solid #064e3b;
+            border: 1.5px solid #0369a1;
         }
-        .user-status-dot.ready { background: #34d399; }
+        .user-status-dot.ready { background: #38bdf8; }
         .user-status-dot.pending { background: #f59e0b; }
 
         .user-role-badge {
@@ -191,7 +191,7 @@ $curTab = $active_tab ?? 'dashboard';
             padding: 1px 5px;
             border-radius: 4px;
             background: rgba(52, 211, 153, 0.18);
-            color: #6ee7b7;
+            color: #7dd3fc;
             text-transform: uppercase;
             letter-spacing: 0.3px;
             border: 1px solid rgba(52, 211, 153, 0.25);
@@ -242,10 +242,10 @@ $curTab = $active_tab ?? 'dashboard';
             color: #ffffff;
         }
         .side-nav-btn.active {
-            background: #059669;
+            background: #0284c7;
             color: #ffffff;
             font-weight: 700;
-            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
         }
         .side-nav-btn .pill-badge {
             font-size: 0.66rem;
@@ -342,8 +342,8 @@ $curTab = $active_tab ?? 'dashboard';
 
         /* ─── PORTAL TOPBAR (FLOATING HIJAU-PUTIH GRADIENT) ─── */
         .portal-topbar {
-            background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 28%, #ffffff 70%, #ffffff 100%);
-            border: 1.5px solid #a7f3d0;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 28%, #ffffff 70%, #ffffff 100%);
+            border: 1.5px solid #bae6fd;
             border-radius: 16px;
             margin: 14px 22px 0;
             padding: 10px 20px;
@@ -355,25 +355,25 @@ $curTab = $active_tab ?? 'dashboard';
             z-index: 1000;
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.12), 0 4px 10px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.12), 0 4px 10px rgba(0, 0, 0, 0.03);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .portal-topbar:hover {
-            box-shadow: 0 12px 28px -4px rgba(5, 150, 105, 0.16), 0 4px 10px rgba(0, 0, 0, 0.04);
-            border-color: #6ee7b7;
+            box-shadow: 0 12px 28px -4px rgba(2, 132, 199, 0.16), 0 4px 10px rgba(0, 0, 0, 0.04);
+            border-color: #7dd3fc;
         }
 
         .topbar-page-icon {
             width: 32px;
             height: 32px;
             border-radius: 8px;
-            background: #ecfdf5;
+            background: #f0f9ff;
             color: var(--primary-emerald);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            border: 1px solid #d1fae5;
+            border: 1px solid #e0f2fe;
         }
         .topbar-sub-badges {
             display: flex;
@@ -391,12 +391,12 @@ $curTab = $active_tab ?? 'dashboard';
         }
         .badge-tp-meta {
             font-size: 0.64rem;
-            background: #ecfdf5;
-            color: #047857;
+            background: #f0f9ff;
+            color: #0284c7;
             font-weight: 700;
             padding: 1px 7px;
             border-radius: 999px;
-            border: 1px solid #d1fae5;
+            border: 1px solid #e0f2fe;
         }
 
         /* TOPBAR KPI PILLS */
@@ -417,9 +417,9 @@ $curTab = $active_tab ?? 'dashboard';
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .topbar-kpi-pill.emerald-glow {
-            background: #ecfdf5;
-            border-color: #a7f3d0;
-            color: #065f46;
+            background: #f0f9ff;
+            border-color: #bae6fd;
+            color: #0369a1;
         }
         .topbar-kpi-lbl {
             font-size: 0.64rem;
@@ -450,17 +450,17 @@ $curTab = $active_tab ?? 'dashboard';
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
         .btn-topbar-print:hover {
-            background: #059669;
+            background: #0284c7;
             color: #ffffff;
-            border-color: #059669;
-            box-shadow: 0 3px 10px rgba(5, 150, 105, 0.25);
+            border-color: #0284c7;
+            box-shadow: 0 3px 10px rgba(2, 132, 199, 0.25);
         }
 
         .topbar-user-avatar {
             width: 30px;
             height: 30px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #059669 0%, #064e3b 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #ffffff;
             font-weight: 800;
             font-size: 0.78rem;
@@ -468,7 +468,7 @@ $curTab = $active_tab ?? 'dashboard';
             align-items: center;
             justify-content: center;
             border: 2px solid #ffffff;
-            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.2);
         }
 
         /* PAGE BODY CONTAINER (FLUID & RESPONSIF SEJAJAR DENGAN HEADER) */
@@ -497,12 +497,12 @@ $curTab = $active_tab ?? 'dashboard';
 
         /* ─── GREEN BANNER TARGET EVALUASI (TAB PENILAIAN) ─── */
         .banner-penilaian-green {
-            background: linear-gradient(135deg, #022c22 0%, #064e3b 45%, #047857 100%);
+            background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 45%, #0284c7 100%);
             border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 16px;
             padding: 16px 22px;
             color: #ffffff;
-            box-shadow: 0 8px 24px -4px rgba(6, 78, 59, 0.28), 0 2px 6px rgba(0,0,0,0.04);
+            box-shadow: 0 8px 24px -4px rgba(2, 132, 199, 0.28), 0 2px 6px rgba(0,0,0,0.04);
             position: relative;
             overflow: hidden;
             margin-bottom: 16px;
@@ -525,7 +525,7 @@ $curTab = $active_tab ?? 'dashboard';
             background: rgba(255, 255, 255, 0.14);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.22);
-            color: #34d399;
+            color: #38bdf8;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -535,7 +535,7 @@ $curTab = $active_tab ?? 'dashboard';
         .banner-tag {
             background: rgba(255, 255, 255, 0.14);
             border: 1px solid rgba(255, 255, 255, 0.22);
-            color: #6ee7b7;
+            color: #7dd3fc;
             font-size: 0.62rem;
             font-weight: 800;
             padding: 2px 8px;
@@ -574,10 +574,10 @@ $curTab = $active_tab ?? 'dashboard';
                 radial-gradient(circle at 95% 5%, rgba(52, 211, 153, 0.22) 0%, transparent 45%),
                 radial-gradient(circle at 5% 95%, rgba(16, 185, 129, 0.16) 0%, transparent 40%),
                 radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                linear-gradient(135deg, #022c22 0%, #064e3b 45%, #047857 100%);
+                linear-gradient(135deg, #0c4a6e 0%, #0369a1 45%, #0284c7 100%);
             background-size: 100% 100%, 100% 100%, 18px 18px, 100% 100%;
             border-radius: 18px;
-            box-shadow: 0 12px 32px -4px rgba(6, 78, 59, 0.3), 0 4px 12px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 12px 32px -4px rgba(2, 132, 199, 0.3), 0 4px 12px rgba(0, 0, 0, 0.05);
             color: #ffffff;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.18);
@@ -602,7 +602,7 @@ $curTab = $active_tab ?? 'dashboard';
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.22);
-            color: #6ee7b7;
+            color: #7dd3fc;
             font-size: 0.65rem;
             font-weight: 800;
             padding: 3px 10px;
@@ -615,14 +615,14 @@ $curTab = $active_tab ?? 'dashboard';
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background: #34d399;
-            box-shadow: 0 0 8px #34d399;
+            background: #38bdf8;
+            box-shadow: 0 0 8px #38bdf8;
             display: inline-block;
             animation: hero-dot-pulse 2s infinite ease-in-out;
         }
         @keyframes hero-dot-pulse {
-            0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 6px #34d399; }
-            50% { transform: scale(1.25); opacity: 0.6; box-shadow: 0 0 12px #34d399; }
+            0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 6px #38bdf8; }
+            50% { transform: scale(1.25); opacity: 0.6; box-shadow: 0 0 12px #38bdf8; }
         }
 
         .hero-heading {
@@ -668,7 +668,7 @@ $curTab = $active_tab ?? 'dashboard';
         }
         .badge-role-hero {
             background: rgba(52, 211, 153, 0.22);
-            color: #a7f3d0;
+            color: #bae6fd;
             font-weight: 700;
             font-size: 0.66rem;
             padding: 1.5px 6px;
@@ -676,7 +676,7 @@ $curTab = $active_tab ?? 'dashboard';
             border: 1px solid rgba(52, 211, 153, 0.3);
         }
         .ttd-badge-ok {
-            color: #34d399;
+            color: #38bdf8;
             font-weight: 700;
         }
         .ttd-badge-warn {
@@ -714,7 +714,7 @@ $curTab = $active_tab ?? 'dashboard';
         .hero-card-pct {
             font-size: 0.78rem;
             font-weight: 800;
-            color: #34d399;
+            color: #38bdf8;
         }
         .hero-card-progress {
             height: 5px;
@@ -725,7 +725,7 @@ $curTab = $active_tab ?? 'dashboard';
         }
         .hero-card-bar {
             height: 100%;
-            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+            background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
             border-radius: 999px;
             box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
             transition: width 0.3s ease;
@@ -738,7 +738,7 @@ $curTab = $active_tab ?? 'dashboard';
 
         .btn-hero-primary {
             background: #ffffff;
-            color: #064e3b;
+            color: #0369a1;
             font-weight: 800;
             font-size: 0.8rem;
             padding: 7px 13px;
@@ -758,11 +758,11 @@ $curTab = $active_tab ?? 'dashboard';
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
             background: #f8fafc;
-            color: #047857;
+            color: #0284c7;
         }
         .btn-hero-primary .badge-count {
-            background: #ecfdf5;
-            color: #059669;
+            background: #f0f9ff;
+            color: #0284c7;
             padding: 1.5px 6px;
             border-radius: 999px;
             font-size: 0.68rem;
@@ -834,7 +834,7 @@ $curTab = $active_tab ?? 'dashboard';
             flex-shrink: 0;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
         }
-        .stat-card-box.emerald .stat-icon-wrap { background: #ecfdf5; color: #059669; }
+        .stat-card-box.emerald .stat-icon-wrap { background: #f0f9ff; color: #0284c7; }
         .stat-card-box.blue .stat-icon-wrap { background: #eff6ff; color: #2563eb; }
         .stat-card-box.purple .stat-icon-wrap { background: #faf5ff; color: #7c3aed; }
         .stat-card-box.amber .stat-icon-wrap { background: #fffbeb; color: #d97706; }
@@ -859,8 +859,8 @@ $curTab = $active_tab ?? 'dashboard';
         }
         .komp-card:hover {
             background: #ffffff;
-            border-color: #34d399;
-            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
+            border-color: #38bdf8;
+            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12);
             transform: translateY(-2px);
         }
         .komp-card-header {
@@ -873,7 +873,7 @@ $curTab = $active_tab ?? 'dashboard';
             width: 26px;
             height: 26px;
             border-radius: 6px;
-            background: #ecfdf5;
+            background: #f0f9ff;
             color: var(--primary-emerald);
             display: flex;
             align-items: center;
@@ -912,7 +912,7 @@ $curTab = $active_tab ?? 'dashboard';
             background: var(--primary-emerald);
             border-color: var(--primary-emerald);
             color: #ffffff;
-            box-shadow: 0 2px 6px rgba(5,150,105,0.25);
+            box-shadow: 0 2px 6px rgba(2,132,199,0.25);
         }
 
         /* INDIKATOR CARD (EXECUTIVE ELEVATED) */
@@ -929,7 +929,7 @@ $curTab = $active_tab ?? 'dashboard';
             border-color: #cbd5e1; 
             box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03); 
         }
-        .ind-card.scored { border-left: 4.5px solid #10b981; }
+        .ind-card.scored { border-left: 4.5px solid #0ea5e9; }
 
         .ind-num-pill {
             background: #f1f5f9;
@@ -943,8 +943,8 @@ $curTab = $active_tab ?? 'dashboard';
 
         .berkas-pill-link {
             background: #ffffff;
-            color: #047857;
-            border: 1px solid #d1fae5;
+            color: #0284c7;
+            border: 1px solid #e0f2fe;
             font-size: 0.72rem;
             font-weight: 600;
             padding: 3px 8px;
@@ -956,9 +956,9 @@ $curTab = $active_tab ?? 'dashboard';
             transition: all 0.15s;
         }
         .berkas-pill-link:hover {
-            background: #ecfdf5;
-            border-color: #a7f3d0;
-            color: #064e3b;
+            background: #f0f9ff;
+            border-color: #bae6fd;
+            color: #0369a1;
         }
 
         /* SCORING PANEL RAPIH & MODERN */
@@ -971,8 +971,8 @@ $curTab = $active_tab ?? 'dashboard';
             box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
         .ind-card.scored .scoring-box {
-            background: #f0fdf4;
-            border-color: #bbf7d0;
+            background: #f0f9ff;
+            border-color: #bae6fd;
         }
         .scoring-box-header {
             display: flex;
@@ -1006,9 +1006,9 @@ $curTab = $active_tab ?? 'dashboard';
             border: 1px solid #fde68a;
         }
         .scoring-status-badge.scored {
-            background: #ecfdf5;
-            color: #047857;
-            border: 1px solid #a7f3d0;
+            background: #f0f9ff;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
         }
 
         .scoring-options-grid {
@@ -1033,10 +1033,10 @@ $curTab = $active_tab ?? 'dashboard';
             text-align: center;
         }
         .score-option-btn:hover {
-            border-color: #059669;
-            background: #ecfdf5;
+            border-color: #0284c7;
+            background: #f0f9ff;
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.15);
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
         }
         .score-option-btn .opt-num {
             font-size: 1.05rem;
@@ -1055,10 +1055,10 @@ $curTab = $active_tab ?? 'dashboard';
             text-align: center;
         }
         .score-option-btn.active {
-            background: #059669;
-            border-color: #047857;
+            background: #0284c7;
+            border-color: #0284c7;
             color: #ffffff;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
             transform: translateY(-1px);
         }
         .score-option-btn.active .opt-num,
@@ -1273,7 +1273,7 @@ $curTab = $active_tab ?? 'dashboard';
                     <span>Setting TTD</span>
                 </div>
                 <?php if (!empty($pgTtd)): ?>
-                    <i data-lucide="check" style="width:13px;height:13px;color:#34d399;" class="nav-badge-icon"></i>
+                    <i data-lucide="check" style="width:13px;height:13px;color:#38bdf8;" class="nav-badge-icon"></i>
                 <?php else: ?>
                     <span class="badge nav-badge-icon" style="font-size:0.6rem; background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3);">Atur</span>
                 <?php endif; ?>
@@ -1333,7 +1333,7 @@ $curTab = $active_tab ?? 'dashboard';
                         ?>
                     </h5>
                     <div class="topbar-sub-badges">
-                        <span class="badge-school-meta"><i data-lucide="building" style="width:12px;height:12px;color:#059669;"></i> <?php echo htmlspecialchars($sekolah_nama); ?></span>
+                        <span class="badge-school-meta"><i data-lucide="building" style="width:12px;height:12px;color:#0284c7;"></i> <?php echo htmlspecialchars($sekolah_nama); ?></span>
                         <span class="badge-tp-meta">TP 2026/2027</span>
                     </div>
                 </div>
@@ -1342,13 +1342,13 @@ $curTab = $active_tab ?? 'dashboard';
             <div class="d-flex align-items-center gap-2">
                 <!-- KPI Skor Badges Executive Capsule -->
                 <div class="topbar-kpi-pill d-none d-sm-flex">
-                    <i data-lucide="check-circle-2" style="width:13px;height:13px;color:#059669;"></i>
+                    <i data-lucide="check-circle-2" style="width:13px;height:13px;color:#0284c7;"></i>
                     <span class="topbar-kpi-lbl">Dinilai:</span>
                     <span class="topbar-kpi-val" id="topDinilai"><?php echo $totalDinilai; ?> <span style="font-size:0.68rem;color:#94a3b8;font-weight:600;">/ 42</span></span>
                 </div>
                 <div class="topbar-kpi-pill emerald-glow d-none d-sm-flex">
-                    <i data-lucide="activity" style="width:13px;height:13px;color:#059669;"></i>
-                    <span class="topbar-kpi-lbl" style="color:#065f46;">NKKM:</span>
+                    <i data-lucide="activity" style="width:13px;height:13px;color:#0284c7;"></i>
+                    <span class="topbar-kpi-lbl" style="color:#0369a1;">NKKM:</span>
                     <span class="topbar-kpi-val text-success" id="topPersen"><?php echo $persentase; ?>%</span>
                 </div>
                 <div class="d-none d-md-block">
@@ -1359,7 +1359,7 @@ $curTab = $active_tab ?? 'dashboard';
 
                 <!-- Tombol Cetak BAP -->
                 <a href="/pengawas/pkkm/cetak-rekap" target="_blank" class="btn-topbar-print ms-1" title="Cetak Berita Acara & Rekapitulasi Nilai">
-                    <i data-lucide="printer" style="width:13px;height:13px;color:#059669;"></i>
+                    <i data-lucide="printer" style="width:13px;height:13px;color:#0284c7;"></i>
                     <span class="d-none d-md-inline">Cetak Rekap</span>
                 </a>
 
@@ -1396,23 +1396,23 @@ $curTab = $active_tab ?? 'dashboard';
                             </p>
                             <div class="hero-meta-bar">
                                 <div class="hero-meta-item">
-                                    <i data-lucide="user-check" style="width:13px;height:13px;color:#34d399;"></i>
+                                    <i data-lucide="user-check" style="width:13px;height:13px;color:#38bdf8;"></i>
                                     <span>Asesor: <strong><?php echo htmlspecialchars($pgNama); ?></strong></span>
                                 </div>
                                 <div class="hero-meta-divider"></div>
                                 <div class="hero-meta-item">
-                                    <i data-lucide="award" style="width:13px;height:13px;color:#6ee7b7;"></i>
+                                    <i data-lucide="award" style="width:13px;height:13px;color:#7dd3fc;"></i>
                                     <span class="badge-role-hero"><?php echo ($pgPeran === 'penilai_1') ? 'Ketua Tim (Penilai 1)' : 'Anggota Tim (Penilai 2)'; ?></span>
                                 </div>
                                 <div class="hero-meta-divider"></div>
                                 <div class="hero-meta-item">
-                                    <i data-lucide="building" style="width:13px;height:13px;color:#a7f3d0;"></i>
+                                    <i data-lucide="building" style="width:13px;height:13px;color:#bae6fd;"></i>
                                     <span><?php echo htmlspecialchars($sekolah_nama); ?></span>
                                 </div>
                                 <div class="hero-meta-divider"></div>
                                 <?php if (!empty($pgTtd)): ?>
                                     <div class="hero-meta-item ttd-badge-ok">
-                                        <i data-lucide="shield-check" style="width:13px;height:13px;color:#34d399;"></i>
+                                        <i data-lucide="shield-check" style="width:13px;height:13px;color:#38bdf8;"></i>
                                         <span>TTD Siap</span>
                                     </div>
                                 <?php else: ?>
@@ -1428,7 +1428,7 @@ $curTab = $active_tab ?? 'dashboard';
                         <div class="hero-action-card">
                             <div class="d-flex align-items-center justify-content-between mb-1.5">
                                 <span class="hero-card-title d-flex align-items-center gap-1.5">
-                                    <i data-lucide="sparkles" style="width:13px;height:13px;color:#34d399;"></i>
+                                    <i data-lucide="sparkles" style="width:13px;height:13px;color:#38bdf8;"></i>
                                     Progress Penilaian
                                 </span>
                                 <span class="hero-card-pct" id="heroProgressPct"><?php echo round(($totalDinilai / 42) * 100); ?>%</span>
@@ -1446,7 +1446,7 @@ $curTab = $active_tab ?? 'dashboard';
                                     <i data-lucide="pen-tool" style="width:14px;height:14px;"></i>
                                     <span>Setting TTD</span>
                                     <?php if (!empty($pgTtd)): ?>
-                                        <i data-lucide="check" style="width:13px;height:13px;color:#34d399;"></i>
+                                        <i data-lucide="check" style="width:13px;height:13px;color:#38bdf8;"></i>
                                     <?php endif; ?>
                                 </button>
                             </div>
@@ -1494,7 +1494,7 @@ $curTab = $active_tab ?? 'dashboard';
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2.5 border-bottom">
                         <div>
                             <h6 class="fw-bold text-dark mb-0.5 d-flex align-items-center gap-2" style="font-size: 0.95rem;">
-                                <i data-lucide="bar-chart-2" style="width:18px;height:18px;color:#059669;"></i>
+                                <i data-lucide="bar-chart-2" style="width:18px;height:18px;color:#0284c7;"></i>
                                 Capaian Evaluasi Berdasarkan 4 Komponen
                             </h6>
                             <div style="font-size: 0.74rem; color: #64748b;">
@@ -1585,7 +1585,7 @@ $curTab = $active_tab ?? 'dashboard';
                                 </table>
                             </div>
 
-                            <div class="alert alert-info rounded-3 py-2 px-3 mb-0 d-flex align-items-center gap-2" style="font-size: 0.78rem; background: #f0fdfa; border-color: #ccfbf1; color: #0f766e;">
+                            <div class="alert alert-info rounded-3 py-2 px-3 mb-0 d-flex align-items-center gap-2" style="font-size: 0.78rem; background: #f0f9ff; border-color: #ccfbf1; color: #0f766e;">
                                 <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;"></i>
                                 <div>Tanda tangan digital otomatis terpasang pada lembar Berita Acara & Rekap Nilai resmi PKKM.</div>
                             </div>
@@ -1595,7 +1595,7 @@ $curTab = $active_tab ?? 'dashboard';
                     <div class="col-lg-5">
                         <div class="executive-card p-3 p-md-4 h-100">
                             <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size: 0.95rem;">
-                                <i data-lucide="building" style="width:18px;height:18px;color:#059669;"></i>
+                                <i data-lucide="building" style="width:18px;height:18px;color:#0284c7;"></i>
                                 Satuan Pendidikan yang Dinilai
                             </h6>
 
@@ -1611,7 +1611,7 @@ $curTab = $active_tab ?? 'dashboard';
                             </div>
 
                             <div class="d-grid gap-2">
-                                <button type="button" class="btn btn-success fw-bold rounded-3 py-2" style="background:#059669; border:none;" onclick="switchTab('penilaian')">
+                                <button type="button" class="btn btn-primary fw-bold rounded-3 py-2" style="background:#0284c7; border:none;" onclick="switchTab('penilaian')">
                                     <i data-lucide="edit-3" style="width:15px;height:15px;vertical-align:middle;"></i> Lanjut Penilaian (42 Butir)
                                 </button>
                                 <a href="/pengawas/pkkm/cetak-rekap" target="_blank" class="btn btn-outline-secondary fw-bold rounded-3 py-2">
@@ -1659,7 +1659,7 @@ $curTab = $active_tab ?? 'dashboard';
                         <!-- Mini Progress Box on Right of Banner -->
                         <div class="banner-green-progress-box">
                             <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 0.76rem; font-weight: 700;">
-                                <span style="color: rgba(255,255,255,0.9);"><i data-lucide="sparkles" style="width:12px;height:12px;color:#34d399;"></i> Kelengkapan:</span>
+                                <span style="color: rgba(255,255,255,0.9);"><i data-lucide="sparkles" style="width:12px;height:12px;color:#38bdf8;"></i> Kelengkapan:</span>
                                 <span id="lbl_progress_pct" class="text-white fw-bold" style="font-size: 0.84rem;"><?php echo round(($totalDinilai / 42) * 100); ?>%</span>
                             </div>
                             <div class="progress" style="height: 7px; border-radius: 999px; background: rgba(0,0,0,0.25);">
@@ -1703,9 +1703,9 @@ $curTab = $active_tab ?? 'dashboard';
                         $isInitialHidden = ($kompId != $firstKompId);
                     ?>
                         <?php if ($subKompId !== $lastSubKompId && !empty($ind['sub_nama'])): ?>
-                            <div class="ind-card sub-komp-header-divider" data-komp="<?php echo $kompId; ?>" style="<?php echo $isInitialHidden ? 'display:none;' : 'display:block;'; ?> background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%); border-left: 4.5px solid #059669; border-radius: 14px; padding: 12px 18px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                            <div class="ind-card sub-komp-header-divider" data-komp="<?php echo $kompId; ?>" style="<?php echo $isInitialHidden ? 'display:none;' : 'display:block;'; ?> background: linear-gradient(135deg, #f0f9ff 0%, #ecfeff 100%); border-left: 4.5px solid #0284c7; border-radius: 14px; padding: 12px 18px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="badge" style="background: #059669; color: #ffffff; font-size: 0.82rem; font-weight: 800; padding: 4px 10px; border-radius: 8px;"><?php echo htmlspecialchars($ind['sub_urutan'] ?? ''); ?></span>
+                                    <span class="badge" style="background: #0284c7; color: #ffffff; font-size: 0.82rem; font-weight: 800; padding: 4px 10px; border-radius: 8px;"><?php echo htmlspecialchars($ind['sub_urutan'] ?? ''); ?></span>
                                     <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem; line-height: 1.4;">
                                         <?php echo htmlspecialchars($ind['sub_nama']); ?>
                                     </h6>
@@ -1718,7 +1718,7 @@ $curTab = $active_tab ?? 'dashboard';
                             <div class="row align-items-center">
                                 <div class="col-lg-8 col-md-12 mb-3 mb-lg-0">
                                     <div class="d-flex align-items-start gap-2 mb-2">
-                                        <span class="ind-num-pill" style="min-width: 48px; text-align: center; font-size: 0.80rem; font-weight: 800; background: #065f46; color: #fff; padding: 4px 10px; border-radius: 8px;">
+                                        <span class="ind-num-pill" style="min-width: 48px; text-align: center; font-size: 0.80rem; font-weight: 800; background: #0369a1; color: #fff; padding: 4px 10px; border-radius: 8px;">
                                             <?php echo htmlspecialchars($ind['kode_lengkap'] ?? ($kompId . '.' . $ind['urutan'])); ?>
                                         </span>
                                         <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem; line-height: 1.45;">
@@ -1779,8 +1779,8 @@ $curTab = $active_tab ?? 'dashboard';
                                     <!-- Bukti Fisik & Berkas yang Disiapkan Madrasah -->
                                     <div class="p-3 rounded-3" style="background: #fafafa; border: 1px dashed #cbd5e1; font-size: 0.8rem;">
                                         <div class="fw-bold text-dark mb-2 d-flex align-items-center justify-content-between flex-wrap gap-1" style="font-size: 0.78rem;">
-                                            <span class="d-flex align-items-center gap-1.5" style="color: #047857;">
-                                                <i data-lucide="folder-check" style="width:15px;height:15px;color:#059669;"></i>
+                                            <span class="d-flex align-items-center gap-1.5" style="color: #0284c7;">
+                                                <i data-lucide="folder-check" style="width:15px;height:15px;color:#0284c7;"></i>
                                                 <span>Dokumen Bukti Fisik yang Disiapkan Madrasah:</span>
                                             </span>
                                             <?php if (!empty($ind['berkas_list'])): ?>
@@ -1792,8 +1792,8 @@ $curTab = $active_tab ?? 'dashboard';
                                         <div class="d-flex flex-wrap gap-2 mt-1">
                                             <?php if (!empty($ind['berkas_list'])): ?>
                                                 <?php foreach ($ind['berkas_list'] as $bk): ?>
-                                                    <a href="<?php echo htmlspecialchars($bk['file_path'] ?? $bk['url']); ?>" target="_blank" class="berkas-pill-link" style="background: #ffffff; border: 1.5px solid #a7f3d0; color: #065f46; font-weight: 700; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease;">
-                                                        <i data-lucide="<?php echo ($bk['tipe'] ?? '') === 'link' ? 'external-link' : 'file-text'; ?>" style="width:14px;height:14px;color:#059669;"></i>
+                                                    <a href="<?php echo htmlspecialchars($bk['file_path'] ?? $bk['url']); ?>" target="_blank" class="berkas-pill-link" style="background: #ffffff; border: 1.5px solid #bae6fd; color: #0369a1; font-weight: 700; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease;">
+                                                        <i data-lucide="<?php echo ($bk['tipe'] ?? '') === 'link' ? 'external-link' : 'file-text'; ?>" style="width:14px;height:14px;color:#0284c7;"></i>
                                                         <span><?php echo htmlspecialchars($bk['nama_file'] ?: 'Berkas Bukti'); ?></span>
                                                     </a>
                                                 <?php endforeach; ?>
@@ -1811,7 +1811,7 @@ $curTab = $active_tab ?? 'dashboard';
                                     <div class="scoring-box" id="scoring_box_<?php echo $ind['id']; ?>">
                                         <div class="scoring-box-header">
                                             <span class="scoring-label">
-                                                <i data-lucide="award" style="width:13px;height:13px;color:#059669;"></i>
+                                                <i data-lucide="award" style="width:13px;height:13px;color:#0284c7;"></i>
                                                 Skor Evaluasi Asesor
                                                 <span class="badge bg-white text-muted border ms-1" style="font-size:0.6rem; cursor:pointer;" onclick="showRubrikModal()" title="Lihat Petunjuk Penskoran Juknis">
                                                     <i data-lucide="help-circle" style="width:10px;height:10px;vertical-align:middle;"></i> Juknis
@@ -1889,7 +1889,7 @@ $curTab = $active_tab ?? 'dashboard';
                     <div class="col-lg-7">
                         <div class="executive-card p-4">
                                 <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                                    <i data-lucide="pen-tool" style="width:20px;height:20px;color:#059669;"></i>
+                                    <i data-lucide="pen-tool" style="width:20px;height:20px;color:#0284c7;"></i>
                                     Atur Tanda Tangan Digital Asesor
                                 </h5>
                                 <p class="text-muted mb-4" style="font-size: 0.85rem;">
@@ -1967,7 +1967,7 @@ $curTab = $active_tab ?? 'dashboard';
                                     </div>
 
                                     <div class="mt-4 pt-2">
-                                        <button type="submit" id="btnSimpanTtd" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background:#059669; border:none;">
+                                        <button type="submit" id="btnSimpanTtd" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background:#0284c7; border:none;">
                                             <i data-lucide="check-circle" style="width:18px;height:18px;"></i> Simpan Tanda Tangan Digital
                                         </button>
                                     </div>
@@ -2015,7 +2015,7 @@ $curTab = $active_tab ?? 'dashboard';
                             </div>
 
                             <div class="text-center mt-4">
-                                <a href="/pengawas/pkkm/cetak-rekap" target="_blank" class="btn btn-outline-success btn-sm fw-bold px-3 py-2 rounded-3">
+                                <a href="/pengawas/pkkm/cetak-rekap" target="_blank" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2 rounded-3">
                                     <i data-lucide="printer" style="width:14px;height:14px;"></i> Uji Cetak Dokumen PDF Lengkap
                                 </a>
                             </div>
@@ -2033,7 +2033,7 @@ $curTab = $active_tab ?? 'dashboard';
 
 <!-- TOAST NOTIFICATION -->
 <div id="saveToast" class="save-toast">
-    <i data-lucide="check-circle" style="width:20px;height:20px;color:#34d399;"></i>
+    <i data-lucide="check-circle" style="width:20px;height:20px;color:#38bdf8;"></i>
     <span id="toastMsg">Skor berhasil disimpan!</span>
 </div>
 
@@ -2273,10 +2273,10 @@ function submitSkor(indikatorId, skorVal) {
 function showRubrikModal() {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
-            title: '<div class="d-flex align-items-center justify-content-center gap-2" style="font-size:1.1rem;color:#064e3b;"><i class="bi bi-journal-bookmark-fill text-success"></i> <span>Pedoman Penskoran Resmi PKKM</span></div>',
+            title: '<div class="d-flex align-items-center justify-content-center gap-2" style="font-size:1.1rem;color:#0369a1;"><i class="bi bi-journal-bookmark-fill text-success"></i> <span>Pedoman Penskoran Resmi PKKM</span></div>',
             html: `
                 <div class="text-start" style="font-size: 0.85rem; line-height: 1.5;">
-                    <div class="alert alert-success py-2 px-3 mb-3 border-0 rounded-3 text-dark fw-medium" style="background:#ecfdf5;font-size:0.8rem;">
+                    <div class="alert alert-success py-2 px-3 mb-3 border-0 rounded-3 text-dark fw-medium" style="background:#f0f9ff;font-size:0.8rem;">
                         <i class="bi bi-info-circle-fill text-success me-1"></i> Standar <strong>Petunjuk Teknis (Juknis) Penilaian Kinerja Kepala Madrasah (PKKM) Dirjen Pendis Kemenag RI</strong>:
                     </div>
 
@@ -2316,7 +2316,7 @@ function showRubrikModal() {
                 </div>
             `,
             confirmButtonText: 'Tutup Panduan',
-            confirmButtonColor: '#059669',
+            confirmButtonColor: '#0284c7',
             customClass: {
                 popup: 'rounded-4 shadow-lg border-0 p-3'
             },
@@ -2418,9 +2418,9 @@ function showToast(msg) {
             showConfirmButton: false,
             timer: 1600,
             timerProgressBar: true,
-            background: '#064e3b',
+            background: '#0369a1',
             color: '#ffffff',
-            iconColor: '#34d399',
+            iconColor: '#38bdf8',
             customClass: {
                 popup: 'rounded-3 shadow-lg border-0'
             }
@@ -2652,7 +2652,7 @@ document.getElementById('formTtd').addEventListener('submit', function(e) {
                 icon: 'success',
                 title: 'Berhasil Disimpan!',
                 text: 'Tanda tangan digital Anda telah tersimpan dan siap dibubuhkan otomatis pada dokumen cetak Berita Acara.',
-                confirmButtonColor: '#059669'
+                confirmButtonColor: '#0284c7'
             });
 
             if (data.ttd_url) {

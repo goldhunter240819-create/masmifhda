@@ -73,8 +73,8 @@ $sasaranMutu = [
         'pilar' => 'Pilar I : Pondasi Akidah & Ibadah',
         'sub' => 'Disiplin shalat fardhu 5 waktu, hafal bacaan shalat dengan tartil, hafal 30 doa harian, dan berbakti kepada orang tua serta guru.',
         'color' => '#0284c7',
-        'bg' => '#ecfdf5',
-        'border' => '#a7f3d0'
+        'bg' => '#f0f9ff',
+        'border' => '#bae6fd'
     ],
     [
         'pilar' => 'Pilar II : Tahfidz Qur\'an Juz 30',
@@ -181,7 +181,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -271,9 +271,9 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #f0fdf4;
+            background: #f0f9ff;
             color: #1e40af;
-            border: 1px solid #86efac;
+            border: 1px solid #7dd3fc;
             padding: 2px 10px;
             border-radius: 999px;
             font-size: 6.8pt;
@@ -343,7 +343,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
         .visi-chip {
             background: rgba(255, 255, 255, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #f0fdf4;
+            color: #f0f9ff;
             padding: 2px 8px;
             border-radius: 999px;
             font-size: 6.8pt;
@@ -463,12 +463,12 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
 
         /* Sosialisasi & Notulen Note Box */
         .meta-notice-box {
-            background: #f0fdf4;
-            border: 1px dashed #86efac;
+            background: #f0f9ff;
+            border: 1px dashed #7dd3fc;
             border-radius: 6px;
             padding: 4px 8px;
             font-size: 6.8pt;
-            color: #166534;
+            color: #0c4a6e;
             line-height: 1.3;
             margin-bottom: 7px;
             display: flex;

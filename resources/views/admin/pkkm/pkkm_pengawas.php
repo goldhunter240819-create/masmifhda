@@ -58,7 +58,7 @@ $active_page = 'pengawas';
         }
         .stat-box:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06); }
         .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); box-shadow: 0 2px 6px rgba(0,0,0,0.04); flex-shrink: 0; }
-        .stat-box.green { background: linear-gradient(135deg, #f0fdf4, #ffffff); border-color: #bbf7d0; color: #14532d; }
+        .stat-box.green { background: linear-gradient(135deg, #f0f9ff, #ffffff); border-color: #bae6fd; color: #0c4a6e; }
         .stat-box.green .stat-icon { color: #38bdf8; }
         .stat-box.blue { background: linear-gradient(135deg, #eff6ff, #ffffff); border-color: #bfdbfe; color: #1e3a8a; }
         .stat-box.blue .stat-icon { color: #3b82f6; }
@@ -76,7 +76,7 @@ $active_page = 'pengawas';
         }
 
         .badge-role-p1 {
-            background: #dcfce7; color: #15803d; border: 1px solid #86efac;
+            background: #e0f2fe; color: #0284c7; border: 1px solid #7dd3fc;
             padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 0.75rem;
             display: inline-flex; align-items: center; gap: 4px;
         }
@@ -204,9 +204,9 @@ $active_page = 'pengawas';
                 </div>
 
                 <!-- Info Box Untuk Hari-H -->
-                <div class="glass-card mb-4" style="background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-left: 5px solid #0284c7;">
+                <div class="glass-card mb-4" style="background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%); border-left: 5px solid #0284c7;">
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width: 44px; height: 44px; border-radius: 12px; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(5,150,105,0.3);">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(2,132,199,0.3);">
                             <i data-lucide="laptop" style="width:22px;height:22px;"></i>
                         </div>
                         <div style="flex: 1;">
@@ -243,7 +243,7 @@ $active_page = 'pengawas';
                             <p class="text-muted mb-3" style="font-size: 0.85rem; max-width: 420px; margin: 0 auto;">
                                 Anda belum menambahkan akun untuk pengawas penilai PKKM. Klik tombol di bawah untuk membuat akun otomatis.
                             </p>
-                            <a href="/admin/pkkm/pengawas/generate-default" class="btn btn-sm btn-success fw-bold px-3 py-2 rounded-3 shadow-sm" onclick="return confirm('Buat akun default untuk Penilai 1 & 2?')">
+                            <a href="/admin/pkkm/pengawas/generate-default" class="btn btn-sm btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm" onclick="return confirm('Buat akun default untuk Penilai 1 & 2?')">
                                 <i data-lucide="wand-2" style="width: 15px; height: 15px; vertical-align: middle;"></i> Auto-Generate Penilai 1 & 2
                             </a>
                         </div>
@@ -391,7 +391,7 @@ $active_page = 'pengawas';
 
                 <div class="modal-footer" style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 24px;">
                     <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal" style="border-radius: 10px;">Batal</button>
-                    <button type="submit" class="btn btn-success fw-bold px-4" style="border-radius: 10px; background: #0284c7; border: none;">Simpan Akun</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 10px; background: #0284c7; border: none;">Simpan Akun</button>
                 </div>
             </form>
         </div>

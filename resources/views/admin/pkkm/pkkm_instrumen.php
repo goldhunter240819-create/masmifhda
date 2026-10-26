@@ -40,7 +40,7 @@
         }
         .stat-box blue { background: linear-gradient(135deg, #faf5ff, #ffffff); border-color: #e9d5ff; color: #6b21a8; }
         .stat-box.blue { background: linear-gradient(135deg, #eff6ff, #ffffff); border-color: #bfdbfe; color: #1e3a8a; }
-        .stat-box.green { background: linear-gradient(135deg, #f0fdf4, #ffffff); border-color: #bbf7d0; color: #14532d; }
+        .stat-box.green { background: linear-gradient(135deg, #f0f9ff, #ffffff); border-color: #bae6fd; color: #0c4a6e; }
         .stat-box.yellow { background: linear-gradient(135deg, #fefce8, #ffffff); border-color: #fef08a; color: #713f12; }
         .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); box-shadow: 0 2px 6px rgba(0,0,0,0.04); flex-shrink: 0; }
         .stat-box blue .stat-icon { color: #8b5cf6; }
@@ -52,7 +52,7 @@
 
         /* Komponen & Sub-Komponen */
         .pkkm-card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px; border: 1px solid #e2e8f0; }
-        .komponen-header { background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border-left: 5px solid #0284c7; padding: 14px 18px; font-weight: 800; color: #0f172a; display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-radius: 0 10px 10px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+        .komponen-header { background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%); border-left: 5px solid #0284c7; padding: 14px 18px; font-weight: 800; color: #0f172a; display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-radius: 0 10px 10px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
         .sub-komponen-box { border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; padding: 18px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
         .sub-komponen-header { font-weight: 700; color: #1e293b; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1; font-size: 0.95rem; }
         .sub-komponen-header .badge-num { background: #0284c7; color: #ffffff; padding: 3px 8px; border-radius: 6px; margin-right: 8px; font-size: 0.75rem; font-weight: 700; }
@@ -64,8 +64,8 @@
         .nav-pills .nav-link.active .badge-count { background: rgba(255, 255, 255, 0.25) !important; color: #fff !important; }
         .badge-count { background: #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
 
-        .btn-upload { background: #ecfdf5; color: #0284c7; border: 1px solid #6ee7b7; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; transition: background 0.2s; }
-        .btn-upload:hover { background: #d1fae5; color: #1e3a8a; }
+        .btn-upload { background: #f0f9ff; color: #0284c7; border: 1px solid #7dd3fc; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; transition: background 0.2s; }
+        .btn-upload:hover { background: #e0f2fe; color: #1e3a8a; }
         .berkas-item { font-size: 0.8rem; background: #f1f5f9; padding: 6px 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border: 1px solid #e2e8f0; }
         .select-skor { border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; background: #fff; font-size: 0.85rem; }
         .select-skor:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15); }
@@ -143,7 +143,7 @@
             
             <?php if(isset($_GET['msg'])): ?>
                 <?php if($_GET['msg'] == 'synced'): ?>
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" style="background:#dcfce7; color:#166534; padding:16px 20px; border-radius:12px; border:1px solid #bbf7d0;" role="alert">
+                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" style="background:#e0f2fe; color:#0c4a6e; padding:16px 20px; border-radius:12px; border:1px solid #bae6fd;" role="alert">
                         <i data-lucide="check-circle-2" style="width:22px;height:22px;flex-shrink:0;"></i>
                         <div>
                             <strong>Instrumen Berhasil Tersinkron!</strong> Database kini aktif dengan <strong>42 Indikator</strong> sesuai Juknis Penilaian Kinerja Kepala Madrasah (Tahun 1, 2, 3).
@@ -153,7 +153,7 @@
                 <?php elseif($_GET['msg'] == 'error_sync'): ?>
                     <div class="alert alert-danger alert-dismissible fade show mb-4" style="background:#fee2e2; color:#991b1b; padding:15px; border-radius:12px; border:1px solid #fecaca;" role="alert">Gagal menyinkronkan data instrumen.</div>
                 <?php elseif($_GET['msg'] == 'success' || $_GET['msg'] == 'berkas_saved'): ?>
-                    <div class="alert alert-success alert-dismissible fade show mb-4" style="background:#dcfce7; color:#166534; padding:15px; border-radius:12px; border:1px solid #bbf7d0;" role="alert">Berhasil menyimpan data!</div>
+                    <div class="alert alert-success alert-dismissible fade show mb-4" style="background:#e0f2fe; color:#0c4a6e; padding:15px; border-radius:12px; border:1px solid #bae6fd;" role="alert">Berhasil menyimpan data!</div>
                 <?php elseif($_GET['msg'] == 'deleted'): ?>
                     <div class="alert alert-danger alert-dismissible fade show mb-4" style="background:#fee2e2; color:#991b1b; padding:15px; border-radius:12px; border:1px solid #fecaca;" role="alert">Berhasil menghapus data.</div>
                 <?php endif; ?>
@@ -192,7 +192,7 @@
                                     <span><?php echo htmlspecialchars($komp['nama_komponen']); ?></span>
                                 </div>
                                 <div style="display:flex; gap:8px; align-items:center;">
-                                    <button class="btn btn-sm btn-outline-success" onclick="openModalSubKomponen(<?php echo $komp['id']; ?>)" style="padding: 4px 10px; font-size:0.8rem; font-weight:600; border-radius:6px;">+ Sub-Komponen</button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="openModalSubKomponen(<?php echo $komp['id']; ?>)" style="padding: 4px 10px; font-size:0.8rem; font-weight:600; border-radius:6px;">+ Sub-Komponen</button>
                                     <button class="btn btn-sm btn-outline-secondary" onclick="openModalIndikator(<?php echo $komp['id']; ?>, null)" style="padding: 4px 10px; font-size:0.8rem; font-weight:600; border-radius:6px;">+ Indikator</button>
                                     <button class="btn btn-sm" onclick="editKomponen(<?php echo $komp['id']; ?>, '<?php echo htmlspecialchars(addslashes($komp['nama_komponen'])); ?>', <?php echo $komp['urutan']; ?>)" style="padding: 4px 8px; font-size:0.8rem; background:#e2e8f0; color:#475569; border:none; border-radius:6px;" title="Edit Komponen"><i data-lucide="edit" style="width:14px;height:14px;"></i></button>
                                     <form action="/admin/pkkm/komponen/delete" method="POST" style="margin:0;" onsubmit="return confirm('Hapus komponen ini beserta semua sub dan indikatornya?')">
@@ -210,7 +210,7 @@
                                     <?php echo htmlspecialchars($sub['nama_sub']); ?>
                                 </div>
                                 <div style="display:flex; gap:8px; align-items:center;">
-                                    <button class="btn btn-sm btn-outline-success" onclick="openModalIndikator(<?php echo $komp['id']; ?>, <?php echo $sub['id']; ?>)" style="padding: 3px 8px; font-size:0.75rem; font-weight:600; border-radius:6px;">+ Indikator</button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="openModalIndikator(<?php echo $komp['id']; ?>, <?php echo $sub['id']; ?>)" style="padding: 3px 8px; font-size:0.75rem; font-weight:600; border-radius:6px;">+ Indikator</button>
                                     <button class="btn btn-sm" onclick="editSubKomponen(<?php echo $sub['id']; ?>, <?php echo $komp['id']; ?>, '<?php echo htmlspecialchars(addslashes($sub['nama_sub'])); ?>', '<?php echo htmlspecialchars($sub['urutan']); ?>')" style="padding: 3px 8px; font-size:0.75rem; background:#e2e8f0; color:#475569; border:none; border-radius:6px;" title="Edit Sub"><i data-lucide="edit" style="width:12px;height:12px;"></i></button>
                                     <form action="/admin/pkkm/subkomponen/delete" method="POST" style="margin:0;" onsubmit="return confirm('Hapus sub-komponen ini beserta semua indikator di dalamnya?')">
                                         <input type="hidden" name="id" value="<?php echo $sub['id']; ?>">
@@ -406,7 +406,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-success" style="background:#38bdf8; border:none;">Simpan Lampiran</button>
+                    <button type="submit" class="btn btn-primary" style="background:#38bdf8; border:none;">Simpan Lampiran</button>
                 </div>
             </form>
         </div>

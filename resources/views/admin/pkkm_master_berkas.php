@@ -12,9 +12,9 @@
         /* Minimalist Elite Page Header */
         .elite-page-header {
             position: relative; padding: 1.1rem 1.6rem; margin-bottom: 1.1rem;
-            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
             border-radius: 14px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 4px 16px -4px rgba(6, 78, 59, 0.25);
+            box-shadow: 0 4px 16px -4px rgba(2, 132, 199, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .elite-page-header .header-bg-shapes {
@@ -43,8 +43,8 @@
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-1px); }
-        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
-        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
+        .e-btn-primary { background: #ffffff; color: #0284c7; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+        .e-btn-primary:hover { background: #f0f9ff; color: #0369a1; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -60,16 +60,16 @@
         }
         .stat-box.purple { background: #faf5ff; border-color: #f3e8ff; color: #6b21a8; }
         .stat-box.blue { background: #eff6ff; border-color: #dbeafe; color: #1e3a8a; }
-        .stat-box.green { background: #f0fdf4; border-color: #dcfce7; color: #14532d; }
+        .stat-box.green { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
         .stat-box.yellow { background: #fefce8; border-color: #fef9c3; color: #713f12; }
-        .stat-box.emerald { background: #ecfdf5; border-color: #d1fae5; color: #065f46; }
+        .stat-box.emerald { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
         .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.85); box-shadow: 0 1px 3px rgba(0,0,0,0.03); flex-shrink: 0; }
         .stat-icon i, .stat-icon svg { width: 16px !important; height: 16px !important; }
         .stat-box.purple .stat-icon { color: #8b5cf6; }
         .stat-box.blue .stat-icon { color: #3b82f6; }
-        .stat-box.green .stat-icon { color: #10b981; }
+        .stat-box.green .stat-icon { color: #0284c7; }
         .stat-box.yellow .stat-icon { color: #f59e0b; }
-        .stat-box.emerald .stat-icon { color: #059669; }
+        .stat-box.emerald .stat-icon { color: #0ea5e9; }
         .stat-value { font-size: 1.25rem; font-weight: 800; line-height: 1.1; margin-bottom: 1px; }
         .stat-label { font-size: 0.68rem; font-weight: 600; color: #64748b; white-space: nowrap; }
 
@@ -82,8 +82,8 @@
         }
         .filter-pill-btn:hover { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
         .filter-pill-btn.active {
-            background: #059669; color: #ffffff; border-color: #047857;
-            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+            background: #0284c7; color: #ffffff; border-color: #0369a1;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.2);
         }
         .filter-pill-btn .badge-num {
             background: #f1f5f9; color: #475569; font-size: 0.68rem; font-weight: 700;
@@ -172,12 +172,12 @@
         }
         .evidence-card-badge {
             display: inline-flex; align-items: center; gap: 3px;
-            background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
+            background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd;
             border-radius: 4px; padding: 1px 6px; font-size: 0.62rem; font-weight: 700;
             cursor: pointer; transition: all 0.15s ease;
         }
         .evidence-card-badge:hover {
-            background: #059669; color: #ffffff; border-color: #059669; transform: translateY(-1px);
+            background: #0284c7; color: #ffffff; border-color: #0284c7; transform: translateY(-1px);
         }
         .badge-cat-pill {
             display: inline-flex; align-items: center; gap: 3px;
@@ -186,9 +186,9 @@
         }
         .cat-sk { background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; }
         .cat-notulen { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .cat-program { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .cat-program { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
         .cat-laporan { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-        .cat-digital { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+        .cat-digital { background: #f0f9ff; color: #0f766e; border: 1px solid #99f6e4; }
         .cat-sarpras { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
         .cat-umum { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
@@ -205,7 +205,7 @@
             transition: all 0.15s ease; cursor: pointer; text-decoration: none;
         }
         .ind-pill-interactive:hover {
-            background: #ecfdf5; color: #047857; border-color: #86efac;
+            background: #f0f9ff; color: #0284c7; border-color: #7dd3fc;
         }
         .unmatched-pill {
             display: inline-flex; align-items: center; gap: 3px;
@@ -221,27 +221,27 @@
         /* Slim Digital Proof Card */
         .digital-proof-card {
             margin-top: 4px; padding: 4px 8px; border-radius: 6px;
-            background: #f0fdf4; border: 1px solid #86efac;
+            background: #f0f9ff; border: 1px solid #bae6fd;
             display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
         }
         .digital-proof-title {
-            font-size: 0.7rem; font-weight: 700; color: #065f46; display: flex; align-items: center; gap: 4px;
+            font-size: 0.7rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 4px;
         }
         .btn-digital-preview {
             display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
-            border-radius: 5px; background: #ffffff; color: #047857; border: 1px solid #6ee7b7;
+            border-radius: 5px; background: #ffffff; color: #0284c7; border: 1px solid #7dd3fc;
             font-size: 0.66rem; font-weight: 600; text-decoration: none;
         }
         .btn-digital-preview:hover {
-            background: #059669; color: #ffffff;
+            background: #0284c7; color: #ffffff;
         }
         .btn-digital-attach {
             display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
-            border-radius: 5px; background: #059669; color: #ffffff; border: none;
+            border-radius: 5px; background: #0284c7; color: #ffffff; border: none;
             font-size: 0.66rem; font-weight: 700; cursor: pointer;
         }
         .btn-digital-attach:hover {
-            background: #047857;
+            background: #0369a1;
         }
 
         /* File Chips */
@@ -264,7 +264,7 @@
         }
         .file-chip-icon i, .file-chip-icon svg { width: 11px !important; height: 11px !important; }
         .icon-file { background: #eff6ff; color: #2563eb; }
-        .icon-link { background: #f0fdf4; color: #059669; }
+        .icon-link { background: #f0f9ff; color: #0284c7; }
         .file-chip-name {
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;
         }
@@ -280,7 +280,7 @@
             display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.15s; text-decoration: none;
         }
         .btn-upload-more:hover {
-            background: #059669; color: #ffffff; border-color: #059669;
+            background: #0284c7; color: #ffffff; border-color: #0284c7;
         }
 
         /* Modern DataTables Inputs */
@@ -292,16 +292,16 @@
             border-radius: 8px; padding: 5px 12px; background-color: #f8fafc; border: 1px solid #cbd5e1; width: 200px; font-weight: 500; font-size: 0.78rem;
         }
         div.dataTables_wrapper div.dataTables_filter input:focus {
-            outline: none; border-color: #10b981; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+            outline: none; border-color: #0284c7; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
         }
         div.dataTables_wrapper div.dataTables_info { padding-top: 12px; color: #64748b; font-size: 0.78rem; font-weight: 600; }
         div.dataTables_wrapper .page-item.active .page-link {
-            background-color: #059669 !important; border-color: #059669 !important; border-radius: 6px; font-weight: 700; color: #fff !important; font-size: 0.75rem;
+            background-color: #0284c7 !important; border-color: #0284c7 !important; border-radius: 6px; font-weight: 700; color: #fff !important; font-size: 0.75rem;
         }
         div.dataTables_wrapper .page-link {
             color: #475569; border: 1px solid transparent; margin: 0 2px; border-radius: 6px; padding: 4px 10px; font-weight: 600; font-size: 0.75rem; transition: all 0.15s ease;
         }
-        div.dataTables_wrapper .page-link:hover { background-color: #f1f5f9; color: #059669; }
+        div.dataTables_wrapper .page-link:hover { background-color: #f1f5f9; color: #0284c7; }
     </style>
 </head>
 <body>
@@ -404,8 +404,8 @@
                         </button>
                     </div>
                     <div class="d-flex gap-1">
-                        <a href="/admin/pkkm/bukti-digital" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 fw-bold" style="border-radius:8px; padding:5px 12px; font-size:0.74rem; background:#f0fdf4; border-color:#86efac; color:#166534;">
-                            <i data-lucide="sparkles" style="width:12px;height:12px;color:#059669;"></i> Menu Bukti Digital
+                        <a href="/admin/pkkm/bukti-digital" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 fw-bold" style="border-radius:8px; padding:5px 12px; font-size:0.74rem; background:#f0f9ff; border-color:#bae6fd; color:#0284c7;">
+                            <i data-lucide="sparkles" style="width:12px;height:12px;color:#0284c7;"></i> Menu Bukti Digital
                         </a>
                         <a href="/admin/pkkm/instrumen" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 fw-bold" style="border-radius:8px; padding:5px 10px; font-size:0.74rem;">
                             <i data-lucide="clipboard-list" style="width:12px;height:12px;"></i> Instrumen PKKM
@@ -498,11 +498,9 @@
                                                 <?php foreach($mb['matched_indicators'] as $mind): ?>
                                                     <a href="/admin/pkkm/instrumen#ind-<?= $mind['id']; ?>" 
                                                        target="_blank"
-                                                       class="ind-pill-interactive" 
-                                                       data-bs-toggle="tooltip"
-                                                       data-bs-placement="top"
-                                                       title="<?= htmlspecialchars($mind['komponen'] . ($mind['sub'] ? ' &rsaquo; ' . $mind['sub'] : '') . ' : ' . $mind['nama']); ?>">
-                                                        <i data-lucide="bookmark-check" style="width:9px;height:9px;color:#059669;"></i>
+                                                       class="ind-pill-interactive" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                        title="<?= htmlspecialchars($mind['komponen'] . ($mind['sub'] ? ' &rsaquo; ' . $mind['sub'] : '') . ' : ' . $mind['nama']); ?>">
+                                                        <i data-lucide="bookmark-check" style="width:9px;height:9px;color:#0284c7;"></i>
                                                         <span><?= htmlspecialchars($mind['kode']); ?></span>
                                                     </a>
                                                 <?php endforeach; ?>
@@ -540,8 +538,8 @@
                                             </span>
                                             <?php if($isDigitalReady): ?>
                                                 <div style="margin-top:5px;">
-                                                    <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" style="display:inline-flex; align-items:center; gap:4px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px; font-size:0.68rem; font-weight:700; text-decoration:none;" title="Buka Halaman Khusus Monitoring PKKM">
-                                                        <i data-lucide="sparkles" style="width:10px;height:10px;color:#059669;"></i> <?= htmlspecialchars($mb['bukti_digital']['title'] ?? 'Portal Digital'); ?>
+                                                    <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" style="display:inline-flex; align-items:center; gap:4px; background:#f0f9ff; color:#0284c7; border:1px solid #bae6fd; padding:2px 8px; border-radius:6px; font-size:0.68rem; font-weight:700; text-decoration:none;" title="Buka Halaman Khusus Monitoring PKKM">
+                                                        <i data-lucide="sparkles" style="width:10px;height:10px;color:#0284c7;"></i> <?= htmlspecialchars($mb['bukti_digital']['title'] ?? 'Portal Digital'); ?>
                                                     </a>
                                                 </div>
                                             <?php endif; ?>
@@ -549,11 +547,11 @@
                                     </td>
                                     <td style="text-align:center;">
                                         <div class="d-flex flex-column align-items-center gap-1">
-                                            <button type="button" class="<?= $hasFiles ? 'btn-upload-more' : 'btn-upload-more'; ?>" style="<?= !$hasFiles ? 'background:#059669; color:#fff; border-color:#059669;' : ''; ?>" onclick="openModalUpload(<?= $mb['id']; ?>, '<?= htmlspecialchars(addslashes($mb['nama_berkas'])); ?>')">
+                                            <button type="button" class="<?= $hasFiles ? 'btn-upload-more' : 'btn-upload-more'; ?>" style="<?= !$hasFiles ? 'background:#0284c7; color:#fff; border-color:#0284c7;' : ''; ?>" onclick="openModalUpload(<?= $mb['id']; ?>, '<?= htmlspecialchars(addslashes($mb['nama_berkas'])); ?>')">
                                                 <i data-lucide="<?= $hasFiles ? 'plus' : 'upload-cloud'; ?>" style="width:12px;height:12px;"></i> <?= $hasFiles ? 'Tambah' : 'Upload'; ?>
                                             </button>
                                             <?php if($isDigitalReady): ?>
-                                                <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" style="display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:6px; background:#f0fdf4; color:#065f46; border:1px solid #86efac; font-size:0.68rem; font-weight:700; text-decoration:none;" title="Buka Portal Monitoring PKKM">
+                                                <a href="<?= htmlspecialchars($mb['bukti_digital']['url']); ?>" target="_blank" style="display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:6px; background:#f0f9ff; color:#0369a1; border:1px solid #bae6fd; font-size:0.68rem; font-weight:700; text-decoration:none;" title="Buka Portal Monitoring PKKM">
                                                     <i data-lucide="external-link" style="width:10px;height:10px;"></i> Monitoring
                                                 </a>
                                             <?php endif; ?>
@@ -576,7 +574,7 @@
         <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 20px 40px rgba(0,0,0,0.15); overflow:hidden;">
             <form action="/admin/pkkm/master-berkas/upload" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="id" id="inp_mb_id">
-                <div class="modal-header" style="background:linear-gradient(135deg, #064e3b, #047857); color:white; padding:18px 24px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #0369a1, #0284c7); color:white; padding:18px 24px;">
                     <div>
                         <span class="badge" style="background:rgba(255,255,255,0.2); font-size:0.7rem; font-weight:700; margin-bottom:4px; letter-spacing:0.5px;">UNGGAH BUKTI FISIK MASTER</span>
                         <h5 class="modal-title fw-bold" style="font-size:1.05rem; margin:0;" id="lbl_nama_berkas">Unggah Berkas</h5>
@@ -627,7 +625,7 @@
     <div class="modal-dialog">
         <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 20px 40px rgba(0,0,0,0.15); overflow:hidden;">
             <form action="/admin/pkkm/master-berkas/create" method="POST">
-                <div class="modal-header" style="background:linear-gradient(135deg, #064e3b, #047857); color:white; padding:18px 24px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #0369a1, #0284c7); color:white; padding:18px 24px;">
                     <h5 class="modal-title fw-bold" style="font-size:1.1rem; display:flex; align-items:center; gap:8px;">
                         <i data-lucide="plus-circle" style="width:20px;height:20px;"></i> Tambah Dokumen Master Baru
                     </h5>
@@ -771,7 +769,7 @@ $(document).ready(function() {
                     icon: 'success',
                     title: 'Sinkronisasi Berhasil!',
                     html: 'Daftar Master Berkas telah disinkronkan dengan <b>42 Indikator</b> instrumen terbaru.<br><span class="badge bg-success mt-2" style="font-size:0.8rem; padding:6px 12px;">+<?= (int)($_GET['ins'] ?? 0); ?> Berkas Baru</span> <?php if(!empty($_GET['del'])): ?><span class="badge bg-secondary mt-2" style="font-size:0.8rem; padding:6px 12px;">-<?= (int)$_GET['del']; ?> Berkas Usang Dibersihkan</span><?php endif; ?>',
-                    confirmButtonColor: '#059669',
+                    confirmButtonColor: '#0284c7',
                     confirmButtonText: 'Alhamdulillah, Siap!',
                     fontFamily: 'Plus Jakarta Sans, sans-serif'
                 });
@@ -825,7 +823,7 @@ function confirmSyncMasterBerkas() {
             html: 'Sistem akan mengekstrak seluruh bukti fisik dari <b>42 Indikator PKKM terbaru</b> dan membersihkan dokumen usang yang tidak terpakai.<br><small class="text-muted">Tenang, berkas yang sudah pernah Anda upload tidak akan hilang!</small>',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#059669',
+            confirmButtonColor: '#0284c7',
             cancelButtonColor: '#64748b',
             confirmButtonText: '⚡ Ya, Sinkronkan Sekarang!',
             cancelButtonText: 'Batal',

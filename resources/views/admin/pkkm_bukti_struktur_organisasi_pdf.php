@@ -114,7 +114,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -223,10 +223,10 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
 
         /* Tingkatan Warna Node */
         .node-top {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            border: 1.5px solid #86efac;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1.5px solid #7dd3fc;
         }
-        .node-top .chart-node-role { color: #166534; }
+        .node-top .chart-node-role { color: #0c4a6e; }
 
         .node-kamad {
             background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
@@ -236,9 +236,9 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
             min-width: 220px;
             box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
         }
-        .node-kamad .chart-node-role { color: #a7f3d0; font-size: 0.74rem; }
+        .node-kamad .chart-node-role { color: #bae6fd; font-size: 0.74rem; }
         .node-kamad .chart-node-name { color: #ffffff; font-size: 0.85rem; font-weight: 800; }
-        .node-kamad .chart-node-nip { color: #d1fae5; font-size: 0.66rem; }
+        .node-kamad .chart-node-nip { color: #e0f2fe; font-size: 0.66rem; }
 
         .node-staff {
             background: #f1f5f9;

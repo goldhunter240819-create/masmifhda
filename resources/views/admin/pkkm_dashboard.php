@@ -13,9 +13,9 @@ $active_page = 'overview';
         /* Elite Banner Header */
         .elite-page-header {
             position: relative; padding: 2.2rem 2.5rem; margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #0f766e 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
             border-radius: 20px; overflow: hidden; color: #ffffff;
-            box-shadow: 0 12px 30px -8px rgba(6, 78, 59, 0.35);
+            box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.35);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .elite-page-header .header-bg-shapes {
@@ -44,8 +44,8 @@ $active_page = 'overview';
             border: none; transition: 0.2s ease; text-decoration: none;
         }
         .e-btn:hover { transform: translateY(-2px); }
-        .e-btn-primary { background: #ffffff; color: #047857; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
-        .e-btn-primary:hover { background: #f8fafc; color: #064e3b; }
+        .e-btn-primary { background: #ffffff; color: #0284c7; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
+        .e-btn-primary:hover { background: #f0f9ff; color: #0369a1; }
         .e-btn-secondary { background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(4px); }
         .e-btn-secondary:hover { background: rgba(255, 255, 255, 0.28); color: #ffffff; }
 
@@ -63,7 +63,7 @@ $active_page = 'overview';
         }
         .stat-box.purple { background: linear-gradient(135deg, #faf5ff 0%, #ffffff 100%); border-color: #e9d5ff; }
         .stat-box.blue { background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border-color: #bfdbfe; }
-        .stat-box.green { background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%); border-color: #a7f3d0; }
+        .stat-box.green { background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%); border-color: #bae6fd; }
         .stat-box.yellow { background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); border-color: #fde68a; }
 
         .stat-icon {
@@ -72,7 +72,7 @@ $active_page = 'overview';
         }
         .stat-box.purple .stat-icon { background: #f3e8ff; color: #7c3aed; }
         .stat-box.blue .stat-icon { background: #dbeafe; color: #2563eb; }
-        .stat-box.green .stat-icon { background: #d1fae5; color: #059669; }
+        .stat-box.green .stat-icon { background: #e0f2fe; color: #0284c7; }
         .stat-box.yellow .stat-icon { background: #fef3c7; color: #d97706; }
 
         .stat-val-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -83,7 +83,7 @@ $active_page = 'overview';
         .kpi-pill {
             padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;
         }
-        .kpi-pill.emerald { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .kpi-pill.emerald { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
         .kpi-pill.amber { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
         .kpi-pill.blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
         .kpi-pill.purple { background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; }
@@ -116,7 +116,7 @@ $active_page = 'overview';
         .progress-track-fill {
             height: 100%; border-radius: 999px; transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .fill-emerald { background: linear-gradient(90deg, #10b981, #059669); }
+        .fill-emerald { background: linear-gradient(90deg, #38bdf8, #0284c7); }
         .fill-purple { background: linear-gradient(90deg, #8b5cf6, #d946ef); }
 
         .tracker-meta-row {
@@ -154,8 +154,8 @@ $active_page = 'overview';
         }
 
         .comp-code-badge {
-            width: 32px; height: 32px; border-radius: 10px; background: #ecfdf5; color: #059669;
-            font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; border: 1px solid #a7f3d0;
+            width: 32px; height: 32px; border-radius: 10px; background: #f0f9ff; color: #0284c7;
+            font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; border: 1px solid #bae6fd;
         }
 
         /* Status Badges */
@@ -164,7 +164,7 @@ $active_page = 'overview';
             font-size: 0.76rem; font-weight: 800; letter-spacing: 0.2px; white-space: nowrap;
         }
         .badge-status.lengkap {
-            background: #dcfce7; color: #15803d; border: 1px solid #86efac;
+            background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc;
         }
         .badge-status.proses {
             background: #fef3c7; color: #b45309; border: 1px solid #fde68a;
@@ -188,13 +188,13 @@ $active_page = 'overview';
             border: 1px solid #e2e8f0; transition: all 0.2s;
         }
         .btn-tbl-action:hover {
-            background: #059669; color: #ffffff; border-color: #059669; transform: translateY(-1px);
+            background: #0284c7; color: #ffffff; border-color: #0284c7; transform: translateY(-1px);
         }
 
         /* Info Alert Box */
         .info-callout {
-            background: #f0fdf4; border: 1px dashed #86efac; border-radius: 14px; padding: 16px 20px;
-            display: flex; align-items: flex-start; gap: 14px; font-size: 0.84rem; color: #166534; line-height: 1.5;
+            background: #f0f9ff; border: 1px dashed #7dd3fc; border-radius: 14px; padding: 16px 20px;
+            display: flex; align-items: flex-start; gap: 14px; font-size: 0.84rem; color: #0369a1; line-height: 1.5;
         }
     </style>
 </head>
@@ -270,7 +270,7 @@ $active_page = 'overview';
                                 <?php if($totalIndikatorBelum > 0): ?>
                                     <strong style="color:#d97706;"><?php echo $totalIndikatorBelum; ?></strong> indikator belum ada berkas
                                 <?php else: ?>
-                                    <strong style="color:#059669;">100% Seluruh Indikator Terpenuhi!</strong>
+                                    <strong style="color:#0284c7;">100% Seluruh Indikator Terpenuhi!</strong>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -320,10 +320,10 @@ $active_page = 'overview';
                         <div>
                             <div class="tracker-header">
                                 <div class="tracker-title-box">
-                                    <h3><i data-lucide="check-square" style="width:20px;height:20px;color:#059669;"></i> Kelengkapan Butir Indikator</h3>
+                                    <h3><i data-lucide="check-square" style="width:20px;height:20px;color:#0284c7;"></i> Kelengkapan Butir Indikator</h3>
                                     <p>Proporsi butir indikator yang telah memiliki minimal 1 berkas bukti fisik terlampir.</p>
                                 </div>
-                                <div class="tracker-pct-badge" style="color:#059669;">
+                                <div class="tracker-pct-badge" style="color:#0284c7;">
                                     <?php echo $persenKelengkapanGlobal; ?>%
                                 </div>
                             </div>
@@ -332,7 +332,7 @@ $active_page = 'overview';
                             </div>
                         </div>
                         <div class="tracker-meta-row">
-                            <span style="color:#059669;">✓ <?php echo $totalIndikatorTerpenuhi; ?> Indikator Terisi</span>
+                            <span style="color:#0284c7;">✓ <?php echo $totalIndikatorTerpenuhi; ?> Indikator Terisi</span>
                             <span style="color:#d97706;">⏳ <?php echo $totalIndikatorBelum; ?> Indikator Kosong</span>
                             <span style="color:#64748b;">Total: <?php echo $totalIndikator; ?> Item</span>
                         </div>
@@ -367,11 +367,11 @@ $active_page = 'overview';
                 <div class="table-card-zamrud">
                     <div class="table-card-header">
                         <div>
-                            <h3><i data-lucide="layers" style="width:20px;height:20px;color:#059669;"></i> Status Kelengkapan per Komponen PKKM</h3>
+                            <h3><i data-lucide="layers" style="width:20px;height:20px;color:#0284c7;"></i> Status Kelengkapan per Komponen PKKM</h3>
                             <p>Status dihitung berdasarkan keterisian seluruh butir indikator di masing-masing komponen.</p>
                         </div>
                         <div style="font-size:0.8rem; color:#64748b;">
-                            <span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:5px 10px; font-weight:700;">
+                            <span class="badge" style="background:#f0f9ff; color:#0284c7; border:1px solid #bae6fd; padding:5px 10px; font-weight:700;">
                                 <i data-lucide="check" style="width:12px;height:12px;display:inline;"></i> Logika Per-Indikator Aktif
                             </span>
                         </div>
@@ -391,7 +391,7 @@ $active_page = 'overview';
                             </thead>
                             <tbody>
                                 <?php foreach($komponenStats as $idx => $k): 
-                                    $progColor = $k['status_class'] === 'lengkap' ? '#10b981' : ($k['status_class'] === 'proses' ? '#f59e0b' : '#cbd5e1');
+                                    $progColor = $k['status_class'] === 'lengkap' ? '#0284c7' : ($k['status_class'] === 'proses' ? '#f59e0b' : '#cbd5e1');
                                 ?>
                                 <tr>
                                     <td style="text-align:center; font-weight:700; color:#64748b;">
@@ -424,7 +424,7 @@ $active_page = 'overview';
                                             <?php if($k['indikator_sisa'] > 0): ?>
                                                 <span>Sisa <?php echo $k['indikator_sisa']; ?> indikator kosong</span>
                                             <?php else: ?>
-                                                <span style="color:#059669; font-weight:700;">✓ Seluruh indikator terisi</span>
+                                                <span style="color:#0284c7; font-weight:700;">✓ Seluruh indikator terisi</span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
@@ -468,17 +468,15 @@ $active_page = 'overview';
 
                 <!-- 5. CALLOUT EDUKATIF (MENGAPA BERKAS > INDIKATOR) -->
                 <div class="info-callout">
-                    <div style="width:36px; height:36px; border-radius:10px; background:#dcfce7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                        <i data-lucide="lightbulb" style="width:20px;height:20px;color:#059669;"></i>
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e0f2fe; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i data-lucide="lightbulb" style="width:20px;height:20px;color:#0284c7;"></i>
                     </div>
                     <div>
-                        <div style="font-weight:800; font-size:0.9rem; color:#064e3b; margin-bottom:3px;">
+                        <div style="font-weight:800; font-size:0.9rem; color:#0369a1; margin-bottom:3px;">
                             💡 Mengapa Jumlah Berkas Bisa Lebih Banyak dari Jumlah Indikator?
                         </div>
-                        <div style="color:#166534; line-height:1.5;">
+                        <div style="color:#0c4a6e; line-height:1.5;">
                             Dalam instrumen PKKM, satu butir indikator seringkali memiliki beberapa dokumen persyaratan fisik (misalnya bukti a, b, dan c). Sistem kami kini menghitung kelengkapan secara <strong>adil dan akurat</strong> berdasarkan pemenuhan setiap butir indikator (komponen baru berstatus <em>Lengkap</em> jika seluruh indikator telah memiliki berkas), sehingga jumlah berkas yang banyak pada satu indikator tidak akan membuat komponen dianggap lengkap sebelum seluruh indikator lainnya terpenuhi.
-                        </div>
-                    </div>
                 </div>
 
             </div>

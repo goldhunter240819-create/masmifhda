@@ -98,9 +98,9 @@ $sasaranMutu = [
     [
         'pilar' => 'Pilar I : Iman, Taqwa & Akhlakul Karimah',
         'sub' => 'Menyiapkan peserta didik menjadi insan beriman, bertaqwa, berakhlak mulia, dan berbudi pekerti luhur.',
-        'color' => '#059669',
-        'bg' => '#ecfdf5',
-        'border' => '#a7f3d0'
+        'color' => '#0284c7',
+        'bg' => '#f0f9ff',
+        'border' => '#bae6fd'
     ],
     [
         'pilar' => 'Pilar II : Daya Saing Lulusan & Prestasi',
@@ -161,7 +161,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
 
         /* Top Action Bar (Screen Only) */
         .no-print-bar {
-            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0369a1 100%);
             color: #ffffff;
             padding: 14px 24px;
             position: sticky;
@@ -200,7 +200,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
         }
         .bar-btn {
             background: #ffffff;
-            color: #064e3b;
+            color: #0369a1;
             border: none;
             padding: 8px 16px;
             border-radius: 8px;
@@ -214,7 +214,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -255,7 +255,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             background: rgba(255,255,255,0.12);
         }
         .tab-btn.active {
-            color: #064e3b;
+            color: #0369a1;
             background: #ffffff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
@@ -272,7 +272,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             align-items: center;
             justify-content: space-between;
         }
-        .alert-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+        .alert-success { background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; }
         .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; }
 
         /* Content Wrappers */
@@ -293,7 +293,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             position: relative;
         }
         .outer-frame {
-            border: 2px solid #064e3b;
+            border: 2px solid #0369a1;
             padding: 3px;
             border-radius: 10px;
             background: #ffffff;
@@ -309,7 +309,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             display: flex;
             align-items: center;
             justify-content: center;
-            border-bottom: 2.5px solid #064e3b;
+            border-bottom: 2.5px solid #0369a1;
             padding-bottom: 5px;
             margin-bottom: 6px;
             position: relative;
@@ -334,7 +334,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             font-weight: bold;
             text-transform: uppercase;
             line-height: 1.2;
-            color: #064e3b;
+            color: #0369a1;
         }
         .kop-text-preview h2 {
             margin: 1px 0 2px 0;
@@ -358,9 +358,9 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #f0fdf4;
-            color: #065f46;
-            border: 1px solid #86efac;
+            background: #f0f9ff;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
             padding: 2px 10px;
             border-radius: 999px;
             font-size: 6.8pt;
@@ -372,7 +372,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
         .main-display-title {
             font-size: 12pt;
             font-weight: 900;
-            color: #064e3b;
+            color: #0369a1;
             text-transform: uppercase;
             letter-spacing: 0.6px;
             margin: 0;
@@ -385,7 +385,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             margin-top: 1px;
         }
         .visi-plaque {
-            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0369a1 100%);
             border: 1.5px solid #d97706;
             border-radius: 9px;
             padding: 9px 14px;
@@ -393,7 +393,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             text-align: center;
             margin-bottom: 8px;
             position: relative;
-            box-shadow: 0 4px 12px rgba(6, 78, 59, 0.15);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
         }
         .visi-top-tag {
             font-size: 7.2pt;
@@ -439,9 +439,9 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
         .section-box-title {
             font-size: 8.5pt;
             font-weight: 800;
-            color: #064e3b;
+            color: #0369a1;
             text-transform: uppercase;
-            border-bottom: 1.5px solid #059669;
+            border-bottom: 1.5px solid #0284c7;
             padding-bottom: 2px;
             margin-bottom: 5px;
             display: flex;
@@ -463,7 +463,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             gap: 6px;
         }
         .misi-num {
-            background: #064e3b;
+            background: #0369a1;
             color: #ffffff;
             width: 16px;
             height: 16px;
@@ -515,12 +515,12 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             font-weight: 500;
         }
         .meta-notice-box {
-            background: #f0fdf4;
-            border: 1px dashed #86efac;
+            background: #f0f9ff;
+            border: 1px dashed #7dd3fc;
             border-radius: 6px;
             padding: 4px 8px;
             font-size: 6.8pt;
-            color: #166534;
+            color: #0c4a6e;
             line-height: 1.3;
             margin-bottom: 7px;
             display: flex;
@@ -576,7 +576,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
         .qr-tag {
             font-size: 5.8pt;
             font-weight: 700;
-            color: #047857;
+            color: #0284c7;
             margin-top: 2px;
             text-transform: uppercase;
         }
@@ -587,13 +587,13 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             bottom: 4px;
             width: 74px;
             height: 74px;
-            border: 2px dashed #059669;
+            border: 2px dashed #0284c7;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #059669;
+            color: #0284c7;
             text-align: center;
             transform: rotate(-12deg);
             background: rgba(240, 253, 244, 0.75);
@@ -601,7 +601,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             z-index: 2;
         }
         .stempel-top { font-size: 5.2pt; font-weight: 900; }
-        .stempel-mid { font-size: 5.8pt; font-weight: 900; color: #047857; margin: 1px 0; }
+        .stempel-mid { font-size: 5.8pt; font-weight: 900; color: #0284c7; margin: 1px 0; }
         .stempel-bot { font-size: 5.2pt; font-weight: 900; }
 
         /* ---------------- TAB 2: MATRIKS KETERCAPAIAN ---------------- */
@@ -646,9 +646,9 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             vertical-align: top;
         }
         .badge-pill-success {
-            background: #ecfdf5;
-            color: #059669;
-            border: 1px solid #a7f3d0;
+            background: #f0f9ff;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
             padding: 3px 10px;
             border-radius: 999px;
             font-size: 0.75rem;
@@ -680,7 +680,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             margin-top: 3px;
             width: 18px;
             height: 18px;
-            accent-color: #059669;
+            accent-color: #0284c7;
             cursor: pointer;
         }
         .eval-criteria-label {
@@ -723,7 +723,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
             <div class="bar-actions">
                 <!-- Status Keterkaitan PKKM -->
                 <?php if($is_pkkm_linked): ?>
-                    <span class="bar-badge" style="background:#10b981; color:#fff; display:inline-flex; align-items:center; gap:5px;">
+                    <span class="bar-badge" style="background:#0ea5e9; color:#fff; display:inline-flex; align-items:center; gap:5px;">
                         ✓ Tertaut di PKKM (<?php echo $linked_count; ?> Berkas)
                     </span>
                     <form action="/admin/pkkm/cetak-bukti/visi-misi/detach" method="POST" style="margin:0;" onsubmit="return confirm('Lepas tautan berkas ini dari instrumen PKKM?')">
@@ -735,7 +735,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
                     <span class="bar-badge" style="background:#f59e0b; color:#fff;">
                         Belum Tertaut PKKM
                     </span>
-                    <a href="/admin/pkkm/cetak-bukti/visi-misi/attach" class="bar-btn" style="background:#10b981; color:#fff;" title="Tautkan otomatis ke Instrumen PKKM 1.2.1 & Master Berkas">
+                    <a href="/admin/pkkm/cetak-bukti/visi-misi/attach" class="bar-btn" style="background:#0ea5e9; color:#fff;" title="Tautkan otomatis ke Instrumen PKKM 1.2.1 & Master Berkas">
                         + Tautkan ke PKKM 1.2.1
                     </a>
                 <?php endif; ?>
@@ -770,7 +770,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
     <?php if(isset($_GET['msg']) && $_GET['msg'] === 'attached'): ?>
         <div class="alert-bar alert-success">
             <div><strong>Sukses!</strong> Bukti fisik Visi Misi berhasil ditautkan otomatis ke Instrumen PKKM 1.2.1 dan Master Berkas.</div>
-            <a href="?tab=<?php echo $activeTab; ?>" style="color:#065f46; text-decoration:none; font-weight:800;">✕</a>
+            <a href="?tab=<?php echo $activeTab; ?>" style="color:#0369a1; text-decoration:none; font-weight:800;">✕</a>
         </div>
     <?php elseif(isset($_GET['msg']) && $_GET['msg'] === 'detached'): ?>
         <div class="alert-bar alert-info">
@@ -780,7 +780,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
     <?php elseif(isset($_GET['msg']) && $_GET['msg'] === 'saved'): ?>
         <div class="alert-bar alert-success">
             <div><strong>Tersimpan!</strong> Catatan telaah dan hasil verifikasi pengawas berhasil diperbarui.</div>
-            <a href="?tab=<?php echo $activeTab; ?>" style="color:#065f46; text-decoration:none; font-weight:800;">✕</a>
+            <a href="?tab=<?php echo $activeTab; ?>" style="color:#0369a1; text-decoration:none; font-weight:800;">✕</a>
         </div>
     <?php endif; ?>
 
@@ -923,15 +923,15 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
                         <h2 class="dash-title">🌐 Saluran Publikasi & Sosialisasi Visi Misi</h2>
                         <div class="dash-sub">Bukti konkret bahwa visi-misi madrasah telah tersosialisasi secara terbuka dan mudah diakses oleh seluruh pemangku kepentingan.</div>
                     </div>
-                    <a href="/profil.php#visimisi" target="_blank" class="bar-btn" style="background:#059669; color:#fff;">
+                    <a href="/profil.php#visimisi" target="_blank" class="bar-btn" style="background:#0284c7; color:#fff;">
                         ↗ Buka Halaman Publik Visi Misi
                     </a>
                 </div>
 
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:10px;">
-                    <div style="padding:14px; border-radius:12px; background:#ecfdf5; border:1px solid #a7f3d0;">
-                        <div style="font-weight:800; color:#065f46; font-size:0.9rem;">1. Website Resmi Madrasah</div>
-                        <div style="font-size:0.8rem; color:#047857; margin-top:4px;">Tayang di <code>masmifhda.sch.id/profil.php#visimisi</code> dapat diakses publik 24/7.</div>
+                    <div style="padding:14px; border-radius:12px; background:#f0f9ff; border:1px solid #bae6fd;">
+                        <div style="font-weight:800; color:#0369a1; font-size:0.9rem;">1. Website Resmi Madrasah</div>
+                        <div style="font-size:0.8rem; color:#0284c7; margin-top:4px;">Tayang di <code>masmifhda.sch.id/profil.php#visimisi</code> dapat diakses publik 24/7.</div>
                         <span class="badge-pill-success" style="margin-top:8px;">Terverifikasi Online</span>
                     </div>
 
@@ -974,7 +974,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
                         <tbody>
                             <?php foreach($misiList as $m): ?>
                                 <tr>
-                                    <td style="font-weight:800; color:#064e3b;"><?php echo $m['no']; ?></td>
+                                    <td style="font-weight:800; color:#0369a1;"><?php echo $m['no']; ?></td>
                                     <td>
                                         <div style="font-weight:700; color:#0f172a;"><?php echo htmlspecialchars($m['title']); ?></div>
                                         <div style="font-size:0.78rem; color:#64748b;"><?php echo htmlspecialchars($m['desc']); ?></div>
@@ -1067,7 +1067,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
                         </div>
 
                         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <select name="skor_rekomendasi" style="padding:8px 14px; border-radius:8px; border:1px solid #059669; font-weight:800; color:#065f46; font-size:0.9rem;">
+                            <select name="skor_rekomendasi" style="padding:8px 14px; border-radius:8px; border:1px solid #0284c7; font-weight:800; color:#0369a1; font-size:0.9rem;">
                                 <?php $curSkor = $savedNotes['skor_rekomendasi'] ?? '4'; ?>
                                 <option value="4" <?php echo $curSkor == '4' ? 'selected':''; ?>>Skor 4 - Amat Baik / Sangat Lengkap</option>
                                 <option value="3" <?php echo $curSkor == '3' ? 'selected':''; ?>>Skor 3 - Baik / Lengkap</option>
@@ -1076,7 +1076,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
                             </select>
 
                             <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; color:#334155; cursor:pointer;">
-                                <input type="checkbox" name="simpan_skor_pkkm" value="1" checked style="accent-color:#059669;">
+                                <input type="checkbox" name="simpan_skor_pkkm" value="1" checked style="accent-color:#0284c7;">
                                 Simpan juga skor ke Tabel Nilai PKKM
                             </label>
                         </div>
@@ -1099,7 +1099,7 @@ $qrCodeSrc = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&
                             </select>
                         </div>
 
-                        <button type="submit" class="bar-btn" style="background:#059669; color:#fff; padding:10px 22px; font-size:0.88rem;">
+                        <button type="submit" class="bar-btn" style="background:#0284c7; color:#fff; padding:10px 22px; font-size:0.88rem;">
                             💾 Simpan Verifikasi & Catatan Pengawas
                         </button>
                     </div>

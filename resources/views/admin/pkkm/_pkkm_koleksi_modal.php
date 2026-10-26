@@ -8,7 +8,7 @@ $daftarBuktiDigital = [
         'komponen' => 'Komponen 1 & 2',
         'icon' => 'award',
         'color' => '#0284c7',
-        'bg' => '#ecfdf5',
+        'bg' => '#f0f9ff',
         'url' => '/admin/pkkm/cetak-bukti/visi-misi',
         'deskripsi' => 'Plakat plang kelembagaan zamrud-emas, Visi resmi, 5 butir Misi & 4 pilar mutu lulusan SKL.'
     ],
@@ -52,7 +52,7 @@ $daftarBuktiDigital = [
         'komponen' => 'Komponen 1',
         'icon' => 'user-check',
         'color' => '#16a34a',
-        'bg' => '#f0fdf4',
+        'bg' => '#f0f9ff',
         'url' => '/admin/pkkm/cetak-bukti/absensi-elektronik',
         'deskripsi' => 'KPI tingkat kehadiran 98.4%, tabel absensi digital per guru & stempel server GH-SSS.'
     ],
@@ -85,7 +85,7 @@ $daftarBuktiDigital = [
         'komponen' => 'Komponen 2',
         'icon' => 'leaf',
         'color' => '#16a34a',
-        'bg' => '#f0fdf4',
+        'bg' => '#f0f9ff',
         'url' => '/admin/pkkm/cetak-bukti/lingkungan-sehat',
         'deskripsi' => 'Galeri 6 kuadran: pagar keamanan, taman rindang, wastafel air mengalir, ventilasi kelas & checklist sanitasi.'
     ],
@@ -96,7 +96,7 @@ $daftarBuktiDigital = [
         'komponen' => 'Komponen 4',
         'icon' => 'clipboard-check',
         'color' => '#0284c7',
-        'bg' => '#ecfdf5',
+        'bg' => '#f0f9ff',
         'url' => '/admin/pkkm/cetak-bukti/supervisi-guru',
         'deskripsi' => 'Matriks penilaian 10 guru (modul ajar, KBM, TIK, asesmen), rata-rata 92.6 (Amat Baik) & tindak lanjut.'
     ],
@@ -107,7 +107,7 @@ $daftarBuktiDigital = [
         'komponen' => 'Komponen 2',
         'icon' => 'activity',
         'color' => '#0284c7',
-        'bg' => '#ecfdf5',
+        'bg' => '#f0f9ff',
         'url' => '/admin/pkkm/cetak-bukti/ekstrakurikuler',
         'deskripsi' => 'Matriks 6 cabang ekskul (Pramuka, Tahfidz, Hadroh, Silat, Futsal, UKS), jadwal rutin & 3 pilar pembinaan.'
     ],
@@ -129,7 +129,7 @@ $daftarBuktiDigital = [
         'komponen' => 'Komponen 3',
         'icon' => 'shopping-bag',
         'color' => '#0284c7',
-        'bg' => '#ecfdf5',
+        'bg' => '#f0f9ff',
         'url' => '/admin/pkkm/cetak-bukti/kewirausahaan',
         'deskripsi' => 'Profil 3 unit usaha (Koperasi, Kantin Sehat, Hidroponik), omzet Rp 14,8 Jt/bln & 4 MoU kemitraan.'
     ],
@@ -416,7 +416,7 @@ $daftarBuktiDigital = [
     font-size: 0.65rem;
     font-weight: 800;
     color: #1e40af;
-    background: #d1fae5;
+    background: #e0f2fe;
     padding: 1px 6px;
     border-radius: 4px;
 }
@@ -506,9 +506,9 @@ $daftarBuktiDigital = [
     min-width: 220px;
 }
 .koleksi-btn-master {
-    background: #ecfdf5;
+    background: #f0f9ff;
     color: #1e40af;
-    border: 1px solid #a7f3d0;
+    border: 1px solid #bae6fd;
     padding: 7px 14px;
     border-radius: 8px;
     font-size: 0.78rem;
@@ -520,7 +520,7 @@ $daftarBuktiDigital = [
     transition: all 0.2s;
 }
 .koleksi-btn-master:hover {
-    background: #d1fae5;
+    background: #e0f2fe;
     color: #0f172a;
 }
 .koleksi-btn-close {

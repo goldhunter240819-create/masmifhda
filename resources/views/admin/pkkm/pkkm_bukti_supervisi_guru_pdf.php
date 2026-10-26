@@ -230,7 +230,7 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -312,9 +312,9 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: #f0fdf4;
+            background: #f0f9ff;
             color: #1e40af;
-            border: 1px solid #86efac;
+            border: 1px solid #7dd3fc;
             padding: 2px 8px;
             border-radius: 999px;
             font-size: 6.8pt;
@@ -416,7 +416,7 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
             background: #fafaf9;
         }
         .sup-table tfoot td {
-            background: #ecfdf5;
+            background: #f0f9ff;
             font-weight: bold;
             color: #1e40af;
             border-top: 1.5px solid #0284c7;
@@ -439,7 +439,7 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
             align-items: flex-start;
             gap: 6px;
         }
-        .tl-card.c1 { border-left: 3px solid #0284c7; background: #f0fdf4; }
+        .tl-card.c1 { border-left: 3px solid #0284c7; background: #f0f9ff; }
         .tl-card.c2 { border-left: 3px solid #2563eb; background: #eff6ff; }
         .tl-card.c3 { border-left: 3px solid #d97706; background: #fffbeb; }
 
@@ -452,7 +452,7 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
             border: 1px dashed #0284c7;
             border-radius: 5px;
             padding: 4px 8px;
-            background: #f0fdf4;
+            background: #f0f9ff;
             font-size: 6.8pt;
             color: #0f172a;
             font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -630,8 +630,8 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
 
             <!-- 4 KPI STATS CARD -->
             <div class="stats-grid">
-                <div class="stat-card" style="border-left: 3.5px solid #0284c7; background: #ecfdf5;">
-                    <div class="stat-icon" style="background:#d1fae5; color:#1e40af;">👥</div>
+                <div class="stat-card" style="border-left: 3.5px solid #0284c7; background: #f0f9ff;">
+                    <div class="stat-icon" style="background:#e0f2fe; color:#1e40af;">👥</div>
                     <div class="stat-content">
                         <div class="stat-val"><?php echo count($matriksSupervisi); ?> Guru (100%)</div>
                         <div class="stat-lbl">Tuntas Disupervisi Klinis</div>
@@ -644,8 +644,8 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
                         <div class="stat-lbl">Rata-rata Skor Pembelajaran</div>
                     </div>
                 </div>
-                <div class="stat-card" style="border-left: 3.5px solid #16a34a; background: #f0fdf4;">
-                    <div class="stat-icon" style="background:#dcfce7; color:#15803d;">🎯</div>
+                <div class="stat-card" style="border-left: 3.5px solid #16a34a; background: #f0f9ff;">
+                    <div class="stat-icon" style="background:#e0f2fe; color:#0284c7;">🎯</div>
                     <div class="stat-content">
                         <div class="stat-val">96.4% Tuntas</div>
                         <div class="stat-lbl">Ketercapaian Modul Merdeka</div>
@@ -691,7 +691,7 @@ $rataRataTotal = round($totalSkor / count($matriksSupervisi), 1);
                             <td style="text-align: center;"><?php echo $row['media']; ?></td>
                             <td style="text-align: center;"><?php echo $row['asesmen']; ?></td>
                             <td style="text-align: center; font-weight: bold; color: #0f172a;"><?php echo $row['rata']; ?></td>
-                            <td style="text-align: center; font-weight: bold; color: #166534; font-size:6.5pt;"><?php echo $row['predikat']; ?></td>
+                            <td style="text-align: center; font-weight: bold; color: #0c4a6e; font-size:6.5pt;"><?php echo $row['predikat']; ?></td>
                             <td style="font-size: 6.5pt;"><?php echo $row['tindak_lanjut']; ?></td>
                         </tr>
                         <?php endforeach; ?>

@@ -114,7 +114,7 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
-        .bar-btn:hover { background: #f0fdf4; transform: translateY(-1px); }
+        .bar-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
         .bar-btn-secondary {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
@@ -223,19 +223,19 @@ $backText = $isPengawas ? 'Kembali ke Penilaian' : 'Kembali ke Instrumen';
         }
         .badge-kondisi {
             display: inline-block;
-            background: #dcfce7;
-            color: #15803d;
+            background: #e0f2fe;
+            color: #0284c7;
             font-weight: 800;
             font-size: 7pt;
             padding: 2px 6px;
             border-radius: 4px;
-            border: 1px solid #86efac;
+            border: 1px solid #7dd3fc;
             text-transform: uppercase;
         }
 
         /* Box Pemeliharaan & Verifikasi */
         .maintenance-box {
-            background: #f0fdf4;
+            background: #f0f9ff;
             border: 1px dashed #0284c7;
             border-radius: 8px;
             padding: 8px 12px;
