@@ -16,11 +16,11 @@ class Branding {
         $instFavicon = self::getInstitusiFavicon();
 
         self::$cache = [
-            'name'    => isset($portal['app_name']) ? $portal['app_name'] : 'Aula System',
+            'name'    => !empty($portal['app_name']) ? $portal['app_name'] : 'GH-SSS Portal',
             'logo'    => $instLogo,
             'favicon' => $instFavicon,
-            'theme'   => isset($portal['theme_color']) ? "#" . $portal['theme_color'] : "#0ea5e9",
-            'title'   => isset($portal['tab_title']) ? $portal['tab_title'] : 'Aula System Platform',
+            'theme'   => !empty($portal['theme_color']) ? "#" . $portal['theme_color'] : "#10b981",
+            'title'   => !empty($portal['tab_title']) ? $portal['tab_title'] : 'GH-SSS Portal - MAS MIFHDA',
             // Logo & favicon langsung dari institusi (dipakai sidebar/favicon SIAKAD)
             'inst_logo'    => $instLogo,
             'inst_favicon' => $instFavicon,
