@@ -1325,29 +1325,35 @@ class SiakadSiswaController {
         
         $active_year = \App\Core\AcademicYear::current();
         $active_year_name = $active_year ? $active_year['name'] : '2025/2026';
-        
         $active_year_id = $active_year ? intval($active_year['id']) : 1;
         
         $where = "WHERE s.status IN ('Aktif', 'Alumni') AND (rks.id IS NOT NULL OR s.tahun_ajaran = '$active_year_name')";
-        if (!empty($_GET['id'])) {
-            $where = "WHERE s.id = " . intval($_GET['id']);
+        $single_id = !empty($_GET['id']) ? intval($_GET['id']) : null;
+        $ids_str = '';
+        $selected_kelas = isset($_GET['kelas_id']) ? $_GET['kelas_id'] : '';
+
+        if ($single_id) {
+            $where = "WHERE s.id = $single_id";
         } elseif (!empty($_GET['ids'])) {
             $raw_ids = is_array($_GET['ids']) ? $_GET['ids'] : explode(',', $_GET['ids']);
-            $ids = array_map('intval', $raw_ids);
-            $ids_str = implode(',', $ids);
-            $where = "WHERE s.id IN ($ids_str)";
+            $ids = array_map('intval', array_filter($raw_ids));
+            if (!empty($ids)) {
+                $ids_str = implode(',', $ids);
+                $where = "WHERE s.id IN ($ids_str)";
+            }
         } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ids'])) {
-            $ids = array_map('intval', $_POST['ids']);
-            $ids_str = implode(',', $ids);
-            $where = "WHERE s.id IN ($ids_str)";
+            $ids = array_map('intval', array_filter($_POST['ids']));
+            if (!empty($ids)) {
+                $ids_str = implode(',', $ids);
+                $where = "WHERE s.id IN ($ids_str)";
+            }
         } else {
-            $selected_kelas = isset($_GET['kelas_id']) ? $_GET['kelas_id'] : null;
             if ($selected_kelas && $selected_kelas !== 'all') {
                 $where .= " AND COALESCE(rks.kelas_id, s.kelas_id) = " . intval($selected_kelas);
             }
         }
 
-        $siswas = $db->query("SELECT s.*, u.username, u.plain_password, 
+        $siswas = $db->query("SELECT s.*, u.username, 
                              COALESCE(k_hist.nama_kelas, k.nama_kelas) as nama_kelas 
                              FROM siswa s 
                              LEFT JOIN riwayat_kelas_siswa rks ON s.id = rks.siswa_id 
@@ -1363,6 +1369,19 @@ class SiakadSiswaController {
         $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $semua_kelas = $db->query("SELECT * FROM kelas ORDER BY nama_kelas ASC")->fetchAll();
         $mode = isset($_GET['mode']) ? $_GET['mode'] : 'horizontal';
+        $sisi = isset($_GET['sisi']) ? $_GET['sisi'] : 'kedua';
+        $nama_qr = isset($_GET['nama_qr']) ? $_GET['nama_qr'] : '0';
+        $kota_cetak = isset($_GET['kota_cetak']) ? $_GET['kota_cetak'] : (!empty($inst['kota']) ? $inst['kota'] : 'Jakarta');
+        $tgl_cetak = isset($_GET['tgl_cetak']) ? $_GET['tgl_cetak'] : date('d M Y');
+
+        $favicon_url = '';
+        if (!empty($inst['logo'])) {
+            $favicon_url = base_url('uploads/logo/' . $inst['logo']);
+        } elseif (class_exists('\App\Core\Branding')) {
+            $favicon_url = \App\Core\Branding::getInstitusiFavicon();
+        } else {
+            $favicon_url = base_url('public/assets/img/logo.png');
+        }
 
         // Template Cetak (Khusus)
         ?>
@@ -1371,69 +1390,92 @@ class SiakadSiswaController {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Cetak Kartu - <?php echo $inst ? $inst['nama'] : 'Madrasah'; ?></title>
+            <meta name="color-scheme" content="light only">
+            <title>Cetak Kartu Pelajar - <?php echo htmlspecialchars($inst['nama'] ?? 'MAS MIFHDA'); ?></title>
+            
+            <!-- Icon Tab / Favicon -->
+            <link rel="icon" type="image/png" href="<?php echo $favicon_url; ?>?v=<?php echo time(); ?>">
+            <link rel="shortcut icon" href="<?php echo $favicon_url; ?>?v=<?php echo time(); ?>">
+            <link rel="apple-touch-icon" href="<?php echo $favicon_url; ?>">
+
             <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
             <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
             <script src="<?php echo base_url('public/assets/js/qrcode.min.js'); ?>"></script>
             <style>
+                :root {
+                    color-scheme: light;
+                }
                 body {
                     margin: 0;
                     padding: 20px;
-                    background: #f1f5f9;
+                    background: #f1f5f9 !important;
                     font-family: 'Plus Jakarta Sans', sans-serif;
                 }
                 .print-controls {
-                    position: fixed;
-                    top: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
                     background: white;
-                    padding: 8px 15px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                    padding: 15px 25px;
+                    border-radius: 16px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
                     display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    z-index: 100;
+                    align-items: flex-end;
+                    justify-content: flex-start;
+                    gap: 15px;
+                    margin-bottom: 25px;
+                    flex-wrap: nowrap;
+                    overflow-x: auto;
+                    max-width: 100%;
+                    border: 1px solid #e2e8f0;
+                    white-space: nowrap;
                 }
                 .btn-print {
                     background: #0f172a;
                     color: white;
                     border: none;
-                    padding: 8px 16px;
-                    border-radius: 6px;
+                    padding: 9px 18px;
+                    border-radius: 8px;
                     font-weight: 700;
-                    font-size: 0.8rem;
+                    font-size: 0.82rem;
                     font-family: inherit;
                     cursor: pointer;
                     display: flex;
                     align-items: center;
-                    gap: 6px;
-                    box-shadow: 0 2px 4px rgba(15,23,42,0.15);
+                    gap: 8px;
+                    box-shadow: 0 4px 6px rgba(15,23,42,0.15);
+                    text-decoration: none;
+                    white-space: nowrap;
+                }
+                .btn-print:hover {
+                    opacity: 0.95;
                 }
                 .card-container {
                     display: flex;
-                    flex-direction: column;
-                    align-items: center;
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                    align-items: flex-start;
+                    justify-content: flex-start;
                     gap: 5mm;
-                    width: 210mm;
+                    width: 100%;
                     margin: 0 auto;
                 }
                 .id-card-wrapper {
                     display: flex;
-                    flex-direction: row; /* Depan Kiri, Belakang Kanan */
-                    gap: 5mm;
+                    flex-direction: column; /* Depan Atas, Belakang Bawah */
+                    gap: 0;
                     page-break-inside: avoid;
-                    margin-bottom: 5mm;
-                    justify-content: center;
-                    width: 100%;
+                    align-items: center;
                 }
                 
+                /* Sisi belakang diputar 180 derajat agar saat dilipat ke belakang posisinya tidak terbalik */
+                .id-card-wrapper > .id-card-body:nth-child(2) {
+                    transform: rotate(180deg);
+                }
+                
+                /* KTP Size CSS */
                 <?php if ($mode === 'vertical'): ?>
                 .id-card-body {
                     box-sizing: border-box;
-                    width: 54mm; 
-                    height: 85.6mm; 
+                    width: 65mm; 
+                    height: 97mm; 
                     border-radius: 3mm; 
                     overflow: hidden; 
                     box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
@@ -1441,8 +1483,9 @@ class SiakadSiswaController {
                     border: 1px solid #e2e8f0; 
                     display: flex; 
                     flex-direction: column;
-                    background: radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.1) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(2, 132, 199, 0.05) 0%, transparent 50%), white;
+                    background: radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(5, 150, 105, 0.05) 0%, transparent 50%), white;
                     flex-shrink: 0;
+                    page-break-inside: avoid;
                 }
                 <?php else: ?>
                 .id-card-body {
@@ -1456,70 +1499,136 @@ class SiakadSiswaController {
                     border: 1px solid #e2e8f0; 
                     display: flex; 
                     flex-direction: column;
-                    background: radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.1) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(2, 132, 199, 0.05) 0%, transparent 50%), white;
+                    background: radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(5, 150, 105, 0.05) 0%, transparent 50%), white;
                     flex-shrink: 0;
+                    page-break-inside: avoid;
                 }
                 <?php endif; ?>
 
                 @media print {
                     body {
-                        background: white;
-                        padding: 0;
+                        background: white !important;
+                        padding: 0 !important;
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    .print-controls { display: none; }
+                    .print-controls { display: none !important; }
                     .card-container {
-                        gap: 2mm; /* Rapatkan gap saat print agar muat 5 baris */
+                        gap: 0 !important;
                     }
                     .id-card-wrapper {
-                        margin-bottom: 2mm;
                         box-shadow: none !important;
+                        margin: 0 !important;
                     }
                     .id-card-body {
                         box-shadow: none !important;
-                        border: 0.1mm solid #ddd !important; /* Garis panduan potong solid tipis */
+                        border: 0.1mm solid #ddd !important; /* Garis batas potong halus */
                     }
                     @page {
-                        size: A4;
-                        margin: 10mm; /* Margin standar untuk A4 */
+                        size: A4 landscape;
+                        margin: 5mm;
                     }
                 }
             </style>
         </head>
         <body>
+            <script>
+            function updatePrintConfig(changeMode = null) {
+                var kelasEl = document.getElementById('f_kelas');
+                var kelas_id = kelasEl ? kelasEl.value : '';
+                var mode = changeMode ? changeMode : '<?php echo $mode; ?>';
+                var sisi = document.getElementById('f_sisi').value;
+                var nama_qr = document.getElementById('f_nama_qr').value;
+                var kota = document.getElementById('f_kota').value;
+                var tgl = document.getElementById('f_tgl').value;
+                
+                var url = '<?php echo base_url("siakad/siswa/cetak-kartu"); ?>?mode=' + encodeURIComponent(mode) + 
+                          '&sisi=' + encodeURIComponent(sisi) + 
+                          '&nama_qr=' + encodeURIComponent(nama_qr) + 
+                          '&kota_cetak=' + encodeURIComponent(kota) + 
+                          '&tgl_cetak=' + encodeURIComponent(tgl);
+
+                <?php if ($single_id): ?>
+                if (kelasEl && kelasEl.getAttribute('data-initial') !== kelas_id && kelas_id !== '') {
+                    url += '&kelas_id=' + encodeURIComponent(kelas_id);
+                } else {
+                    url += '&id=<?php echo $single_id; ?>';
+                }
+                <?php elseif (!empty($ids_str)): ?>
+                if (kelasEl && kelasEl.getAttribute('data-initial') !== kelas_id && kelas_id !== '') {
+                    url += '&kelas_id=' + encodeURIComponent(kelas_id);
+                } else {
+                    url += '&ids=<?php echo $ids_str; ?>';
+                }
+                <?php else: ?>
+                if (kelas_id) {
+                    url += '&kelas_id=' + encodeURIComponent(kelas_id);
+                }
+                <?php endif; ?>
+
+                window.location.href = url;
+            }
+            </script>
+            
             <div class="print-controls">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <label style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Filter Kelas:</label>
-                    <select onchange="window.location.href='?kelas_id='+this.value+'&mode=<?php echo $mode; ?>'" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 0.8rem; font-weight: 600; color: #0f172a; outline: none; cursor: pointer;">
+                <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 130px; max-width: 220px;">
+                    <label style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Kelas</label>
+                    <select id="f_kelas" data-initial="<?php echo htmlspecialchars($selected_kelas); ?>" onchange="updatePrintConfig()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-weight: 600; color: #0f172a; outline: none; cursor: pointer;">
                         <option value="">Semua Kelas</option>
                         <?php foreach($semua_kelas as $k): ?>
-                            <option value="<?php echo $k['id']; ?>" <?php echo $selected_kelas == $k['id'] ? 'selected' : ''; ?>><?php echo $k['nama_kelas']; ?></option>
+                            <option value="<?php echo $k['id']; ?>" <?php echo $selected_kelas == $k['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($k['nama_kelas']); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div style="border-left: 2px solid #e2e8f0; padding-left: 12px;">
-                    <div style="font-weight: 800; color: #0f172a; font-size: 0.85rem;">Total: <?php echo count($siswas); ?> Kartu</div>
-                    <div style="font-size: 0.7rem; color: #64748b;">(<?php echo count($siswas) * 2; ?> Sisi) siap cetak.</div>
+
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Sisi</label>
+                    <select id="f_sisi" onchange="updatePrintConfig()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-weight: 600; color: #0f172a; outline: none; cursor: pointer;">
+                        <option value="kedua" <?php echo $sisi == 'kedua' ? 'selected' : ''; ?>>Keduanya (Lipat)</option>
+                        <option value="depan" <?php echo $sisi == 'depan' ? 'selected' : ''; ?>>Depan Saja</option>
+                        <option value="belakang" <?php echo $sisi == 'belakang' ? 'selected' : ''; ?>>Belakang Saja</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Nama di QR</label>
+                    <select id="f_nama_qr" onchange="updatePrintConfig()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-weight: 600; color: #0f172a; outline: none; cursor: pointer;">
+                        <option value="0" <?php echo $nama_qr == '0' ? 'selected' : ''; ?>>Sembunyi</option>
+                        <option value="1" <?php echo $nama_qr == '1' ? 'selected' : ''; ?>>Tampil</option>
+                    </select>
                 </div>
                 
-                <div style="display: flex; gap: 8px; margin-left: 5px;">
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Tempat</label>
+                    <input type="text" id="f_kota" value="<?php echo htmlspecialchars($kota_cetak); ?>" onchange="updatePrintConfig()" style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-weight: 600; color: #0f172a; outline: none; width: 95px;">
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Tanggal</label>
+                    <input type="text" id="f_tgl" value="<?php echo htmlspecialchars($tgl_cetak); ?>" onchange="updatePrintConfig()" style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-weight: 600; color: #0f172a; outline: none; width: 95px;">
+                </div>
+
+                <div style="border-left: 2px solid #e2e8f0; padding-left: 15px; margin-left: 5px; display: flex; flex-direction: column; justify-content: center; height: 38px;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Total: <?php echo count($siswas); ?> Siswa</div>
+                    <div style="font-size: 0.72rem; color: #64748b;"><?php echo $sisi == 'kedua' ? (count($siswas) * 2) . ' Sisi (Lipat)' : count($siswas) . ' Sisi'; ?></div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-left: auto; align-items: center;">
+                    <a href="<?php echo base_url('siakad/siswa'); ?>" class="btn-print" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; box-shadow: none;">
+                        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> KEMBALI
+                    </a>
                     <?php if ($mode === 'vertical'): ?>
-                        <button class="btn-print" onclick="window.location.href='?kelas_id=<?php echo $selected_kelas; ?>&mode=horizontal'" style="background: #64748b; color: white;">
-                            <i data-lucide="layout-template" style="width: 14px; height: 14px;"></i> HORIZONTAL
+                        <button class="btn-print" onclick="updatePrintConfig('horizontal')" style="background: #64748b; color: white;">
+                            <i data-lucide="layout-template" style="width: 16px; height: 16px;"></i> HORIZONTAL
                         </button>
                     <?php else: ?>
-                        <button class="btn-print" onclick="window.location.href='?kelas_id=<?php echo $selected_kelas; ?>&mode=vertical'" style="background: #64748b; color: white;">
-                            <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i> VERTIKAL
+                        <button class="btn-print" onclick="updatePrintConfig('vertical')" style="background: #64748b; color: white;">
+                            <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i> VERTIKAL
                         </button>
                     <?php endif; ?>
-                    <?php $isThumb = isset($_GET['thumb']) && $_GET['thumb'] == '1'; ?>
-                    <button class="btn-print" onclick="window.location.href='?kelas_id=<?php echo $selected_kelas; ?>&mode=<?php echo $mode; ?>&thumb=<?php echo $isThumb ? '0' : '1'; ?>'" style="background: <?php echo $isThumb ? '#f59e0b' : '#64748b'; ?>; color: white;">
-                        <i data-lucide="image" style="width: 14px; height: 14px;"></i> VERSI <?php echo $isThumb ? 'ORIGINAL' : 'THUMBNAIL'; ?>
-                    </button>
-                    <button class="btn-print" onclick="window.print()">
-                        <i data-lucide="printer" style="width: 14px; height: 14px;"></i> CETAK A4 SEKARANG
+                    <button class="btn-print" onclick="window.print()" style="background: #059669; color: white;">
+                        <i data-lucide="printer" style="width: 16px; height: 16px;"></i> CETAK KARTU
                     </button>
                 </div>
             </div>
@@ -1528,99 +1637,116 @@ class SiakadSiswaController {
                 <?php foreach($siswas as $data): ?>
                     <?php 
                         $alamat = '-';
-                        if($data['alamat']) {
+                        if(!empty($data['alamat'])) {
                             $alamat = $data['alamat'];
-                            if($data['desa']) $alamat .= ', ' . $data['desa'];
+                            if(!empty($data['desa'])) $alamat .= ', ' . $data['desa'];
                         }
                         
-                        $tglFormat = '-';
-                        if ($data['tanggal_lahir']) {
+                        $tgl_lahir_indo = '-';
+                        if(!empty($data['tanggal_lahir']) && $data['tanggal_lahir'] !== '0000-00-00') {
+                            $bulan_indo = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
                             $parts = explode('-', $data['tanggal_lahir']);
-                            if (count($parts) === 3 && $data['tanggal_lahir'] !== '0000-00-00') {
-                                $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                                $monthIndex = (int)$parts[1] - 1;
-                                $monthStr = isset($months[$monthIndex]) ? $months[$monthIndex] : $parts[1];
-                                $tglFormat = $parts[2] . ' ' . $monthStr . ' ' . $parts[0];
+                            if(count($parts) == 3 && isset($bulan_indo[(int)$parts[1]])) {
+                                $tgl_lahir_indo = $parts[2] . ' ' . $bulan_indo[(int)$parts[1]] . ' ' . $parts[0];
                             } else {
-                                $tglFormat = $data['tanggal_lahir'];
+                                $tgl_lahir_indo = $data['tanggal_lahir'];
                             }
                         }
                         
                         $ttl = '-';
-                        if($data['tempat_lahir'] || $data['tanggal_lahir']) {
-                            $ttl = ($data['tempat_lahir'] ? $data['tempat_lahir'] . ', ' : '') . ($tglFormat !== '-' ? $tglFormat : '');
+                        if(!empty($data['tempat_lahir']) || !empty($data['tanggal_lahir'])) {
+                            $ttl = (!empty($data['tempat_lahir']) ? $data['tempat_lahir'] . ', ' : '') . ($tgl_lahir_indo !== '-' ? $tgl_lahir_indo : '');
                         }
                         
-                        $useThumb = isset($_GET['thumb']) && $_GET['thumb'] == '1';
-                        if ($useThumb) {
-                            $foto = $data['foto'] ? '/thumb.php?src=uploads/siswa/' . $data['foto'] . '&w=300&h=300' : 'https://ui-avatars.com/api/?name=' . urlencode($data['nama']) . '&background=065f46&color=fff';
-                        } else {
-                            $foto = $data['foto'] ? '/uploads/siswa/' . $data['foto'] : 'https://ui-avatars.com/api/?name=' . urlencode($data['nama']) . '&background=065f46&color=fff';
+                        $foto = 'https://ui-avatars.com/api/?name=' . urlencode($data['nama']) . '&background=065f46&color=fff';
+                        if (!empty($data['foto'])) {
+                            $foto = base_url('uploads/siswa/' . $data['foto']);
                         }
                         
-                        $tglCetak = date('d M Y');
-                        $kotaCetak = $inst ? $inst['kota'] : 'Jakarta';
-                        $namaKepala = $inst ? $inst['nama_kepala'] : 'Kepala Sekolah';
-                        $thn = date('Y');
+                        $tglCetak = $tgl_cetak;
+                        $kotaCetak = $kota_cetak;
+                        $namaKepala = !empty($inst['nama_kepala']) ? $inst['nama_kepala'] : 'Kepala Sekolah';
+                        $nipKepala = !empty($inst['nip_kepala']) ? $inst['nip_kepala'] : '-';
                         
-                        // QR TTD: Pengesahan
+                        // QR TTD: Pengesahan Kepala Sekolah
                         $txtTTD = "Telah disahkan oleh $namaKepala di $kotaCetak pada $tglCetak";
                         $qr_ttd_data = $txtTTD;
                         
-                        // QR Belakang: Token Login
-                        $nisn_nis = ($data['nisn'] ? $data['nisn'] . '/' : '') . $data['nis'];
-                        $qr_token = "TOKEN:" . $data['user_id'] . ":" . substr(md5($data['user_id'] . 'MASMIFHDA_SECURE_QR_2026'), 0, 16);
-                        $txtSiswa = $qr_token;
-                        $qr_absen_data = $txtSiswa;
+                        // QR Belakang: Token Absen & Login Siswa
+                        $qr_absen_data = "TOKEN:" . $data['user_id'] . ":" . substr(md5($data['user_id'] . 'MASMIFHDA_SECURE_QR_2026'), 0, 16);
                         
                         $username = $data['username'] ?: $data['nis'];
                     ?>
-                    
-                    <div class="id-card-wrapper">
+                    <?php if($sisi === 'kedua'): ?><div class="id-card-wrapper"><?php endif; ?>
                         <!-- SISI DEPAN -->
+                        <?php if($sisi !== 'belakang'): ?>
                         <div class="id-card-body">
-                            <!-- Watermark -->
-                            <?php if($inst && $inst['logo']): ?>
+                            <!-- Watermark Logo -->
+                            <?php if(!empty($inst['logo'])): ?>
                                 <?php if ($mode === 'vertical'): ?>
-                                    <img src="/uploads/logo/<?php echo $inst['logo']; ?>" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40mm; height: 40mm; object-fit: contain; opacity: 0.08; z-index: 1;">
+                                    <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50mm; height: 50mm; object-fit: contain; opacity: 0.08; z-index: 1;">
                                 <?php else: ?>
-                                    <img src="/uploads/logo/<?php echo $inst['logo']; ?>" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35mm; height: 35mm; object-fit: contain; opacity: 0.1; z-index: 1;">
+                                    <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35mm; height: 35mm; object-fit: contain; opacity: 0.1; z-index: 1;">
                                 <?php endif; ?>
                             <?php endif; ?>
 
                             <?php if ($mode === 'vertical'): ?>
                                 <!-- VERTIKAL SISI DEPAN -->
-                                <div style="height: 18mm; background: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' fill-opacity=\'0.25\' d=\'M0,128L48,144C96,160,192,192,288,197.3C384,203,480,181,576,149.3C672,117,768,75,864,64C960,53,1056,75,1152,106.7C1248,139,1344,181,1392,202.7L1440,224L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z\'%3E%3C/path%3E%3C/svg%3E'), linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; color: white; border-bottom: 1.5px solid #075985; flex-shrink: 0; z-index: 2; position: relative;">
-                                    <?php if($inst && $inst['logo']): ?>
-                                        <img src="/uploads/logo/<?php echo $inst['logo']; ?>" style="width: 8mm; height: 8mm; object-fit: contain; margin-bottom: 1mm; flex-shrink: 0;">
+                                <!-- Slim Header Bar -->
+                                <div style="height: 12mm; background: linear-gradient(135deg, #059669 0%, #047857 100%); display: flex; align-items: center; padding: 0 3.5mm; color: white; flex-shrink: 0; z-index: 2; position: relative;">
+                                    <?php if(!empty($inst['logo'])): ?>
+                                        <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="width: 7.5mm; height: 7.5mm; object-fit: contain; margin-right: 2.5mm; flex-shrink: 0;">
                                     <?php else: ?>
-                                        <div style="width: 8mm; height: 8mm; display: flex; align-items: center; justify-content: center; margin-bottom: 1mm; flex-shrink: 0;"><i data-lucide="graduation-cap" style="width: 6mm;"></i></div>
+                                        <div style="width: 7.5mm; height: 7.5mm; display: flex; align-items: center; justify-content: center; margin-right: 2.5mm; flex-shrink: 0;"><i data-lucide="graduation-cap" style="width: 6mm;"></i></div>
                                     <?php endif; ?>
-                                    <div style="text-align: center; line-height: 1.2;">
-                                        <div style="font-weight: 800; font-size: 8px; letter-spacing: 1px;">KARTU PELAJAR</div>
-                                        <div style="font-weight: 700; font-size: 7px; opacity: 0.95; text-transform: uppercase;"><?php echo $inst ? $inst['nama'] : 'GH-SSS ACADEMY'; ?></div>
+                                    <div style="line-height: 1.2; flex: 1; min-width: 0;">
+                                        <div style="font-weight: 800; font-size: 9.5px; letter-spacing: 1px;">KARTU PELAJAR</div>
+                                        <div style="font-weight: 600; font-size: 7px; opacity: 0.9; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo htmlspecialchars($inst['nama'] ?? 'MAS MIFHDA'); ?></div>
                                     </div>
                                 </div>
-                                <div style="flex: 1; padding: 2mm 3mm; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2;">
-                                    <div style="width: 20mm; height: 26mm; border: 1px solid #cbd5e1; border-radius: 1mm; overflow: hidden; padding: 0.8mm; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 2mm;">
-                                        <img src="<?php echo $foto; ?>" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5mm;">
+
+                                <!-- Body Content -->
+                                <div style="flex: 1; padding: 3mm 3.5mm 2mm; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2;">
+                                    <!-- Foto -->
+                                    <div style="width: 28mm; height: 35mm; border: 1.5px solid #e2e8f0; border-radius: 1.5mm; overflow: hidden; padding: 0.5mm; background: white; margin-bottom: 2mm;">
+                                        <img src="<?php echo $foto; ?>" style="width: 100%; height: 100%; object-fit: cover; border-radius: 1mm;">
                                     </div>
-                                    <div style="width: 100%; text-align: center; margin-bottom: 2mm;">
-                                        <div style="font-weight: 800; color: #0f172a; font-size: 9px; line-height: 1.2; margin-bottom: 1mm;"><?php echo htmlspecialchars($data['nama']); ?></div>
-                                        <div style="font-weight: 700; color: #475569; font-size: 7px;">NIS: <?php echo htmlspecialchars($data['nis']) . ($data['nisn'] ? ' / ' . htmlspecialchars($data['nisn']) : ''); ?></div>
-                                        <div style="font-weight: 700; color: #475569; font-size: 6.5px;"><?php echo $ttl; ?></div>
-                                        <div style="font-weight: 700; color: #475569; font-size: 6px; margin-top: 0.5mm; line-height: 1.2; padding: 0 2mm;"><?php echo htmlspecialchars($alamat); ?></div>
+                                    <!-- Nama -->
+                                    <div style="width: 100%; text-align: center; margin-bottom: 2mm; padding: 0 1mm;">
+                                        <div style="font-weight: 900; color: #0f172a; font-size: 10px; line-height: 1.2;"><?php echo htmlspecialchars($data['nama']); ?></div>
+                                        <div style="font-size: 7px; color: #64748b; margin-top: 0.5mm; font-weight: 600;"><?php echo htmlspecialchars($data['nis']) . (!empty($data['nisn']) ? ' / ' . htmlspecialchars($data['nisn']) : ''); ?></div>
                                     </div>
-                                    <div style="display: flex; flex-direction: row; align-items: flex-end; justify-content: space-between; width: 100%; margin-top: auto;">
-                                        <div style="text-align: left; max-width: 30mm;">
-                                            <div style="font-size: 5px; color: #475569; line-height: 1.4;"><?php echo $inst ? $inst['kota'] : 'Jakarta'; ?>, <?php echo date('d M Y'); ?><br>Kepala Madrasah</div>
-                                            <div style="font-size: 5.5px; font-weight: 800; color: #0f172a; margin-top: 3.5mm; border-bottom: 0.5px solid #0f172a; display: inline-block; padding-bottom: 0.5px;"><?php echo $inst ? $inst['nama_kepala'] : 'Kepala Sekolah'; ?></div>
-                                            <div style="font-size: 5px; color: #475569; margin-top: 0.5mm;">NIP. <?php echo $inst ? $inst['nip_kepala'] : '-'; ?></div>
+                                    <!-- Separator -->
+                                    <div style="width: 15mm; height: 0.5px; background: linear-gradient(90deg, transparent, #cbd5e1, transparent); margin-bottom: 2mm;"></div>
+                                    <!-- Data -->
+                                    <table style="width: 100%; font-size: 7px; border-collapse: collapse; line-height: 1.4; margin-bottom: auto;">
+                                        <tr>
+                                            <td style="font-weight: 600; width: 14mm; color: #94a3b8; vertical-align: top; padding-bottom: 0.8mm;">Tempat Lahir</td>
+                                            <td style="width: 1.5mm; vertical-align: top; color: #94a3b8;">:</td>
+                                            <td style="font-weight: 700; color: #334155; vertical-align: top;"><?php echo !empty($data['tempat_lahir']) ? htmlspecialchars($data['tempat_lahir']) : '-'; ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight: 600; color: #94a3b8; vertical-align: top; padding-bottom: 0.8mm;">Tanggal Lahir</td>
+                                            <td style="vertical-align: top; color: #94a3b8;">:</td>
+                                            <td style="font-weight: 700; color: #334155; vertical-align: top;"><?php echo $tgl_lahir_indo; ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight: 600; color: #94a3b8; vertical-align: top;">Alamat</td>
+                                            <td style="vertical-align: top; color: #94a3b8;">:</td>
+                                            <td style="font-weight: 700; color: #334155; vertical-align: top;"><?php echo htmlspecialchars($alamat); ?></td>
+                                        </tr>
+                                    </table>
+                                    <!-- TTD & QR -->
+                                    <div style="display: flex; flex-direction: row; align-items: flex-end; justify-content: space-between; width: 100%; margin-top: 1.5mm; padding-top: 1.5mm; border-top: 0.5px solid #f1f5f9;">
+                                        <div style="text-align: left; max-width: 38mm;">
+                                            <div style="font-size: 5.5px; color: #94a3b8; line-height: 1.35;"><?php echo htmlspecialchars($kotaCetak); ?>, <?php echo htmlspecialchars($tglCetak); ?><br>Kepala Madrasah</div>
+                                            <div style="font-size: 6.5px; font-weight: 800; color: #0f172a; margin-top: 2.5mm; border-bottom: 0.5px solid #0f172a; display: inline-block; padding-bottom: 0.3px;"><?php echo htmlspecialchars($namaKepala); ?></div>
+                                            <div style="font-size: 5.5px; color: #94a3b8; margin-top: 0.3mm;">NIP. <?php echo htmlspecialchars($nipKepala); ?></div>
                                         </div>
                                         <div id="qr-ttd-<?php echo $data['id']; ?>" style="width: 12mm; height: 12mm; flex-shrink: 0;"></div>
                                         <script>
                                             new QRCode(document.getElementById("qr-ttd-<?php echo $data['id']; ?>"), {
-                                                text: "<?php echo addslashes($qr_ttd_data); ?>",
+                                                text: <?php echo json_encode($qr_ttd_data); ?>,
                                                 width: 60,
                                                 height: 60,
                                                 correctLevel : QRCode.CorrectLevel.L
@@ -1640,21 +1766,21 @@ class SiakadSiswaController {
                             <?php else: ?>
                                 <!-- HORIZONTAL SISI DEPAN -->
                                 <!-- Header Bar -->
-                                <div style="height: 12.5mm; background: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' fill-opacity=\'0.25\' d=\'M0,128L48,144C96,160,192,192,288,197.3C384,203,480,181,576,149.3C672,117,768,75,864,64C960,53,1056,75,1152,106.7C1248,139,1344,181,1392,202.7L1440,224L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z\'%3E%3C/path%3E%3C/svg%3E'), linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); background-size: cover; background-position: center; display: flex; align-items: center; padding: 0 4mm; color: white; border-bottom: 1.5px solid #075985; flex-shrink: 0; z-index: 2; position: relative;">
-                                    <?php if($inst && $inst['logo']): ?>
-                                        <img src="/uploads/logo/<?php echo $inst['logo']; ?>" style="width: 10mm; height: 10mm; object-fit: contain; margin-right: 3mm; flex-shrink: 0;">
+                                <div style="height: 12.5mm; background: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' fill-opacity=\'0.25\' d=\'M0,128L48,144C96,160,192,192,288,197.3C384,203,480,181,576,149.3C672,117,768,75,864,64C960,53,1056,75,1152,106.7C1248,139,1344,181,1392,202.7L1440,224L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z\'%3E%3C/path%3E%3C/svg%3E'), linear-gradient(135deg, #059669 0%, #10b981 100%); background-size: cover; background-position: center; display: flex; align-items: center; padding: 0 4mm; color: white; border-bottom: 1.5px solid #047857; flex-shrink: 0; z-index: 2; position: relative;">
+                                    <?php if(!empty($inst['logo'])): ?>
+                                        <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="width: 10mm; height: 10mm; object-fit: contain; margin-right: 3mm; flex-shrink: 0;">
                                     <?php else: ?>
                                         <div style="width: 10mm; height: 10mm; display: flex; align-items: center; justify-content: center; margin-right: 3mm; flex-shrink: 0;"><i data-lucide="graduation-cap" style="width: 7.5mm;"></i></div>
                                     <?php endif; ?>
                                     <div style="text-align: left; line-height: 1.2; flex: 1; min-width: 0;">
                                         <div style="font-weight: 800; font-size: 10px; letter-spacing: 1px; white-space: nowrap;">KARTU PELAJAR</div>
-                                        <div style="font-weight: 700; font-size: 8.5px; opacity: 0.95; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo $inst ? $inst['nama'] : 'GH-SSS ACADEMY'; ?></div>
+                                        <div style="font-weight: 700; font-size: 8.5px; opacity: 0.95; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo htmlspecialchars($inst['nama'] ?? 'MAS MIFHDA'); ?></div>
                                     </div>
                                 </div>
                                 
                                 <!-- Body: Foto besar kiri, Data+QR kanan -->
                                 <div style="flex: 1; padding: 2mm 4mm; display: flex; gap: 3mm; position: relative; z-index: 2;">
-                                    <!-- KIRI: Foto besar (full tinggi) -->
+                                    <!-- KIRI: Foto besar -->
                                     <div style="width: 22mm; flex-shrink: 0; border: 1px solid #cbd5e1; border-radius: 1mm; overflow: hidden; padding: 0.8mm; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); align-self: stretch;">
                                         <img src="<?php echo $foto; ?>" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5mm;">
                                     </div>
@@ -1665,23 +1791,23 @@ class SiakadSiswaController {
                                                 <td style="font-weight: 700; width: 17mm; color: #475569; vertical-align: top;">Nama</td>
                                                 <td style="width: 2mm; vertical-align: top;">:</td>
                                                 <td style="vertical-align: top; max-width: 38mm; overflow: hidden; white-space: nowrap;">
-                                                    <div class="auto-fit-text" style="font-weight: 800; color: #0f172a; font-size: 8px;"><?php echo htmlspecialchars($data['nama']); ?></div>
+                                                    <div style="font-weight: 800; color: #0f172a; font-size: 8px;"><?php echo htmlspecialchars($data['nama']); ?></div>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="font-weight: 700; color: #475569; vertical-align: top;">NIS / NISN</td>
                                                 <td style="vertical-align: top;">:</td>
-                                                <td style="font-weight: 700; color: #1e293b; vertical-align: top;"><?php echo htmlspecialchars($data['nis']) . ($data['nisn'] ? ' / ' . htmlspecialchars($data['nisn']) : ''); ?></td>
+                                                <td style="font-weight: 700; color: #1e293b; vertical-align: top;"><?php echo htmlspecialchars($data['nis']) . (!empty($data['nisn']) ? ' / ' . htmlspecialchars($data['nisn']) : ''); ?></td>
                                             </tr>
                                             <tr>
                                                 <td style="font-weight: 700; color: #475569; vertical-align: top;">Tempat Lahir</td>
                                                 <td style="vertical-align: top;">:</td>
-                                                <td style="font-weight: 700; color: #1e293b; vertical-align: top;"><?php echo $data['tempat_lahir'] ?: '-'; ?></td>
+                                                <td style="font-weight: 700; color: #1e293b; vertical-align: top;"><?php echo !empty($data['tempat_lahir']) ? htmlspecialchars($data['tempat_lahir']) : '-'; ?></td>
                                             </tr>
                                             <tr>
                                                 <td style="font-weight: 700; color: #475569; vertical-align: top;">Tanggal Lahir</td>
                                                 <td style="vertical-align: top;">:</td>
-                                                <td style="font-weight: 700; color: #1e293b; vertical-align: top;"><?php echo $tglFormat; ?></td>
+                                                <td style="font-weight: 700; color: #1e293b; vertical-align: top;"><?php echo $tgl_lahir_indo; ?></td>
                                             </tr>
                                             <tr>
                                                 <td style="font-weight: 700; color: #475569; vertical-align: top;">Alamat</td>
@@ -1694,7 +1820,7 @@ class SiakadSiswaController {
                                             <div id="qr-ttd-<?php echo $data['id']; ?>" style="width: 12mm; height: 12mm; flex-shrink: 0;"></div>
                                             <script>
                                                 new QRCode(document.getElementById("qr-ttd-<?php echo $data['id']; ?>"), {
-                                                    text: "<?php echo addslashes($qr_ttd_data); ?>",
+                                                    text: <?php echo json_encode($qr_ttd_data); ?>,
                                                     width: 60,
                                                     height: 60,
                                                     correctLevel : QRCode.CorrectLevel.L
@@ -1710,58 +1836,97 @@ class SiakadSiswaController {
                                                 }, 200);
                                             </script>
                                             <div style="text-align: left;">
-                                                <div style="font-size: 5px; color: #475569; line-height: 1.4;"><?php echo $inst ? $inst['kota'] : 'Jakarta'; ?>, <?php echo date('d M Y'); ?><br>Mengetahui, Kepala Madrasah</div>
-                                                <div style="font-size: 5.5px; font-weight: 800; color: #0f172a; margin-top: 2.5mm; border-bottom: 0.5px solid #0f172a; display: inline-block; padding-bottom: 0.5px;"><?php echo $inst ? $inst['nama_kepala'] : 'Kepala Sekolah'; ?></div>
-                                                <div style="font-size: 5px; color: #475569; margin-top: 0.5mm;">NIP. <?php echo $inst ? $inst['nip_kepala'] : '-'; ?></div>
+                                                <div style="font-size: 5px; color: #475569; line-height: 1.4;"><?php echo htmlspecialchars($kotaCetak); ?>, <?php echo htmlspecialchars($tglCetak); ?><br>Mengetahui, Kepala Madrasah</div>
+                                                <div style="font-size: 5.5px; font-weight: 800; color: #0f172a; margin-top: 2.5mm; border-bottom: 0.5px solid #0f172a; display: inline-block; padding-bottom: 0.5px;"><?php echo htmlspecialchars($namaKepala); ?></div>
+                                                <div style="font-size: 5px; color: #475569; margin-top: 0.5mm;">NIP. <?php echo htmlspecialchars($nipKepala); ?></div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             <?php endif; ?>
-                            <div style="height: 1.5mm; background: #0284c7; width: 100%; flex-shrink: 0; position: relative; z-index: 2;"></div>
+                            <div style="height: 1.5mm; background: #059669; width: 100%; flex-shrink: 0; position: relative; z-index: 2;"></div>
                         </div>
-                        
-                        <!-- SISI BELAKANG -->
-                        <div class="id-card-body" style="background: white; color: #0f172a; padding: 4mm; align-items: center; justify-content: center; <?php echo $mode === 'vertical' ? 'flex-direction: column;' : ''; ?>">
-                            <div style="width: 100%; text-align: center; margin-bottom: 3mm;">
-                                <div style="font-weight: 800; font-size: <?php echo $mode === 'vertical' ? '9px' : '10px'; ?>; letter-spacing: 1px; color: #0284c7;">KARTU PELAJAR ELEKTRONIK</div>
-                                <div style="font-size: 6px; color: #64748b; margin-top: 1mm;">Gunakan QR Code ini untuk melihat data identitas siswa</div>
-                            </div>
-                            
-                            <div style="background: white; padding: 2mm; border-radius: 2mm; margin-bottom: 3mm; border: 1px solid #cbd5e1;">
-                                <div id="qr-absen-<?php echo $data['id']; ?>" style="<?php echo $mode === 'vertical' ? 'width: 30mm; height: 30mm;' : 'width: 25mm; height: 25mm;'; ?>"></div>
-                                <script>
-                                    new QRCode(document.getElementById("qr-absen-<?php echo $data['id']; ?>"), {
-                                        text: <?php echo json_encode($qr_absen_data); ?>,
-                                        width: 100,
-                                        height: 100,
-                                        correctLevel : QRCode.CorrectLevel.M
-                                    });
-                                    setTimeout(() => {
-                                        let qrEl = document.getElementById("qr-absen-<?php echo $data['id']; ?>");
-                                        if(qrEl) {
-                                            let img = qrEl.querySelector('img');
-                                            if(img) img.style.width = '100%';
-                                            let canvas = qrEl.querySelector('canvas');
-                                            if(canvas) canvas.style.display = 'none';
-                                        }
-                                    }, 200);
-                                </script>
-                            </div>
-                            
+                        <?php endif; ?>
 
+                        <!-- SISI BELAKANG -->
+                        <?php if($sisi !== 'depan'): ?>
+                        <div class="id-card-body" style="background: white; position: relative; overflow: hidden; color: #0f172a; padding: 4mm; align-items: center; justify-content: center; <?php echo $mode === 'vertical' ? 'flex-direction: column;' : 'flex-direction: row; gap: 4mm;'; ?>">
+                            
+                            <!-- Ornamen Geometris Modern -->
+                            <div style="position: absolute; top: -10mm; right: -10mm; width: 45mm; height: 45mm; background: linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0) 100%); border-radius: 50%; z-index: 1;"></div>
+                            <div style="position: absolute; bottom: -15mm; left: -15mm; width: 55mm; height: 55mm; background: linear-gradient(45deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0) 100%); border-radius: 50%; z-index: 1;"></div>
+                            <div style="position: absolute; top: 50%; right: 5mm; transform: translateY(-50%) rotate(45deg); width: 20mm; height: 20mm; border: 1.5px solid rgba(245,158,11,0.15); z-index: 1;"></div>
+                            <div style="position: absolute; top: 10mm; left: 5mm; width: 8mm; height: 8mm; background: rgba(239,68,68,0.05); border-radius: 50%; z-index: 1;"></div>
+
+                            <!-- Watermark Logo -->
+                            <?php if(!empty($inst['logo'])): ?>
+                                <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 25mm; height: 25mm; object-fit: contain; opacity: 0.04; z-index: 1; filter: grayscale(100%);">
+                            <?php endif; ?>
+
+                            <div style="width: 100%; text-align: center; margin-bottom: 2mm; z-index: 2; <?php echo $mode === 'horizontal' ? 'flex: 1;' : ''; ?>">
+                                <?php if(!empty($inst['logo'])): ?>
+                                    <div style="margin-bottom: 1.5mm;">
+                                        <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="width: 9mm; height: 9mm; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));">
+                                    </div>
+                                <?php endif; ?>
+                                <div style="display: inline-block; background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); color: white; padding: 1.5mm 4mm; border-radius: 4px; font-weight: 900; font-size: <?php echo $mode === 'vertical' ? '10px' : '9px'; ?>; letter-spacing: 1.5px; margin-bottom: 2mm; box-shadow: 0 4px 10px rgba(15,23,42,0.2); border-left: 3px solid #10b981;">
+                                    KARTU PELAJAR
+                                </div>
+                                <div style="font-size: <?php echo $mode === 'vertical' ? '7.5px' : '7px'; ?>; color: #475569; margin-top: 1mm; font-weight: 700; line-height: 1.5; letter-spacing: 0.5px;">
+                                    IDENTITAS DIGITAL & ABSENSI<br>
+                                    <span style="font-weight: 500; font-size: 6.5px; color: #94a3b8;">Gunakan QR Code untuk pemindaian</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; <?php echo $mode === 'horizontal' ? 'margin-left: 2mm;' : ''; ?>">
+                                <!-- QR Container dengan Desain Tech/Modern -->
+                                <div style="background: white; padding: 2.5mm; border-radius: 4px; border: 1.5px solid #e2e8f0; box-shadow: 0 8px 20px rgba(0,0,0,0.06); position: relative;">
+                                    <!-- Sudut Aksen -->
+                                    <div style="position: absolute; top: -1px; left: -1px; width: 5px; height: 5px; border-top: 2px solid #10b981; border-left: 2px solid #10b981;"></div>
+                                    <div style="position: absolute; top: -1px; right: -1px; width: 5px; height: 5px; border-top: 2px solid #10b981; border-right: 2px solid #10b981;"></div>
+                                    <div style="position: absolute; bottom: -1px; left: -1px; width: 5px; height: 5px; border-bottom: 2px solid #10b981; border-left: 2px solid #10b981;"></div>
+                                    <div style="position: absolute; bottom: -1px; right: -1px; width: 5px; height: 5px; border-bottom: 2px solid #10b981; border-right: 2px solid #10b981;"></div>
+
+                                    <div id="qr-absen-<?php echo $data['id']; ?>" style="<?php echo $mode === 'vertical' ? 'width: 30mm; height: 30mm;' : 'width: 26mm; height: 26mm;'; ?>"></div>
+                                    <script>
+                                        new QRCode(document.getElementById("qr-absen-<?php echo $data['id']; ?>"), {
+                                            text: <?php echo json_encode($qr_absen_data); ?>,
+                                            width: 120,
+                                            height: 120,
+                                            correctLevel : QRCode.CorrectLevel.M,
+                                            colorDark : "#0f172a",
+                                            colorLight : "#ffffff"
+                                        });
+                                        setTimeout(() => {
+                                            let qrEl = document.getElementById("qr-absen-<?php echo $data['id']; ?>");
+                                            if(qrEl) {
+                                                let img = qrEl.querySelector('img');
+                                                if(img) img.style.width = '100%';
+                                                let canvas = qrEl.querySelector('canvas');
+                                                if(canvas) canvas.style.display = 'none';
+                                            }
+                                        }, 200);
+                                    </script>
+                                </div>
+
+                                <?php if ($nama_qr == '1'): ?>
+                                    <div style="font-weight: 800; font-size: <?php echo $mode === 'vertical' ? '10px' : '9px'; ?>; color: #1e293b; margin-top: 2mm; text-align: center; text-transform: uppercase; background: #f8fafc; padding: 1mm 3mm; border-radius: 4px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <?php echo htmlspecialchars($data['nama']); ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div style="margin-top: <?php echo $mode === 'vertical' ? '4mm' : '2.5mm'; ?>; font-size: 5.5px; color: #64748b; text-align: center; max-width: 45mm; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 1.5mm;">
+                                    Barang siapa menemukan kartu ini,<br>mohon kesediaannya mengembalikan ke:<br>
+                                    <b style="color: #0f172a; font-size: 6px;"><?php echo htmlspecialchars($inst['nama'] ?? 'Madrasah'); ?></b>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                        <?php endif; ?>
+                    <?php if($sisi === 'kedua'): ?></div><?php endif; ?>
                 <?php endforeach; ?>
             </div>
             <script>
                 lucide.createIcons();
-                // Otomatis buka jendela print setelah gambar selesai dimuat
-                window.onload = function() {
-                    setTimeout(function(){
-                        window.print();
-                    }, 1000);
-                }
             </script>
         </body>
         </html>
