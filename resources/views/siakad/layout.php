@@ -67,6 +67,65 @@
             font-size: 12.8px !important;
         }
 
+        /* ── Global Crisp Lucide Icon Sizing ── */
+        svg.lucide, i[data-lucide] {
+            display: inline-block;
+            vertical-align: middle;
+            width: 16px;
+            height: 16px;
+            max-width: 16px;
+            max-height: 16px;
+            flex-shrink: 0;
+        }
+
+        /* Sidebar navigation icons: 16px */
+        .z-sidebar svg.lucide, .z-sidebar i[data-lucide],
+        .z-nav-item svg, .z-nav-item i,
+        .z-nav-header svg, .z-nav-header i,
+        .z-nav-dropdown-toggle svg, .z-nav-dropdown-toggle i {
+            width: 16px !important;
+            height: 16px !important;
+            max-width: 16px !important;
+            max-height: 16px !important;
+            flex-shrink: 0 !important;
+        }
+        .z-subnav-item svg, .z-subnav-item i {
+            width: 13px !important;
+            height: 13px !important;
+            max-width: 13px !important;
+            max-height: 13px !important;
+            flex-shrink: 0 !important;
+        }
+
+        /* Stat cards icons in Dashboard: 20px */
+        .stat-icon svg, .stat-icon i,
+        .z-stat-icon svg, .z-stat-icon i {
+            width: 20px !important;
+            height: 20px !important;
+            max-width: 20px !important;
+            max-height: 20px !important;
+        }
+
+        /* Quick Navigation cards in Dashboard: 18px */
+        .icon-box svg, .icon-box i {
+            width: 18px !important;
+            height: 18px !important;
+            max-width: 18px !important;
+            max-height: 18px !important;
+        }
+
+        /* Action buttons & Table buttons: 15px */
+        .action-btn svg, .action-btn i,
+        .av-btn svg, .av-btn i,
+        .btn svg, .btn i,
+        .e-btn svg, .e-btn i,
+        .z-btn svg, .z-btn i {
+            width: 15px !important;
+            height: 15px !important;
+            max-width: 15px !important;
+            max-height: 15px !important;
+        }
+
         /* ── Elite Page Header (Mismifhda Concept with Masmifhda Blue) ── */
         .elite-page-header {
             position: relative; padding: 2rem; margin-bottom: 1.5rem;
@@ -362,9 +421,9 @@
             color: #fff; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
             font-weight: 800;
         }
-        .z-nav-item i { width: 16px; height: 16px; flex-shrink: 0; }
+        .z-nav-item i, .z-nav-item svg { width: 16px !important; height: 16px !important; flex-shrink: 0; }
 
-        /* â”€â”€ Nav Group (Dropdown) â”€â”€ */
+        /* ── Nav Group (Dropdown) ── */
         .z-nav-group { margin: 1px .5rem; border-radius: 8px; }
         .z-nav-header {
             display: flex; align-items: center; justify-content: space-between;
@@ -372,6 +431,7 @@
             font-size: .8rem; font-weight: 600; cursor: pointer;
             transition: .15s; border-radius: 8px;
         }
+        .z-nav-header i, .z-nav-header svg { width: 16px !important; height: 16px !important; flex-shrink: 0; }
         .z-nav-header:hover { background: rgba(255,255,255,.07); color: #fff; }
         .z-subnav { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
         .z-nav-group.open .z-subnav { max-height: 400px; }

@@ -41,13 +41,15 @@
             url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1.5' fill='white' fill-opacity='0.15'/%3E%3C/svg%3E");
         z-index: 1;
     }
-    .hero-bg-icon { position: absolute; right: -30px; bottom: -30px; font-size: 120px; opacity: 0.05; transform: rotate(-15deg); z-index: 1; }
+    .hero-bg-icon { position: absolute; right: -30px; bottom: -30px; font-size: 120px; opacity: 0.05; transform: rotate(-15deg); z-index: 1; pointer-events: none; }
+    .hero-bg-icon i, .hero-bg-icon svg { width: 120px !important; height: 120px !important; }
     .hero-content { position: relative; z-index: 2; max-width: 550px; }
     .hero-badge { background: rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 100px; font-weight: 800; font-size: 0.7rem; display: inline-block; margin-bottom: .8rem; border: 1px solid rgba(255,255,255,0.3); }
     .hero-content h1 { font-size: 1.8rem; font-weight: 800; margin: 0 0 .5rem; letter-spacing: -0.5px; line-height: 1.15; }
     .hero-content p { font-size: .92rem; opacity: 0.7; line-height: 1.5; margin-bottom: 1.2rem; }
     .hero-actions { display: flex; gap: .75rem; }
     .hero-btn { text-decoration: none; padding: .6rem 1.25rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; font-size: .85rem !important; transition: 0.3s; }
+    .hero-btn i, .hero-btn svg { width: 16px !important; height: 16px !important; }
     .hero-btn.primary { background: #0ea5e9; color: white; box-shadow: 0 10px 20px rgba(14,165,233,0.2); }
     .hero-btn.secondary { background: rgba(255,255,255,0.1); color: white; backdrop-filter: blur(10px); }
     .hero-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(0,0,0,0.2); }
@@ -58,11 +60,12 @@
     .mini-stat .val { font-size: 1.5rem; font-weight: 800; color: white; }
     .mini-stat .lab { font-size: 0.7rem; font-weight: 700; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* â”€â”€â”€ Stats Cards â”€â”€â”€ */
+    /* ─── Stats Cards ─── */
     .z-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; padding: 0 2rem 1.5rem; }
     .stat-card { background: white; padding: 1.2rem; border-radius: 16px; display: flex; align-items: center; gap: 1rem; border: 1px solid #f1f5f9; position: relative; transition: 0.3s; }
     .stat-card:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(0,0,0,0.03); }
-    .stat-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .stat-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .stat-icon i, .stat-icon svg, .stat-icon .lucide { width: 20px !important; height: 20px !important; max-width: 20px !important; max-height: 20px !important; }
     .stat-info .label { font-size: 0.72rem; font-weight: 700; color: #64748b; margin-bottom: 2px; }
     .stat-info .value { font-size: 1.25rem; font-weight: 800; color: #0f172a; }
     .stat-info .sub { font-size: 0.68rem; color: #94a3b8; }
@@ -76,11 +79,12 @@
     .stat-chart-mini { position: absolute; right: 1.2rem; bottom: 1.2rem; display: flex; gap: 3px; align-items: flex-end; height: 16px; }
     .stat-chart-mini .bar { width: 3px; background: #0ea5e9; border-radius: 2px; opacity: 0.3; }
 
-    /* â”€â”€â”€ Dashboard Content â”€â”€â”€ */
+    /* ─── Dashboard Content ─── */
     .z-dashboard-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.25rem; padding: 0 2rem 2.5rem; }
     .z-panel-modern { background: white; border-radius: 20px; padding: 1.5rem; border: 1px solid #f1f5f9; }
     .panel-header { margin-bottom: 1.2rem; }
     .panel-header h3 { margin: 0; font-size: .95rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px; }
+    .panel-header h3 i, .panel-header h3 svg { width: 16px !important; height: 16px !important; }
     .panel-header p { margin: 2px 0 0; font-size: 0.8rem; color: #94a3b8; }
 
     .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
@@ -93,8 +97,8 @@
     .quick-item.special { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); border: none; }
     .quick-item.special span { color: white; }
 
-    .icon-box { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-    .icon-box i { width: 18px !important; height: 18px !important; }
+    .icon-box { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .icon-box i, .icon-box svg, .icon-box .lucide { width: 18px !important; height: 18px !important; max-width: 18px !important; max-height: 18px !important; }
     .s-green { background: #f0fdf4; color: #0ea5e9; }
     .s-blue { background: #eff6ff; color: #3b82f6; }
     .s-amber { background: #fffbeb; color: #f59e0b; }
@@ -105,7 +109,7 @@
     .activity-list { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.25rem; }
     .activity-item { display: flex; gap: .75rem; align-items: flex-start; }
     .act-icon { width: 34px; height: 34px; border-radius: 50%; background: #f8fafc; color: #64748b; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .act-icon i { width: 16px !important; height: 16px !important; }
+    .act-icon i, .act-icon svg, .act-icon .lucide { width: 16px !important; height: 16px !important; max-width: 16px !important; max-height: 16px !important; }
     .act-text { display: flex; flex-direction: column; }
     .act-text strong { font-size: .82rem !important; color: #1e293b; }
     .act-text span { font-size: 0.7rem !important; color: #94a3b8; }
@@ -156,7 +160,7 @@
             <!-- Welcome Hero -->
             <div class="welcome-hero">
                 <div class="hero-content">
-                    <div class="hero-badge">SIAKAD MI MIFTAHUL HUDA v2.0</div>
+                    <div class="hero-badge">SIAKAD MA MIFTAHUL HUDA v2.0</div>
                     <h1>Selamat Datang, <?php echo $nama; ?>! <span class="wave">👋</span></h1>
                     <p>Fokus Akademik. Kelola data siswa, rombongan belajar, presensi, hingga penilaian secara efisien dalam satu pintu.</p>
                 </div>
