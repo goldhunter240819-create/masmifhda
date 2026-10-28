@@ -1368,7 +1368,7 @@ class SiakadSiswaController {
                              
         $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $semua_kelas = $db->query("SELECT * FROM kelas ORDER BY nama_kelas ASC")->fetchAll();
-        $mode = isset($_GET['mode']) ? $_GET['mode'] : 'horizontal';
+        $mode = isset($_GET['mode']) ? $_GET['mode'] : (isset($_POST['mode']) ? $_POST['mode'] : 'horizontal');
         $sisi = isset($_GET['sisi']) ? $_GET['sisi'] : 'kedua';
         $nama_qr = isset($_GET['nama_qr']) ? $_GET['nama_qr'] : '0';
         $kota_cetak = isset($_GET['kota_cetak']) ? $_GET['kota_cetak'] : (!empty($inst['kota']) ? $inst['kota'] : 'Jakarta');
@@ -1483,7 +1483,7 @@ class SiakadSiswaController {
                     border: 1px solid #e2e8f0; 
                     display: flex; 
                     flex-direction: column;
-                    background: radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(5, 150, 105, 0.05) 0%, transparent 50%), white;
+                    background: radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.12) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(2, 132, 199, 0.06) 0%, transparent 50%), white;
                     flex-shrink: 0;
                     page-break-inside: avoid;
                 }
@@ -1499,7 +1499,7 @@ class SiakadSiswaController {
                     border: 1px solid #e2e8f0; 
                     display: flex; 
                     flex-direction: column;
-                    background: radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(5, 150, 105, 0.05) 0%, transparent 50%), white;
+                    background: radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.12) 0%, transparent 60%), radial-gradient(circle at 0% 100%, rgba(2, 132, 199, 0.06) 0%, transparent 50%), white;
                     flex-shrink: 0;
                     page-break-inside: avoid;
                 }
@@ -1627,7 +1627,7 @@ class SiakadSiswaController {
                             <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i> VERTIKAL
                         </button>
                     <?php endif; ?>
-                    <button class="btn-print" onclick="window.print()" style="background: #059669; color: white;">
+                    <button class="btn-print" onclick="window.print()" style="background: #0284c7; color: white;">
                         <i data-lucide="printer" style="width: 16px; height: 16px;"></i> CETAK KARTU
                     </button>
                 </div>
@@ -1658,7 +1658,7 @@ class SiakadSiswaController {
                             $ttl = (!empty($data['tempat_lahir']) ? $data['tempat_lahir'] . ', ' : '') . ($tgl_lahir_indo !== '-' ? $tgl_lahir_indo : '');
                         }
                         
-                        $foto = 'https://ui-avatars.com/api/?name=' . urlencode($data['nama']) . '&background=065f46&color=fff';
+                        $foto = 'https://ui-avatars.com/api/?name=' . urlencode($data['nama']) . '&background=0284c7&color=fff';
                         if (!empty($data['foto'])) {
                             $foto = base_url('uploads/siswa/' . $data['foto']);
                         }
@@ -1693,7 +1693,7 @@ class SiakadSiswaController {
                             <?php if ($mode === 'vertical'): ?>
                                 <!-- VERTIKAL SISI DEPAN -->
                                 <!-- Slim Header Bar -->
-                                <div style="height: 12mm; background: linear-gradient(135deg, #059669 0%, #047857 100%); display: flex; align-items: center; padding: 0 3.5mm; color: white; flex-shrink: 0; z-index: 2; position: relative;">
+                                <div style="height: 12mm; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); display: flex; align-items: center; padding: 0 3.5mm; color: white; flex-shrink: 0; z-index: 2; position: relative;">
                                     <?php if(!empty($inst['logo'])): ?>
                                         <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="width: 7.5mm; height: 7.5mm; object-fit: contain; margin-right: 2.5mm; flex-shrink: 0;">
                                     <?php else: ?>
@@ -1766,7 +1766,7 @@ class SiakadSiswaController {
                             <?php else: ?>
                                 <!-- HORIZONTAL SISI DEPAN -->
                                 <!-- Header Bar -->
-                                <div style="height: 12.5mm; background: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' fill-opacity=\'0.25\' d=\'M0,128L48,144C96,160,192,192,288,197.3C384,203,480,181,576,149.3C672,117,768,75,864,64C960,53,1056,75,1152,106.7C1248,139,1344,181,1392,202.7L1440,224L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z\'%3E%3C/path%3E%3C/svg%3E'), linear-gradient(135deg, #059669 0%, #10b981 100%); background-size: cover; background-position: center; display: flex; align-items: center; padding: 0 4mm; color: white; border-bottom: 1.5px solid #047857; flex-shrink: 0; z-index: 2; position: relative;">
+                                <div style="height: 12.5mm; background: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' fill-opacity=\'0.25\' d=\'M0,128L48,144C96,160,192,192,288,197.3C384,203,480,181,576,149.3C672,117,768,75,864,64C960,53,1056,75,1152,106.7C1248,139,1344,181,1392,202.7L1440,224L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z\'%3E%3C/path%3E%3C/svg%3E'), linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); background-size: cover; background-position: center; display: flex; align-items: center; padding: 0 4mm; color: white; border-bottom: 1.5px solid #0369a1; flex-shrink: 0; z-index: 2; position: relative;">
                                     <?php if(!empty($inst['logo'])): ?>
                                         <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="width: 10mm; height: 10mm; object-fit: contain; margin-right: 3mm; flex-shrink: 0;">
                                     <?php else: ?>
@@ -1844,7 +1844,7 @@ class SiakadSiswaController {
                                     </div>
                                 </div>
                             <?php endif; ?>
-                            <div style="height: 1.5mm; background: #059669; width: 100%; flex-shrink: 0; position: relative; z-index: 2;"></div>
+                            <div style="height: 1.5mm; background: #0284c7; width: 100%; flex-shrink: 0; position: relative; z-index: 2;"></div>
                         </div>
                         <?php endif; ?>
 
@@ -1853,7 +1853,7 @@ class SiakadSiswaController {
                         <div class="id-card-body" style="background: white; position: relative; overflow: hidden; color: #0f172a; padding: 4mm; align-items: center; justify-content: center; <?php echo $mode === 'vertical' ? 'flex-direction: column;' : 'flex-direction: row; gap: 4mm;'; ?>">
                             
                             <!-- Ornamen Geometris Modern -->
-                            <div style="position: absolute; top: -10mm; right: -10mm; width: 45mm; height: 45mm; background: linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0) 100%); border-radius: 50%; z-index: 1;"></div>
+                            <div style="position: absolute; top: -10mm; right: -10mm; width: 45mm; height: 45mm; background: linear-gradient(135deg, rgba(14,165,233,0.2) 0%, rgba(14,165,233,0) 100%); border-radius: 50%; z-index: 1;"></div>
                             <div style="position: absolute; bottom: -15mm; left: -15mm; width: 55mm; height: 55mm; background: linear-gradient(45deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0) 100%); border-radius: 50%; z-index: 1;"></div>
                             <div style="position: absolute; top: 50%; right: 5mm; transform: translateY(-50%) rotate(45deg); width: 20mm; height: 20mm; border: 1.5px solid rgba(245,158,11,0.15); z-index: 1;"></div>
                             <div style="position: absolute; top: 10mm; left: 5mm; width: 8mm; height: 8mm; background: rgba(239,68,68,0.05); border-radius: 50%; z-index: 1;"></div>
@@ -1869,7 +1869,7 @@ class SiakadSiswaController {
                                         <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" style="width: 9mm; height: 9mm; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));">
                                     </div>
                                 <?php endif; ?>
-                                <div style="display: inline-block; background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); color: white; padding: 1.5mm 4mm; border-radius: 4px; font-weight: 900; font-size: <?php echo $mode === 'vertical' ? '10px' : '9px'; ?>; letter-spacing: 1.5px; margin-bottom: 2mm; box-shadow: 0 4px 10px rgba(15,23,42,0.2); border-left: 3px solid #10b981;">
+                                <div style="display: inline-block; background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); color: white; padding: 1.5mm 4mm; border-radius: 4px; font-weight: 900; font-size: <?php echo $mode === 'vertical' ? '10px' : '9px'; ?>; letter-spacing: 1.5px; margin-bottom: 2mm; box-shadow: 0 4px 10px rgba(15,23,42,0.2); border-left: 3px solid #0284c7;">
                                     KARTU PELAJAR
                                 </div>
                                 <div style="font-size: <?php echo $mode === 'vertical' ? '7.5px' : '7px'; ?>; color: #475569; margin-top: 1mm; font-weight: 700; line-height: 1.5; letter-spacing: 0.5px;">
@@ -1882,10 +1882,10 @@ class SiakadSiswaController {
                                 <!-- QR Container dengan Desain Tech/Modern -->
                                 <div style="background: white; padding: 2.5mm; border-radius: 4px; border: 1.5px solid #e2e8f0; box-shadow: 0 8px 20px rgba(0,0,0,0.06); position: relative;">
                                     <!-- Sudut Aksen -->
-                                    <div style="position: absolute; top: -1px; left: -1px; width: 5px; height: 5px; border-top: 2px solid #10b981; border-left: 2px solid #10b981;"></div>
-                                    <div style="position: absolute; top: -1px; right: -1px; width: 5px; height: 5px; border-top: 2px solid #10b981; border-right: 2px solid #10b981;"></div>
-                                    <div style="position: absolute; bottom: -1px; left: -1px; width: 5px; height: 5px; border-bottom: 2px solid #10b981; border-left: 2px solid #10b981;"></div>
-                                    <div style="position: absolute; bottom: -1px; right: -1px; width: 5px; height: 5px; border-bottom: 2px solid #10b981; border-right: 2px solid #10b981;"></div>
+                                    <div style="position: absolute; top: -1px; left: -1px; width: 5px; height: 5px; border-top: 2px solid #0284c7; border-left: 2px solid #0284c7;"></div>
+                                    <div style="position: absolute; top: -1px; right: -1px; width: 5px; height: 5px; border-top: 2px solid #0284c7; border-right: 2px solid #0284c7;"></div>
+                                    <div style="position: absolute; bottom: -1px; left: -1px; width: 5px; height: 5px; border-bottom: 2px solid #0284c7; border-left: 2px solid #0284c7;"></div>
+                                    <div style="position: absolute; bottom: -1px; right: -1px; width: 5px; height: 5px; border-bottom: 2px solid #0284c7; border-right: 2px solid #0284c7;"></div>
 
                                     <div id="qr-absen-<?php echo $data['id']; ?>" style="<?php echo $mode === 'vertical' ? 'width: 30mm; height: 30mm;' : 'width: 26mm; height: 26mm;'; ?>"></div>
                                     <script>

@@ -461,7 +461,7 @@ class SiakadGuruController {
                         </div>
                         <?php if($selected_kelas): ?>
                             <div>
-                                <span style="background: #f0f9ff; color: #0284c7; border: 1px solid #bbf7d0; padding: 4px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                <span style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 4px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
                                     <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> Mode Edit Aktif
                                 </span>
                             </div>

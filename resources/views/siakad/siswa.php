@@ -193,7 +193,7 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
     .z-tab-btn:hover { color: #0ea5e9; background: #fff; }
     .z-tab-btn.active { 
         color: #fff; background: #0ea5e9; 
-        box-shadow: 0 10px 20px rgba(16,185,129,0.2);
+        box-shadow: 0 10px 20px rgba(14, 165, 233, 0.25);
     }
     .z-tab-content { display: none; padding: 2rem; max-height: calc(90vh - 250px); overflow-y: auto; scrollbar-width: thin; }
     .z-tab-content.active { display: block; animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -364,7 +364,7 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
                     <a href="<?php echo base_url('siakad/siswa/cetak-kartu' . ($selected_kelas ? '?kelas_id=' . $selected_kelas : '')); ?>" target="_blank" class="e-btn e-btn-dark">
                         <i data-lucide="id-card"></i> Cetak Massal
                     </a>
-                    <button class="e-btn e-btn-emerald-light" onclick="document.getElementById('modal-import-siswa').style.display='flex'">
+                    <button class="e-btn e-btn-blue-light" onclick="document.getElementById('modal-import-siswa').style.display='flex'">
                         <i data-lucide="copy-plus"></i> Import Data
                     </button>
                     <button class="e-btn" style="background: #fef08a; color: #854d0e; border: 1px solid #fde047;" onclick="document.getElementById('modal-update-bulk').style.display='flex'">
@@ -426,31 +426,23 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
                 $total_p += $r['jml_p'];
                 $total_all += $r['total'];
             ?>
-            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; min-width: 140px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); flex-shrink: 0;">
-                <div style="font-weight: 800; color: #1e293b; font-size: 0.9rem; margin-bottom: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">Kelas <?php echo htmlspecialchars($r['nama_kelas']); ?></div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; margin-bottom: 3px;">
-                    <span>Laki-laki:</span> <span style="font-weight: 700; color: #3b82f6;"><?php echo $r['jml_l'] ?: 0; ?></span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; margin-bottom: 3px;">
-                    <span>Perempuan:</span> <span style="font-weight: 700; color: #ec4899;"><?php echo $r['jml_p'] ?: 0; ?></span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 800; color: #0f172a; margin-top: 5px; padding-top: 5px; border-top: 1px solid #f1f5f9;">
-                    <span>Total:</span> <span><?php echo $r['total']; ?></span>
+            <div style="background: rgba(255,255,255,0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 16px; padding: 12px 18px; min-width: 115px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid rgba(255,255,255,0.85); flex-shrink: 0; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.95)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,0.65)'; this.style.transform='translateY(0)'">
+                <div style="font-weight: 800; color: #64748b; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px;">Kelas <?php echo htmlspecialchars($r['nama_kelas']); ?></div>
+                <div style="font-size: 1.45rem; font-weight: 900; color: #0f172a; margin-bottom: 4px; line-height: 1.1;"><?php echo $r['total']; ?></div>
+                <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 700;">
+                    <span style="color: #0284c7; background: rgba(14,165,233,0.12); padding: 2px 7px; border-radius: 6px;">L: <?php echo $r['jml_l'] ?: 0; ?></span>
+                    <span style="color: #ec4899; background: rgba(236,72,153,0.12); padding: 2px 7px; border-radius: 6px;">P: <?php echo $r['jml_p'] ?: 0; ?></span>
                 </div>
             </div>
             <?php endforeach; ?>
             
             <!-- Total Keseluruhan -->
-            <div style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; border-radius: 12px; padding: 12px 16px; min-width: 140px; box-shadow: 0 4px 10px rgba(16,185,129,0.2); flex-shrink: 0;">
-                <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 4px;">TOTAL SEMUA</div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 3px; opacity: 0.9;">
-                    <span>Laki-laki:</span> <span style="font-weight: 700;"><?php echo $total_l; ?></span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 3px; opacity: 0.9;">
-                    <span>Perempuan:</span> <span style="font-weight: 700;"><?php echo $total_p; ?></span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 800; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.2);">
-                    <span>Total:</span> <span><?php echo $total_all; ?></span>
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #0369a1 100%); color: white; border-radius: 16px; padding: 12px 18px; min-width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(2,132,199,0.3); flex-shrink: 0;">
+                <div style="font-weight: 800; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.7); margin-bottom: 3px;">TOTAL SEMUA</div>
+                <div style="font-size: 1.45rem; font-weight: 900; margin-bottom: 4px; line-height: 1.1;"><?php echo $total_all; ?></div>
+                <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 700;">
+                    <span style="color: #7dd3fc; background: rgba(255,255,255,0.15); padding: 2px 7px; border-radius: 6px;">L: <?php echo $total_l; ?></span>
+                    <span style="color: #f472b6; background: rgba(255,255,255,0.15); padding: 2px 7px; border-radius: 6px;">P: <?php echo $total_p; ?></span>
                 </div>
             </div>
         </div>
@@ -504,7 +496,7 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
                                             <?php if($s['foto'] && file_exists(__DIR__ . "/../../../public/uploads/siswa/" . $s['foto'])): ?>
                                                 <img loading="lazy" id="img-siswa-<?php echo $s['id']; ?>" src="<?php echo base_url('thumb.php?src=uploads/siswa/' . $s['foto'] . '&w=100&h=100'); ?>" class="avatar-img">
                                             <?php else: ?>
-                                                <img loading="lazy" id="img-siswa-<?php echo $s['id']; ?>" src="https://ui-avatars.com/api/?name=<?php echo urlencode($s['nama']); ?>&background=065f46&color=fff&bold=true&size=128" class="avatar-img">
+                                                <img loading="lazy" id="img-siswa-<?php echo $s['id']; ?>" src="https://ui-avatars.com/api/?name=<?php echo urlencode($s['nama']); ?>&background=0284c7&color=fff&bold=true&size=128" class="avatar-img">
                                             <?php endif; ?>
                                         </div>
                                         <div class="avatar-actions">
@@ -529,13 +521,13 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
                                     </div>
                                 </td>
                                 <td class="text-center">
-                                    <span class="z-badge-emerald"><?php echo $s['nama_kelas']; ?></span>
+                                    <span class="z-badge-blue"><?php echo $s['nama_kelas']; ?></span>
                                 </td>
                                 <td>
                                     <div class="z-action-btns">
-                                        <a href="<?php echo base_url('siakad/siswa/cetak-kartu?id=' . $s['id']); ?>" target="_blank" class="action-btn card-btn" title="Cetak Kartu Pelajar">
+                                        <button type="button" onclick="printSingleCard('<?php echo $s['id']; ?>')" class="action-btn card-btn" title="Cetak Kartu Pelajar">
                                             <i data-lucide="contact"></i>
-                                        </a>
+                                        </button>
                                         <a href="<?php echo base_url('siakad/siswa/edit/' . $s['id']); ?>" class="action-btn edit-btn" title="Edit Data Siswa">
                                             <i data-lucide="edit-3"></i>
                                         </a>
@@ -557,6 +549,37 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
 
 <input type="file" id="quick-auto-input" accept="image/*" style="display: none;" onchange="handleAutoUpload(this)">
 <input type="hidden" id="quick-auto-siswa-id">
+
+<!-- Modal Print Options -->
+<div id="modal-print-options" class="z-modal">
+    <div class="z-modal-content small" style="border-radius: 20px; overflow: hidden; border: 1px solid rgba(2, 132, 199, 0.2); box-shadow: 0 25px 50px -12px rgba(2, 132, 199, 0.25);">
+        <div class="z-modal-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 1.4rem 1.75rem; border: none; position: relative;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 10px; color: #fff;">
+                <i data-lucide="printer" style="color: #38bdf8;"></i> Format Cetak Kartu Pelajar
+            </h3>
+            <button onclick="document.getElementById('modal-print-options').style.display='none'" class="close-btn" style="color: #fff; opacity: 0.8;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="z-modal-body text-center" style="padding: 26px 20px; background: #fff;">
+            <p style="margin-bottom: 22px; color: #64748b; font-size: 0.92rem; font-weight: 500;">Pilih tata letak orientasi cetak untuk kartu identitas pelajar.</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <button type="button" onclick="executePrintCard('horizontal')" style="padding: 20px 14px; border-radius: 16px; border: 2px solid #e2e8f0; background: #f8fafc; cursor: pointer; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; align-items: center; gap: 8px;" onmouseover="this.style.borderColor='#0284c7'; this.style.background='#f0f9ff'; this.style.color='#0284c7'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 20px rgba(2, 132, 199, 0.15)';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.color='#0f172a'; this.style.transform='none'; this.style.boxShadow='none';">
+                    <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(2, 132, 199, 0.1); color: #0284c7; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="layout-template" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">Horizontal</div>
+                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Format ID Card (Standar)</span>
+                </button>
+                <button type="button" onclick="executePrintCard('vertical')" style="padding: 20px 14px; border-radius: 16px; border: 2px solid #e2e8f0; background: #f8fafc; cursor: pointer; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; align-items: center; gap: 8px;" onmouseover="this.style.borderColor='#0284c7'; this.style.background='#f0f9ff'; this.style.color='#0284c7'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 20px rgba(2, 132, 199, 0.15)';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.color='#0f172a'; this.style.transform='none'; this.style.boxShadow='none';">
+                    <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(2, 132, 199, 0.1); color: #0284c7; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="smartphone" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">Vertikal</div>
+                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Format Lanyard / Badge</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Export -->
 <div id="modal-export-siswa" class="z-modal">
@@ -759,7 +782,7 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
 <!-- Modal Import -->
 <div id="modal-import-siswa" class="z-modal">
     <div class="z-modal-content large">
-        <div class="z-modal-header bg-emerald">
+        <div class="z-modal-header" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
             <h3>Import Siswa (Smart-Paste)</h3>
             <button onclick="document.getElementById('modal-import-siswa').style.display='none'" class="close-btn white"><i data-lucide="x"></i></button>
         </div>
@@ -1169,8 +1192,25 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         }, 100);
     }
 
+    let currentPrintId = null;
+    function printSingleCard(id) {
+        currentPrintId = id;
+        let modal = document.getElementById('modal-print-options');
+        if (modal) modal.style.display = 'flex';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function executePrintCard(mode) {
+        let modal = document.getElementById('modal-print-options');
+        if (modal) modal.style.display = 'none';
+        if (!currentPrintId) return;
+        
+        let url = '<?php echo base_url("siakad/siswa/cetak-kartu"); ?>?id=' + encodeURIComponent(currentPrintId) + '&mode=' + encodeURIComponent(mode);
+        window.open(url, '_blank');
+    }
+
     function openStudentCardNewTab(id) {
-        window.open(base_url('siakad/siswa/cetak-kartu?id=' + id), '_blank');
+        printSingleCard(id);
     }
 
     // Initialize DataTable

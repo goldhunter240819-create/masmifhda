@@ -6,14 +6,20 @@
     <div class="z-main">
         <?php include __DIR__ . '/_siakad_header.php'; ?>
 
-        <div class="z-page-head-row">
-            <div class="header-text">
-                <h1>Mata Pelajaran</h1>
-                <p>Kelola kurikulum dan daftar mata pelajaran aktif.</p>
+        <div class="elite-page-header">
+            <div class="header-bg-shapes"></div>
+            <div class="header-content-inner">
+                <div class="header-text-premium">
+                    <div class="header-badge">DATA MASTER</div>
+                    <h1><i data-lucide="book-open"></i> Mata Pelajaran</h1>
+                    <p>Kelola kurikulum dan daftar mata pelajaran aktif.</p>
+                </div>
+                <div class="header-actions-premium">
+                    <button class="e-btn e-btn-primary" onclick="addMapelModal()">
+                        <i data-lucide="plus-circle"></i> Tambah Mapel
+                    </button>
+                </div>
             </div>
-            <button class="btn btn-primary" onclick="addMapelModal()">
-                <i data-lucide="plus-circle"></i> Tambah Mapel
-            </button>
         </div>
 
         <div class="z-panel">

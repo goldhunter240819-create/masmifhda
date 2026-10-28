@@ -197,27 +197,28 @@
     <div class="z-main">
         <?php include __DIR__ . '/_siakad_header.php'; ?>
 
-        <div class="z-page-head-row" style="flex-direction: column; align-items: stretch; gap: 1.25rem;">
-            <div class="header-text">
-                <h1>Manajemen Data Guru</h1>
-                <p>Kelola profil, jabatan, dan cetak kartu identitas guru & tendik.</p>
-            </div>
-            
-            <div style="background: white; padding: 1rem 1.25rem; border-radius: 14px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-                <div style="font-weight: 700; font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="zap" style="color: #f59e0b; width: 16px; height: 16px;"></i> Aksi & Fitur:
+        <div class="elite-page-header">
+            <div class="header-bg-shapes"></div>
+            <div class="header-content-inner">
+                <div class="header-text-premium">
+                    <div class="header-badge">DATA MASTER</div>
+                    <h1><i data-lucide="users"></i> Manajemen Data Guru</h1>
+                    <p>Kelola profil, jabatan, dan cetak kartu identitas guru & tendik.</p>
                 </div>
-                <div class="header-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                    <button class="z-btn z-btn-ghost" onclick="document.getElementById('modal-export-guru').style.display='flex'">
+                <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="e-btn e-btn-glass" onclick="document.getElementById('modal-export-guru').style.display='flex'">
                         <i data-lucide="printer"></i> Cetak / Export
                     </button>
-                    <button class="z-btn z-btn-emerald-light" onclick="document.getElementById('modal-import-guru').style.display='flex'">
+                    <button class="e-btn e-btn-blue-light" onclick="document.getElementById('modal-import-guru').style.display='flex'">
                         <i data-lucide="file-up"></i> Smart-Paste
                     </button>
-                    <a href="<?php echo base_url('siakad/guru/cetak-kartu'); ?>" target="_blank" class="z-btn z-btn-secondary">
-                        <i data-lucide="id-card"></i> Kartu Massal
+                    <a href="<?php echo base_url('siakad/guru/cetak-kartu?mode=horizontal'); ?>" target="_blank" class="e-btn e-btn-dark">
+                        <i data-lucide="id-card"></i> Kartu (H)
                     </a>
-                    <button class="z-btn z-btn-primary" onclick="openAddGuruModal()">
+                    <a href="<?php echo base_url('siakad/guru/cetak-kartu?mode=vertical'); ?>" target="_blank" class="e-btn e-btn-dark">
+                        <i data-lucide="id-card"></i> Kartu (V)
+                    </a>
+                    <button class="e-btn e-btn-primary" onclick="openAddGuruModal()">
                         <i data-lucide="user-plus"></i> Tambah Guru
                     </button>
                 </div>

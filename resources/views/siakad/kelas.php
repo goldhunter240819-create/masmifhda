@@ -6,14 +6,20 @@
     <div class="z-main">
         <?php include __DIR__ . '/_siakad_header.php'; ?>
 
-        <div class="z-page-head-row">
-            <div>
-                <h1>Data Kelas & Rombel</h1>
-                <p>Kelola pembagian tingkat dan rombongan belajar sekolah.</p>
+        <div class="elite-page-header">
+            <div class="header-bg-shapes"></div>
+            <div class="header-content-inner">
+                <div class="header-text-premium">
+                    <div class="header-badge">DATA MASTER</div>
+                    <h1><i data-lucide="layout-dashboard"></i> Data Kelas & Rombel</h1>
+                    <p>Kelola pembagian tingkat dan rombongan belajar sekolah.</p>
+                </div>
+                <div class="header-actions-premium">
+                    <button class="e-btn e-btn-primary" onclick="addKelasModal()">
+                        <i data-lucide="plus-circle"></i> Tambah Kelas
+                    </button>
+                </div>
             </div>
-            <button class="btn btn-primary" onclick="addKelasModal()">
-                <i data-lucide="plus-circle" style="width:16px;height:16px;"></i> Tambah Kelas
-            </button>
         </div>
 
         <div class="z-panel">

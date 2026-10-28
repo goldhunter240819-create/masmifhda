@@ -1103,6 +1103,7 @@ $siakadRoutes = [
     ['POST', '/siakad/guru/import', [\App\Controllers\SiakadGuruController::class, 'importGuru']],
     ['GET', '/siakad/siswa', [\App\Controllers\SiakadSiswaController::class, 'siswa']],
     ['GET', '/siakad/siswa/cetak-kartu', [\App\Controllers\SiakadSiswaController::class, 'cetakKartuMassal']],
+    ['GET', '/siakad/siswa/cetak-kartu-massal', [\App\Controllers\SiakadSiswaController::class, 'cetakKartuMassal']],
     ['POST', '/siakad/siswa/cetak-kartu-massal', [\App\Controllers\SiakadSiswaController::class, 'cetakKartuMassal']],
     ['GET', '/siakad/siswa/naik-kelas', [\App\Controllers\SiakadSiswaController::class, 'naikKelas']],
     ['GET', '/siakad/siswa/alumni', [\App\Controllers\SiakadSiswaController::class, 'alumni']],

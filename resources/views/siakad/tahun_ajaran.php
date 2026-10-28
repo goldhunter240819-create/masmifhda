@@ -6,15 +6,19 @@
     <div class="z-main">
         <?php include __DIR__ . '/_siakad_header.php'; ?>
 
-        <div class="z-page-head-row">
-            <div class="header-text">
-                <h1>Manajemen Tahun Ajaran</h1>
-                <p>Kelola daftar tahun pelajaran aktif dan sejarah kurikulum.</p>
-            </div>
-            <div class="header-action">
-                <button class="btn btn-primary" onclick="document.getElementById('modal-add-tahun').style.display='flex'">
-                    <i data-lucide="plus"></i> Tambah Tahun Ajaran
-                </button>
+        <div class="elite-page-header">
+            <div class="header-bg-shapes"></div>
+            <div class="header-content-inner">
+                <div class="header-text-premium">
+                    <div class="header-badge">KONFIGURASI AKADEMIK</div>
+                    <h1><i data-lucide="calendar"></i> Manajemen Tahun Ajaran</h1>
+                    <p>Kelola daftar tahun pelajaran aktif dan semester madrasah.</p>
+                </div>
+                <div class="header-actions-premium">
+                    <button class="e-btn e-btn-primary" onclick="document.getElementById('modal-add-tahun').style.display='flex'">
+                        <i data-lucide="plus"></i> Tambah Tahun Ajaran
+                    </button>
+                </div>
             </div>
         </div>
 
