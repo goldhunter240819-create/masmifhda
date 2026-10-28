@@ -533,15 +533,15 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
                                 </td>
                                 <td>
                                     <div class="z-action-btns">
-                                        <button type="button" class="action-btn card-btn" onclick='openStudentCardNewTab(<?php echo $s['id']; ?>)' title="Kartu Pelajar">
+                                        <a href="<?php echo base_url('siakad/siswa/cetak-kartu?id=' . $s['id']); ?>" target="_blank" class="action-btn card-btn" title="Cetak Kartu Pelajar">
                                             <i data-lucide="contact"></i>
-                                        </button>
-                                        <button type="button" class="action-btn edit-btn" onclick='editSiswa(<?php echo htmlspecialchars(json_encode($s), ENT_QUOTES, "UTF-8"); ?>)' title="Edit">
-                                            <i data-lucide="edit-3"></i>
-                                        </button>
-                                        <a href="<?php echo base_url('siakad/siswa/delete/' . $s['id']); ?>" onclick="return confirm('Hapus siswa ini?')" class="action-btn delete-btn">
-                                            <i data-lucide="trash-2"></i>
                                         </a>
+                                        <a href="<?php echo base_url('siakad/siswa/edit/' . $s['id']); ?>" class="action-btn edit-btn" title="Edit Data Siswa">
+                                            <i data-lucide="edit-3"></i>
+                                        </a>
+                                        <button type="button" onclick="confirmDeleteSiswa(<?php echo $s['id']; ?>, '<?php echo addslashes(htmlspecialchars($s['nama'], ENT_QUOTES)); ?>')" class="action-btn delete-btn" title="Hapus Siswa">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -897,20 +897,100 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
 
     function confirmBulkActionSiswa(action) {
         let form = document.getElementById('form-bulk-siswa');
+        let count = document.querySelectorAll('.check-siswa:checked').length;
+        if (count === 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Pilih Siswa',
+                    text: 'Silakan centang minimal 1 siswa terlebih dahulu.',
+                    confirmButtonColor: '#0ea5e9'
+                });
+            } else {
+                alert('Silakan centang minimal 1 siswa terlebih dahulu.');
+            }
+            return;
+        }
+
         if(action === 'delete') {
-            if(confirm('Hapus siswa terpilih secara permanen?')) {
-                form.action = base_url('siakad/siswa/delete-bulk');
-                form.submit();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Hapus Siswa Terpilih?',
+                    html: `Apakah Anda yakin ingin menghapus <b>${count}</b> siswa terpilih secara permanen?<br><small style="color:#ef4444;">Akun login dan seluruh data terkait akan ikut terhapus.</small>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Hapus Semua!',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.action = base_url('siakad/siswa/delete-bulk<?php echo $selected_kelas ? '?kelas_id=' . $selected_kelas : ''; ?>');
+                        form.target = '_self';
+                        form.submit();
+                    }
+                });
+            } else {
+                if(confirm('Hapus ' + count + ' siswa terpilih secara permanen?')) {
+                    form.action = base_url('siakad/siswa/delete-bulk<?php echo $selected_kelas ? '?kelas_id=' . $selected_kelas : ''; ?>');
+                    form.target = '_self';
+                    form.submit();
+                }
             }
         } else if(action === 'print') {
             form.action = base_url('siakad/siswa/cetak-kartu-massal');
             form.target = '_blank';
             form.submit();
         } else if(action === 'reset-password') {
-            if(confirm('Reset username dan password untuk siswa terpilih ke random 8 karakter?')) {
-                form.action = base_url('siakad/siswa/reset-password-bulk');
-                form.target = '';
-                form.submit();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Reset Password Akun?',
+                    html: `Reset username dan password untuk <b>${count}</b> siswa terpilih ke kombinasi random 8 karakter?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#0f172a',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Reset Sekarang!',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.action = base_url('siakad/siswa/reset-password-bulk<?php echo $selected_kelas ? '?kelas_id=' . $selected_kelas : ''; ?>');
+                        form.target = '_self';
+                        form.submit();
+                    }
+                });
+            } else {
+                if(confirm('Reset username dan password untuk ' + count + ' siswa terpilih ke random 8 karakter?')) {
+                    form.action = base_url('siakad/siswa/reset-password-bulk<?php echo $selected_kelas ? '?kelas_id=' . $selected_kelas : ''; ?>');
+                    form.target = '_self';
+                    form.submit();
+                }
+            }
+        }
+    }
+
+    function confirmDeleteSiswa(id, name) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Hapus Data Siswa?',
+                html: `Apakah Anda yakin ingin menghapus data siswa <b>${name}</b>?<br><small style="color:#ef4444;">Akun login dan seluruh data siswa akan ikut terhapus permanen.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = base_url('siakad/siswa/delete/' + id + '<?php echo $selected_kelas ? '?kelas_id=' . $selected_kelas : ''; ?>');
+                }
+            });
+        } else {
+            if (confirm('Hapus siswa ' + name + '? Akun login juga akan terhapus.')) {
+                window.location.href = base_url('siakad/siswa/delete/' + id + '<?php echo $selected_kelas ? '?kelas_id=' . $selected_kelas : ''; ?>');
             }
         }
     }
@@ -933,6 +1013,17 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
             formData.append('foto', input.files[0]);
             formData.append('id', id);
 
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Mengunggah Foto...',
+                    text: 'Mohon tunggu sebentar',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+            }
+
             fetch(base_url('siakad/siswa/update-foto'), {
                 method: 'POST',
                 body: formData
@@ -943,23 +1034,61 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
                     // Update image source directly to avoid reload
                     let img = document.getElementById('img-siswa-' + id);
                     if (img) {
-                        // Use a query parameter to bust browser cache
                         img.src = base_url('uploads/siswa/' + data.foto + '?t=' + new Date().getTime());
                     }
-                    alert('Foto berhasil diupdate!');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'Foto siswa berhasil diperbarui!',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+                    } else {
+                        alert('Foto berhasil diupdate!');
+                    }
                 } else {
-                    alert('Gagal upload foto: ' + data.message);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal Upload Foto',
+                            text: data.message || 'Format atau ukuran file tidak didukung.',
+                            confirmButtonColor: '#0ea5e9'
+                        });
+                    } else {
+                        alert('Gagal upload foto: ' + data.message);
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Terjadi kesalahan saat upload.');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kesalahan Sistem',
+                        text: 'Terjadi kesalahan saat mengunggah foto.',
+                        confirmButtonColor: '#0ea5e9'
+                    });
+                } else {
+                    alert('Terjadi kesalahan saat upload.');
+                }
             });
         }
     }
 
     function editSiswa(data) {
+        if (typeof data === 'number' || typeof data === 'string') {
+            window.location.href = base_url('siakad/siswa/edit/' + data);
+            return;
+        }
+        if (data && data.id) {
+            window.location.href = base_url('siakad/siswa/edit/' + data.id);
+            return;
+        }
         const form = document.getElementById('siswa-form');
+        if (!form) return;
         form.action = base_url('siakad/siswa/update');
         
         // Map data to inputs
@@ -970,7 +1099,8 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
             }
         }
         
-        document.getElementById('modal-add-siswa').style.display = 'flex';
+        let modal = document.getElementById('modal-add-siswa');
+        if (modal) modal.style.display = 'flex';
         switchTab('tab-identitas', document.querySelector('.z-tab-btn'));
         lucide.createIcons();
     }
@@ -1040,18 +1170,7 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
     }
 
     function openStudentCardNewTab(id) {
-        let f = document.createElement('form');
-        f.method = 'POST';
-        f.action = base_url('siakad/siswa/cetak-kartu-massal');
-        f.target = '_blank';
-        let i = document.createElement('input');
-        i.type = 'hidden';
-        i.name = 'ids[]';
-        i.value = id;
-        f.appendChild(i);
-        document.body.appendChild(f);
-        f.submit();
-        f.remove();
+        window.open(base_url('siakad/siswa/cetak-kartu?id=' + id), '_blank');
     }
 
     // Initialize DataTable
@@ -1073,6 +1192,37 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
             // Pindahkan kontrol DataTables ke atas sebelah filter kelas
             $('.dataTables_length, .dataTables_filter').appendTo('#dt-custom-controls');
         }
+
+        // SweetAlert2 Alerts on page load
+        <?php if(isset($_GET['msg'])): ?>
+            if (typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true
+                });
+                <?php 
+                    $msg = $_GET['msg'];
+                    if ($msg === 'created') {
+                        echo "Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Data siswa baru berhasil ditambahkan.', confirmButtonColor: '#0ea5e9' });";
+                    } elseif ($msg === 'updated') {
+                        echo "Swal.fire({ icon: 'success', title: 'Berhasil Diperbarui!', text: 'Biodata siswa telah berhasil diperbarui.', confirmButtonColor: '#0ea5e9' });";
+                    } elseif ($msg === 'deleted') {
+                        echo "Toast.fire({ icon: 'success', title: 'Data siswa berhasil dihapus.' });";
+                    } elseif ($msg === 'deleted_bulk') {
+                        echo "Toast.fire({ icon: 'success', title: 'Siswa terpilih berhasil dihapus.' });";
+                    } elseif ($msg === 'reset_success') {
+                        echo "Swal.fire({ icon: 'success', title: 'Reset Berhasil!', text: 'Username dan password akun siswa terpilih berhasil direset.', confirmButtonColor: '#0ea5e9' });";
+                    } elseif ($msg === 'imported') {
+                        echo "Swal.fire({ icon: 'success', title: 'Import Selesai!', text: 'Data siswa berhasil diimport ke sistem.', confirmButtonColor: '#0ea5e9' });";
+                    } elseif ($msg === 'updated_bulk') {
+                        echo "Swal.fire({ icon: 'success', title: 'Update Selesai!', text: 'Data siswa berhasil diperbarui secara massal.', confirmButtonColor: '#0ea5e9' });";
+                    }
+                ?>
+            }
+        <?php endif; ?>
     });
 
     // Initialize Lucide

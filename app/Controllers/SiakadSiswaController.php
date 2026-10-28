@@ -177,7 +177,9 @@ class SiakadSiswaController {
             }
         }
         \App\Services\DataSyncService::runSiswaSync();
-        redirect('/siakad/siswa');
+        $kelas_id = !empty($data['kelas_id']) ? $data['kelas_id'] : null;
+        $redir = '/siakad/siswa?msg=created' . ($kelas_id ? '&kelas_id=' . $kelas_id : '');
+        redirect($redir);
     }
 
 
@@ -482,37 +484,48 @@ class SiakadSiswaController {
             ]);
         }
         \App\Services\DataSyncService::runSiswaSync();
-        redirect('/siakad/siswa');
+        $kelas_id = !empty($data['kelas_id']) ? $data['kelas_id'] : null;
+        $redir = '/siakad/siswa?msg=updated' . ($kelas_id ? '&kelas_id=' . $kelas_id : '');
+        redirect($redir);
     }
 
 
     public function deleteSiswa($id) {
         $db = Database::connect('core');
-        $siswa = $db->query("SELECT * FROM siswa WHERE id = $id")->fetch();
+        $siswa = $db->query("SELECT * FROM siswa WHERE id = " . intval($id))->fetch();
+        $kelas_id = $siswa ? $siswa['kelas_id'] : null;
         if ($siswa) {
             $db->beginTransaction();
             try {
-                $db->exec("DELETE FROM users WHERE id = " . $siswa['user_id']);
-                $db->exec("DELETE FROM siswa WHERE id = $id");
+                if ($siswa['foto'] && file_exists(__DIR__ . '/../../public/uploads/siswa/' . $siswa['foto'])) {
+                    @unlink(__DIR__ . '/../../public/uploads/siswa/' . $siswa['foto']);
+                }
+                if ($siswa['user_id']) {
+                    $db->exec("DELETE FROM users WHERE id = " . $siswa['user_id']);
+                }
+                $db->exec("DELETE FROM siswa WHERE id = " . intval($id));
                 $db->commit();
             } catch (\Exception $e) { $db->rollBack(); }
         }
         \App\Services\DataSyncService::runSiswaSync();
-        redirect('/siakad/siswa');
+        $redir = '/siakad/siswa?msg=deleted' . ($kelas_id ? '&kelas_id=' . $kelas_id : '');
+        redirect($redir);
     }
 
     public function deleteSiswaBulk() {
+        $kelas_id = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ids'])) {
             $db = Database::connect('core');
             $ids = array_map('intval', $_POST['ids']);
             $ids_str = implode(',', $ids);
             
-            $siswas = $db->query("SELECT user_id, foto FROM siswa WHERE id IN ($ids_str)")->fetchAll();
+            $siswas = $db->query("SELECT user_id, foto, kelas_id FROM siswa WHERE id IN ($ids_str)")->fetchAll();
             $userIds = [];
             foreach ($siswas as $s) {
+                if (!$kelas_id && !empty($s['kelas_id'])) $kelas_id = $s['kelas_id'];
                 if ($s['user_id']) $userIds[] = $s['user_id'];
                 if ($s['foto'] && file_exists(__DIR__ . '/../../public/uploads/siswa/' . $s['foto'])) {
-                    unlink(__DIR__ . '/../../public/uploads/siswa/' . $s['foto']);
+                    @unlink(__DIR__ . '/../../public/uploads/siswa/' . $s['foto']);
                 }
             }
             
@@ -529,20 +542,23 @@ class SiakadSiswaController {
             }
         }
         \App\Services\DataSyncService::runSiswaSync();
-        redirect('/siakad/siswa');
+        $redir = '/siakad/siswa?msg=deleted_bulk' . ($kelas_id ? '&kelas_id=' . $kelas_id : '');
+        redirect($redir);
         exit;
     }
 
     public function resetPasswordBulk() {
+        $kelas_id = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ids'])) {
             $db = Database::connect('core');
             $ids = array_map('intval', $_POST['ids']);
             $ids_str = implode(',', $ids);
-            $siswas = $db->query("SELECT id, user_id FROM siswa WHERE id IN ($ids_str)")->fetchAll();
+            $siswas = $db->query("SELECT id, user_id, kelas_id FROM siswa WHERE id IN ($ids_str)")->fetchAll();
             
             try {
                 $db->beginTransaction();
                 foreach ($siswas as $s) {
+                    if (!$kelas_id && !empty($s['kelas_id'])) $kelas_id = $s['kelas_id'];
                     // Generate random username
                     $random_user = strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
                     $check = $db->prepare("SELECT id FROM users WHERE username = ?");
@@ -578,7 +594,8 @@ class SiakadSiswaController {
             }
         }
         \App\Services\DataSyncService::runSiswaSync();
-        redirect('/siakad/siswa');
+        $redir = '/siakad/siswa?msg=reset_success' . ($kelas_id ? '&kelas_id=' . $kelas_id : '');
+        redirect($redir);
         exit;
     }
 
@@ -1312,13 +1329,20 @@ class SiakadSiswaController {
         $active_year_id = $active_year ? intval($active_year['id']) : 1;
         
         $where = "WHERE s.status IN ('Aktif', 'Alumni') AND (rks.id IS NOT NULL OR s.tahun_ajaran = '$active_year_name')";
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ids'])) {
+        if (!empty($_GET['id'])) {
+            $where = "WHERE s.id = " . intval($_GET['id']);
+        } elseif (!empty($_GET['ids'])) {
+            $raw_ids = is_array($_GET['ids']) ? $_GET['ids'] : explode(',', $_GET['ids']);
+            $ids = array_map('intval', $raw_ids);
+            $ids_str = implode(',', $ids);
+            $where = "WHERE s.id IN ($ids_str)";
+        } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ids'])) {
             $ids = array_map('intval', $_POST['ids']);
             $ids_str = implode(',', $ids);
             $where = "WHERE s.id IN ($ids_str)";
         } else {
             $selected_kelas = isset($_GET['kelas_id']) ? $_GET['kelas_id'] : null;
-            if ($selected_kelas) {
+            if ($selected_kelas && $selected_kelas !== 'all') {
                 $where .= " AND COALESCE(rks.kelas_id, s.kelas_id) = " . intval($selected_kelas);
             }
         }
@@ -1347,10 +1371,10 @@ class SiakadSiswaController {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Cetak Kartu Massal - <?php echo $inst['nama']; ?></title>
-            <link rel="stylesheet" href="/public/assets/css/plus-jakarta-sans.css">
-            <script src="https://unpkg.com/lucide@latest"></script>
-            <script src="/public/assets/js/qrcode.min.js"></script>
+            <title>Cetak Kartu - <?php echo $inst ? $inst['nama'] : 'Madrasah'; ?></title>
+            <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
+            <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
+            <script src="<?php echo base_url('public/assets/js/qrcode.min.js'); ?>"></script>
             <style>
                 body {
                     margin: 0;

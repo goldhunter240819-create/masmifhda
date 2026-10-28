@@ -9,6 +9,19 @@
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/zamrud.css?v=' . time()); ?>">
     <!-- Lucide Icons -->
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="<?php echo base_url('public/assets/js/sweetalert2.all.min.js'); ?>"></script>
+    <script>
+        if (typeof Swal === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><\/script>');
+        }
+        window.baseUrl = '<?php echo base_url(); ?>'.replace(/\/+$/, '');
+        function base_url(path = '') {
+            path = String(path).replace(/^\/+/, '');
+            return window.baseUrl ? window.baseUrl + '/' + path : '/' + path;
+        }
+    </script>
     <style>
         /* â”€â”€ Legacy CSS variable bridge â”€â”€ */
         :root {
