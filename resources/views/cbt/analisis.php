@@ -209,40 +209,47 @@ $active_menu = 'analisis';
                                     $pVal = $s['tingkat_kesukaran'];
                                     $dVal = $s['daya_beda'];
 
-                                    // Klasifikasi Tingkat Kesukaran
-                                    if ($pVal < 0.30) {
-                                        $tkLabel = 'Sukar';
-                                        $tkBadge = 'background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;';
-                                    } elseif ($pVal <= 0.70) {
-                                        $tkLabel = 'Sedang';
-                                        $tkBadge = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
+                                    // Klasifikasi Tingkat Kesukaran & Daya Pembeda
+                                    if ($totalPesertaUjian == 0) {
+                                        $tkLabel = 'Menunggu';
+                                        $tkBadge = 'background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;';
+                                        $dpLabel = 'Menunggu';
+                                        $dpBadge = 'background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;';
+                                        $rekomendasi = 'Menunggu Peserta';
+                                        $rekBadge = 'background:#f1f5f9; color:#64748b;';
                                     } else {
-                                        $tkLabel = 'Mudah';
-                                        $tkBadge = 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
-                                    }
+                                        if ($pVal < 0.30) {
+                                            $tkLabel = 'Sukar';
+                                            $tkBadge = 'background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;';
+                                        } elseif ($pVal <= 0.70) {
+                                            $tkLabel = 'Sedang';
+                                            $tkBadge = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
+                                        } else {
+                                            $tkLabel = 'Mudah';
+                                            $tkBadge = 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
+                                        }
 
-                                    // Klasifikasi Daya Pembeda
-                                    if ($dVal >= 0.40) {
-                                        $dpLabel = 'Sangat Baik';
-                                        $dpBadge = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
-                                    } elseif ($dVal >= 0.30) {
-                                        $dpLabel = 'Baik';
-                                        $dpBadge = 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
-                                    } elseif ($dVal >= 0.20) {
-                                        $dpLabel = 'Cukup';
-                                        $dpBadge = 'background:#fef3c7; color:#b45309; border:1px solid #fde68a;';
-                                    } else {
-                                        $dpLabel = 'Buruk';
-                                        $dpBadge = 'background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;';
-                                    }
+                                        if ($dVal >= 0.40) {
+                                            $dpLabel = 'Sangat Baik';
+                                            $dpBadge = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
+                                        } elseif ($dVal >= 0.30) {
+                                            $dpLabel = 'Baik';
+                                            $dpBadge = 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
+                                        } elseif ($dVal >= 0.20) {
+                                            $dpLabel = 'Cukup';
+                                            $dpBadge = 'background:#fef3c7; color:#b45309; border:1px solid #fde68a;';
+                                        } else {
+                                            $dpLabel = 'Buruk';
+                                            $dpBadge = 'background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;';
+                                        }
 
-                                    // Rekomendasi
-                                    $rekomendasi = $s['rekomendasi'];
-                                    $rekBadge = 'background:#dcfce7; color:#15803d;';
-                                    if ($rekomendasi === 'Dibuang') {
-                                        $rekBadge = 'background:#fee2e2; color:#b91c1c;';
-                                    } elseif (strpos($rekomendasi, 'Revisi') !== false) {
-                                        $rekBadge = 'background:#fef3c7; color:#b45309;';
+                                        $rekomendasi = $s['rekomendasi'];
+                                        $rekBadge = 'background:#dcfce7; color:#15803d;';
+                                        if ($rekomendasi === 'Dibuang') {
+                                            $rekBadge = 'background:#fee2e2; color:#b91c1c;';
+                                        } elseif (strpos($rekomendasi, 'Revisi') !== false) {
+                                            $rekBadge = 'background:#fef3c7; color:#b45309;';
+                                        }
                                     }
                                 ?>
                                 <tr>

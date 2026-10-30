@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Kelola Paket Ujian';
+$pageTitle = 'Kelola Paket Ujian CBT';
 $active_menu = 'ujian';
 ?>
 <div class="siakad-container">
@@ -11,13 +11,19 @@ $active_menu = 'ujian';
         <div class="z-scroll" style="padding: 1.5rem 2rem 3rem;">
 
             <!-- Alerts -->
-            <?php if(isset($_GET['msg']) && $_GET['msg'] === 'saved'): ?>
+            <?php if(isset($_GET['saved'])): ?>
             <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                 <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Paket ujian berhasil disimpan!
             </div>
             <?php endif; ?>
 
-            <?php if(isset($_GET['msg']) && $_GET['msg'] === 'deleted'): ?>
+            <?php if(isset($_GET['synced'])): ?>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                <i data-lucide="users" style="width: 20px; height: 20px; color: #3b82f6;"></i> Berhasil menyinkronkan data <?php echo (int)$_GET['synced']; ?> siswa real ke dalam ujian ini.
+            </div>
+            <?php endif; ?>
+
+            <?php if(isset($_GET['deleted'])): ?>
             <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                 <i data-lucide="trash-2" style="width: 20px; height: 20px; color: #ef4444;"></i> Paket ujian dan butir soal terkait berhasil dihapus.
             </div>
@@ -28,9 +34,9 @@ $active_menu = 'ujian';
                 <div class="header-bg-shapes"></div>
                 <div class="header-content-inner">
                     <div class="header-text-premium">
-                        <div class="header-badge">BANK & PAKET SOAL</div>
+                        <div class="header-badge">BANK & PAKET SOAL REAL</div>
                         <h1><i data-lucide="file-question"></i> Kelola Paket Ujian & Bank Soal</h1>
-                        <p>Buat paket ujian baru, susun butir soal pilihan ganda, tarik soal dari bank soal pusat, dan konfigurasi bobot nilai.</p>
+                        <p>Kelola paket ujian madrasah, sinkronkan peserta dari data siswa real, susun butir soal pilihan ganda, dan uji langsung dengan CBT Player.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button type="button" onclick="openUjianModal()" class="e-btn e-btn-glass">
@@ -58,24 +64,28 @@ $active_menu = 'ujian';
                     <table class="z-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px;">No</th>
-                                <th>Kode Ujian</th>
+                                <th style="width: 45px;">No</th>
+                                <th style="width: 110px;">Kode Ujian</th>
                                 <th>Nama Paket Ujian</th>
                                 <th>Mata Pelajaran</th>
                                 <th>Kelas Sasaran</th>
-                                <th>Jumlah Soal</th>
+                                <th>Butir Soal</th>
+                                <th>Peserta Real</th>
                                 <th>KKM</th>
                                 <th>Status</th>
-                                <th style="text-align: right;">Aksi</th>
+                                <th style="text-align: right; width: 320px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($ujianList)): ?>
                             <tr>
-                                <td colspan="9" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
-                                    <i data-lucide="folder-search" style="width: 44px; height: 44px; margin-bottom: 10px; color: #cbd5e1;"></i>
-                                    <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Belum ada paket ujian yang dibuat</div>
-                                    <div style="font-size: 0.78rem;">Klik tombol "Tambah Ujian Baru" untuk membuat ujian dan menginput butir soal.</div>
+                                <td colspan="10" style="padding: 3.5rem 1.5rem; text-align: center; color: #94a3b8;">
+                                    <i data-lucide="clipboard-list" style="width: 48px; height: 48px; margin-bottom: 12px; color: #cbd5e1;"></i>
+                                    <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: #1e293b;">Belum Ada Paket Ujian</h3>
+                                    <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem;">Klik tombol di bawah untuk membuat paket ujian baru dan menyinkronkan siswa kelas real.</p>
+                                    <button type="button" onclick="openUjianModal()" class="e-btn e-btn-primary" style="background: #4f46e5;">
+                                        <i data-lucide="plus-circle"></i> Buat Paket Ujian Pertama
+                                    </button>
                                 </td>
                             </tr>
                             <?php else: ?>
@@ -84,6 +94,7 @@ $active_menu = 'ujian';
                                     $stBg = ($st === 'Aktif') ? '#dcfce7' : (($st === 'Selesai') ? '#f1f5f9' : '#fef3c7');
                                     $stCol = ($st === 'Aktif') ? '#15803d' : (($st === 'Selesai') ? '#475569' : '#b45309');
                                     $jmlSoal = (int)($u['jumlah_soal'] ?? 0);
+                                    $jmlPeserta = (int)($u['jumlah_peserta'] ?? 0);
                                 ?>
                                 <tr>
                                     <td style="color: #94a3b8; font-weight: 600;"><?php echo $no++; ?></td>
@@ -112,6 +123,11 @@ $active_menu = 'ujian';
                                         </a>
                                     </td>
                                     <td>
+                                        <span style="font-size: 0.78rem; font-weight: 800; color: #0369a1; background: #e0f2fe; padding: 3px 10px; border-radius: 100px; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i data-lucide="users" style="width: 12px; height: 12px;"></i> <?php echo $jmlPeserta; ?> Siswa
+                                        </span>
+                                    </td>
+                                    <td>
                                         <span style="font-weight: 800; color: #0f172a; font-size: 0.82rem;"><?php echo number_format($u['kkm'], 0); ?></span>
                                     </td>
                                     <td>
@@ -120,21 +136,34 @@ $active_menu = 'ujian';
                                         </span>
                                     </td>
                                     <td style="text-align: right; white-space: nowrap;">
+                                        <!-- Uji CBT Player -->
+                                        <a href="<?php echo base_url('cbt/kerjakan?ujian_id=' . $u['id']); ?>" target="_blank" class="e-btn e-btn-primary" style="padding: 4px 8px; font-size: 0.72rem; background: #059669;" title="Uji Coba CBT Player">
+                                            <i data-lucide="play" style="width: 12px; height: 12px;"></i> Uji CBT
+                                        </a>
+
+                                        <!-- Sinkronkan Siswa Real -->
+                                        <form method="POST" action="<?php echo base_url('cbt/ujian/sync-peserta'); ?>" style="display: inline-block;">
+                                            <input type="hidden" name="ujian_id" value="<?php echo $u['id']; ?>">
+                                            <button type="submit" class="e-btn e-btn-blue-light" style="padding: 4px 8px; font-size: 0.72rem;" title="Sinkronkan Daftar Siswa Real dari Kelas <?php echo htmlspecialchars($u['kelas_nama'] ?: 'Semua'); ?>">
+                                                <i data-lucide="users" style="width: 12px; height: 12px;"></i> Sync Siswa
+                                            </button>
+                                        </form>
+
                                         <!-- Tombol Kelola / Tambah Soal -->
-                                        <a href="<?php echo base_url('cbt/soal?ujian_id=' . $u['id']); ?>" class="e-btn e-btn-primary" style="padding: 5px 11px; font-size: 0.74rem; background: #4f46e5;" title="Kelola & Tambah Soal">
-                                            <i data-lucide="plus-circle" style="width: 13px; height: 13px;"></i> Tambah Soal
+                                        <a href="<?php echo base_url('cbt/soal?ujian_id=' . $u['id']); ?>" class="e-btn e-btn-primary" style="padding: 4px 8px; font-size: 0.72rem; background: #4f46e5;" title="Kelola & Tambah Soal">
+                                            <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Soal
                                         </a>
 
                                         <!-- Edit Ujian Modal -->
-                                        <button type="button" onclick="editUjianModal(<?php echo htmlspecialchars(json_encode($u)); ?>)" class="e-btn e-btn-blue-light" style="padding: 5px 9px; font-size: 0.74rem;" title="Edit Pengaturan Ujian">
-                                            <i data-lucide="settings" style="width: 13px; height: 13px;"></i>
+                                        <button type="button" onclick="editUjianModal(<?php echo htmlspecialchars(json_encode($u)); ?>)" class="e-btn e-btn-blue-light" style="padding: 4px 7px; font-size: 0.72rem;" title="Edit Pengaturan Ujian">
+                                            <i data-lucide="settings" style="width: 12px; height: 12px;"></i>
                                         </button>
 
                                         <!-- Hapus Ujian -->
                                         <form method="POST" action="<?php echo base_url('cbt/ujian/delete'); ?>" style="display: inline-block;" onsubmit="return confirm('Hapus paket ujian ini beserta seluruh butir soalnya?')">
                                             <input type="hidden" name="id" value="<?php echo $u['id']; ?>">
-                                            <button type="submit" class="e-btn e-btn-dark" style="padding: 5px 9px; font-size: 0.74rem; background: #fee2e2; color: #b91c1c; border-color: #fecaca;" title="Hapus Paket">
-                                                <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                                            <button type="submit" class="e-btn e-btn-dark" style="padding: 4px 7px; font-size: 0.72rem; background: #fee2e2; color: #b91c1c; border-color: #fecaca;" title="Hapus Paket">
+                                                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
                                             </button>
                                         </form>
                                     </td>
@@ -180,12 +209,29 @@ $active_menu = 'ujian';
             <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; margin-bottom: 1rem;">
                 <div>
                     <label class="label-sm">Mata Pelajaran <span style="color:#ef4444;">*</span></label>
-                    <input type="text" name="mapel_nama" id="form_mapel_nama" class="input-sm" placeholder="Contoh: Matematika, Fiqih, dll." required>
+                    <input type="text" name="mapel_nama" id="form_mapel_nama" list="list_mapel_real" class="input-sm" placeholder="Pilih / ketik mapel..." required>
+                    <datalist id="list_mapel_real">
+                        <?php if (!empty($mapelList)): foreach($mapelList as $m): ?>
+                            <option value="<?php echo htmlspecialchars($m['nama_mapel']); ?>"></option>
+                        <?php endforeach; endif; ?>
+                    </datalist>
                 </div>
                 <div>
-                    <label class="label-sm">Kelas Sasaran</label>
-                    <input type="text" name="kelas_nama" id="form_kelas_nama" class="input-sm" placeholder="Semua Kelas / X-IPA / XI">
+                    <label class="label-sm">Kelas Sasaran <span style="color:#ef4444;">*</span></label>
+                    <select name="kelas_nama" id="form_kelas_nama" class="input-sm">
+                        <option value="Semua Kelas">Semua Kelas</option>
+                        <?php if (!empty($kelasList)): foreach($kelasList as $k): ?>
+                            <option value="<?php echo htmlspecialchars($k['nama_kelas']); ?>"><?php echo htmlspecialchars($k['nama_kelas']); ?></option>
+                        <?php endforeach; endif; ?>
+                    </select>
                 </div>
+            </div>
+
+            <div style="margin-bottom: 1rem; background: #eef2ff; padding: 10px 14px; border-radius: 10px; border: 1px solid #c7d2fe;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; color: #3730a3; cursor: pointer;">
+                    <input type="checkbox" name="auto_sync_siswa" value="1" checked>
+                    <span>Otomatis daftarkan seluruh siswa real dari kelas sasaran ke ujian ini</span>
+                </label>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 1rem;">

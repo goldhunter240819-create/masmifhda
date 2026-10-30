@@ -148,7 +148,8 @@ $active_menu = 'hasil';
                             </tr>
                             <?php else: ?>
                                 <?php $no = 1; foreach($pesertaList as $p): 
-                                    $isTuntas = ($p['nilai_akhir'] >= $kkmUjian);
+                                    $isSelesai = ($p['status_pengerjaan'] === 'Selesai');
+                                    $isTuntas = ($isSelesai && $p['nilai_akhir'] >= $kkmUjian);
                                 ?>
                                 <tr>
                                     <td style="color: #94a3b8; font-weight: 600;"><?php echo $no++; ?></td>
@@ -165,24 +166,42 @@ $active_menu = 'hasil';
                                         <div style="font-weight: 700; color: #1e293b; font-size: 0.82rem;"><?php echo htmlspecialchars($p['nama_ujian'] ?? 'Ujian'); ?></div>
                                     </td>
                                     <td>
+                                        <?php if ($isSelesai): ?>
                                         <span style="font-weight: 800; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
                                             <?php echo $p['jumlah_benar']; ?> Benar
                                         </span>
+                                        <?php else: ?>
+                                        <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php if ($isSelesai): ?>
                                         <span style="font-weight: 800; color: #b91c1c; background: #fee2e2; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
                                             <?php echo $p['jumlah_salah']; ?> Salah
                                         </span>
+                                        <?php else: ?>
+                                        <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php if ($isSelesai): ?>
                                         <div style="font-size: 1.25rem; font-weight: 900; color: <?php echo $isTuntas ? '#15803d' : '#b91c1c'; ?>;">
                                             <?php echo number_format($p['nilai_akhir'], 1); ?>
                                         </div>
+                                        <?php else: ?>
+                                        <span style="color: #94a3b8; font-size: 0.84rem; font-weight: 700;">-</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php if ($isSelesai): ?>
                                         <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 6px; <?php echo $isTuntas ? 'background:#dcfce7;color:#15803d;' : 'background:#fee2e2;color:#b91c1c;'; ?>">
                                             <?php echo $isTuntas ? 'Tuntas' : 'Remedial'; ?>
                                         </span>
+                                        <?php else: ?>
+                                        <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b;">
+                                            Belum Mengerjakan
+                                        </span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

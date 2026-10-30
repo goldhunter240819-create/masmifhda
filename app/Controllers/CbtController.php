@@ -8,8 +8,8 @@ use PDO;
 class CbtController {
 
     /**
-     * Pastikan tabel-tabel modul CBT Online tersedia di database core.
-     * Buat dan isi data sampel awal jika tabel masih kosong.
+     * Pastikan skema tabel modul CBT Online tersedia di database core.
+     * Bersihkan data dummy lama agar 100% menggunakan data real.
      */
     public static function ensureTables($db) {
         try {
@@ -59,7 +59,7 @@ class CbtController {
                 INDEX (status)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            // 4. Tabel Peserta & Riwayat Pengerjaan
+            // 4. Tabel Peserta & Riwayat Pengerjaan Siswa Real
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_peserta (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 ujian_id INT NOT NULL,
@@ -69,126 +69,125 @@ class CbtController {
                 kelas_nama VARCHAR(100) DEFAULT NULL,
                 waktu_mulai DATETIME DEFAULT NULL,
                 waktu_selesai DATETIME DEFAULT NULL,
-                status_pengerjaan VARCHAR(50) DEFAULT 'Selesai',
+                status_pengerjaan VARCHAR(50) DEFAULT 'Belum Mengerjakan',
                 jumlah_benar INT DEFAULT 0,
                 jumlah_salah INT DEFAULT 0,
                 nilai_akhir DECIMAL(5,2) DEFAULT 0.00,
                 jawaban_json LONGTEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX (ujian_id),
+                INDEX (siswa_id),
                 INDEX (nis)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            // Cek apakah tabel cbt_ujian masih kosong, jika ya buatkan seed data realistis
-            $checkCount = $db->query("SELECT COUNT(*) FROM cbt_ujian")->fetchColumn();
-            if ($checkCount == 0) {
-                // Seed Ujian 1: Aktif
-                $stmtU1 = $db->prepare("INSERT INTO cbt_ujian (kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, tgl_mulai, tgl_selesai, kkm, acak_soal, acak_opsi, status) 
-                                        VALUES (?, ?, ?, ?, ?, NOW() - INTERVAL 1 HOUR, NOW() + INTERVAL 2 DAY, ?, 1, 1, 'Aktif')");
-                $stmtU1->execute(['UJN-MAT-01', 'Penilaian Akhir Semester (PAS) Ganjil', 'Matematika Wajib', 'X-IPA', 90, 75]);
-                $u1Id = $db->lastInsertId();
+            // Bersihkan data dummy awal (seperti UJN-MAT-01, UJN-FIQ-02, MAS982, nis dummy)
+            $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02'))");
+            $db->exec("DELETE FROM cbt_peserta WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02')) OR nis LIKE '2024100%'");
+            $db->exec("DELETE FROM cbt_token WHERE token = 'MAS982'");
+            $db->exec("DELETE FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02')");
 
-                // Seed Ujian 2: Draft
-                $stmtU2 = $db->prepare("INSERT INTO cbt_ujian (kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, tgl_mulai, tgl_selesai, kkm, acak_soal, acak_opsi, status) 
-                                        VALUES (?, ?, ?, ?, ?, NOW() + INTERVAL 1 DAY, NOW() + INTERVAL 3 DAY, ?, 1, 1, 'Draft')");
-                $stmtU2->execute(['UJN-FIQ-02', 'Asesmen Sumatif Tengah Semester', 'Pendidikan Agama Islam & Fiqih', 'XI-IPS', 60, 75]);
-                $u2Id = $db->lastInsertId();
-
-                // Seed Soal untuk Ujian 1 (5 butir soal pilihan ganda)
-                $soalSeeds = [
-                    [
-                        'no' => 1,
-                        'q' => 'Berapakah himpunan penyelesaian dari persamaan kuadrat x² - 5x + 6 = 0?',
-                        'a' => '{1, 6}',
-                        'b' => '{2, 3}',
-                        'c' => '{-2, -3}',
-                        'd' => '{-1, 6}',
-                        'e' => '{0, 6}',
-                        'kunci' => 'B',
-                        'bobot' => 1.00
-                    ],
-                    [
-                        'no' => 2,
-                        'q' => 'Diketahui f(x) = 2x + 3 dan g(x) = x² - 1. Tentukan nilai dari fungsi komposisi (f ∘ g)(2)!',
-                        'a' => '9',
-                        'b' => '7',
-                        'c' => '11',
-                        'd' => '5',
-                        'e' => '15',
-                        'kunci' => 'A',
-                        'bobot' => 1.00
-                    ],
-                    [
-                        'no' => 3,
-                        'q' => 'Sebuah dadu bermata enam seimbang dilempar satu kali. Peluang munculnya mata dadu prima ganjil adalah...',
-                        'a' => '1/6',
-                        'b' => '1/3',
-                        'c' => '1/2',
-                        'd' => '2/3',
-                        'e' => '5/6',
-                        'kunci' => 'B',
-                        'bobot' => 1.00
-                    ],
-                    [
-                        'no' => 4,
-                        'q' => 'Nilai limit dari lim_{x→0} (sin 4x / 2x) adalah...',
-                        'a' => '0',
-                        'b' => '1',
-                        'c' => '2',
-                        'd' => '4',
-                        'e' => '1/2',
-                        'kunci' => 'C',
-                        'bobot' => 1.00
-                    ],
-                    [
-                        'no' => 5,
-                        'q' => 'Diketahui barisan aritmetika dengan suku pertama a = 4 dan beda b = 3. Tentukan suku ke-10 (U10)!',
-                        'a' => '28',
-                        'b' => '31',
-                        'c' => '34',
-                        'd' => '30',
-                        'e' => '37',
-                        'kunci' => 'B',
-                        'bobot' => 1.00
-                    ],
-                ];
-
-                $stmtSoal = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot) 
-                                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                foreach ($soalSeeds as $s) {
-                    $stmtSoal->execute([
-                        $u1Id, $s['no'], $s['q'], $s['a'], $s['b'], $s['c'], $s['d'], $s['e'], $s['kunci'], $s['bobot']
-                    ]);
-                }
-
-                // Seed Token Aktif
-                $stmtToken = $db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) 
-                                          VALUES (?, ?, 120, 'Aktif', NOW())");
-                $stmtToken->execute(['MAS982', $u1Id]);
-
-                // Seed Peserta Siswa & Hasil Ujian untuk Ujian 1
-                $pesertaSeeds = [
-                    ['nis' => '20241001', 'nama' => 'Ahmad Fauzi Rahman', 'kelas' => 'X-IPA', 'b' => 5, 's' => 0, 'nilai' => 100.0, 'ans' => ['1'=>'B','2'=>'A','3'=>'B','4'=>'C','5'=>'B']],
-                    ['nis' => '20241002', 'nama' => 'Siti Nur Aisyah', 'kelas' => 'X-IPA', 'b' => 4, 's' => 1, 'nilai' => 80.0, 'ans' => ['1'=>'B','2'=>'A','3'=>'B','4'=>'C','5'=>'A']],
-                    ['nis' => '20241003', 'nama' => 'Muhammad Rizky Pratama', 'kelas' => 'X-IPA', 'b' => 4, 's' => 1, 'nilai' => 80.0, 'ans' => ['1'=>'B','2'=>'A','3'=>'A','4'=>'C','5'=>'B']],
-                    ['nis' => '20241004', 'nama' => 'Dewi Anggraini', 'kelas' => 'X-IPA', 'b' => 4, 's' => 1, 'nilai' => 80.0, 'ans' => ['1'=>'B','2'=>'B','3'=>'B','4'=>'C','5'=>'B']],
-                    ['nis' => '20241005', 'nama' => 'Budi Santoso', 'kelas' => 'X-IPA', 'b' => 3, 's' => 2, 'nilai' => 60.0, 'ans' => ['1'=>'B','2'=>'C','3'=>'B','4'=>'A','5'=>'B']],
-                    ['nis' => '20241006', 'nama' => 'Nurul Hidayati', 'kelas' => 'X-IPA', 'b' => 3, 's' => 2, 'nilai' => 60.0, 'ans' => ['1'=>'A','2'=>'A','3'=>'C','4'=>'C','5'=>'B']],
-                    ['nis' => '20241007', 'nama' => 'Fajar Sidik Permana', 'kelas' => 'X-IPA', 'b' => 2, 's' => 3, 'nilai' => 40.0, 'ans' => ['1'=>'C','2'=>'B','3'=>'A','4'=>'C','5'=>'A']],
-                    ['nis' => '20241008', 'nama' => 'Rina Kartika Sari', 'kelas' => 'X-IPA', 'b' => 5, 's' => 0, 'nilai' => 100.0, 'ans' => ['1'=>'B','2'=>'A','3'=>'B','4'=>'C','5'=>'B']]
-                ];
-
-                $stmtPeserta = $db->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json) 
-                                             VALUES (?, NULL, ?, ?, ?, NOW() - INTERVAL 45 MINUTE, NOW() - INTERVAL 5 MINUTE, 'Selesai', ?, ?, ?, ?)");
-                foreach ($pesertaSeeds as $p) {
-                    $stmtPeserta->execute([
-                        $u1Id, $p['nis'], $p['nama'], $p['kelas'], $p['b'], $p['s'], $p['nilai'], json_encode($p['ans'])
-                    ]);
-                }
-            }
         } catch (\Exception $e) {
-            // Silence exception or log if needed
+            // Silence exception
         }
+    }
+
+    /**
+     * Dapatkan daftar Mata Pelajaran Real dari tabel mata_pelajaran di database siakad
+     */
+    public static function getRealMapelList($db_siakad) {
+        try {
+            $list = $db_siakad->query("SELECT id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($list)) return $list;
+        } catch (\Exception $e) {}
+
+        // Fallback daftar mapel standar madrasah jika tabel kosong
+        return [
+            ['id' => 1, 'nama_mapel' => "Al-Qur'an Hadits"],
+            ['id' => 2, 'nama_mapel' => 'Akidah Akhlak'],
+            ['id' => 3, 'nama_mapel' => 'Fiqih'],
+            ['id' => 4, 'nama_mapel' => 'Sejarah Kebudayaan Islam'],
+            ['id' => 5, 'nama_mapel' => 'Bahasa Arab'],
+            ['id' => 6, 'nama_mapel' => 'Bahasa Indonesia'],
+            ['id' => 7, 'nama_mapel' => 'Matematika'],
+            ['id' => 8, 'nama_mapel' => 'Bahasa Inggris'],
+            ['id' => 9, 'nama_mapel' => 'Biologi'],
+            ['id' => 10, 'nama_mapel' => 'Fisika'],
+            ['id' => 11, 'nama_mapel' => 'Kimia'],
+            ['id' => 12, 'nama_mapel' => 'Ekonomi'],
+            ['id' => 13, 'nama_mapel' => 'Sosiologi'],
+            ['id' => 14, 'nama_mapel' => 'Geografi'],
+            ['id' => 15, 'nama_mapel' => 'Informatika']
+        ];
+    }
+
+    /**
+     * Dapatkan daftar Kelas Real dari tabel kelas di database core
+     */
+    public static function getRealKelasList($db_core) {
+        try {
+            $list = $db_core->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($list)) return $list;
+        } catch (\Exception $e) {}
+
+        return [
+            ['id' => 1, 'nama_kelas' => 'X-IPA', 'tingkat' => 'X'],
+            ['id' => 2, 'nama_kelas' => 'X-IPS', 'tingkat' => 'X'],
+            ['id' => 3, 'nama_kelas' => 'XI-IPA', 'tingkat' => 'XI'],
+            ['id' => 4, 'nama_kelas' => 'XI-IPS', 'tingkat' => 'XI'],
+            ['id' => 5, 'nama_kelas' => 'XII-IPA', 'tingkat' => 'XII'],
+            ['id' => 6, 'nama_kelas' => 'XII-IPS', 'tingkat' => 'XII']
+        ];
+    }
+
+    /**
+     * Dapatkan daftar Siswa Real dari tabel siswa di database core
+     */
+    public static function getRealSiswaList($db_core, $kelasNama = '') {
+        try {
+            $sql = "SELECT s.id, s.nis, s.nama, COALESCE(k.nama_kelas, 'Umum') as kelas_nama 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    WHERE s.status IN ('Aktif', 'aktif', '1')";
+            $params = [];
+            if (!empty($kelasNama) && $kelasNama !== 'Semua Kelas') {
+                $sql .= " AND k.nama_kelas = :kelas_nama";
+                $params[':kelas_nama'] = $kelasNama;
+            }
+            $sql .= " ORDER BY s.nama ASC";
+            $stmt = $db_core->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Sinkronkan daftar siswa real ke cbt_peserta untuk paket ujian tertentu
+     */
+    public static function syncPesertaFromRealSiswa($db_core, $ujianId, $kelasNama = '') {
+        $realStudents = self::getRealSiswaList($db_core, $kelasNama);
+        if (empty($realStudents)) {
+            return 0;
+        }
+
+        $stmtExisting = $db_core->prepare("SELECT siswa_id FROM cbt_peserta WHERE ujian_id = ? AND siswa_id IS NOT NULL");
+        $stmtExisting->execute([$ujianId]);
+        $existingIds = $stmtExisting->fetchAll(PDO::FETCH_COLUMN);
+
+        $stmtInsert = $db_core->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir) 
+                                         VALUES (?, ?, ?, ?, ?, 'Belum Mengerjakan', 0, 0, 0)");
+
+        $synced = 0;
+        foreach ($realStudents as $st) {
+            if (!in_array($st['id'], $existingIds)) {
+                $stmtInsert->execute([
+                    $ujianId, $st['id'], $st['nis'], $st['nama'], $st['kelas_nama']
+                ]);
+                $synced++;
+            }
+        }
+        return $synced;
     }
 
     /**
@@ -222,29 +221,30 @@ class CbtController {
     }
 
     /**
-     * Dashboard CBT Online
+     * Dashboard CBT Online (Real Data)
      */
     public static function dashboard() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
 
-        // Ambil metrik ringkasan
+        // Real counts
         $totalUjian = (int)$db->query("SELECT COUNT(*) FROM cbt_ujian")->fetchColumn();
         $totalSoal = (int)$db->query("SELECT COUNT(*) FROM cbt_soal")->fetchColumn();
         $totalPeserta = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta")->fetchColumn();
         $totalPesertaSelesai = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE status_pengerjaan = 'Selesai'")->fetchColumn();
 
-        // Token saat ini
+        // Real active token
         $stmtTok = $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
         $tokenAktif = $stmtTok->fetch(PDO::FETCH_ASSOC) ?: null;
 
-        // Daftar Ujian
+        // Real exams
         $ujianList = $db->query("SELECT * FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
-        // Peserta Selesai Terbaru
+        // Real recent student submissions
         $stmtP = $db->query("SELECT p.*, u.nama_ujian 
                              FROM cbt_peserta p 
                              LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
+                             WHERE p.status_pengerjaan = 'Selesai'
                              ORDER BY p.waktu_selesai DESC LIMIT 6");
         $pesertaTerbaru = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
@@ -296,7 +296,7 @@ class CbtController {
     }
 
     /**
-     * Toggle Status Ujian (Aktif <-> Tutup/Draft)
+     * Toggle Status Ujian (Aktif <-> Selesai)
      */
     public static function toggleStatusJadwal() {
         $ctx = self::getAuthContext();
@@ -337,17 +337,22 @@ class CbtController {
     }
 
     /**
-     * Kelola Paket Ujian
+     * Kelola Paket Ujian (Real Subjects & Classes)
      */
     public static function ujian() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
 
         $ujianList = $db->query("SELECT u.*, 
-                                 (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) AS jml_soal,
-                                 (SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = u.id) AS jml_peserta 
+                                 (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) AS jumlah_soal,
+                                 (SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = u.id) AS jumlah_peserta 
                                  FROM cbt_ujian u 
                                  ORDER BY u.created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ambil daftar Mapel & Kelas Real
+        $mapelList = self::getRealMapelList($db_siakad);
+        $kelasList = self::getRealKelasList($db);
 
         $title = "Kelola Paket Ujian CBT - MAS MIFTAHUL HUDA";
         ob_start();
@@ -357,7 +362,7 @@ class CbtController {
     }
 
     /**
-     * Simpan / Perbarui Paket Ujian
+     * Simpan / Perbarui Paket Ujian & Auto-Enroll Siswa Real
      */
     public static function saveUjian() {
         $ctx = self::getAuthContext();
@@ -368,25 +373,56 @@ class CbtController {
             $kode_ujian = trim($_POST['kode_ujian'] ?? ('UJN-' . strtoupper(substr(uniqid(), -4))));
             $nama_ujian = trim($_POST['nama_ujian'] ?? 'Ujian Baru');
             $mapel_nama = trim($_POST['mapel_nama'] ?? 'Umum');
-            $kelas_nama = trim($_POST['kelas_nama'] ?? '');
+            $kelas_nama = trim($_POST['kelas_nama'] ?? 'Semua Kelas');
             $durasi_menit = !empty($_POST['durasi_menit']) ? (int)$_POST['durasi_menit'] : 90;
             $kkm = !empty($_POST['kkm']) ? (int)$_POST['kkm'] : 75;
             $status = !empty($_POST['status']) ? trim($_POST['status']) : 'Draft';
             $acak_soal = isset($_POST['acak_soal']) ? 1 : 0;
             $acak_opsi = isset($_POST['acak_opsi']) ? 1 : 0;
+            $autoSync = isset($_POST['auto_sync_siswa']) ? 1 : 0;
 
             if ($id > 0) {
                 $stmt = $db->prepare("UPDATE cbt_ujian 
                                       SET kode_ujian = ?, nama_ujian = ?, mapel_nama = ?, kelas_nama = ?, durasi_menit = ?, kkm = ?, status = ?, acak_soal = ?, acak_opsi = ? 
                                       WHERE id = ?");
                 $stmt->execute([$kode_ujian, $nama_ujian, $mapel_nama, $kelas_nama, $durasi_menit, $kkm, $status, $acak_soal, $acak_opsi, $id]);
+                $targetId = $id;
             } else {
                 $stmt = $db->prepare("INSERT INTO cbt_ujian (kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, status, acak_soal, acak_opsi) 
                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$kode_ujian, $nama_ujian, $mapel_nama, $kelas_nama, $durasi_menit, $kkm, $status, $acak_soal, $acak_opsi]);
+                $targetId = (int)$db->lastInsertId();
             }
+
+            // Daftarkan siswa real secara otomatis jika dicentang
+            if ($autoSync && $targetId > 0) {
+                self::syncPesertaFromRealSiswa($db, $targetId, $kelas_nama);
+            }
+
             redirect('/cbt/ujian?saved=1');
             exit;
+        }
+        redirect('/cbt/ujian');
+    }
+
+    /**
+     * Action Sinkronisasi Siswa Real secara manual
+     */
+    public static function syncPesertaAction() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ujianId = isset($_POST['ujian_id']) ? (int)$_POST['ujian_id'] : 0;
+            if ($ujianId > 0) {
+                $stmt = $db->prepare("SELECT kelas_nama FROM cbt_ujian WHERE id = ?");
+                $stmt->execute([$ujianId]);
+                $kelasNama = $stmt->fetchColumn() ?: '';
+
+                $count = self::syncPesertaFromRealSiswa($db, $ujianId, $kelasNama);
+                redirect("/cbt/ujian?synced={$count}");
+                exit;
+            }
         }
         redirect('/cbt/ujian');
     }
@@ -422,7 +458,6 @@ class CbtController {
 
         $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
         if ($ujian_id <= 0) {
-            // Ambil ujian pertama jika ada
             $ujian_id = (int)$db->query("SELECT id FROM cbt_ujian ORDER BY id ASC LIMIT 1")->fetchColumn();
             if ($ujian_id <= 0) {
                 redirect('/cbt/ujian');
@@ -439,12 +474,12 @@ class CbtController {
             exit;
         }
 
-        // Ambil daftar butir soal
+        // Ambil daftar butir soal real
         $stmtS = $db->prepare("SELECT * FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
         $stmtS->execute([$ujian_id]);
         $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 
-        // Ambil daftar topik bank soal dari database siakad jika ada
+        // Ambil daftar topik bank soal real dari siakad
         $bankTopiks = [];
         try {
             $stmtBT = $db_siakad->query("SELECT id, jenis, nama_topik FROM bs_topik ORDER BY created_at DESC");
@@ -459,7 +494,7 @@ class CbtController {
     }
 
     /**
-     * Simpan / Perbarui Butir Soal
+     * Simpan / Tambah Butir Soal Real
      */
     public static function saveSoal() {
         $ctx = self::getAuthContext();
@@ -477,7 +512,6 @@ class CbtController {
             $bobot = !empty($_POST['bobot']) ? (float)$_POST['bobot'] : 1.00;
 
             if ($ujian_id > 0 && !empty($pertanyaan)) {
-                // Hitung nomor urut berikutnya
                 $stmtMax = $db->prepare("SELECT COALESCE(MAX(nomor_urut), 0) + 1 FROM cbt_soal WHERE ujian_id = ?");
                 $stmtMax->execute([$ujian_id]);
                 $nextNo = (int)$stmtMax->fetchColumn();
@@ -527,13 +561,11 @@ class CbtController {
             $topik_id = isset($_POST['topik_id']) ? (int)$_POST['topik_id'] : 0;
 
             if ($ujian_id > 0 && $topik_id > 0) {
-                // Ambil soal-soal PG dari Bank Soal
                 try {
                     $stmtBS = $db_siakad->prepare("SELECT * FROM bs_soal WHERE topik_id = ?");
                     $stmtBS->execute([$topik_id]);
                     $bankItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
 
-                    // Ambil nomor urut tertinggi saat ini
                     $stmtMax = $db->prepare("SELECT COALESCE(MAX(nomor_urut), 0) FROM cbt_soal WHERE ujian_id = ?");
                     $stmtMax->execute([$ujian_id]);
                     $currNo = (int)$stmtMax->fetchColumn();
@@ -572,17 +604,15 @@ class CbtController {
     }
 
     /**
-     * Manajemen Token Ujian
+     * Manajemen Token Ujian Real
      */
     public static function token() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
 
-        // Ambil token aktif saat ini
         $stmtTok = $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
         $tokenAktif = $stmtTok->fetch(PDO::FETCH_ASSOC) ?: null;
 
-        // Riwayat token sebelumnya
         $tokenHistory = $db->query("SELECT * FROM cbt_token ORDER BY id DESC LIMIT 25")->fetchAll(PDO::FETCH_ASSOC);
 
         $title = "Token Ujian CBT - MAS MIFTAHUL HUDA";
@@ -593,17 +623,15 @@ class CbtController {
     }
 
     /**
-     * Generate / Rilis Token Baru
+     * Generate / Rilis Token Baru (Real 6-char random token)
      */
     public static function generateToken() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Nonaktifkan token lama
             $db->exec("UPDATE cbt_token SET status = 'Expired' WHERE status = 'Aktif'");
 
-            // Buat token 6 karakter alfanumerik yang mudah dibaca (tanpa angka 0, O, 1, I)
             $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             $tokenStr = '';
             for ($i = 0; $i < 6; $i++) {
@@ -641,7 +669,7 @@ class CbtController {
     }
 
     /**
-     * Rekap Hasil Ujian Siswa
+     * Rekap Hasil Ujian Siswa Real
      */
     public static function hasil() {
         $ctx = self::getAuthContext();
@@ -653,13 +681,13 @@ class CbtController {
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 
-        // Ambil daftar kelas unik dari peserta
+        // Daftar kelas real dari database kelas
         $kelasList = [];
         try {
-            $kelasList = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != '' ORDER BY kelas_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
+            $kelasList = $db->query("SELECT DISTINCT nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_COLUMN);
         } catch (\Exception $e) {}
 
-        // Query Peserta
+        // Query Peserta Real
         $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama 
                 FROM cbt_peserta p 
                 LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
@@ -681,7 +709,7 @@ class CbtController {
             $params[':q'] = "%{$search}%";
         }
 
-        $sql .= " ORDER BY p.nilai_akhir DESC, p.nama_siswa ASC";
+        $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
         $stmtP = $db->prepare($sql);
         $stmtP->execute($params);
         $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
@@ -697,24 +725,27 @@ class CbtController {
             }
         }
 
-        // Kalkulasi Statistik
-        $totalPeserta = count($pesertaList);
+        // Hitung statistik nilai dari peserta yang sudah menyelesaikan ujian
+        $totalSelesai = 0;
         $totalNilai = 0;
         $tuntasCount = 0;
         $jumlahRemedial = 0;
 
         foreach ($pesertaList as $p) {
-            $nilai = (float)$p['nilai_akhir'];
-            $totalNilai += $nilai;
-            if ($nilai >= $kkmUjian) {
-                $tuntasCount++;
-            } else {
-                $jumlahRemedial++;
+            if ($p['status_pengerjaan'] === 'Selesai') {
+                $totalSelesai++;
+                $nilai = (float)$p['nilai_akhir'];
+                $totalNilai += $nilai;
+                if ($nilai >= $kkmUjian) {
+                    $tuntasCount++;
+                } else {
+                    $jumlahRemedial++;
+                }
             }
         }
 
-        $rataRata = $totalPeserta > 0 ? ($totalNilai / $totalPeserta) : 0;
-        $persenTuntas = $totalPeserta > 0 ? round(($tuntasCount / $totalPeserta) * 100) : 0;
+        $rataRata = $totalSelesai > 0 ? ($totalNilai / $totalSelesai) : 0;
+        $persenTuntas = $totalSelesai > 0 ? round(($tuntasCount / $totalSelesai) * 100) : 0;
 
         $title = "Hasil Ujian CBT - MAS MIFTAHUL HUDA";
         ob_start();
@@ -724,7 +755,7 @@ class CbtController {
     }
 
     /**
-     * Analisis Butir Soal (Tingkat Kesukaran, Daya Pembeda, Pengecoh, KR-20)
+     * Analisis Butir Soal Real (Tingkat Kesukaran, Daya Pembeda, Pengecoh, KR-20)
      */
     public static function analisis() {
         $ctx = self::getAuthContext();
@@ -745,23 +776,22 @@ class CbtController {
             }
         }
 
-        // Ambil seluruh butir soal ujian
+        // Butir soal ujian
         $stmtSoal = $db->prepare("SELECT * FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
         $stmtSoal->execute([$selectedUjianId]);
         $soalRows = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
 
-        // Ambil data seluruh peserta ujian beserta jawaban_json
-        $stmtPeserta = $db->prepare("SELECT id, nis, nama_siswa, nilai_akhir, jawaban_json FROM cbt_peserta WHERE ujian_id = ? ORDER BY nilai_akhir DESC");
+        // Peserta yang telah selesai mengerjakan
+        $stmtPeserta = $db->prepare("SELECT id, nis, nama_siswa, nilai_akhir, jawaban_json FROM cbt_peserta WHERE ujian_id = ? AND status_pengerjaan = 'Selesai' ORDER BY nilai_akhir DESC");
         $stmtPeserta->execute([$selectedUjianId]);
         $pesertaRows = $stmtPeserta->fetchAll(PDO::FETCH_ASSOC);
 
         $totalPesertaUjian = count($pesertaRows);
 
-        // Hitung statistik skor peserta
         $scores = [];
         $totalNilai = 0;
         $nilaiMaks = 0;
-        $nilaiMin = 100;
+        $nilaiMin = $totalPesertaUjian > 0 ? 100 : 0;
 
         foreach ($pesertaRows as $p) {
             $sc = (float)$p['nilai_akhir'];
@@ -771,13 +801,8 @@ class CbtController {
             if ($sc < $nilaiMin) $nilaiMin = $sc;
         }
 
-        if (empty($scores)) {
-            $nilaiMin = 0;
-        }
-
         $rataRata = $totalPesertaUjian > 0 ? ($totalNilai / $totalPesertaUjian) : 0;
 
-        // Standar Deviasi
         $variance = 0;
         if ($totalPesertaUjian > 0) {
             $sumSqDiff = 0;
@@ -788,8 +813,7 @@ class CbtController {
         }
         $standarDeviasi = sqrt($variance);
 
-        // Bagi kelompok atas dan bawah untuk perhitungan Daya Pembeda (D)
-        // Standar psikometri: 27% atas dan 27% bawah, atau 50% jika peserta <= 6
+        // Kelompok atas dan bawah
         $kGroup = ($totalPesertaUjian <= 6) ? max(1, (int)round($totalPesertaUjian / 2)) : max(1, (int)round(0.27 * $totalPesertaUjian));
         $kelompokAtas = array_slice($pesertaRows, 0, $kGroup);
         $kelompokBawah = array_slice($pesertaRows, max(0, $totalPesertaUjian - $kGroup), $kGroup);
@@ -798,6 +822,7 @@ class CbtController {
         $sumPQ = 0;
 
         foreach ($soalRows as $s) {
+            $soalId = (string)$s['id'];
             $soalNo = (string)$s['nomor_urut'];
             $kunci = strtoupper(trim($s['kunci_jawaban']));
 
@@ -805,10 +830,9 @@ class CbtController {
             $jmlSalah = 0;
             $sebaran = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0];
 
-            // Hitung sebaran jawaban peserta
             foreach ($pesertaRows as $p) {
                 $ansData = !empty($p['jawaban_json']) ? json_decode($p['jawaban_json'], true) : [];
-                $ans = strtoupper(trim($ansData[$soalNo] ?? ($ansData[$s['id']] ?? '')));
+                $ans = strtoupper(trim($ansData[$soalId] ?? ($ansData[$soalNo] ?? '')));
                 if (isset($sebaran[$ans])) {
                     $sebaran[$ans]++;
                 }
@@ -819,29 +843,26 @@ class CbtController {
                 }
             }
 
-            // Tingkat Kesukaran (P)
             $pVal = $totalPesertaUjian > 0 ? ($jmlBenar / $totalPesertaUjian) : 0;
             $qVal = 1 - $pVal;
             $sumPQ += ($pVal * $qVal);
 
-            // Daya Pembeda (D)
             $benarAtas = 0;
             foreach ($kelompokAtas as $pa) {
                 $ansData = !empty($pa['jawaban_json']) ? json_decode($pa['jawaban_json'], true) : [];
-                $ans = strtoupper(trim($ansData[$soalNo] ?? ($ansData[$s['id']] ?? '')));
+                $ans = strtoupper(trim($ansData[$soalId] ?? ($ansData[$soalNo] ?? '')));
                 if ($ans === $kunci) $benarAtas++;
             }
 
             $benarBawah = 0;
             foreach ($kelompokBawah as $pb) {
                 $ansData = !empty($pb['jawaban_json']) ? json_decode($pb['jawaban_json'], true) : [];
-                $ans = strtoupper(trim($ansData[$soalNo] ?? ($ansData[$s['id']] ?? '')));
+                $ans = strtoupper(trim($ansData[$soalId] ?? ($ansData[$soalNo] ?? '')));
                 if ($ans === $kunci) $benarBawah++;
             }
 
             $dVal = $kGroup > 0 ? (($benarAtas - $benarBawah) / $kGroup) : 0;
 
-            // Efektivitas Pengecoh & Rekomendasi
             $hasDeadDistractor = false;
             foreach (['A', 'B', 'C', 'D', 'E'] as $opt) {
                 if ($opt !== $kunci && !empty($s['opsi_' . strtolower($opt)])) {
@@ -851,7 +872,9 @@ class CbtController {
                 }
             }
 
-            if ($dVal < 0.20 || $dVal < 0) {
+            if ($totalPesertaUjian == 0) {
+                $rekomendasi = 'Menunggu Ujian';
+            } elseif ($dVal < 0.20 || $dVal < 0) {
                 $rekomendasi = 'Dibuang';
             } elseif ($dVal < 0.30) {
                 $rekomendasi = 'Revisi Soal';
@@ -871,9 +894,8 @@ class CbtController {
             ]);
         }
 
-        // Reliabilitas KR-20
         $jmlItem = count($soalRows);
-        $reliabilitasKR20 = 0.85; // Default standar tinggi
+        $reliabilitasKR20 = 0.85;
         if ($jmlItem > 1 && $variance > 0) {
             $kr = ($jmlItem / ($jmlItem - 1)) * (1 - ($sumPQ / $variance));
             $reliabilitasKR20 = max(0, min(1, $kr));
@@ -885,5 +907,179 @@ class CbtController {
         $content = ob_get_clean();
         include __DIR__ . '/../../resources/views/siakad/layout.php';
     }
-}
 
+    /**
+     * Ruang Ujian CBT (CBT Player untuk Siswa & Pengawas)
+     */
+    public static function kerjakan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+
+        $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+        if ($ujian_id <= 0) {
+            redirect('/cbt/ujian');
+            exit;
+        }
+
+        $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ?");
+        $stmtU->execute([$ujian_id]);
+        $ujianInfo = $stmtU->fetch(PDO::FETCH_ASSOC);
+
+        if (!$ujianInfo) {
+            redirect('/cbt/ujian');
+            exit;
+        }
+
+        // Ambil butir soal
+        $stmtS = $db->prepare("SELECT id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, bobot FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+        $stmtS->execute([$ujian_id]);
+        $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($soalList)) {
+            echo "<script>alert('Paket ujian ini belum memiliki butir soal! Tambahkan butir soal terlebih dahulu.'); window.location.href='" . base_url('cbt/soal?ujian_id=' . $ujian_id) . "';</script>";
+            exit;
+        }
+
+        // Cek identitas peserta (siswa login atau trial guru)
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $roleId = (int)($_SESSION['role_id'] ?? 0);
+
+        $pesertaInfo = null;
+
+        if ($roleId === 3) {
+            // Role Siswa: Cari data siswa di database core
+            $stmtSiswa = $db->prepare("SELECT s.id, s.nis, s.nama, COALESCE(k.nama_kelas, 'Umum') as kelas_nama 
+                                       FROM siswa s 
+                                       LEFT JOIN kelas k ON s.kelas_id = k.id 
+                                       WHERE s.user_id = ? LIMIT 1");
+            $stmtSiswa->execute([$userId]);
+            $realSiswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
+
+            if ($realSiswa) {
+                // Cari atau buat record di cbt_peserta
+                $stmtP = $db->prepare("SELECT * FROM cbt_peserta WHERE ujian_id = ? AND siswa_id = ? LIMIT 1");
+                $stmtP->execute([$ujian_id, $realSiswa['id']]);
+                $pesertaInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
+
+                if (!$pesertaInfo) {
+                    $stmtIns = $db->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, status_pengerjaan) 
+                                             VALUES (?, ?, ?, ?, ?, NOW(), 'Mengerjakan')");
+                    $stmtIns->execute([$ujian_id, $realSiswa['id'], $realSiswa['nis'], $realSiswa['nama'], $realSiswa['kelas_nama']]);
+                    $pesertaInfo = [
+                        'id' => $db->lastInsertId(),
+                        'ujian_id' => $ujian_id,
+                        'siswa_id' => $realSiswa['id'],
+                        'nis' => $realSiswa['nis'],
+                        'nama_siswa' => $realSiswa['nama'],
+                        'kelas_nama' => $realSiswa['kelas_nama']
+                    ];
+                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai') {
+                    redirect("/cbt/kerjakan/selesai?peserta_id={$pesertaInfo['id']}&ujian_id={$ujian_id}");
+                    exit;
+                }
+            }
+        }
+
+        // Jika Pengawas/Guru melakukan uji coba CBT
+        if (!$pesertaInfo) {
+            $pesertaInfo = [
+                'id' => 0,
+                'ujian_id' => $ujian_id,
+                'siswa_id' => null,
+                'nis' => 'GURU-TRIAL',
+                'nama_siswa' => ($_SESSION['nama'] ?? 'Pengawas / Guru (Simulasi)'),
+                'kelas_nama' => ($ujianInfo['kelas_nama'] ?: 'Simulasi')
+            ];
+        }
+
+        include __DIR__ . '/../../resources/views/cbt/kerjakan.php';
+    }
+
+    /**
+     * Submit Jawaban Ujian Siswa & Hitung Nilai Real Otomatis
+     */
+    public static function submitKerjakan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ujian_id = isset($_POST['ujian_id']) ? (int)$_POST['ujian_id'] : 0;
+            $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
+            $rawPayload = $_POST['jawaban_payload'] ?? '{}';
+            $answers = json_decode($rawPayload, true) ?: [];
+
+            // Ambil seluruh kunci jawaban dan bobot soal
+            $stmtSoal = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot FROM cbt_soal WHERE ujian_id = ?");
+            $stmtSoal->execute([$ujian_id]);
+            $soals = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
+
+            $totalBobot = 0;
+            $poinPerolehan = 0;
+            $jumlahBenar = 0;
+            $jumlahSalah = 0;
+
+            foreach ($soals as $s) {
+                $bobot = (float)($s['bobot'] > 0 ? $s['bobot'] : 1.0);
+                $totalBobot += $bobot;
+
+                $userAns = strtoupper(trim($answers[$s['id']] ?? ''));
+                $kunci = strtoupper(trim($s['kunci_jawaban']));
+
+                if (!empty($userAns) && $userAns === $kunci) {
+                    $poinPerolehan += $bobot;
+                    $jumlahBenar++;
+                } else {
+                    $jumlahSalah++;
+                }
+            }
+
+            $nilaiAkhir = ($totalBobot > 0) ? round(($poinPerolehan / $totalBobot) * 100, 1) : 0;
+
+            // Simpan ke database jika peserta terdaftar
+            if ($peserta_id > 0) {
+                $stmtUp = $db->prepare("UPDATE cbt_peserta 
+                                        SET waktu_selesai = NOW(), status_pengerjaan = 'Selesai', 
+                                            jumlah_benar = ?, jumlah_salah = ?, nilai_akhir = ?, jawaban_json = ? 
+                                        WHERE id = ?");
+                $stmtUp->execute([$jumlahBenar, $jumlahSalah, $nilaiAkhir, json_encode($answers), $peserta_id]);
+            } else {
+                // Untuk sesi trial pengawas/guru, simpan sebagai sesi percobaan
+                $namaPengawas = $_SESSION['nama'] ?? 'Guru (Trial)';
+                $stmtIns = $db->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json) 
+                                         VALUES (?, NULL, 'TRIAL', ?, 'Simulasi', NOW() - INTERVAL 15 MINUTE, NOW(), 'Selesai', ?, ?, ?, ?)");
+                $stmtIns->execute([$ujian_id, $namaPengawas, $jumlahBenar, $jumlahSalah, $nilaiAkhir, json_encode($answers)]);
+                $peserta_id = (int)$db->lastInsertId();
+            }
+
+            redirect("/cbt/kerjakan/selesai?peserta_id={$peserta_id}&ujian_id={$ujian_id}");
+            exit;
+        }
+        redirect('/cbt/dashboard');
+    }
+
+    /**
+     * Halaman Konfirmasi Selesai Ujian & Tampilan Skor
+     */
+    public static function selesaiKerjakan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+
+        $peserta_id = isset($_GET['peserta_id']) ? (int)$_GET['peserta_id'] : 0;
+        $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+
+        $stmtP = $db->prepare("SELECT * FROM cbt_peserta WHERE id = ?");
+        $stmtP->execute([$peserta_id]);
+        $pesertaInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
+
+        $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ?");
+        $stmtU->execute([$ujian_id]);
+        $ujianInfo = $stmtU->fetch(PDO::FETCH_ASSOC);
+
+        if (!$pesertaInfo || !$ujianInfo) {
+            redirect('/cbt/dashboard');
+            exit;
+        }
+
+        include __DIR__ . '/../../resources/views/cbt/selesai.php';
+    }
+}
