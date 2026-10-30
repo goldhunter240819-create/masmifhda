@@ -484,6 +484,7 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
         if ($cardKey === 'keuangan' && $userRoleId === 2 && $isFinanceAdmin) return true;
         if ($cardKey === 'keuangan' && $userRoleId === 2 && !$isFinanceAdmin) return false;
         if ($cardKey === 'pkkm' && !empty($_SESSION['is_kamad'])) return true;
+        if ($cardKey === 'manajemen_berkas' && !empty($_SESSION['is_kamad'])) return true;
 
         $card = $portalCardsConfig['cards'][$cardKey] ?? null;
         if (!$card) {
@@ -611,6 +612,23 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
                 <div class="mod-body">
                     <p class="mod-title">Waka Kurikulum</p>
                     <p class="mod-desc">Supervisi, administrasi, jurnal, dan jadwal KBM.</p>
+                </div>
+                <div class="mod-arrow"><i data-lucide="arrow-up-right" style="width:15px;height:15px;"></i></div>
+            </div>
+            <?php endif; ?>
+
+            <!-- MANAJEMEN BERKAS -->
+            <?php if ($isCardVisible('manajemen_berkas')): 
+                $berkasUrl = ($isAdmin || $userRoleId === 1 || $userRoleId === 99) 
+                    ? base_url('admin/pkkm/master-berkas') 
+                    : base_url('guru/pkkm/master-berkas');
+            ?>
+            <div class="mod-card theme-violet d5" onclick="location.href='<?php echo $berkasUrl; ?>'">
+                <span class="mod-badge badge-new" style="background: #e0e7ff; color: #4338ca; border-color: #a5b4fc;">Baru</span>
+                <div class="mod-icon-wrap icon-violet" style="background:#eef2ff; color:#4f46e5;"><i data-lucide="archive"></i></div>
+                <div class="mod-body">
+                    <p class="mod-title">Manajemen Berkas</p>
+                    <p class="mod-desc">Pusat master berkas, repositori dokumen akreditasi, dan bukti fisik digital.</p>
                 </div>
                 <div class="mod-arrow"><i data-lucide="arrow-up-right" style="width:15px;height:15px;"></i></div>
             </div>
@@ -2256,6 +2274,7 @@ $router->add('GET', '/admin/pkkm/sync-instrumen', [\App\Controllers\AdminPkkmCon
 // PKKM Master Berkas / Dokumen
 $router->add('GET', '/admin/pkkm/master-berkas', [\App\Controllers\AdminPkkmController::class, 'daftarBerkas']);
 $router->add('GET', '/admin/pkkm/dokumen', [\App\Controllers\AdminPkkmController::class, 'daftarBerkas']);
+$router->add('GET', '/admin/manajemen-berkas', [\App\Controllers\AdminPkkmController::class, 'daftarBerkas']);
 $router->add('GET', '/admin/pkkm/master-berkas/sync', [\App\Controllers\AdminPkkmController::class, 'syncMasterBerkas']);
 $router->add('POST', '/admin/pkkm/master-berkas/sync', [\App\Controllers\AdminPkkmController::class, 'syncMasterBerkas']);
 $router->add('POST', '/admin/pkkm/master-berkas/create', [\App\Controllers\AdminPkkmController::class, 'createMasterBerkas']);
@@ -2338,6 +2357,15 @@ $router->add('GET', '/pengawas/pkkm/cetak-bukti/perangkat-guru', [\App\Controlle
 // Portal Guru - PKKM (Penilaian Kinerja Kepala Madrasah)
 $router->add('GET', '/guru/pkkm/instrumen', [\App\Controllers\PortalGuruPkkmController::class, 'instrumen']);
 $router->add('GET', '/guru/pkkm/master-berkas', [\App\Controllers\PortalGuruPkkmController::class, 'masterBerkas']);
+$router->add('GET', '/guru/manajemen-berkas', [\App\Controllers\PortalGuruPkkmController::class, 'masterBerkas']);
+$router->add('GET', '/manajemen-berkas', function() {
+    $role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+    if ($role === 1 || $role === 99) {
+        redirect('admin/pkkm/master-berkas');
+    } else {
+        redirect('guru/pkkm/master-berkas');
+    }
+});
 $router->add('POST', '/guru/pkkm/berkas/save', [\App\Controllers\PortalGuruPkkmController::class, 'saveBerkas']);
 $router->add('POST', '/guru/pkkm/berkas/delete', [\App\Controllers\PortalGuruPkkmController::class, 'deleteBerkas']);
 $router->add('POST', '/guru/pkkm/master-berkas/upload', [\App\Controllers\PortalGuruPkkmController::class, 'uploadMasterBerkas']);

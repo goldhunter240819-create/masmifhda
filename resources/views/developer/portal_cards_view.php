@@ -25,6 +25,7 @@ $cardIcons = [
     'rekap_soal'     => 'database',
     'rekap_jadwal'   => 'calendar',
     'rdm'            => 'book-open-check',
+    'manajemen_berkas' => 'archive',
 ];
 
 $cardThemes = [
@@ -45,6 +46,7 @@ $cardThemes = [
     'rekap_soal'     => ['bg'=>'#eff6ff','color'=>'#2563eb'],
     'rekap_jadwal'   => ['bg'=>'#faf5ff','color'=>'#9333ea'],
     'rdm'            => ['bg'=>'#0f2e5c','color'=>'#38bdf8'],
+    'manajemen_berkas' => ['bg'=>'#ede9fe','color'=>'#7c3aed'],
 ];
 ?>
 

@@ -20,4 +20,3 @@ $logData = date('Y-m-d H:i:s') . "\nResult:\n" . $output . "\n------------------
 echo "<pre>$output</pre>";
 echo "Berhasil update otomatis MAS Mifhda!";
 ?>
-
