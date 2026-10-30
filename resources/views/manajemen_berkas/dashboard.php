@@ -1,7 +1,180 @@
 <?php
 $pageTitle = 'Dashboard Monitoring';
 $active_menu = 'dashboard';
+$nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
 ?>
+<style>
+    /* ─── Hero Banner (SIAKAD Style) ─── */
+    .welcome-hero {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        border-radius: 20px;
+        padding: 2.2rem 2.5rem;
+        position: relative;
+        overflow: hidden;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 15px 35px -10px rgba(2, 132, 199, 0.4);
+        margin-bottom: 2rem;
+    }
+    .welcome-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: 
+            radial-gradient(circle at 10% 20%, rgba(255,255,255,0.18) 0%, transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(255,255,255,0.12) 0%, transparent 40%),
+            url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1.5' fill='white' fill-opacity='0.15'/%3E%3C/svg%3E");
+        z-index: 1;
+    }
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        max-width: 600px;
+    }
+    .hero-badge {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        padding: 4px 14px;
+        border-radius: 100px;
+        font-weight: 800;
+        font-size: 0.72rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 0.8rem;
+        border: 1px solid rgba(255,255,255,0.3);
+        letter-spacing: 0.5px;
+        backdrop-filter: blur(8px);
+    }
+    .hero-content h1 {
+        font-size: 1.85rem;
+        font-weight: 900;
+        margin: 0 0 0.5rem;
+        letter-spacing: -0.5px;
+        line-height: 1.2;
+    }
+    .hero-content p {
+        font-size: 0.92rem;
+        opacity: 0.9;
+        line-height: 1.55;
+        margin: 0 0 1.3rem;
+    }
+    .hero-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .hero-btn {
+        text-decoration: none;
+        padding: 0.65rem 1.25rem;
+        border-radius: 12px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.84rem;
+        transition: 0.25s;
+    }
+    .hero-btn.primary {
+        background: #ffffff;
+        color: #0284c7;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    .hero-btn.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 25px rgba(0,0,0,0.18);
+        background: #f8fafc;
+    }
+    .hero-btn.secondary {
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        backdrop-filter: blur(10px);
+    }
+    .hero-btn.secondary:hover {
+        transform: translateY(-2px);
+        background: rgba(255,255,255,0.22);
+    }
+
+    /* Mini stats in banner right side */
+    .hero-stats-mini {
+        display: flex;
+        gap: 1.5rem;
+        z-index: 2;
+        flex-shrink: 0;
+    }
+    .mini-stat {
+        text-align: right;
+        border-right: 2px solid rgba(255,255,255,0.18);
+        padding-right: 1.5rem;
+    }
+    .mini-stat:last-child {
+        border: none;
+        padding-right: 0;
+    }
+    .mini-stat .val {
+        font-size: 1.65rem;
+        font-weight: 900;
+        color: white;
+        line-height: 1.1;
+    }
+    .mini-stat .lab {
+        font-size: 0.7rem;
+        font-weight: 700;
+        opacity: 0.75;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-top: 4px;
+    }
+
+    .hero-bg-icon {
+        position: absolute;
+        right: -25px;
+        bottom: -25px;
+        opacity: 0.08;
+        transform: rotate(-12deg);
+        z-index: 1;
+        pointer-events: none;
+    }
+    .hero-bg-icon i, .hero-bg-icon svg {
+        width: 170px !important;
+        height: 170px !important;
+        color: white;
+    }
+
+    @keyframes wave {
+        0%, 100% { transform: rotate(0deg); }
+        20%, 60% { transform: rotate(14deg); }
+        40%, 80% { transform: rotate(-14deg); }
+    }
+    .wave {
+        display: inline-block;
+        animation: wave 2s infinite;
+        transform-origin: 70% 70%;
+    }
+
+    @media (max-width: 900px) {
+        .welcome-hero {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+            padding: 1.75rem;
+        }
+        .hero-stats-mini {
+            width: 100%;
+            justify-content: flex-start;
+            border-top: 1px solid rgba(255,255,255,0.15);
+            padding-top: 1.25rem;
+        }
+        .mini-stat {
+            text-align: left;
+        }
+    }
+</style>
+
 <div class="siakad-container">
     <?php include __DIR__ . '/sidebar.php'; ?>
 
@@ -11,28 +184,44 @@ $active_menu = 'dashboard';
         <div class="z-scroll" style="padding: 1.5rem 2rem 3rem;">
             
             <!-- Welcome Hero -->
-            <div class="welcome-hero" style="margin: 0 0 1.75rem 0; border-radius: 20px; padding: 2rem 2.25rem; position: relative; overflow: hidden; color: white; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); box-shadow: 0 12px 30px -10px rgba(2, 132, 199, 0.4);">
-                <div class="hero-content" style="position: relative; z-index: 2; max-width: 620px;">
-                    <div class="hero-badge" style="background: rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 100px; font-weight: 800; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 0.8rem; border: 1px solid rgba(255,255,255,0.3); letter-spacing: 0.5px;">
-                        <i data-lucide="folder-check" style="width: 14px; height: 14px;"></i> PUSAT DOKUMEN & SUPERVISI GURU
+            <div class="welcome-hero">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <i data-lucide="folder-check" style="width: 14px; height: 14px;"></i> PUSAT DOKUMEN & SUPERVISI GURU v2.0
                     </div>
-                    <h1 style="font-size: 1.85rem; font-weight: 900; margin: 0 0 0.5rem; letter-spacing: -0.5px; line-height: 1.2;">
-                        Manajemen Berkas Guru
-                    </h1>
-                    <p style="font-size: 0.92rem; opacity: 0.9; line-height: 1.5; margin-bottom: 1.25rem;">
-                        Sistem terintegrasi untuk melihat, memonitor, dan memverifikasi kelengkapan berkas pribadi (SK, Sertifikat, Ijazah) serta perangkat pembelajaran (RPP, Modul Ajar, ATP, Prota, Promes) seluruh dewan guru.
+                    <h1>Selamat Datang, <?php echo htmlspecialchars($nama); ?>! <span class="wave">👋</span></h1>
+                    <p>
+                        Pusat digitalisasi dokumen madrasah. Kelola, monitor, dan verifikasi berkas pribadi dewan guru serta perangkat pembelajaran (Modul Ajar, ATP, Prota, Promes) secara efisien dalam satu pintu.
                     </p>
-                    <div class="hero-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                        <a href="<?php echo base_url($baseRoute . '/perangkat'); ?>" class="hero-btn primary" style="background: #ffffff; color: #0284c7; padding: 0.65rem 1.25rem; border-radius: 12px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.84rem; box-shadow: 0 4px 15px rgba(0,0,0,0.15); transition: 0.2s;">
+                    <div class="hero-actions">
+                        <a href="<?php echo base_url($baseRoute . '/perangkat'); ?>" class="hero-btn primary">
                             <i data-lucide="book-marked" style="width: 16px; height: 16px;"></i> Perangkat Pembelajaran
                         </a>
-                        <a href="<?php echo base_url($baseRoute . '/pribadi'); ?>" class="hero-btn secondary" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 0.65rem 1.25rem; border-radius: 12px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.84rem; backdrop-filter: blur(10px); transition: 0.2s;">
+                        <a href="<?php echo base_url($baseRoute . '/pribadi'); ?>" class="hero-btn secondary">
                             <i data-lucide="file-badge" style="width: 16px; height: 16px;"></i> Berkas Pribadi
                         </a>
                     </div>
                 </div>
-                <div class="hero-bg-icon" style="position: absolute; right: -20px; bottom: -20px; opacity: 0.08; pointer-events: none;">
-                    <i data-lucide="folder-kanban" style="width: 160px; height: 160px; color: white;"></i>
+
+                <!-- Right Side Mini Stats -->
+                <div class="hero-stats-mini">
+                    <div class="mini-stat">
+                        <div class="val"><?php echo date('H:i'); ?></div>
+                        <div class="lab">Waktu Server</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="val"><?php echo date('d'); ?></div>
+                        <div class="lab"><?php echo date('M Y'); ?></div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="val" style="color: #67e8f9;"><?php echo $persenKelengkapan; ?>%</div>
+                        <div class="lab">Partisipasi</div>
+                    </div>
+                </div>
+
+                <!-- Floating Giant Watermark Icon -->
+                <div class="hero-bg-icon">
+                    <i data-lucide="folder-kanban"></i>
                 </div>
             </div>
 
@@ -267,4 +456,3 @@ $active_menu = 'dashboard';
         }
     }
 </script>
-

@@ -61,29 +61,6 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 <i data-lucide="file-badge"></i>
                 <span>Berkas Pribadi</span>
             </a>
-
-            <div class="z-nav-label" style="margin-top: 1rem;">Navigasi Sistem</div>
-
-            <a href="<?php echo base_url('portal'); ?>" class="z-nav-item">
-                <i data-lucide="home"></i>
-                <span>Portal Utama</span>
-            </a>
-            
-            <?php if ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad'])): ?>
-            <a href="<?php echo base_url('admin/kurikulum/supervisi-administrasi'); ?>" class="z-nav-item">
-                <i data-lucide="clipboard-check"></i>
-                <span>Supervisi Kurikulum</span>
-            </a>
-            <a href="<?php echo base_url('admin/pkkm/cetak-bukti/perangkat-guru'); ?>" target="_blank" class="z-nav-item">
-                <i data-lucide="printer"></i>
-                <span>Display Audit PKKM</span>
-            </a>
-            <?php else: ?>
-            <a href="<?php echo base_url('guru/perangkat'); ?>" class="z-nav-item">
-                <i data-lucide="folder-cog"></i>
-                <span>Input Perangkat Guru</span>
-            </a>
-            <?php endif; ?>
         </nav>
     </div>
 
@@ -105,4 +82,3 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
         </a>
     </div>
 </aside>
-

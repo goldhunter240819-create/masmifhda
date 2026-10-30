@@ -25,21 +25,20 @@ $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad
             </div>
             <?php endif; ?>
 
-            <!-- Header Title & Action -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 1.5rem;">
-                <div>
-                    <h2 style="margin: 0 0 4px; font-size: 1.4rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px;">
-                        <i data-lucide="file-badge" style="color: #059669; width: 24px; height: 24px;"></i>
-                        Berkas Pribadi & Portofolio Guru
-                    </h2>
-                    <p style="margin: 0; color: #64748b; font-size: 0.85rem;">
-                        Pusat penyimpanan arsip kepegawaian (SK, Sertifikat Pendidik, Ijazah, KTP, NUPTK) dan portofolio dewan guru.
-                    </p>
-                </div>
-                <div>
-                    <button type="button" onclick="document.getElementById('modalUploadPribadi').classList.add('open')" class="e-btn e-btn-primary" style="background: #059669;">
-                        <i data-lucide="upload-cloud" style="width: 15px; height: 15px;"></i> Upload Berkas Baru
-                    </button>
+            <!-- Elite Page Header -->
+            <div class="elite-page-header">
+                <div class="header-bg-shapes"></div>
+                <div class="header-content-inner">
+                    <div class="header-text-premium">
+                        <div class="header-badge">PORTOFOLIO & ARSIP GURU</div>
+                        <h1><i data-lucide="file-badge"></i> Berkas Pribadi & Portofolio</h1>
+                        <p>Pusat penyimpanan arsip kepegawaian (SK Mengajar, Sertifikat Pendidik, Ijazah, KTP, NUPTK) dan portofolio dewan guru.</p>
+                    </div>
+                    <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" onclick="document.getElementById('modalUploadPribadi').classList.add('open')" class="e-btn e-btn-glass">
+                            <i data-lucide="upload-cloud"></i> Upload Berkas Baru
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -276,4 +275,3 @@ $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad
         }
     }
 </script>
-

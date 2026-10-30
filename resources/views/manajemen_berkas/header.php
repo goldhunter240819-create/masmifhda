@@ -27,11 +27,17 @@ $pageTitle = $pageTitle ?? 'Dashboard';
             <span class="current" style="font-weight: 700; color: #1e293b;"><?php echo htmlspecialchars($pageTitle); ?></span>
         </div>
     </div>
-    <div class="z-header-right" style="display: flex; align-items: center; gap: 1.5rem;">
+    <div class="z-header-right" style="display: flex; align-items: center; gap: 1.25rem;">
         <div class="header-status-pill" style="display: flex; align-items: center; gap: 8px; background: #f0fdf4; padding: 6px 14px; border-radius: 100px; border: 1px solid #dcfce7; font-size: 0.75rem; font-weight: 700; color: #15803d;">
             <div class="dot pulse" style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%;"></div>
             <span>System Online</span>
         </div>
+
+        <!-- PORTAL HUB BUTTON -->
+        <a href="<?php echo base_url('portal'); ?>" style="display: flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 100px; border: 1px solid #bfdbfe; background: #eff6ff; color: #0284c7; font-size: 0.75rem; font-weight: 800; text-decoration: none; transition: 0.2s; white-space: nowrap;">
+            <i data-lucide="layout-grid" style="width: 14px; height: 14px;"></i> Portal HUB
+        </a>
+
         <div class="z-header-user" style="display: flex; align-items: center; gap: 10px;">
             <div class="z-avatar-premium" style="width: 36px; height: 36px; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(14,165,233,0.2);">
                 <?php echo $initial; ?>
@@ -45,6 +51,10 @@ $pageTitle = $pageTitle ?? 'Dashboard';
                 </div>
             </div>
         </div>
+
+        <!-- LOGOUT BUTTON -->
+        <a href="<?php echo base_url('logout'); ?>" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #fef2f2; color: #ef4444; text-decoration: none; transition: 0.2s; border: 1px solid #fee2e2;" title="Logout">
+            <i data-lucide="log-out" style="width: 17px; height: 17px;"></i>
+        </a>
     </div>
 </header>
-

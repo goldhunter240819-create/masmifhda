@@ -12,27 +12,26 @@ $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad
 
         <div class="z-scroll" style="padding: 1.5rem 2rem 3rem;">
 
-            <!-- Header Title & Action -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 1.5rem;">
-                <div>
-                    <h2 style="margin: 0 0 4px; font-size: 1.4rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px;">
-                        <i data-lucide="book-marked" style="color: #0284c7; width: 24px; height: 24px;"></i>
-                        Berkas Perangkat Pembelajaran
-                    </h2>
-                    <p style="margin: 0; color: #64748b; font-size: 0.85rem;">
-                        Monitoring dan validasi perangkat ajar digital (Modul Ajar / RPP, ATP, Prota, Promes, KKTP, Silabus).
-                    </p>
-                </div>
-                <div>
-                    <?php if (!$isAdminOrKamad): ?>
-                    <a href="<?php echo base_url('guru/perangkat'); ?>" class="e-btn e-btn-primary">
-                        <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i> Input Perangkat Saya
-                    </a>
-                    <?php else: ?>
-                    <a href="<?php echo base_url('admin/pkkm/cetak-bukti/perangkat-guru'); ?>" target="_blank" class="e-btn e-btn-blue-light">
-                        <i data-lucide="printer" style="width: 15px; height: 15px;"></i> Cetak Bukti Supervisi
-                    </a>
-                    <?php endif; ?>
+            <!-- Elite Page Header -->
+            <div class="elite-page-header">
+                <div class="header-bg-shapes"></div>
+                <div class="header-content-inner">
+                    <div class="header-text-premium">
+                        <div class="header-badge">SUPERVISI & KBM</div>
+                        <h1><i data-lucide="book-marked"></i> Berkas Perangkat Pembelajaran</h1>
+                        <p>Monitoring dan validasi kelengkapan perangkat ajar digital (Modul Ajar / RPP, ATP, Prota, Promes, KKTP, Silabus) seluruh dewan guru.</p>
+                    </div>
+                    <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <?php if (!$isAdminOrKamad): ?>
+                        <a href="<?php echo base_url('guru/perangkat'); ?>" class="e-btn e-btn-glass">
+                            <i data-lucide="plus-circle"></i> Input Perangkat Saya
+                        </a>
+                        <?php else: ?>
+                        <a href="<?php echo base_url('admin/pkkm/cetak-bukti/perangkat-guru'); ?>" target="_blank" class="e-btn e-btn-glass">
+                            <i data-lucide="printer"></i> Cetak Bukti Supervisi
+                        </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 
@@ -287,4 +286,3 @@ $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad
         document.getElementById('reviewModal').classList.add('open');
     }
 </script>
-
