@@ -25,7 +25,7 @@ $cardIcons = [
     'rekap_soal'     => 'database',
     'rekap_jadwal'   => 'calendar',
     'rdm'            => 'book-open-check',
-    'manajemen_berkas' => 'archive',
+    'manajemen_berkas' => 'folder-check',
 ];
 
 $cardThemes = [

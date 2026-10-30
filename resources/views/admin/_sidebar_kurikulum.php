@@ -21,9 +21,10 @@ $sub_menus = array(
             'icon'=>'clipboard-list',
             'label'=>'Supervisi & Evaluasi',
             'page'=>'supervisi',
-            'subpages'=>array('supervisi_administrasi','supervisi_kelas','supervisi_penilaian'),
+            'subpages'=>array('supervisi_administrasi','manajemen_berkas','supervisi_kelas','supervisi_penilaian'),
             'dropdown'=>array(
                 array('icon'=>'folder-check', 'label'=>'Supervisi Administrasi', 'url'=>base_url('admin/kurikulum/supervisi-administrasi'), 'page'=>'supervisi_administrasi'),
+                array('icon'=>'folder-kanban', 'label'=>'Monitoring Berkas Guru', 'url'=>base_url('admin/manajemen-berkas'), 'page'=>'manajemen_berkas'),
                 array('icon'=>'monitor-play', 'label'=>'Supervisi Kelas', 'url'=>base_url('admin/kurikulum/supervisi-kelas'), 'page'=>'supervisi_kelas'),
                 array('icon'=>'clipboard-check', 'label'=>'Supervisi Penilaian', 'url'=>base_url('admin/kurikulum/supervisi-penilaian'), 'page'=>'supervisi_penilaian'),
             )

@@ -93,14 +93,14 @@ if(isset($_SESSION['user_id'])) {
 
             <div class="z-nav-cat">Pusat Dokumen</div>
             
-            <div class="z-nav-dropdown <?php echo (strpos($uri, 'perangkat') !== false || strpos($uri, 'berkas-pribadi') !== false || strpos($uri, 'pemberkasan') !== false) ? 'open' : ''; ?>">
+            <div class="z-nav-dropdown <?php echo (strpos($uri, 'perangkat') !== false || strpos($uri, 'berkas-pribadi') !== false || strpos($uri, 'manajemen-berkas') !== false || strpos($uri, 'pemberkasan') !== false) ? 'open' : ''; ?>">
                 <div class="z-nav-dropdown-header" onclick="this.parentElement.classList.toggle('open')">
                     <div class="left"><i data-lucide="folder-open"></i> Pusat Dokumen</div>
                     <i data-lucide="chevron-right" class="chev" style="width:14px;height:14px;"></i>
                 </div>
                 <div class="z-nav-subnav">
                     <a href="<?php echo base_url('guru/perangkat'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'guru/perangkat') !== false) ? 'active' : ''; ?>">Perangkat Pembelajaran</a>
-                    <!-- <a href="<?php echo base_url('guru/berkas-pribadi'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'berkas-pribadi') !== false) ? 'active' : ''; ?>">Berkas Pribadi</a> -->
+                    <a href="<?php echo base_url('guru/manajemen-berkas'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'guru/manajemen-berkas') !== false) ? 'active' : ''; ?>">Manajemen Berkas Guru</a>
                     
                     <?php if(isset($status_kepegawaian) && in_array($status_kepegawaian, ['PNS', 'P3K', 'PPPK', 'Sertifikasi'])): ?>
                         <a href="<?php echo base_url('guru/pemberkasan'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'pemberkasan') !== false) ? 'active' : ''; ?>">Pemberkasan Dinas</a>
