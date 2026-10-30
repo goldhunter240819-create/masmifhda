@@ -106,6 +106,7 @@ class CbtController {
             // 6. Tabel Matriks Jadwal Ujian (Grid per Hari, Slot, Kelas)
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_jadwal_grid (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                topik_id INT DEFAULT NULL,
                 ujian_id INT NOT NULL,
                 hari VARCHAR(50) NOT NULL,
                 jam_slot VARCHAR(50) NOT NULL,
@@ -115,10 +116,37 @@ class CbtController {
                 ruang VARCHAR(100) DEFAULT NULL,
                 tanggal DATE DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (topik_id),
                 INDEX (ujian_id),
                 INDEX (hari),
                 INDEX (kelas_nama)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            try {
+                $db->exec("ALTER TABLE cbt_jadwal_grid ADD COLUMN topik_id INT DEFAULT NULL AFTER id");
+            } catch (\Exception $e) {}
+
+            // 7. Tabel Topik Ujian (bs_topik)
+            $db->exec("CREATE TABLE IF NOT EXISTS bs_topik (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                jenis VARCHAR(50) NOT NULL,
+                nama_topik VARCHAR(255) NOT NULL,
+                keterangan TEXT DEFAULT NULL,
+                tahun_ajaran VARCHAR(50) DEFAULT '2026/2027',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            try {
+                $cntTopik = (int)$db->query("SELECT COUNT(*) FROM bs_topik")->fetchColumn();
+                if ($cntTopik === 0) {
+                    $db->exec("INSERT INTO bs_topik (jenis, nama_topik, keterangan, tahun_ajaran) VALUES
+                        ('PAS', 'Penilaian Akhir Semester (PAS) Ganjil 2026/2027', 'Agenda asesmen sumatif akhir semester ganjil', '2026/2027'),
+                        ('PTS', 'Penilaian Tengah Semester (PTS) Ganjil 2026/2027', 'Agenda asesmen sumatif tengah semester ganjil', '2026/2027'),
+                        ('ASAJ', 'Asesmen Sumatif Akhir Jenjang (ASAJ)', 'Ujian akhir jenjang madrasah aliyah', '2026/2027'),
+                        ('PH', 'Penilaian Harian (PH) Terjadwal', 'Penilaian harian / formatif kelas', '2026/2027')
+                    ");
+                }
+            } catch (\Exception $e) {}
 
             // Bersihkan data dummy awal (seperti UJN-MAT-01, UJN-FIQ-02, MAS982, nis dummy)
             $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02'))");
@@ -308,6 +336,37 @@ class CbtController {
         $db_siakad = $ctx['db_siakad'];
         self::ensureTables($db);
 
+        // 1. Ambil daftar topik dari Bank Soal (bs_topik)
+        $topikList = [];
+        if ($db_siakad) {
+            try {
+                $topikList = $db_siakad->query("SELECT id, jenis, nama_topik, tahun_ajaran FROM bs_topik ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+        }
+        if (empty($topikList)) {
+            try {
+                $topikList = $db->query("SELECT id, jenis, nama_topik, tahun_ajaran FROM bs_topik ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+        }
+
+        // Tentukan topik aktif
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        if ($selectedTopikId === 0 && !empty($topikList)) {
+            $selectedTopikId = (int)$topikList[0]['id'];
+        }
+
+        $selectedTopik = null;
+        foreach ($topikList as $tp) {
+            if ((int)$tp['id'] === $selectedTopikId) {
+                $selectedTopik = $tp;
+                break;
+            }
+        }
+        if (!$selectedTopik && !empty($topikList)) {
+            $selectedTopik = $topikList[0];
+            $selectedTopikId = (int)$selectedTopik['id'];
+        }
+
         // Ambil daftar kelas real
         $kelasList = self::getRealKelasList($db, $db_siakad);
 
@@ -326,19 +385,54 @@ class CbtController {
         // Ambil semua paket ujian
         $ujianList = $db->query("SELECT * FROM cbt_ujian ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai DESC, created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
-        // Ambil daftar guru untuk pengawas
+        // Ambil daftar guru untuk pengawas (dengan fallback nama guru lengkap masmifhda)
         $guruList = [];
         try {
             $guruList = $db->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
+        if (empty($guruList) && $db_siakad) {
+            try {
+                $guruList = $db_siakad->query("SELECT id, nama FROM aula_db.guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+        }
+        if (empty($guruList)) {
+            $guruList = [
+                ['id' => 1, 'nama' => 'M AZIZ SULAIMAN, S.Pd'],
+                ['id' => 2, 'nama' => 'SAIPUDIN AZIZ, S.Pd'],
+                ['id' => 3, 'nama' => 'INDAH YUNITASARI, S.Pd'],
+                ['id' => 4, 'nama' => 'M. Wahidin, S.Pd'],
+                ['id' => 5, 'nama' => 'SYAIFUL BAHRI, S.Pd'],
+                ['id' => 6, 'nama' => 'SAWALUDIN, S.Pd'],
+                ['id' => 7, 'nama' => 'Drs. Hamim Hasyim'],
+                ['id' => 8, 'nama' => 'ERWANSAH, S.Pd'],
+                ['id' => 9, 'nama' => 'ENDANG KURNIASIH, S.E.'],
+                ['id' => 10, 'nama' => 'JULAINI, S.Pd'],
+                ['id' => 11, 'nama' => 'SHOBIRIN'],
+                ['id' => 12, 'nama' => 'SITI AISAH, S.Pd.I'],
+                ['id' => 13, 'nama' => 'DIDI HARTONO, S.Pd.I']
+            ];
+        }
 
-        // Ambil grid jadwal tersimpan
-        $gridRows = $db->query("
-            SELECT g.*, u.nama_ujian, u.kode_ujian, u.mapel_nama, u.durasi_menit, u.status as ujian_status 
-            FROM cbt_jadwal_grid g
-            JOIN cbt_ujian u ON g.ujian_id = u.id
-            ORDER BY g.id ASC
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        // Ambil grid jadwal tersimpan untuk topik aktif
+        $gridRows = [];
+        if ($selectedTopikId > 0) {
+            $stmtG = $db->prepare("
+                SELECT g.*, u.nama_ujian, u.kode_ujian, u.mapel_nama, u.durasi_menit, u.status as ujian_status 
+                FROM cbt_jadwal_grid g
+                JOIN cbt_ujian u ON g.ujian_id = u.id
+                WHERE g.topik_id = ? OR g.topik_id IS NULL OR g.topik_id = 0
+                ORDER BY g.id ASC
+            ");
+            $stmtG->execute([$selectedTopikId]);
+            $gridRows = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $gridRows = $db->query("
+                SELECT g.*, u.nama_ujian, u.kode_ujian, u.mapel_nama, u.durasi_menit, u.status as ujian_status 
+                FROM cbt_jadwal_grid g
+                JOIN cbt_ujian u ON g.ujian_id = u.id
+                ORDER BY g.id ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         // Susun matriks jadwal: $jadwal_master[hari][jam_slot][kelas_key] = data
         $jadwal_master = [];
@@ -433,6 +527,7 @@ class CbtController {
         self::ensureTables($db);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $topik_id = !empty($_POST['topik_id']) ? (int)$_POST['topik_id'] : null;
             $ujian_id = (int)($_POST['ujian_id'] ?? 0);
             $hari = trim($_POST['hari'] ?? 'Senin');
             $jam_slot = trim($_POST['jam_slot'] ?? '');
@@ -443,21 +538,27 @@ class CbtController {
             $tanggal = !empty($_POST['tanggal']) ? $_POST['tanggal'] : null;
 
             if ($ujian_id > 0 && !empty($jam_slot) && !empty($kelas_nama)) {
-                $stmtCheck = $db->prepare("SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?");
-                $stmtCheck->execute([$hari, $jam_slot, $kelas_nama]);
+                $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
+                $params = [$hari, $jam_slot, $kelas_nama];
+                if ($topik_id) {
+                    $checkSql .= " AND (topik_id = ? OR topik_id IS NULL)";
+                    $params[] = $topik_id;
+                }
+                $stmtCheck = $db->prepare($checkSql);
+                $stmtCheck->execute($params);
                 $existingId = $stmtCheck->fetchColumn();
 
                 if ($existingId) {
-                    $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ? WHERE id = ?");
-                    $stmtUp->execute([$ujian_id, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
+                    $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ? WHERE id = ?");
+                    $stmtUp->execute([$topik_id, $ujian_id, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
                 } else {
-                    $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmtIns->execute([$ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
+                    $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmtIns->execute([$topik_id, $ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
                 }
 
                 $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
             }
-            redirect('/cbt/jadwal?msg=saved');
+            redirect('/cbt/jadwal?topik_id=' . ($topik_id ?: '') . '&msg=saved');
             exit;
         }
         redirect('/cbt/jadwal');
@@ -473,10 +574,11 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['id'] ?? 0);
+            $topik_id = !empty($_POST['topik_id']) ? (int)$_POST['topik_id'] : '';
             if ($id > 0) {
                 $db->prepare("DELETE FROM cbt_jadwal_grid WHERE id = ?")->execute([$id]);
             }
-            redirect('/cbt/jadwal?msg=deleted');
+            redirect('/cbt/jadwal?topik_id=' . $topik_id . '&msg=deleted');
             exit;
         }
         redirect('/cbt/jadwal');
@@ -564,6 +666,7 @@ class CbtController {
         self::ensureTables($db);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $topik_id = !empty($_POST['topik_id']) ? (int)$_POST['topik_id'] : null;
             $kelas_nama = trim($_POST['kelas_nama'] ?? '');
             $kelas_id = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
             $schedules = $_POST['schedules'] ?? [];
@@ -578,25 +681,75 @@ class CbtController {
 
                     if (!empty($hari) && !empty($jam_slot)) {
                         if ($ujian_id > 0) {
-                            $stmtCheck = $db->prepare("SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?");
-                            $stmtCheck->execute([$hari, $jam_slot, $kelas_nama]);
+                            $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
+                            $params = [$hari, $jam_slot, $kelas_nama];
+                            if ($topik_id) {
+                                $checkSql .= " AND (topik_id = ? OR topik_id IS NULL)";
+                                $params[] = $topik_id;
+                            }
+                            $stmtCheck = $db->prepare($checkSql);
+                            $stmtCheck->execute($params);
                             $existingId = $stmtCheck->fetchColumn();
 
                             if ($existingId) {
-                                $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ? WHERE id = ?");
-                                $stmtUp->execute([$ujian_id, $kelas_id, $pengawas, $ruang, $existingId]);
+                                $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ? WHERE id = ?");
+                                $stmtUp->execute([$topik_id, $ujian_id, $kelas_id, $pengawas, $ruang, $existingId]);
                             } else {
-                                $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                                $stmtIns->execute([$ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang]);
+                                $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                $stmtIns->execute([$topik_id, $ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang]);
                             }
                             $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
                         } else {
-                            $db->prepare("DELETE FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?")->execute([$hari, $jam_slot, $kelas_nama]);
+                            $delSql = "DELETE FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
+                            $delParams = [$hari, $jam_slot, $kelas_nama];
+                            if ($topik_id) {
+                                $delSql .= " AND (topik_id = ? OR topik_id IS NULL)";
+                                $delParams[] = $topik_id;
+                            }
+                            $stmtDel = $db->prepare($delSql);
+                            $stmtDel->execute($delParams);
                         }
                     }
                 }
             }
-            redirect('/cbt/jadwal?msg=bulk_saved');
+            redirect('/cbt/jadwal?topik_id=' . ($topik_id ?: '') . '&msg=bulk_saved');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Simpan Topik Ujian Baru dari CBT
+     */
+    public static function saveTopikJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $jenis = trim($_POST['jenis'] ?? 'PAS');
+            $nama_topik = trim($_POST['nama_topik'] ?? '');
+            $keterangan = trim($_POST['keterangan'] ?? '');
+            $tahun_ajaran = trim($_POST['tahun_ajaran'] ?? '2026/2027');
+
+            $newId = 0;
+            if (!empty($nama_topik)) {
+                if ($db_siakad) {
+                    try {
+                        $stmt = $db_siakad->prepare("INSERT INTO bs_topik (jenis, nama_topik, keterangan, tahun_ajaran) VALUES (?, ?, ?, ?)");
+                        $stmt->execute([$jenis, $nama_topik, $keterangan, $tahun_ajaran]);
+                        $newId = (int)$db_siakad->lastInsertId();
+                    } catch (\Exception $e) {}
+                }
+                try {
+                    $stmt = $db->prepare("INSERT INTO bs_topik (jenis, nama_topik, keterangan, tahun_ajaran) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$jenis, $nama_topik, $keterangan, $tahun_ajaran]);
+                    if ($newId === 0) {
+                        $newId = (int)$db->lastInsertId();
+                    }
+                } catch (\Exception $e) {}
+            }
+            redirect('/cbt/jadwal?topik_id=' . $newId . '&msg=topik_created');
             exit;
         }
         redirect('/cbt/jadwal');

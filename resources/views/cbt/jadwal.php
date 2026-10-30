@@ -191,6 +191,10 @@ $currentView = $_GET['view'] ?? 'grid';
                     <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                         <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Jadwal ujian kelas berhasil diperbarui secara massal!
                     </div>
+                <?php elseif($_GET['msg'] === 'topik_created'): ?>
+                    <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                        <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Topik ujian baru berhasil dibuat dan siap dijadwalkan!
+                    </div>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -220,16 +224,57 @@ $currentView = $_GET['view'] ?? 'grid';
                 </div>
             </div>
 
+            <!-- Topik Selector Bar (Bank Soal) -->
+            <div style="background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 1.15rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: 1; min-width: 320px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); flex-shrink: 0;">
+                        <i data-lucide="book-open" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div style="flex: 1; min-width: 240px;">
+                        <div style="font-size: 0.72rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px;">
+                            PILIH TOPIK UJIAN (DARI BANK SOAL):
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <select id="selectTopikJadwal" onchange="window.location.href='?topik_id=' + this.value + '&hari=<?php echo urlencode($selectedHari); ?>&view=<?php echo $currentView; ?>'" style="padding: 8px 14px; border-radius: 10px; border: 1.5px solid #0ea5e9; font-size: 0.88rem; font-weight: 800; color: #0f172a; background: #f0f9ff; cursor: pointer; outline: none; min-width: 280px; max-width: 460px;">
+                                <?php if (empty($topikList)): ?>
+                                    <option value="0">-- Belum Ada Topik di Bank Soal --</option>
+                                <?php else: ?>
+                                    <?php foreach($topikList as $tp): ?>
+                                        <option value="<?php echo $tp['id']; ?>" <?php echo ((int)$tp['id'] === (int)$selectedTopikId) ? 'selected' : ''; ?>>
+                                            [<?php echo htmlspecialchars($tp['jenis'] ?: 'PAS'); ?>] <?php echo htmlspecialchars($tp['nama_topik']); ?> (<?php echo htmlspecialchars($tp['tahun_ajaran'] ?: '2026/2027'); ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <?php if ($selectedTopik): ?>
+                                <span style="font-size: 0.75rem; font-weight: 800; background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 20px; border: 1px solid #bae6fd;">
+                                    <?php echo htmlspecialchars($selectedTopik['jenis'] ?: 'PAS'); ?> &bull; <?php echo htmlspecialchars($selectedTopik['tahun_ajaran'] ?: '2026/2027'); ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" onclick="openModalTambahTopik()" class="e-btn" style="background: #0ea5e9; color: #fff; font-weight: 700; border: none; padding: 8px 16px; border-radius: 10px; font-size: 0.82rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25); cursor: pointer;">
+                        <i data-lucide="folder-plus" style="width: 16px; height: 16px;"></i> + Buat Topik Baru
+                    </button>
+                    <a href="<?php echo base_url('banksoal'); ?>" class="e-btn" style="background: #f1f5f9; color: #475569; font-weight: 700; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 10px; font-size: 0.82rem; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                        <i data-lucide="database" style="width: 14px; height: 14px;"></i> Bank Soal
+                    </a>
+                </div>
+            </div>
+
             <!-- Toolbar: Filter Hari & View Switcher -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom: 1.25rem;">
                 <!-- Filter Tab Hari -->
                 <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
                     <span style="font-size:0.8rem; font-weight:800; color:#64748b; margin-right:4px;">HARI:</span>
-                    <a href="?hari=Semua&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === 'Semua') ? 'active' : ''; ?>">
+                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=Semua&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === 'Semua') ? 'active' : ''; ?>">
                         <i data-lucide="layers" style="width:14px;height:14px;"></i> Semua Hari
                     </a>
                     <?php foreach($hari_list as $h): ?>
-                    <a href="?hari=<?php echo $h; ?>&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === $h) ? 'active' : ''; ?>">
+                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $h; ?>&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === $h) ? 'active' : ''; ?>">
                         <?php echo $h; ?>
                     </a>
                     <?php endforeach; ?>
@@ -237,10 +282,10 @@ $currentView = $_GET['view'] ?? 'grid';
 
                 <!-- View Switcher -->
                 <div style="display:flex; gap:6px; align-items:center; background:#f1f5f9; padding:4px; border-radius:10px;">
-                    <a href="?hari=<?php echo $selectedHari; ?>&view=grid" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'grid') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
+                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $selectedHari; ?>&view=grid" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'grid') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
                         <i data-lucide="grid" style="width:14px;height:14px;"></i> Matriks Jadwal
                     </a>
-                    <a href="?hari=<?php echo $selectedHari; ?>&view=list" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'list') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
+                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $selectedHari; ?>&view=list" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'list') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
                         <i data-lucide="list" style="width:14px;height:14px;"></i> Daftar Sesi
                     </a>
                 </div>
@@ -590,6 +635,7 @@ $currentView = $_GET['view'] ?? 'grid';
         </div>
 
         <form method="POST" action="<?php echo base_url('cbt/jadwal/grid/save'); ?>">
+            <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
             <div style="margin-bottom: 1rem;">
                 <label class="label-sm">Pilih Paket Ujian <span style="color:#ef4444;">*</span></label>
                 <select name="ujian_id" id="grid_ujian_id" class="input-sm" required>
@@ -645,13 +691,15 @@ $currentView = $_GET['view'] ?? 'grid';
             </div>
 
             <div style="margin-bottom: 1.25rem;">
-                <label class="label-sm">Guru Pengawas / Pengampu (Opsional)</label>
-                <input type="text" name="pengawas" id="grid_pengawas" class="input-sm" list="listGuruPengawas" placeholder="Pilih atau ketik nama pengawas...">
-                <datalist id="listGuruPengawas">
+                <label class="label-sm">Guru Pengawas (Dropdown)</label>
+                <select name="pengawas" id="grid_pengawas" class="input-sm" style="width:100%;">
+                    <option value="">-- Pilih Guru Pengawas --</option>
                     <?php foreach($guruList as $g): ?>
-                        <option value="<?php echo htmlspecialchars($g['nama']); ?>"></option>
+                        <option value="<?php echo htmlspecialchars($g['nama']); ?>">
+                            <?php echo htmlspecialchars($g['nama']); ?>
+                        </option>
                     <?php endforeach; ?>
-                </datalist>
+                </select>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -670,7 +718,7 @@ $currentView = $_GET['view'] ?? 'grid';
 <!-- MODAL 3: ATUR JADWAL KELAS (TOMBOL [ATUR] DI HEADER KELAS)       -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div id="modalAturKelas" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('open')">
-    <div style="background: #ffffff; width: 92%; max-width: 780px; border-radius: 20px; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18); border: 1px solid #e2e8f0; max-height: 90vh; overflow-y: auto;">
+    <div style="background: #ffffff; width: 92%; max-width: 820px; border-radius: 20px; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18); border: 1px solid #e2e8f0; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
                 <i data-lucide="sliders" style="width: 22px; height: 22px; color: #4f46e5;"></i>
@@ -682,21 +730,22 @@ $currentView = $_GET['view'] ?? 'grid';
         </div>
 
         <form method="POST" action="<?php echo base_url('cbt/jadwal/kelas/save-bulk'); ?>">
+            <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
             <input type="hidden" name="kelas_nama" id="atur_bulk_kelas_nama" value="">
             <input type="hidden" name="kelas_id" id="atur_bulk_kelas_id" value="">
 
             <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem;">
-                Tentukan paket ujian dan pengawas untuk masing-masing slot waktu kelas ini. Pilih <em>-- Kosongkan --</em> jika pada jam tersebut tidak ada ujian.
+                Tentukan paket ujian dan guru pengawas untuk masing-masing slot waktu kelas ini. Pilih <em>-- Kosongkan Slot Ini --</em> jika pada jam tersebut tidak ada ujian.
             </p>
 
             <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                     <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                         <tr>
-                            <th style="padding: 10px 12px; text-align: left; width: 100px;">Hari</th>
-                            <th style="padding: 10px 12px; text-align: left; width: 120px;">Slot Waktu</th>
+                            <th style="padding: 10px 12px; text-align: left; width: 90px;">Hari</th>
+                            <th style="padding: 10px 12px; text-align: left; width: 110px;">Slot Waktu</th>
                             <th style="padding: 10px 12px; text-align: left;">Paket Ujian</th>
-                            <th style="padding: 10px 12px; text-align: left; width: 160px;">Pengawas</th>
+                            <th style="padding: 10px 12px; text-align: left; width: 200px;">Guru Pengawas</th>
                         </tr>
                     </thead>
                     <tbody id="aturKelasTbody">
@@ -759,6 +808,7 @@ $currentView = $_GET['view'] ?? 'grid';
 
         <div style="display: flex; justify-content: space-between; gap: 8px;">
             <form method="POST" action="<?php echo base_url('cbt/jadwal/grid/delete'); ?>" onsubmit="return confirm('Hapus sesi ujian ini dari jadwal kelas?')">
+                <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                 <input type="hidden" name="id" id="detailDeleteId" value="">
                 <button type="submit" class="e-btn e-btn-dark" style="background:#fee2e2; color:#b91c1c; border-color:#fecaca;">
                     <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Hapus Jadwal
@@ -771,12 +821,78 @@ $currentView = $_GET['view'] ?? 'grid';
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL 5: TAMBAH TOPIK UJIAN BARU (BANK SOAL & CBT)              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="modalTambahTopik" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('open')">
+    <div style="background: #ffffff; width: 90%; max-width: 520px; border-radius: 20px; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18); border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="folder-plus" style="width: 22px; height: 22px; color: #0ea5e9;"></i>
+                Tambah Topik Ujian Baru
+            </h3>
+            <button type="button" onclick="document.getElementById('modalTambahTopik').classList.remove('open')" style="background: none; border: none; cursor: pointer; color: #94a3b8;">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem;">
+            Topik ini akan terhubung langsung dengan <strong>Bank Soal</strong> dan dapat dipilih saat menyusun jadwal ujian per sesi kelas.
+        </p>
+
+        <form method="POST" action="<?php echo base_url('cbt/jadwal/topik/save'); ?>">
+            <div style="margin-bottom: 1rem;">
+                <label class="label-sm">Nama Topik / Kegiatan Ujian <span style="color:#ef4444;">*</span></label>
+                <input type="text" name="nama_topik" class="input-sm" placeholder="Contoh: Penilaian Akhir Semester (PAS) Ganjil 2026/2027" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem;">
+                <div>
+                    <label class="label-sm">Jenis Ujian <span style="color:#ef4444;">*</span></label>
+                    <select name="jenis" class="input-sm" required>
+                        <option value="PAS">PAS (Penilaian Akhir Semester)</option>
+                        <option value="PTS">PTS (Penilaian Tengah Semester)</option>
+                        <option value="ASAJ">ASAJ (Asesmen Sumatif Akhir Jenjang)</option>
+                        <option value="PH">PH (Penilaian Harian)</option>
+                        <option value="Latihan">Simulasi / Try Out</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-sm">Tahun Ajaran <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="tahun_ajaran" class="input-sm" value="2026/2027 (Ganjil)" required>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label class="label-sm">Keterangan / Catatan (Opsional)</label>
+                <textarea name="keterangan" class="input-sm" rows="2" placeholder="Catatan topik ujian..."></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" onclick="document.getElementById('modalTambahTopik').classList.remove('open')" class="e-btn e-btn-dark">
+                    Batal
+                </button>
+                <button type="submit" class="e-btn e-btn-primary" style="background: #0ea5e9;">
+                    <i data-lucide="check" style="width: 14px; height: 14px;"></i> Simpan Topik
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     // Data global untuk JS
     const JADWAL_MASTER = <?php echo json_encode($jadwal_master); ?>;
     const UJIAN_LIST = <?php echo json_encode($ujianList); ?>;
     const SLOT_LIST = <?php echo json_encode($slotList); ?>;
     const HARI_LIST = <?php echo json_encode($hari_list); ?>;
+    const GURU_LIST = <?php echo json_encode($guruList); ?>;
+
+    // ─── Modal Topik: Tambah Topik Baru ───
+    function openModalTambahTopik() {
+        document.getElementById('modalTambahTopik').classList.add('open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
 
     // ─── Modal 1: Custom Jam ───
     function openModalAturJam() {
@@ -816,6 +932,7 @@ $currentView = $_GET['view'] ?? 'grid';
         document.getElementById('grid_jam_slot').value = jamSlot;
         document.getElementById('grid_kelas_nama').value = kelasNama;
         document.getElementById('grid_kelas_id').value = kelasId;
+        document.getElementById('grid_pengawas').value = '';
         document.getElementById('modalGridTitle').innerHTML = '<i data-lucide="calendar-plus" style="width:20px;height:20px;color:#0ea5e9;"></i> Pasang Jadwal: ' + kelasNama + ' (' + hari + ')';
         document.getElementById('modalJadwalGrid').classList.add('open');
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -854,6 +971,18 @@ $currentView = $_GET['view'] ?? 'grid';
                     optionsUjian += `<option value="${uj.id}" ${sel}>${uj.nama_ujian} (${uj.mapel_nama})</option>`;
                 });
 
+                // Dropdown Guru Pengawas
+                let optionsPengawas = '<option value="">-- Pilih Guru Pengawas --</option>';
+                let pengawasMatched = false;
+                GURU_LIST.forEach(g => {
+                    const selGuru = (currentPengawas && currentPengawas.trim().toLowerCase() === g.nama.trim().toLowerCase()) ? 'selected' : '';
+                    if (selGuru) pengawasMatched = true;
+                    optionsPengawas += `<option value="${g.nama}" ${selGuru}>${g.nama}</option>`;
+                });
+                if (currentPengawas && !pengawasMatched) {
+                    optionsPengawas += `<option value="${currentPengawas}" selected>${currentPengawas}</option>`;
+                }
+
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #f1f5f9';
                 tr.innerHTML = `
@@ -871,7 +1000,9 @@ $currentView = $_GET['view'] ?? 'grid';
                         </select>
                     </td>
                     <td style="padding:8px 12px;">
-                        <input type="text" name="schedules[${rowIdx}][pengawas]" value="${currentPengawas}" class="input-sm" style="width:100%; font-size:0.8rem;" placeholder="Pengawas">
+                        <select name="schedules[${rowIdx}][pengawas]" class="input-sm" style="width:100%; font-size:0.8rem;">
+                            ${optionsPengawas}
+                        </select>
                     </td>
                 `;
                 tbody.appendChild(tr);

@@ -2407,6 +2407,7 @@ $router->add('POST', '/cbt/jadwal/kelas/save-bulk', [\App\Controllers\CbtControl
 $router->add('POST', '/cbt/jadwal/slot/save', [\App\Controllers\CbtController::class, 'saveJamSlot']);
 $router->add('POST', '/cbt/jadwal/slot/delete', [\App\Controllers\CbtController::class, 'deleteJamSlot']);
 $router->add('POST', '/cbt/jadwal/slot/reset', [\App\Controllers\CbtController::class, 'resetJamSlot']);
+$router->add('POST', '/cbt/jadwal/topik/save', [\App\Controllers\CbtController::class, 'saveTopikJadwal']);
 $router->add('GET', '/cbt/ujian', [\App\Controllers\CbtController::class, 'ujian']);
 $router->add('GET', '/cbt/ujian/tambah', [\App\Controllers\CbtController::class, 'ujian']);
 $router->add('POST', '/cbt/ujian/save', [\App\Controllers\CbtController::class, 'saveUjian']);
