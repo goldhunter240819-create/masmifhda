@@ -1291,6 +1291,16 @@ $router->add('POST', '/guru/tugas_tambahan/pembina_ekstra/absen/save', [\App\Con
 $router->add('GET', '/guru/tugas_tambahan/pembina_ekstra/nilai', [\App\Controllers\PortalGuruEkstraController::class, 'nilai']);
 $router->add('POST', '/guru/tugas_tambahan/pembina_ekstra/nilai/save', [\App\Controllers\PortalGuruEkstraController::class, 'saveNilai']);
 
+// Guru Bendahara Routes
+$router->add('GET', '/guru/bendahara/bku', [\App\Controllers\PortalGuruBendaharaController::class, 'bku']);
+$router->add('GET', '/guru/bendahara/transaksi', [\App\Controllers\PortalGuruBendaharaController::class, 'transaksi']);
+$router->add('POST', '/guru/bendahara/transaksi/save', [\App\Controllers\PortalGuruBendaharaController::class, 'saveTransaksi']);
+$router->add('GET', '/guru/bendahara/transaksi/delete/{id}', [\App\Controllers\PortalGuruBendaharaController::class, 'deleteTransaksi']);
+$router->add('POST', '/guru/bendahara/transaksi/delete/{id}', [\App\Controllers\PortalGuruBendaharaController::class, 'deleteTransaksi']);
+$router->add('GET', '/guru/bendahara/transaksi/delete-pembayaran/{id}', [\App\Controllers\PortalGuruBendaharaController::class, 'deletePembayaranSiswa']);
+$router->add('POST', '/guru/bendahara/transaksi/delete-pembayaran/{id}', [\App\Controllers\PortalGuruBendaharaController::class, 'deletePembayaranSiswa']);
+$router->add('POST', '/guru/bendahara/transaksi/update-pembayaran', [\App\Controllers\PortalGuruBendaharaController::class, 'updatePembayaranSiswa']);
+
 // --- Absen QR V2 Module ---
 $router->add('GET', '/admin/absen_v2', [\App\Controllers\AbsenV2Controller::class, 'dashboard']);
 $router->add('GET', '/absen_v2/scanner', [\App\Controllers\AbsenV2Controller::class, 'scanner']);

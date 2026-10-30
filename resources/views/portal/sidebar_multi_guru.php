@@ -5,6 +5,7 @@ $isTugasActive = (strpos($uri, 'tugas_tambahan') !== false);
 $isBerkasActive = (strpos($uri, 'berkas-ujian') !== false || strpos($uri, 'template-analisis') !== false);
 
 $myTasks = [];
+$isBendahara = false;
 if(isset($_SESSION['user_id'])) {
     try {
         $db_core_tugas = \App\Core\Database::connect('core');
@@ -12,8 +13,24 @@ if(isset($_SESSION['user_id'])) {
         $active_year_sidebar_name = $active_year_sidebar ? $active_year_sidebar['name'] : '2025/2026';
         $myTasks = $db_core_tugas->query("SELECT tugas FROM guru_tugas WHERE guru_id = (SELECT id FROM guru WHERE user_id = ".$_SESSION['user_id'].") AND tahun_ajaran = '$active_year_sidebar_name'")->fetchAll(\PDO::FETCH_COLUMN);
         
-        $guru_profile = $db_core_tugas->query("SELECT status_kepegawaian FROM guru WHERE user_id = ".$_SESSION['user_id'])->fetch();
+        $guru_profile = $db_core_tugas->query("SELECT id, status_kepegawaian FROM guru WHERE user_id = ".$_SESSION['user_id'])->fetch();
         $status_kepegawaian = $guru_profile ? $guru_profile['status_kepegawaian'] : 'Honorer';
+        $guru_id_session = $guru_profile ? ($guru_profile['id'] ?? null) : null;
+
+        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+        if ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad'])) {
+            $isBendahara = true;
+        } elseif ($guru_id_session) {
+            $checkBendahara = $db_core_tugas->query("SELECT COUNT(*) FROM keuangan_komite_kategori WHERE guru_id = $guru_id_session")->fetchColumn();
+            $hasTaskBendahara = false;
+            foreach ($myTasks as $t) {
+                if (stripos($t, 'bendahara') !== false) {
+                    $hasTaskBendahara = true;
+                    break;
+                }
+            }
+            $isBendahara = ($checkBendahara > 0) || $hasTaskBendahara;
+        }
     } catch(\PDOException $e) {}
 }
 ?>
@@ -121,6 +138,19 @@ if(isset($_SESSION['user_id'])) {
                     <a href="<?php echo base_url('guru/pkkm/master-berkas'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'guru/pkkm/master-berkas') !== false) ? 'active' : ''; ?>">Daftar Berkas</a>
                 </div>
             </div>
+
+            <?php if(isset($isBendahara) && $isBendahara): ?>
+            <div class="z-nav-dropdown <?php echo (strpos($uri, 'guru/bendahara') !== false) ? 'open' : ''; ?>">
+                <div class="z-nav-dropdown-header" onclick="this.parentElement.classList.toggle('open')">
+                    <div class="left"><i data-lucide="wallet" style="width:16px;height:16px;color:#10b981;"></i> <span style="color:#10b981;font-weight:700;">Bendahara</span></div>
+                    <i data-lucide="chevron-right" class="chev" style="width:14px;height:14px;"></i>
+                </div>
+                <div class="z-nav-subnav">
+                    <a href="<?php echo base_url('guru/bendahara/bku'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'guru/bendahara/bku') !== false) ? 'active' : ''; ?>"><i data-lucide="file-spreadsheet" style="width:14px;height:14px;"></i> Buku Kas (BKU)</a>
+                    <a href="<?php echo base_url('guru/bendahara/transaksi'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'guru/bendahara/transaksi') !== false) ? 'active' : ''; ?>"><i data-lucide="arrow-right-left" style="width:14px;height:14px;"></i> Riwayat Transaksi</a>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <div class="z-nav-cat">Aplikasi</div>
 
