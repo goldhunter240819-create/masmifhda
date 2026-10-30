@@ -35,10 +35,7 @@ class ManajemenBerkasController {
         } catch (\Exception $e) {}
     }
 
-    /**
-     * Dispatcher utama: Admin/Kamad -> monitoring; Guru -> portal pribadi
-     */
-    public static function index() {
+    private static function getAuthContext() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -48,38 +45,52 @@ class ManajemenBerkasController {
             exit;
         }
 
-        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
-        $isKamad = !empty($_SESSION['is_kamad']);
-
-        // Jika Guru biasa (bukan Kamad/Admin/Dev), arahkan ke guru view
-        if ($roleId === 2 && !$isKamad) {
-            self::guruIndex();
-            return;
-        }
-
-        // Monitoring Admin, Kamad, dan Developer
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
         self::ensureTables($db_core);
 
-        $filter_guru = isset($_GET['guru_id']) ? intval($_GET['guru_id']) : 0;
-        $filter_kategori = isset($_GET['kategori']) ? trim($_GET['kategori']) : '';
-        $filter_tab = isset($_GET['tab']) ? trim($_GET['tab']) : 'perangkat';
-        $search = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+        $isKamad = !empty($_SESSION['is_kamad']);
+        $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || $isKamad);
 
-        // Daftar Guru Lengkap
+        $currentGuruId = 0;
+        if (!$isAdminOrKamad) {
+            $stmtG = $db_core->prepare("SELECT id FROM guru WHERE user_id = ? LIMIT 1");
+            $stmtG->execute([$_SESSION['user_id']]);
+            $currentGuruId = (int)$stmtG->fetchColumn();
+        }
+
+        $baseRoute = $isAdminOrKamad ? 'admin/manajemen-berkas' : 'guru/manajemen-berkas';
+
+        return [
+            'db_core' => $db_core,
+            'db_siakad' => $db_siakad,
+            'roleId' => $roleId,
+            'isKamad' => $isKamad,
+            'isAdminOrKamad' => $isAdminOrKamad,
+            'currentGuruId' => $currentGuruId,
+            'baseRoute' => $baseRoute
+        ];
+    }
+
+    /**
+     * Dashboard: Statistik, Overview Perangkat Terbaru & Berkas Pribadi Terbaru
+     */
+    public static function index() {
+        $ctx = self::getAuthContext();
+        $db_core = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        $isAdminOrKamad = $ctx['isAdminOrKamad'];
+        $currentGuruId = $ctx['currentGuruId'];
+        $baseRoute = $ctx['baseRoute'];
+
+        // Daftar Guru
         $guruList = [];
         try {
             $guruList = $db_core->query("SELECT id, nama, nip, foto, status_kepegawaian FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        // Map Guru
-        $guruMap = [];
-        foreach ($guruList as $g) {
-            $guruMap[$g['id']] = $g;
-        }
-
-        // 1. Ambil Data Perangkat Pembelajaran (gabungan guru_perangkat di core dan perangkat_pembelajaran di siakad jika ada)
+        // Ambil Perangkat Pembelajaran
         $perangkatList = [];
         try {
             $qCore = "SELECT gp.*, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, 'core' as source
@@ -87,17 +98,9 @@ class ManajemenBerkasController {
                       LEFT JOIN guru g ON g.id = gp.guru_id
                       WHERE 1=1";
             $pCore = [];
-            if ($filter_guru > 0) {
+            if (!$isAdminOrKamad) {
                 $qCore .= " AND gp.guru_id = :gid";
-                $pCore[':gid'] = $filter_guru;
-            }
-            if (!empty($filter_kategori)) {
-                $qCore .= " AND gp.kategori LIKE :kat";
-                $pCore[':kat'] = "%$filter_kategori%";
-            }
-            if (!empty($search)) {
-                $qCore .= " AND (gp.nama_berkas LIKE :q OR g.nama LIKE :q OR gp.mapel_nama LIKE :q)";
-                $pCore[':q'] = "%$search%";
+                $pCore[':gid'] = $currentGuruId;
             }
             $qCore .= " ORDER BY gp.created_at DESC";
             $stmtC = $db_core->prepare($qCore);
@@ -105,28 +108,20 @@ class ManajemenBerkasController {
             $perangkatList = $stmtC->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        // Ambil juga dari siakad.perangkat_pembelajaran jika ada
+        // Ambil data dari siakad perangkat_pembelajaran jika ada
         try {
             $qSiakad = "SELECT p.id, p.guru_id, p.jenis_perangkat as kategori, m.nama_mapel, k.nama_kelas, 
                                p.judul as nama_berkas, p.nama_file as file_path, 'Disetujui' as status_review, 
                                p.created_at, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, 'siakad' as source
                         FROM perangkat_pembelajaran p
                         LEFT JOIN aula_db.guru g ON g.id = p.guru_id
-                        LEFT JOIN mapel m ON m.id = p.mapel_id
+                        LEFT JOIN mata_pelajaran m ON m.id = p.mapel_id
                         LEFT JOIN aula_db.kelas k ON k.id = p.kelas_id
                         WHERE 1=1";
             $pSiakad = [];
-            if ($filter_guru > 0) {
+            if (!$isAdminOrKamad) {
                 $qSiakad .= " AND p.guru_id = :gid";
-                $pSiakad[':gid'] = $filter_guru;
-            }
-            if (!empty($filter_kategori)) {
-                $qSiakad .= " AND p.jenis_perangkat LIKE :kat";
-                $pSiakad[':kat'] = "%$filter_kategori%";
-            }
-            if (!empty($search)) {
-                $qSiakad .= " AND (p.judul LIKE :q OR g.nama LIKE :q OR m.nama_mapel LIKE :q)";
-                $pSiakad[':q'] = "%$search%";
+                $pSiakad[':gid'] = $currentGuruId;
             }
             $qSiakad .= " ORDER BY p.id DESC";
             $stmtS = $db_siakad->prepare($qSiakad);
@@ -135,7 +130,7 @@ class ManajemenBerkasController {
             $perangkatList = array_merge($perangkatList, $siakadPerangkat);
         } catch (\Exception $e) {}
 
-        // 2. Ambil Data Berkas Pribadi Guru (dari guru_berkas di aula_db)
+        // Ambil Berkas Pribadi Guru
         $berkasPribadiList = [];
         try {
             $qBerkas = "SELECT gb.*, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, g.status_kepegawaian
@@ -143,13 +138,9 @@ class ManajemenBerkasController {
                         LEFT JOIN guru g ON g.id = gb.guru_id
                         WHERE 1=1";
             $pBerkas = [];
-            if ($filter_guru > 0) {
+            if (!$isAdminOrKamad) {
                 $qBerkas .= " AND gb.guru_id = :gid";
-                $pBerkas[':gid'] = $filter_guru;
-            }
-            if (!empty($search)) {
-                $qBerkas .= " AND (gb.nama_berkas LIKE :q OR g.nama LIKE :q)";
-                $pBerkas[':q'] = "%$search%";
+                $pBerkas[':gid'] = $currentGuruId;
             }
             $qBerkas .= " ORDER BY gb.created_at DESC";
             $stmtB = $db_core->prepare($qBerkas);
@@ -157,7 +148,7 @@ class ManajemenBerkasController {
             $berkasPribadiList = $stmtB->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        // 3. Statistik Global
+        // Hitung Statistik KPI
         $totalGuru = count($guruList);
         $totalPerangkat = count($perangkatList);
         $totalBerkasPribadi = count($berkasPribadiList);
@@ -172,102 +163,181 @@ class ManajemenBerkasController {
         $guruAktifCount = count($gurusWithDocs);
         $persenKelengkapan = $totalGuru > 0 ? round(($guruAktifCount / $totalGuru) * 100) : 0;
 
-        $title_page = "Monitoring Berkas Guru";
-        include __DIR__ . '/../../resources/views/admin/manajemen_berkas_guru.php';
+        $title = "Dashboard - Manajemen Berkas MAS MIFTAHUL HUDA";
+        ob_start();
+        include __DIR__ . '/../../resources/views/manajemen_berkas/dashboard.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
     }
 
     /**
-     * Tampilan untuk Guru melihat & mengelola perangkat serta berkas pribadinya
+     * Halaman Menu: Berkas Perangkat Pembelajaran
      */
-    public static function guruIndex() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+    public static function perangkat() {
+        $ctx = self::getAuthContext();
+        $db_core = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        $isAdminOrKamad = $ctx['isAdminOrKamad'];
+        $currentGuruId = $ctx['currentGuruId'];
+        $baseRoute = $ctx['baseRoute'];
 
-        if (!isset($_SESSION['user_id'])) {
-            redirect('/login');
-            exit;
-        }
+        $filter_guru = isset($_GET['guru_id']) ? intval($_GET['guru_id']) : 0;
+        $filter_kategori = isset($_GET['kategori']) ? trim($_GET['kategori']) : '';
+        $filter_status = isset($_GET['status']) ? trim($_GET['status']) : '';
+        $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 
-        $db_core = Database::connect('core');
-        $db_siakad = Database::connect('siakad');
-        self::ensureTables($db_core);
-
-        // Cari guru berdasarkan user_id
-        $stmtG = $db_core->prepare("SELECT * FROM guru WHERE user_id = :uid LIMIT 1");
-        $stmtG->execute([':uid' => $_SESSION['user_id']]);
-        $guru = $stmtG->fetch(PDO::FETCH_ASSOC);
-
-        if (!$guru) {
-            // Fallback jika login bukan via guru
-            echo "Akun Anda tidak terhubung dengan data guru. Silakan hubungi admin.";
-            exit;
-        }
-
-        $guru_id = $guru['id'];
-        $active_tab = isset($_GET['tab']) ? trim($_GET['tab']) : 'perangkat';
-
-        // 1. Ambil Perangkat Pembelajaran Guru ini
-        $myPerangkat = [];
+        // Daftar Guru
+        $guruList = [];
         try {
-            $stmtP = $db_core->prepare("SELECT * FROM guru_perangkat WHERE guru_id = ? ORDER BY created_at DESC");
-            $stmtP->execute([$guru_id]);
-            $myPerangkat = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+            $guruList = $db_core->query("SELECT id, nama, nip, foto, status_kepegawaian FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        // 2. Ambil Berkas Pribadi Guru ini
-        $myBerkasPribadi = [];
+        // Ambil Data Perangkat Pembelajaran
+        $perangkatList = [];
         try {
-            $stmtBP = $db_core->prepare("SELECT * FROM guru_berkas WHERE guru_id = ? ORDER BY created_at DESC");
-            $stmtBP->execute([$guru_id]);
-            $myBerkasPribadi = $stmtBP->fetchAll(PDO::FETCH_ASSOC);
+            $qCore = "SELECT gp.*, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, 'core' as source
+                      FROM guru_perangkat gp
+                      LEFT JOIN guru g ON g.id = gp.guru_id
+                      WHERE 1=1";
+            $pCore = [];
+            if (!$isAdminOrKamad) {
+                $qCore .= " AND gp.guru_id = :gid";
+                $pCore[':gid'] = $currentGuruId;
+            } elseif ($filter_guru > 0) {
+                $qCore .= " AND gp.guru_id = :gid";
+                $pCore[':gid'] = $filter_guru;
+            }
+
+            if (!empty($filter_kategori)) {
+                $qCore .= " AND gp.kategori LIKE :kat";
+                $pCore[':kat'] = "%$filter_kategori%";
+            }
+            if (!empty($filter_status)) {
+                $qCore .= " AND gp.status_review = :st";
+                $pCore[':st'] = $filter_status;
+            }
+            if (!empty($search)) {
+                $qCore .= " AND (gp.nama_berkas LIKE :q OR g.nama LIKE :q OR gp.mapel_nama LIKE :q)";
+                $pCore[':q'] = "%$search%";
+            }
+            $qCore .= " ORDER BY gp.created_at DESC";
+            $stmtC = $db_core->prepare($qCore);
+            $stmtC->execute($pCore);
+            $perangkatList = $stmtC->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
-        // 3. Ambil Mapel & Kelas yang diampu oleh guru ini
-        $mapelKelasList = [];
+        // Ambil data siakad jika ada
         try {
-            $stmtJ = $db_siakad->prepare("
-                SELECT DISTINCT m.nama_mapel, k.nama_kelas, m.id as mapel_id, k.id as kelas_id
-                FROM (
-                    SELECT kelas_id, mapel_id as mapel FROM mengajar WHERE guru_id = :gid
-                    UNION
-                    SELECT kelas_id, mata_pelajaran_id as mapel FROM jadwal_pelajaran WHERE guru_id = :gid
-                ) jp
-                JOIN mata_pelajaran m ON jp.mapel = m.id
-                JOIN aula_db.kelas k ON jp.kelas_id = k.id
-                ORDER BY k.nama_kelas ASC, m.nama_mapel ASC
-            ");
-            $stmtJ->execute([':gid' => $guru_id]);
-            $mapelKelasList = $stmtJ->fetchAll(PDO::FETCH_ASSOC);
+            $qSiakad = "SELECT p.id, p.guru_id, p.jenis_perangkat as kategori, m.nama_mapel, k.nama_kelas, 
+                               p.judul as nama_berkas, p.nama_file as file_path, 'Disetujui' as status_review, 
+                               p.created_at, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, 'siakad' as source
+                        FROM perangkat_pembelajaran p
+                        LEFT JOIN aula_db.guru g ON g.id = p.guru_id
+                        LEFT JOIN mata_pelajaran m ON m.id = p.mapel_id
+                        LEFT JOIN aula_db.kelas k ON k.id = p.kelas_id
+                        WHERE 1=1";
+            $pSiakad = [];
+            if (!$isAdminOrKamad) {
+                $qSiakad .= " AND p.guru_id = :gid";
+                $pSiakad[':gid'] = $currentGuruId;
+            } elseif ($filter_guru > 0) {
+                $qSiakad .= " AND p.guru_id = :gid";
+                $pSiakad[':gid'] = $filter_guru;
+            }
+
+            if (!empty($filter_kategori)) {
+                $qSiakad .= " AND p.jenis_perangkat LIKE :kat";
+                $pSiakad[':kat'] = "%$filter_kategori%";
+            }
+            if (!empty($filter_status) && $filter_status !== 'Disetujui') {
+                $qSiakad .= " AND 1=0"; // status siakad default disetujui
+            }
+            if (!empty($search)) {
+                $qSiakad .= " AND (p.judul LIKE :q OR g.nama LIKE :q OR m.nama_mapel LIKE :q)";
+                $pSiakad[':q'] = "%$search%";
+            }
+            $qSiakad .= " ORDER BY p.id DESC";
+            $stmtS = $db_siakad->prepare($qSiakad);
+            $stmtS->execute($pSiakad);
+            $siakadPerangkat = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+            $perangkatList = array_merge($perangkatList, $siakadPerangkat);
         } catch (\Exception $e) {}
 
-        $kategoriList = [
-            'Capaian Pembelajaran (CP)',
-            'Alur Tujuan Pembelajaran (ATP)',
-            'Modul Ajar / RPP',
-            'KKTP',
-            'Program Tahunan (Prota)',
-            'Program Semester (Promes)',
-            'Silabus',
-            'Bahan Ajar / Materi'
-        ];
-
-        $title_page = "Manajemen Berkas Saya";
-        include __DIR__ . '/../../resources/views/portal/guru/manajemen_berkas.php';
+        $title = "Perangkat Pembelajaran - Manajemen Berkas MAS MIFTAHUL HUDA";
+        ob_start();
+        include __DIR__ . '/../../resources/views/manajemen_berkas/perangkat.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
     }
 
     /**
-     * Upload berkas pribadi oleh guru
+     * Halaman Menu: Berkas Pribadi Guru
+     */
+    public static function pribadi() {
+        $ctx = self::getAuthContext();
+        $db_core = $ctx['db_core'];
+        $isAdminOrKamad = $ctx['isAdminOrKamad'];
+        $currentGuruId = $ctx['currentGuruId'];
+        $baseRoute = $ctx['baseRoute'];
+
+        $filter_guru = isset($_GET['guru_id']) ? intval($_GET['guru_id']) : 0;
+        $filter_kategori = isset($_GET['kategori']) ? trim($_GET['kategori']) : '';
+        $search = isset($_GET['q']) ? trim($_GET['q']) : '';
+
+        // Daftar Guru
+        $guruList = [];
+        try {
+            $guruList = $db_core->query("SELECT id, nama, nip, foto, status_kepegawaian FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        // Ambil Data Berkas Pribadi
+        $berkasPribadiList = [];
+        try {
+            $qBerkas = "SELECT gb.*, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, g.status_kepegawaian
+                        FROM guru_berkas gb
+                        LEFT JOIN guru g ON g.id = gb.guru_id
+                        WHERE 1=1";
+            $pBerkas = [];
+            if (!$isAdminOrKamad) {
+                $qBerkas .= " AND gb.guru_id = :gid";
+                $pBerkas[':gid'] = $currentGuruId;
+            } elseif ($filter_guru > 0) {
+                $qBerkas .= " AND gb.guru_id = :gid";
+                $pBerkas[':gid'] = $filter_guru;
+            }
+
+            if (!empty($filter_kategori)) {
+                $qBerkas .= " AND gb.kategori LIKE :kat";
+                $pBerkas[':kat'] = "%$filter_kategori%";
+            }
+            if (!empty($search)) {
+                $qBerkas .= " AND (gb.nama_berkas LIKE :q OR g.nama LIKE :q)";
+                $pBerkas[':q'] = "%$search%";
+            }
+            $qBerkas .= " ORDER BY gb.created_at DESC";
+            $stmtB = $db_core->prepare($qBerkas);
+            $stmtB->execute($pBerkas);
+            $berkasPribadiList = $stmtB->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $title = "Berkas Pribadi - Manajemen Berkas MAS MIFTAHUL HUDA";
+        ob_start();
+        include __DIR__ . '/../../resources/views/manajemen_berkas/pribadi.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Upload Berkas Pribadi
      */
     public static function uploadPribadi() {
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        if (!isset($_SESSION['user_id'])) { redirect('/login'); exit; }
-
-        $db_core = Database::connect('core');
-        self::ensureTables($db_core);
+        $ctx = self::getAuthContext();
+        $db_core = $ctx['db_core'];
+        $isAdminOrKamad = $ctx['isAdminOrKamad'];
+        $baseRoute = $ctx['baseRoute'];
 
         $guru_id = 0;
-        if (isset($_POST['guru_id']) && (in_array($_SESSION['role_id'], [1, 99]) || !empty($_SESSION['is_kamad']))) {
+        if (isset($_POST['guru_id']) && $isAdminOrKamad) {
             $guru_id = intval($_POST['guru_id']);
         } else {
             $stmt = $db_core->prepare("SELECT id FROM guru WHERE user_id = ? LIMIT 1");
@@ -291,45 +361,38 @@ class ManajemenBerkasController {
                     $ins = $db_core->prepare("INSERT INTO guru_berkas (guru_id, nama_berkas, kategori, file_path, created_at) VALUES (?, ?, ?, ?, NOW())");
                     $ins->execute([$guru_id, $nama_berkas, $kategori, $filename]);
 
-                    $target = (in_array($_SESSION['role_id'], [1, 99]) || !empty($_SESSION['is_kamad']))
-                        ? '/admin/manajemen-berkas?tab=pribadi&msg=uploaded'
-                        : '/guru/manajemen-berkas?tab=pribadi&msg=uploaded';
-                    redirect($target);
+                    redirect('/' . $baseRoute . '/pribadi?msg=uploaded');
                     exit;
                 }
             }
         }
 
-        $target = (in_array($_SESSION['role_id'], [1, 99]) || !empty($_SESSION['is_kamad']))
-            ? '/admin/manajemen-berkas?tab=pribadi&err=upload_failed'
-            : '/guru/manajemen-berkas?tab=pribadi&err=upload_failed';
-        redirect($target);
+        redirect('/' . $baseRoute . '/pribadi?err=upload_failed');
         exit;
     }
 
     /**
-     * Hapus berkas pribadi
+     * Hapus Berkas Pribadi
      */
     public static function deletePribadi() {
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        if (!isset($_SESSION['user_id'])) { redirect('/login'); exit; }
+        $ctx = self::getAuthContext();
+        $db_core = $ctx['db_core'];
+        $isAdminOrKamad = $ctx['isAdminOrKamad'];
+        $baseRoute = $ctx['baseRoute'];
 
-        $db_core = Database::connect('core');
         $id = intval($_POST['id'] ?? 0);
 
-        $isAdmin = (in_array($_SESSION['role_id'], [1, 99]) || !empty($_SESSION['is_kamad']));
-        
         $stmt = $db_core->prepare("SELECT * FROM guru_berkas WHERE id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($row) {
-            if (!$isAdmin) {
+            if (!$isAdminOrKamad) {
                 $stmtG = $db_core->prepare("SELECT id FROM guru WHERE user_id = ?");
                 $stmtG->execute([$_SESSION['user_id']]);
                 $myGid = (int)$stmtG->fetchColumn();
                 if ($row['guru_id'] !== $myGid) {
-                    redirect('/guru/manajemen-berkas?err=unauthorized');
+                    redirect('/' . $baseRoute . '/pribadi?err=unauthorized');
                     exit;
                 }
             }
@@ -343,30 +406,48 @@ class ManajemenBerkasController {
             $del->execute([$id]);
         }
 
-        $target = $isAdmin ? '/admin/manajemen-berkas?tab=pribadi&msg=deleted' : '/guru/manajemen-berkas?tab=pribadi&msg=deleted';
-        redirect($target);
+        redirect('/' . $baseRoute . '/pribadi?msg=deleted');
         exit;
     }
 
     /**
-     * Update status review perangkat oleh Admin/Kamad (AJAX atau Form POST)
+     * Update Status Review Perangkat (Admin/Kamad)
      */
     public static function updateStatusReview() {
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        if (!isset($_SESSION['user_id']) || (!in_array($_SESSION['role_id'], [1, 99]) && empty($_SESSION['is_kamad']))) {
-            echo json_encode(['status' => false, 'message' => 'Unauthorized']);
+        $ctx = self::getAuthContext();
+        $db_core = $ctx['db_core'];
+        $isAdminOrKamad = $ctx['isAdminOrKamad'];
+        $baseRoute = $ctx['baseRoute'];
+
+        if (!$isAdminOrKamad) {
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                echo json_encode(['status' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
+            redirect('/' . $baseRoute . '/perangkat?err=unauthorized');
             exit;
         }
 
         $id = intval($_POST['id'] ?? 0);
-        $status = trim($_POST['status'] ?? 'Menunggu');
-        $catatan = trim($_POST['catatan'] ?? '');
+        $status = trim($_POST['status_review'] ?? ($_POST['status'] ?? 'Menunggu'));
+        $catatan = trim($_POST['catatan_review'] ?? ($_POST['catatan'] ?? ''));
 
-        $db_core = Database::connect('core');
         $stmt = $db_core->prepare("UPDATE guru_perangkat SET status_review = ?, catatan_review = ? WHERE id = ?");
         $stmt->execute([$status, $catatan, $id]);
 
-        echo json_encode(['status' => true, 'message' => 'Status review diperbarui']);
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            echo json_encode(['status' => true, 'message' => 'Status review berhasil disimpan']);
+            exit;
+        }
+
+        redirect('/' . $baseRoute . '/perangkat?msg=status_updated');
         exit;
+    }
+
+    /**
+     * Fallback untuk backward-compatibility dengan route guruIndex
+     */
+    public static function guruIndex() {
+        self::index();
     }
 }

@@ -2357,13 +2357,26 @@ $router->add('GET', '/pengawas/pkkm/cetak-bukti/perangkat-guru', [\App\Controlle
 // Portal Guru - PKKM (Penilaian Kinerja Kepala Madrasah)
 $router->add('GET', '/guru/pkkm/instrumen', [\App\Controllers\PortalGuruPkkmController::class, 'instrumen']);
 $router->add('GET', '/guru/pkkm/master-berkas', [\App\Controllers\PortalGuruPkkmController::class, 'masterBerkas']);
-// Manajemen Berkas Guru & Monitoring (Berkas Pribadi & Perangkat Pembelajaran)
+// Manajemen Berkas Guru (Dashboard, Berkas Pribadi, Berkas Perangkat Pembelajaran)
 $router->add('GET', '/admin/manajemen-berkas', [\App\Controllers\ManajemenBerkasController::class, 'index']);
-$router->add('GET', '/guru/manajemen-berkas', [\App\Controllers\ManajemenBerkasController::class, 'guruIndex']);
-$router->add('GET', '/manajemen-berkas', [\App\Controllers\ManajemenBerkasController::class, 'index']);
+$router->add('GET', '/admin/manajemen-berkas/dashboard', [\App\Controllers\ManajemenBerkasController::class, 'index']);
+$router->add('GET', '/admin/manajemen-berkas/perangkat', [\App\Controllers\ManajemenBerkasController::class, 'perangkat']);
+$router->add('GET', '/admin/manajemen-berkas/pribadi', [\App\Controllers\ManajemenBerkasController::class, 'pribadi']);
+$router->add('POST', '/admin/manajemen-berkas/upload-pribadi', [\App\Controllers\ManajemenBerkasController::class, 'uploadPribadi']);
+$router->add('POST', '/admin/manajemen-berkas/delete-pribadi', [\App\Controllers\ManajemenBerkasController::class, 'deletePribadi']);
+$router->add('POST', '/admin/manajemen-berkas/update-status', [\App\Controllers\ManajemenBerkasController::class, 'updateStatusReview']);
+
+$router->add('GET', '/guru/manajemen-berkas', [\App\Controllers\ManajemenBerkasController::class, 'index']);
+$router->add('GET', '/guru/manajemen-berkas/dashboard', [\App\Controllers\ManajemenBerkasController::class, 'index']);
+$router->add('GET', '/guru/manajemen-berkas/perangkat', [\App\Controllers\ManajemenBerkasController::class, 'perangkat']);
+$router->add('GET', '/guru/manajemen-berkas/pribadi', [\App\Controllers\ManajemenBerkasController::class, 'pribadi']);
 $router->add('POST', '/guru/manajemen-berkas/upload-pribadi', [\App\Controllers\ManajemenBerkasController::class, 'uploadPribadi']);
 $router->add('POST', '/guru/manajemen-berkas/delete-pribadi', [\App\Controllers\ManajemenBerkasController::class, 'deletePribadi']);
-$router->add('POST', '/admin/manajemen-berkas/update-status', [\App\Controllers\ManajemenBerkasController::class, 'updateStatusReview']);
+
+$router->add('GET', '/manajemen-berkas', [\App\Controllers\ManajemenBerkasController::class, 'index']);
+$router->add('GET', '/manajemen-berkas/dashboard', [\App\Controllers\ManajemenBerkasController::class, 'index']);
+$router->add('GET', '/manajemen-berkas/perangkat', [\App\Controllers\ManajemenBerkasController::class, 'perangkat']);
+$router->add('GET', '/manajemen-berkas/pribadi', [\App\Controllers\ManajemenBerkasController::class, 'pribadi']);
 $router->add('POST', '/guru/pkkm/berkas/save', [\App\Controllers\PortalGuruPkkmController::class, 'saveBerkas']);
 $router->add('POST', '/guru/pkkm/berkas/delete', [\App\Controllers\PortalGuruPkkmController::class, 'deleteBerkas']);
 $router->add('POST', '/guru/pkkm/master-berkas/upload', [\App\Controllers\PortalGuruPkkmController::class, 'uploadMasterBerkas']);
