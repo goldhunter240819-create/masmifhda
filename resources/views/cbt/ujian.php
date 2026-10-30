@@ -260,4 +260,8 @@ $active_menu = 'ujian';
         document.getElementById('modalUjian').classList.add('open');
         lucide.createIcons();
     }
+
+    if (window.location.pathname.endsWith('/tambah') || new URLSearchParams(window.location.search).get('tambah') === '1') {
+        openUjianModal();
+    }
 </script>

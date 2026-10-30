@@ -113,3 +113,4 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
         </a>
     </div>
 </aside>
+

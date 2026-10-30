@@ -770,8 +770,8 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
             </div>
 
             <!-- CBT Online -->
-            <div class="mod-card theme-indigo d11" onclick="Swal.fire({title: 'Segera Hadir!', text: 'Modul CBT Online sedang dalam tahap pengembangan.', icon: 'info', confirmButtonText: 'Oke', confirmButtonColor: '#3b82f6'})">
-                <span class="mod-badge badge-new" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;">Dev</span>
+            <div class="mod-card theme-indigo d11" onclick="location.href='<?php echo base_url('cbt'); ?>'">
+                <span class="mod-badge badge-new" style="background: #e0f2fe; color: #0284c7; border: 1px solid #7dd3fc;">Live</span>
                 <div class="mod-icon-wrap icon-indigo" style="background:#e0e7ff; color:#4f46e5;"><i data-lucide="monitor-check"></i></div>
                 <div class="mod-body">
                     <p class="mod-title">CBT Online</p>
@@ -2383,6 +2383,27 @@ $router->add('POST', '/guru/pkkm/master-berkas/upload', [\App\Controllers\Portal
 $router->add('POST', '/guru/pkkm/master-berkas/delete', [\App\Controllers\PortalGuruPkkmController::class, 'deleteMasterBerkas']);
 $router->add('POST', '/guru/pkkm/master-berkas/attach-digital', [\App\Controllers\PortalGuruPkkmController::class, 'attachDigitalToMaster']);
 $router->add('POST', '/guru/pkkm/bukti-attach-website', [\App\Controllers\PortalGuruPkkmController::class, 'attachWebsiteLink']);
+
+// CBT ONLINE MODULE
+$router->add('GET', '/cbt', [\App\Controllers\CbtController::class, 'dashboard']);
+$router->add('GET', '/cbt/dashboard', [\App\Controllers\CbtController::class, 'dashboard']);
+$router->add('GET', '/cbt/jadwal', [\App\Controllers\CbtController::class, 'jadwal']);
+$router->add('POST', '/cbt/jadwal/save', [\App\Controllers\CbtController::class, 'saveJadwal']);
+$router->add('POST', '/cbt/jadwal/toggle-status', [\App\Controllers\CbtController::class, 'toggleStatusJadwal']);
+$router->add('POST', '/cbt/jadwal/delete', [\App\Controllers\CbtController::class, 'deleteJadwal']);
+$router->add('GET', '/cbt/ujian', [\App\Controllers\CbtController::class, 'ujian']);
+$router->add('GET', '/cbt/ujian/tambah', [\App\Controllers\CbtController::class, 'ujian']);
+$router->add('POST', '/cbt/ujian/save', [\App\Controllers\CbtController::class, 'saveUjian']);
+$router->add('POST', '/cbt/ujian/delete', [\App\Controllers\CbtController::class, 'deleteUjian']);
+$router->add('GET', '/cbt/soal', [\App\Controllers\CbtController::class, 'soal']);
+$router->add('POST', '/cbt/soal/save', [\App\Controllers\CbtController::class, 'saveSoal']);
+$router->add('POST', '/cbt/soal/delete', [\App\Controllers\CbtController::class, 'deleteSoal']);
+$router->add('POST', '/cbt/soal/import-bank', [\App\Controllers\CbtController::class, 'importBankSoal']);
+$router->add('GET', '/cbt/token', [\App\Controllers\CbtController::class, 'token']);
+$router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::class, 'generateToken']);
+$router->add('POST', '/cbt/token/expire', [\App\Controllers\CbtController::class, 'expireToken']);
+$router->add('GET', '/cbt/hasil', [\App\Controllers\CbtController::class, 'hasil']);
+$router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'analisis']);
 
 $router->run();
 
