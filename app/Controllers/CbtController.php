@@ -80,6 +80,46 @@ class CbtController {
                 INDEX (nis)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+            // 5. Tabel Custom Jam / Slot Waktu Ujian CBT
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_jam_slot (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                urutan INT DEFAULT 1,
+                label_sesi VARCHAR(50) DEFAULT 'Sesi 1',
+                jam_mulai VARCHAR(10) NOT NULL,
+                jam_selesai VARCHAR(10) NOT NULL,
+                is_istirahat TINYINT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Seed default slots jika masih kosong
+            $cntSlot = (int)$db->query("SELECT COUNT(*) FROM cbt_jam_slot")->fetchColumn();
+            if ($cntSlot === 0) {
+                $db->exec("INSERT INTO cbt_jam_slot (urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES
+                    (1, 'Sesi 1', '07:30', '08:45', 0),
+                    (2, 'Sesi 2', '09:00', '10:15', 0),
+                    (3, 'Istirahat', '10:15', '10:45', 1),
+                    (4, 'Sesi 3', '10:45', '12:00', 0),
+                    (5, 'Sesi 4', '12:30', '13:45', 0)
+                ");
+            }
+
+            // 6. Tabel Matriks Jadwal Ujian (Grid per Hari, Slot, Kelas)
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_jadwal_grid (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ujian_id INT NOT NULL,
+                hari VARCHAR(50) NOT NULL,
+                jam_slot VARCHAR(50) NOT NULL,
+                kelas_id INT DEFAULT NULL,
+                kelas_nama VARCHAR(100) NOT NULL,
+                pengawas VARCHAR(150) DEFAULT NULL,
+                ruang VARCHAR(100) DEFAULT NULL,
+                tanggal DATE DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (ujian_id),
+                INDEX (hari),
+                INDEX (kelas_nama)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
             // Bersihkan data dummy awal (seperti UJN-MAT-01, UJN-FIQ-02, MAS982, nis dummy)
             $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02'))");
             $db->exec("DELETE FROM cbt_peserta WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02')) OR nis LIKE '2024100%'");
@@ -123,19 +163,23 @@ class CbtController {
     /**
      * Dapatkan daftar Kelas Real dari tabel kelas di database core
      */
-    public static function getRealKelasList($db_core) {
+    public static function getRealKelasList($db_core, $db_siakad = null) {
+        if ($db_siakad) {
+            try {
+                $list = $db_siakad->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($list)) return $list;
+            } catch (\Exception $e) {}
+        }
         try {
             $list = $db_core->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($list)) return $list;
         } catch (\Exception $e) {}
 
         return [
-            ['id' => 1, 'nama_kelas' => 'X-IPA', 'tingkat' => 'X'],
-            ['id' => 2, 'nama_kelas' => 'X-IPS', 'tingkat' => 'X'],
-            ['id' => 3, 'nama_kelas' => 'XI-IPA', 'tingkat' => 'XI'],
-            ['id' => 4, 'nama_kelas' => 'XI-IPS', 'tingkat' => 'XI'],
-            ['id' => 5, 'nama_kelas' => 'XII-IPA', 'tingkat' => 'XII'],
-            ['id' => 6, 'nama_kelas' => 'XII-IPS', 'tingkat' => 'XII']
+            ['id' => 1, 'nama_kelas' => 'X E.1', 'tingkat' => 'X'],
+            ['id' => 2, 'nama_kelas' => 'XI F.1', 'tingkat' => 'XI'],
+            ['id' => 3, 'nama_kelas' => 'XII F.1', 'tingkat' => 'XII'],
+            ['id' => 4, 'nama_kelas' => 'XII F.2', 'tingkat' => 'XII']
         ];
     }
 
@@ -261,8 +305,52 @@ class CbtController {
     public static function jadwal() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
 
+        // Ambil daftar kelas real
+        $kelasList = self::getRealKelasList($db, $db_siakad);
+
+        // Ambil daftar custom jam slot
+        $slotList = $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC, jam_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($slotList)) {
+            $slotList = [
+                ['id' => 1, 'urutan' => 1, 'label_sesi' => 'Sesi 1', 'jam_mulai' => '07:30', 'jam_selesai' => '08:45', 'is_istirahat' => 0],
+                ['id' => 2, 'urutan' => 2, 'label_sesi' => 'Sesi 2', 'jam_mulai' => '09:00', 'jam_selesai' => '10:15', 'is_istirahat' => 0],
+                ['id' => 3, 'urutan' => 3, 'label_sesi' => 'Istirahat', 'jam_mulai' => '10:15', 'jam_selesai' => '10:45', 'is_istirahat' => 1],
+                ['id' => 4, 'urutan' => 4, 'label_sesi' => 'Sesi 3', 'jam_mulai' => '10:45', 'jam_selesai' => '12:00', 'is_istirahat' => 0],
+                ['id' => 5, 'urutan' => 5, 'label_sesi' => 'Sesi 4', 'jam_mulai' => '12:30', 'jam_selesai' => '13:45', 'is_istirahat' => 0],
+            ];
+        }
+
+        // Ambil semua paket ujian
         $ujianList = $db->query("SELECT * FROM cbt_ujian ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai DESC, created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ambil daftar guru untuk pengawas
+        $guruList = [];
+        try {
+            $guruList = $db->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        // Ambil grid jadwal tersimpan
+        $gridRows = $db->query("
+            SELECT g.*, u.nama_ujian, u.kode_ujian, u.mapel_nama, u.durasi_menit, u.status as ujian_status 
+            FROM cbt_jadwal_grid g
+            JOIN cbt_ujian u ON g.ujian_id = u.id
+            ORDER BY g.id ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Susun matriks jadwal: $jadwal_master[hari][jam_slot][kelas_key] = data
+        $jadwal_master = [];
+        foreach ($gridRows as $gr) {
+            $h = $gr['hari'];
+            $slot = $gr['jam_slot'];
+            $kKey = !empty($gr['kelas_id']) ? $gr['kelas_id'] : $gr['kelas_nama'];
+            $jadwal_master[$h][$slot][$kKey] = $gr;
+            $jadwal_master[$h][$slot][$gr['kelas_nama']] = $gr;
+        }
+
+        $hari_list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
         $title = "Jadwal Ujian CBT - MAS MIFTAHUL HUDA";
         ob_start();
@@ -295,7 +383,7 @@ class CbtController {
         redirect('/cbt/jadwal');
     }
 
-    /**
+/**
      * Toggle Status Ujian (Aktif <-> Selesai)
      */
     public static function toggleStatusJadwal() {
@@ -317,7 +405,7 @@ class CbtController {
         redirect('/cbt/jadwal');
     }
 
-    /**
+/**
      * Reset / Hapus Jadwal Ujian
      */
     public static function deleteJadwal() {
@@ -331,6 +419,184 @@ class CbtController {
                 $stmt->execute([$id]);
             }
             redirect('/cbt/jadwal?deleted=1');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+/**
+     * Simpan / Pasang Jadwal Ujian pada Matriks Grid
+     */
+    public static function saveGridJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ujian_id = (int)($_POST['ujian_id'] ?? 0);
+            $hari = trim($_POST['hari'] ?? 'Senin');
+            $jam_slot = trim($_POST['jam_slot'] ?? '');
+            $kelas_id = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+            $kelas_nama = trim($_POST['kelas_nama'] ?? '');
+            $pengawas = trim($_POST['pengawas'] ?? '');
+            $ruang = trim($_POST['ruang'] ?? '');
+            $tanggal = !empty($_POST['tanggal']) ? $_POST['tanggal'] : null;
+
+            if ($ujian_id > 0 && !empty($jam_slot) && !empty($kelas_nama)) {
+                $stmtCheck = $db->prepare("SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?");
+                $stmtCheck->execute([$hari, $jam_slot, $kelas_nama]);
+                $existingId = $stmtCheck->fetchColumn();
+
+                if ($existingId) {
+                    $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ? WHERE id = ?");
+                    $stmtUp->execute([$ujian_id, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
+                } else {
+                    $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmtIns->execute([$ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
+                }
+
+                $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
+            }
+            redirect('/cbt/jadwal?msg=saved');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Hapus Slot Jadwal Ujian dari Grid
+     */
+    public static function deleteGridJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            if ($id > 0) {
+                $db->prepare("DELETE FROM cbt_jadwal_grid WHERE id = ?")->execute([$id]);
+            }
+            redirect('/cbt/jadwal?msg=deleted');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Simpan / Perbarui Custom Jam / Slot Waktu Ujian
+     */
+    public static function saveJamSlot() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            $urutan = (int)($_POST['urutan'] ?? 1);
+            $label_sesi = trim($_POST['label_sesi'] ?? 'Sesi');
+            $jam_mulai = trim($_POST['jam_mulai'] ?? '');
+            $jam_selesai = trim($_POST['jam_selesai'] ?? '');
+            $is_istirahat = !empty($_POST['is_istirahat']) ? 1 : 0;
+
+            if (!empty($jam_mulai) && !empty($jam_selesai)) {
+                if ($id > 0) {
+                    $stmt = $db->prepare("UPDATE cbt_jam_slot SET urutan = ?, label_sesi = ?, jam_mulai = ?, jam_selesai = ?, is_istirahat = ? WHERE id = ?");
+                    $stmt->execute([$urutan, $label_sesi, $jam_mulai, $jam_selesai, $is_istirahat, $id]);
+                } else {
+                    $stmt = $db->prepare("INSERT INTO cbt_jam_slot (urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$urutan, $label_sesi, $jam_mulai, $jam_selesai, $is_istirahat]);
+                }
+            }
+            redirect('/cbt/jadwal?msg=slot_saved');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Hapus Slot Jam
+     */
+    public static function deleteJamSlot() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            if ($id > 0) {
+                $db->prepare("DELETE FROM cbt_jam_slot WHERE id = ?")->execute([$id]);
+            }
+            redirect('/cbt/jadwal?msg=slot_deleted');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Reset Slot Jam ke Standar
+     */
+    public static function resetJamSlot() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db->exec("TRUNCATE TABLE cbt_jam_slot");
+            $db->exec("INSERT INTO cbt_jam_slot (urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES
+                (1, 'Sesi 1', '07:30', '08:45', 0),
+                (2, 'Sesi 2', '09:00', '10:15', 0),
+                (3, 'Istirahat', '10:15', '10:45', 1),
+                (4, 'Sesi 3', '10:45', '12:00', 0),
+                (5, 'Sesi 4', '12:30', '13:45', 0)
+            ");
+            redirect('/cbt/jadwal?msg=slot_reset');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Atur Jadwal Ujian Bulk untuk Satu Kelas (Tombol [ATUR])
+     */
+    public static function saveBulkKelasJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $kelas_nama = trim($_POST['kelas_nama'] ?? '');
+            $kelas_id = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+            $schedules = $_POST['schedules'] ?? [];
+
+            if (!empty($kelas_nama) && is_array($schedules)) {
+                foreach ($schedules as $sc) {
+                    $hari = trim($sc['hari'] ?? '');
+                    $jam_slot = trim($sc['jam_slot'] ?? '');
+                    $ujian_id = (int)($sc['ujian_id'] ?? 0);
+                    $pengawas = trim($sc['pengawas'] ?? '');
+                    $ruang = trim($sc['ruang'] ?? '');
+
+                    if (!empty($hari) && !empty($jam_slot)) {
+                        if ($ujian_id > 0) {
+                            $stmtCheck = $db->prepare("SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?");
+                            $stmtCheck->execute([$hari, $jam_slot, $kelas_nama]);
+                            $existingId = $stmtCheck->fetchColumn();
+
+                            if ($existingId) {
+                                $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ? WHERE id = ?");
+                                $stmtUp->execute([$ujian_id, $kelas_id, $pengawas, $ruang, $existingId]);
+                            } else {
+                                $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                                $stmtIns->execute([$ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang]);
+                            }
+                            $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
+                        } else {
+                            $db->prepare("DELETE FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?")->execute([$hari, $jam_slot, $kelas_nama]);
+                        }
+                    }
+                }
+            }
+            redirect('/cbt/jadwal?msg=bulk_saved');
             exit;
         }
         redirect('/cbt/jadwal');
