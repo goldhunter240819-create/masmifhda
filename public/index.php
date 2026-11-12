@@ -2479,6 +2479,7 @@ $router->add('POST', '/kurikulum/supervisi/program/delete', [\App\Controllers\Ku
 $router->add('GET', '/kurikulum/supervisi/program/cetak', [\App\Controllers\KurikulumController::class, 'cetakProgramSupervisi']);
 $router->add('GET', '/kurikulum/supervisi/instrumen', [\App\Controllers\KurikulumController::class, 'supervisiInstrumen']);
 $router->add('POST', '/kurikulum/supervisi/instrumen/tambah', [\App\Controllers\KurikulumController::class, 'storeSupervisiInstrumen']);
+$router->add('POST', '/kurikulum/supervisi/instrumen/update', [\App\Controllers\KurikulumController::class, 'updateSupervisiInstrumen']);
 $router->add('POST', '/kurikulum/supervisi/instrumen/delete', [\App\Controllers\KurikulumController::class, 'deleteSupervisiInstrumen']);
 $router->add('GET', '/kurikulum/supervisi/tim', [\App\Controllers\KurikulumController::class, 'timSupervisi']);
 $router->add('POST', '/kurikulum/supervisi/tim/update-config', [\App\Controllers\KurikulumController::class, 'updateTimSupervisiConfig']);

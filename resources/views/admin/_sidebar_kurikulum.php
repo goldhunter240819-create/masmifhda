@@ -27,7 +27,7 @@ $sub_menus = array(
                 array('icon'=>'file-text','label'=>'Supervisi Administrasi', 'url'=>base_url('kurikulum/supervisi/administrasi'), 'page'=>'supervisi_administrasi'),
                 array('icon'=>'users','label'=>'Supervisi Kelas', 'url'=>base_url('kurikulum/supervisi/kelas'), 'page'=>'supervisi_kelas'),
                 array('icon'=>'arrow-right-circle','label'=>'Tindak Lanjut Supervisi', 'url'=>base_url('kurikulum/supervisi/tindak-lanjut'), 'page'=>'supervisi_tindak_lanjut'),
-                array('icon'=>'clipboard-list','label'=>'Instrumen Supervisi Kelas', 'url'=>base_url('kurikulum/supervisi/instrumen'), 'page'=>'supervisi_instrumen'),
+                array('icon'=>'clipboard-list','label'=>'Instrumen Supervisi', 'url'=>base_url('kurikulum/supervisi/instrumen'), 'page'=>'supervisi_instrumen'),
                 array('icon'=>'file-bar-chart-2','label'=>'Laporan Hasil Supervisi', 'url'=>base_url('kurikulum/supervisi/laporan-hasil'), 'page'=>'supervisi_laporan_hasil'),
                 array('icon'=>'file-check','label'=>'Laporan Hasil Tindak Lanjut', 'url'=>base_url('kurikulum/supervisi/laporan-tindak-lanjut'), 'page'=>'supervisi_laporan_tindak_lanjut'),
             )

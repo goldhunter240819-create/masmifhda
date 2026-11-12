@@ -230,7 +230,7 @@ class KurikulumController {
             $supervisi['nama_kelas'] = $supervisi['kelas_id'] ? $siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . $supervisi['kelas_id'])->fetchColumn() : null;
         }
 
-        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = '$tipeAsli' ORDER BY kode ASC")->fetchAll();
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = '$tipeAsli' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = '$tipeAsli' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
         $hasil = [];
         foreach($hasil_raw as $h) {
@@ -352,7 +352,7 @@ class KurikulumController {
             $supervisi['nama_kelas'] = $supervisi['kelas_id'] ? $siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . $supervisi['kelas_id'])->fetchColumn() : null;
         }
 
-        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = '$tipeAsli' ORDER BY kode ASC")->fetchAll();
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = '$tipeAsli' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = '$tipeAsli' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
         $hasil = [];
         foreach($hasil_raw as $h) {
@@ -951,7 +951,7 @@ class KurikulumController {
         $db = \App\Core\Database::connect('core');
         $supervisi = $db->query("SELECT sa.*, g.nama as nama_pegawai, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor FROM kurikulum_supervisi_administrasi sa JOIN guru g ON sa.pegawai_id = g.id JOIN guru sp ON sa.supervisor_id = sp.id WHERE sa.id = $id")->fetch();
         
-        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Administrasi' ORDER BY kode ASC")->fetchAll();
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Administrasi' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Administrasi' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
         $hasil = [];
         foreach($hasil_raw as $r) { $hasil[$r['instrumen_id']] = $r['skor']; }
@@ -1009,7 +1009,7 @@ class KurikulumController {
         $db = \App\Core\Database::connect('core');
         $supervisi = $db->query("SELECT sa.*, g.nama as nama_pegawai, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor FROM kurikulum_supervisi_administrasi sa JOIN guru g ON sa.pegawai_id = g.id JOIN guru sp ON sa.supervisor_id = sp.id WHERE sa.id = $id")->fetch();
         
-        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Administrasi' ORDER BY kode ASC")->fetchAll();
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Administrasi' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Administrasi' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
         $hasil = [];
         foreach($hasil_raw as $r) { $hasil[$r['instrumen_id']] = $r['skor']; }
@@ -1251,7 +1251,7 @@ class KurikulumController {
         $supervisi['nama_mapel'] = $siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-';
         $supervisi['nama_kelas'] = $siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-';
 
-        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY kode ASC")->fetchAll();
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Kelas' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
         $hasil = [];
         foreach($hasil_raw as $r) { $hasil[$r['instrumen_id']] = $r['skor']; }
@@ -1366,7 +1366,7 @@ class KurikulumController {
         $supervisi['nama_mapel'] = $siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-';
         $supervisi['nama_kelas'] = $siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-';
 
-        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY kode ASC")->fetchAll();
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Kelas' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
         $hasil = [];
         foreach($hasil_raw as $r) { $hasil[$r['instrumen_id']] = $r['skor']; }
@@ -1405,7 +1405,7 @@ class KurikulumController {
         }
         unset($s);
 
-        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY kode ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll(\PDO::FETCH_ASSOC);
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC) ?: [];
         
         $all_hasil_raw = $db->query("SELECT supervisi_id, instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Kelas'")->fetchAll(\PDO::FETCH_ASSOC);
@@ -1534,7 +1534,7 @@ class KurikulumController {
         $instrumen = [];
         try {
             $db = \App\Core\Database::connect('core');
-            $stmt = $db->query("SELECT * FROM kurikulum_instrumen_supervisi ORDER BY tipe_supervisi ASC, kategori ASC, id ASC");
+            $stmt = $db->query("SELECT * FROM kurikulum_instrumen_supervisi ORDER BY tipe_supervisi ASC, CAST(kode AS UNSIGNED) ASC, id ASC");
             $instrumen = $stmt->fetchAll();
         } catch (\Exception $e) {
             // Ignore if table doesn't exist yet
@@ -1546,18 +1546,50 @@ class KurikulumController {
     public function storeSupervisiInstrumen() {
         $db = \App\Core\Database::connect('core');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $tipe_supervisi = $_POST['tipe_supervisi'];
-            $kategori = $_POST['kategori'] ?? 'Lain-lain';
-            $kode = $_POST['kode'];
-            $aspek = $_POST['aspek'];
-            $bobot = $_POST['bobot_maksimal'];
+            $tipe_supervisi = trim($_POST['tipe_supervisi'] ?? 'Kelas');
+            $kategori = trim($_POST['kategori'] ?? 'Lain-lain');
+            $kode = trim($_POST['kode'] ?? '');
+            $aspek = trim($_POST['aspek'] ?? '');
+            $bobot = (int)($_POST['bobot_maksimal'] ?? $_POST['bobot'] ?? 5);
 
             try {
                 $stmt = $db->prepare("INSERT INTO kurikulum_instrumen_supervisi (tipe_supervisi, kategori, kode, aspek, bobot_maksimal) VALUES (?, ?, ?, ?, ?)");
                 $stmt->execute([$tipe_supervisi, $kategori, $kode, $aspek, $bobot]);
+                if (session_status() === PHP_SESSION_NONE) session_start();
+                $_SESSION['alert'] = ['type' => 'success', 'message' => 'Instrumen berhasil ditambahkan!'];
                 $_SESSION['sweetalert'] = ['title' => 'Sukses!', 'text' => 'Instrumen berhasil ditambahkan', 'icon' => 'success'];
             } catch (\Exception $e) {
+                if (session_status() === PHP_SESSION_NONE) session_start();
+                $_SESSION['alert'] = ['type' => 'error', 'message' => 'Gagal menambahkan instrumen: ' . $e->getMessage()];
                 $_SESSION['sweetalert'] = ['title' => 'Gagal!', 'text' => 'Gagal menambahkan instrumen', 'icon' => 'error'];
+            }
+            header('Location: ' . base_url('kurikulum/supervisi/instrumen'));
+            exit;
+        }
+    }
+
+    public function updateSupervisiInstrumen() {
+        $db = \App\Core\Database::connect('core');
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            $tipe_supervisi = trim($_POST['tipe_supervisi'] ?? 'Kelas');
+            $kategori = trim($_POST['kategori'] ?? 'Lain-lain');
+            $kode = trim($_POST['kode'] ?? '');
+            $aspek = trim($_POST['aspek'] ?? '');
+            $bobot = (int)($_POST['bobot_maksimal'] ?? $_POST['bobot'] ?? 5);
+
+            if ($id > 0 && !empty($aspek)) {
+                try {
+                    $stmt = $db->prepare("UPDATE kurikulum_instrumen_supervisi SET tipe_supervisi = ?, kategori = ?, kode = ?, aspek = ?, bobot_maksimal = ? WHERE id = ?");
+                    $stmt->execute([$tipe_supervisi, $kategori, $kode, $aspek, $bobot, $id]);
+                    if (session_status() === PHP_SESSION_NONE) session_start();
+                    $_SESSION['alert'] = ['type' => 'success', 'message' => 'Instrumen berhasil diperbarui! Nilai hasil evaluasi tetap aman tersimpan.'];
+                    $_SESSION['sweetalert'] = ['title' => 'Sukses!', 'text' => 'Instrumen berhasil diperbarui! Nilai hasil evaluasi tetap aman tersimpan.', 'icon' => 'success'];
+                } catch (\Exception $e) {
+                    if (session_status() === PHP_SESSION_NONE) session_start();
+                    $_SESSION['alert'] = ['type' => 'error', 'message' => 'Gagal memperbarui instrumen: ' . $e->getMessage()];
+                    $_SESSION['sweetalert'] = ['title' => 'Gagal!', 'text' => 'Gagal memperbarui instrumen', 'icon' => 'error'];
+                }
             }
             header('Location: ' . base_url('kurikulum/supervisi/instrumen'));
             exit;
@@ -1566,15 +1598,26 @@ class KurikulumController {
 
     public function deleteSupervisiInstrumen() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'] ?? '';
-            if ($id) {
+            $id = (int)($_POST['id'] ?? 0);
+            if ($id > 0) {
                 try {
                     $db = \App\Core\Database::connect('core');
-                    $stmt = $db->prepare("DELETE FROM kurikulum_instrumen_supervisi WHERE id = ?");
-                    $stmt->execute([$id]);
-                    $_SESSION['alert'] = ['type' => 'success', 'message' => 'Instrumen berhasil dihapus!'];
+                    // Cek apakah sudah ada hasil nilai yang terikat dengan instrumen ini
+                    $usedCount = (int)$db->query("SELECT COUNT(*) FROM kurikulum_supervisi_hasil WHERE instrumen_id = " . $id)->fetchColumn();
+                    if ($usedCount > 0) {
+                        if (session_status() === PHP_SESSION_NONE) session_start();
+                        $_SESSION['alert'] = ['type' => 'warning', 'message' => "Instrumen ID $id tidak dapat dihapus karena sudah memiliki $usedCount data nilai evaluasi guru! Gunakan fitur EDIT agar nilai guru tidak hilang."];
+                        $_SESSION['sweetalert'] = ['title' => 'Peringatan!', 'text' => "Instrumen ini sudah memiliki $usedCount data penilaian guru! Silakan gunakan fitur Edit untuk mengubah teks tanpa menghapus nilai.", 'icon' => 'warning'];
+                    } else {
+                        $stmt = $db->prepare("DELETE FROM kurikulum_instrumen_supervisi WHERE id = ?");
+                        $stmt->execute([$id]);
+                        if (session_status() === PHP_SESSION_NONE) session_start();
+                        $_SESSION['alert'] = ['type' => 'success', 'message' => 'Instrumen berhasil dihapus!'];
+                        $_SESSION['sweetalert'] = ['title' => 'Sukses!', 'text' => 'Instrumen berhasil dihapus!', 'icon' => 'success'];
+                    }
                 } catch (\Exception $e) {
-                    $_SESSION['alert'] = ['type' => 'error', 'message' => 'Gagal menghapus instrumen.'];
+                    if (session_status() === PHP_SESSION_NONE) session_start();
+                    $_SESSION['alert'] = ['type' => 'error', 'message' => 'Gagal menghapus instrumen: ' . $e->getMessage()];
                 }
             }
         }
@@ -1754,7 +1797,7 @@ class KurikulumController {
                 $skorPerKategori = ['persiapan' => [], 'pendahuluan' => [], 'inti' => [], 'penutup' => []];
                 if (!empty($hasilAspek)) {
                     try {
-                        $instrumenList = $db->query("SELECT id, kode FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY kode ASC")->fetchAll(\PDO::FETCH_ASSOC);
+                        $instrumenList = $db->query("SELECT id, kode FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll(\PDO::FETCH_ASSOC);
                         foreach ($instrumenList as $instr) {
                             $kode = strtoupper($instr['kode'] ?? '');
                             $sid = $instr['id'];
