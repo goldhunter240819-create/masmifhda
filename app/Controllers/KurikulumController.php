@@ -55,11 +55,11 @@ class KurikulumController {
         
         $rekap = [];
         // Administrasi
-        $adminCount = $db->query("SELECT COUNT(DISTINCT pegawai_id) FROM kurikulum_supervisi_administrasi WHERE status = 'Dievaluasi'")->fetchColumn() ?: 0;
+        $adminCount = $db->query("SELECT COUNT(DISTINCT COALESCE(pegawai_id, guru_id)) FROM kurikulum_supervisi_administrasi WHERE status = 'Dievaluasi' OR (nilai IS NOT NULL AND nilai > 0) OR (nilai_akhir IS NOT NULL AND nilai_akhir > 0)")->fetchColumn() ?: 0;
         $rekap[] = ['kategori' => 'Administrasi', 'total' => $adminCount, 'persen' => $totalGuru > 0 ? round(($adminCount/$totalGuru)*100) : 0, 'color' => 'bg-primary'];
         
         // Kelas
-        $kelasCount = $db->query("SELECT COUNT(DISTINCT guru_id) FROM kurikulum_supervisi_kelas WHERE status = 'Dievaluasi'")->fetchColumn() ?: 0;
+        $kelasCount = $db->query("SELECT COUNT(DISTINCT guru_id) FROM kurikulum_supervisi_kelas WHERE status = 'Dievaluasi' OR (nilai IS NOT NULL AND nilai > 0) OR (nilai_akhir IS NOT NULL AND nilai_akhir > 0)")->fetchColumn() ?: 0;
         $rekap[] = ['kategori' => 'Proses Pembelajaran', 'total' => $kelasCount, 'persen' => $totalGuru > 0 ? round(($kelasCount/$totalGuru)*100) : 0, 'color' => 'bg-warning'];
         
         // Universal
@@ -75,11 +75,11 @@ class KurikulumController {
             $detail = ['nama' => $g['nama'], 'nip' => $g['nip'], 'completed' => 0];
             
             // Cek admin
-            $isAdmin = $db->query("SELECT id FROM kurikulum_supervisi_administrasi WHERE pegawai_id = {$g['id']} AND status = 'Dievaluasi' LIMIT 1")->fetchColumn();
+            $isAdmin = $db->query("SELECT id FROM kurikulum_supervisi_administrasi WHERE (pegawai_id = {$g['id']} OR guru_id = {$g['id']}) AND (status = 'Dievaluasi' OR (nilai IS NOT NULL AND nilai > 0) OR (nilai_akhir IS NOT NULL AND nilai_akhir > 0)) LIMIT 1")->fetchColumn();
             if($isAdmin) $detail['completed']++;
             
             // Cek kelas
-            $isKelas = $db->query("SELECT id FROM kurikulum_supervisi_kelas WHERE guru_id = {$g['id']} AND status = 'Dievaluasi' LIMIT 1")->fetchColumn();
+            $isKelas = $db->query("SELECT id FROM kurikulum_supervisi_kelas WHERE guru_id = {$g['id']} AND (status = 'Dievaluasi' OR (nilai IS NOT NULL AND nilai > 0) OR (nilai_akhir IS NOT NULL AND nilai_akhir > 0)) LIMIT 1")->fetchColumn();
             if($isKelas) $detail['completed']++;
             
             // Cek universal
@@ -884,13 +884,20 @@ class KurikulumController {
             
             // Get records
             $stmt_jadwal = $db->query("
-                SELECT sa.*, g.nama as nama_pegawai, sp.nama as nama_supervisor 
+                SELECT sa.*, 
+                       COALESCE(sa.pegawai_id, sa.guru_id) as pegawai_id,
+                       COALESCE(sa.supervisor_id, sa.penilai_id) as supervisor_id,
+                       COALESCE(sa.tanggal, sa.tanggal_supervisi) as tanggal,
+                       COALESCE(sa.nilai, sa.nilai_akhir, 0) as nilai,
+                       IF((sa.nilai IS NOT NULL AND sa.nilai > 0) OR (sa.nilai_akhir IS NOT NULL AND sa.nilai_akhir > 0), 'Dievaluasi', COALESCE(sa.status, 'Jadwal')) as status,
+                       COALESCE(g.nama, 'Pegawai') as nama_pegawai, 
+                       COALESCE(sp.nama, sa.penilai_nama, 'Supervisor') as nama_supervisor 
                 FROM kurikulum_supervisi_administrasi sa
-                JOIN guru g ON sa.pegawai_id = g.id
-                JOIN guru sp ON sa.supervisor_id = sp.id
-                ORDER BY sa.tanggal DESC
+                LEFT JOIN guru g ON COALESCE(sa.pegawai_id, sa.guru_id) = g.id
+                LEFT JOIN guru sp ON COALESCE(sa.supervisor_id, sa.penilai_id) = sp.id
+                ORDER BY COALESCE(sa.tanggal, sa.tanggal_supervisi) DESC, sa.id DESC
             ");
-            $jadwal_supervisi = $stmt_jadwal->fetchAll();
+            $jadwal_supervisi = $stmt_jadwal ? $stmt_jadwal->fetchAll() : [];
         } catch (\Exception $e) {
         }
         
@@ -901,12 +908,23 @@ class KurikulumController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $db = \App\Core\Database::connect('core');
-                $stmt = $db->prepare("INSERT INTO kurikulum_supervisi_administrasi (pegawai_id, supervisor_id, tanggal, keterangan, status) VALUES (?, ?, ?, ?, 'Jadwal')");
+                $pegawai_id = (int)$_POST['pegawai_id'];
+                $supervisor_id = (int)$_POST['supervisor_id'];
+                $tanggal = $_POST['tanggal'];
+                $keterangan = $_POST['keterangan'] ?? '';
+
+                $spNama = $db->query("SELECT nama FROM guru WHERE id = $supervisor_id")->fetchColumn() ?: 'Supervisor';
+
+                $stmt = $db->prepare("INSERT INTO kurikulum_supervisi_administrasi (pegawai_id, guru_id, supervisor_id, penilai_id, penilai_nama, tanggal, tanggal_supervisi, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Jadwal')");
                 $stmt->execute([
-                    $_POST['pegawai_id'],
-                    $_POST['supervisor_id'],
-                    $_POST['tanggal'],
-                    $_POST['keterangan'] ?? ''
+                    $pegawai_id,
+                    $pegawai_id,
+                    $supervisor_id,
+                    $supervisor_id,
+                    $spNama,
+                    $tanggal,
+                    $tanggal,
+                    $keterangan
                 ]);
                 header('Location: ' . base_url('kurikulum/supervisi/administrasi'));
                 exit;
@@ -920,8 +938,16 @@ class KurikulumController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
             try {
                 $db = \App\Core\Database::connect('core');
-                $stmt = $db->prepare("UPDATE kurikulum_supervisi_administrasi SET pegawai_id = ?, supervisor_id = ?, tanggal = ?, keterangan = ? WHERE id = ?");
-                $stmt->execute([$_POST['pegawai_id'], $_POST['supervisor_id'], $_POST['tanggal'], $_POST['keterangan'] ?? '', $_POST['id']]);
+                $pegawai_id = (int)$_POST['pegawai_id'];
+                $supervisor_id = (int)$_POST['supervisor_id'];
+                $tanggal = $_POST['tanggal'];
+                $keterangan = $_POST['keterangan'] ?? '';
+                $id = (int)$_POST['id'];
+
+                $spNama = $db->query("SELECT nama FROM guru WHERE id = $supervisor_id")->fetchColumn() ?: 'Supervisor';
+
+                $stmt = $db->prepare("UPDATE kurikulum_supervisi_administrasi SET pegawai_id = ?, guru_id = ?, supervisor_id = ?, penilai_id = ?, penilai_nama = ?, tanggal = ?, tanggal_supervisi = ?, keterangan = ? WHERE id = ?");
+                $stmt->execute([$pegawai_id, $pegawai_id, $supervisor_id, $supervisor_id, $spNama, $tanggal, $tanggal, $keterangan, $id]);
                 header('Location: ' . base_url('kurikulum/supervisi/administrasi'));
                 exit;
             } catch (\Exception $e) {
@@ -949,7 +975,21 @@ class KurikulumController {
         if (!$id) { header('Location: ' . base_url('kurikulum/supervisi/administrasi')); exit; }
         
         $db = \App\Core\Database::connect('core');
-        $supervisi = $db->query("SELECT sa.*, g.nama as nama_pegawai, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor FROM kurikulum_supervisi_administrasi sa JOIN guru g ON sa.pegawai_id = g.id JOIN guru sp ON sa.supervisor_id = sp.id WHERE sa.id = $id")->fetch();
+        $supervisi = $db->query("
+            SELECT sa.*, 
+                   COALESCE(sa.pegawai_id, sa.guru_id) as pegawai_id,
+                   COALESCE(sa.supervisor_id, sa.penilai_id) as supervisor_id,
+                   COALESCE(sa.tanggal, sa.tanggal_supervisi) as tanggal,
+                   COALESCE(sa.nilai, sa.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Pegawai') as nama_pegawai, 
+                   COALESCE(g.nip, '-') as nip_guru, 
+                   COALESCE(sp.nama, sa.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor 
+            FROM kurikulum_supervisi_administrasi sa 
+            LEFT JOIN guru g ON COALESCE(sa.pegawai_id, sa.guru_id) = g.id 
+            LEFT JOIN guru sp ON COALESCE(sa.supervisor_id, sa.penilai_id) = sp.id 
+            WHERE sa.id = $id
+        ")->fetch();
         
         $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Administrasi' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Administrasi' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
@@ -989,8 +1029,8 @@ class KurikulumController {
                 $nilaiAkhir = ($maxSkor > 0) ? round(($totalSkor / $maxSkor) * 100) : 0;
                 $catatan = $_POST['catatan_evaluasi'] ?? '';
                 
-                $stmt_update = $db->prepare("UPDATE kurikulum_supervisi_administrasi SET nilai = ?, catatan_evaluasi = ?, status = 'Dievaluasi' WHERE id = ?");
-                $stmt_update->execute([$nilaiAkhir, $catatan, $id]);
+                $stmt_update = $db->prepare("UPDATE kurikulum_supervisi_administrasi SET nilai = ?, nilai_akhir = ?, catatan_evaluasi = ?, catatan = ?, status = 'Dievaluasi' WHERE id = ?");
+                $stmt_update->execute([$nilaiAkhir, $nilaiAkhir, $catatan, $catatan, $id]);
                 
                 $db->commit();
                 header('Location: ' . base_url('kurikulum/supervisi/administrasi'));
@@ -1007,7 +1047,21 @@ class KurikulumController {
         if (!$id) { header('Location: ' . base_url('kurikulum/supervisi/administrasi')); exit; }
         
         $db = \App\Core\Database::connect('core');
-        $supervisi = $db->query("SELECT sa.*, g.nama as nama_pegawai, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor FROM kurikulum_supervisi_administrasi sa JOIN guru g ON sa.pegawai_id = g.id JOIN guru sp ON sa.supervisor_id = sp.id WHERE sa.id = $id")->fetch();
+        $supervisi = $db->query("
+            SELECT sa.*, 
+                   COALESCE(sa.pegawai_id, sa.guru_id) as pegawai_id,
+                   COALESCE(sa.supervisor_id, sa.penilai_id) as supervisor_id,
+                   COALESCE(sa.tanggal, sa.tanggal_supervisi) as tanggal,
+                   COALESCE(sa.nilai, sa.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Pegawai') as nama_pegawai, 
+                   COALESCE(g.nip, '-') as nip_guru, 
+                   COALESCE(sp.nama, sa.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor 
+            FROM kurikulum_supervisi_administrasi sa 
+            LEFT JOIN guru g ON COALESCE(sa.pegawai_id, sa.guru_id) = g.id 
+            LEFT JOIN guru sp ON COALESCE(sa.supervisor_id, sa.penilai_id) = sp.id 
+            WHERE sa.id = $id
+        ")->fetch();
         
         $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Administrasi' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Administrasi' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
@@ -1076,21 +1130,30 @@ class KurikulumController {
             $gurus = $stmt->fetchAll();
             
             $stmt_jadwal = $db->query("
-                SELECT sk.*, g.nama as nama_guru, sp.nama as nama_supervisor 
+                SELECT sk.*, 
+                       COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                       COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                       IF((sk.nilai IS NOT NULL AND sk.nilai > 0) OR (sk.nilai_akhir IS NOT NULL AND sk.nilai_akhir > 0), 'Dievaluasi', COALESCE(sk.status, 'Jadwal')) as status,
+                       COALESCE(g.nama, 'Guru') as nama_guru, 
+                       COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor 
                 FROM kurikulum_supervisi_kelas sk
-                JOIN guru g ON sk.guru_id = g.id
-                JOIN guru sp ON sk.supervisor_id = sp.id
-                ORDER BY sk.tanggal DESC
+                LEFT JOIN guru g ON sk.guru_id = g.id
+                LEFT JOIN guru sp ON sk.supervisor_id = sp.id
+                ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) DESC, sk.id DESC
             ");
-            $jadwal_supervisi = $stmt_jadwal->fetchAll();
+            $jadwal_supervisi = $stmt_jadwal ? $stmt_jadwal->fetchAll() : [];
 
             $siakad_db = \App\Core\Database::connect('siakad');
-            $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
-            $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR);
+            $mapels = [];
+            $kelasList = [];
+            try {
+                $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+                $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            } catch (\Throwable $e) {}
 
             foreach($jadwal_supervisi as &$j) {
-                $j['nama_mapel'] = $mapels[$j['mapel_id']] ?? 'Mapel ID: ' . $j['mapel_id'];
-                $j['nama_kelas'] = $kelasList[$j['kelas_id']] ?? 'Kelas ID: ' . $j['kelas_id'];
+                $j['nama_mapel'] = !empty($j['mata_pelajaran']) ? $j['mata_pelajaran'] : ($mapels[$j['mapel_id'] ?? 0] ?? 'Umum');
+                $j['nama_kelas'] = !empty($j['kelas']) ? $j['kelas'] : ($kelasList[$j['kelas_id'] ?? 0] ?? 'Umum');
             }
             unset($j);
         } catch (\Exception $e) {
@@ -1158,23 +1221,32 @@ class KurikulumController {
             $guru_id = $_SESSION['guru_id'] ?? 0;
 
             $stmt_jadwal = $db->prepare("
-                SELECT sk.*, g.nama as nama_guru, sp.nama as nama_supervisor 
+                SELECT sk.*, 
+                       COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                       COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                       IF((sk.nilai IS NOT NULL AND sk.nilai > 0) OR (sk.nilai_akhir IS NOT NULL AND sk.nilai_akhir > 0), 'Dievaluasi', COALESCE(sk.status, 'Jadwal')) as status,
+                       COALESCE(g.nama, 'Guru') as nama_guru, 
+                       COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor 
                 FROM kurikulum_supervisi_kelas sk
-                JOIN guru g ON sk.guru_id = g.id
-                JOIN guru sp ON sk.supervisor_id = sp.id
+                LEFT JOIN guru g ON sk.guru_id = g.id
+                LEFT JOIN guru sp ON sk.supervisor_id = sp.id
                 WHERE sk.supervisor_id = ?
-                ORDER BY sk.tanggal DESC
+                ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) DESC, sk.id DESC
             ");
             $stmt_jadwal->execute([$guru_id]);
             $jadwal_supervisi = $stmt_jadwal->fetchAll();
 
             $siakad_db = \App\Core\Database::connect('siakad');
-            $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
-            $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR);
+            $mapels = [];
+            $kelasList = [];
+            try {
+                $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+                $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            } catch (\Throwable $e) {}
 
             foreach($jadwal_supervisi as &$j) {
-                $j['nama_mapel'] = $mapels[$j['mapel_id']] ?? 'Mapel ID: ' . $j['mapel_id'];
-                $j['nama_kelas'] = $kelasList[$j['kelas_id']] ?? 'Kelas ID: ' . $j['kelas_id'];
+                $j['nama_mapel'] = !empty($j['mata_pelajaran']) ? $j['mata_pelajaran'] : ($mapels[$j['mapel_id'] ?? 0] ?? 'Mapel ID: ' . ($j['mapel_id'] ?? 0));
+                $j['nama_kelas'] = !empty($j['kelas']) ? $j['kelas'] : ($kelasList[$j['kelas_id'] ?? 0] ?? 'Kelas ID: ' . ($j['kelas_id'] ?? 0));
             }
             unset($j);
         } catch (\Exception $e) {
@@ -1187,14 +1259,31 @@ class KurikulumController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $db = \App\Core\Database::connect('core');
-                $stmt = $db->prepare("INSERT INTO kurikulum_supervisi_kelas (guru_id, kelas_id, mapel_id, supervisor_id, tanggal, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, 'Jadwal')");
+                $siakad_db = \App\Core\Database::connect('siakad');
+                
+                $guru_id = (int)$_POST['guru_id'];
+                $kelas_id = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+                $mapel_id = !empty($_POST['mapel_id']) ? (int)$_POST['mapel_id'] : null;
+                $supervisor_id = (int)$_POST['supervisor_id'];
+                $tanggal = $_POST['tanggal'];
+                $keterangan = $_POST['keterangan'] ?? '';
+
+                $spNama = $db->query("SELECT nama FROM guru WHERE id = $supervisor_id")->fetchColumn() ?: 'Supervisor';
+                $namaMapel = $mapel_id ? ($siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = $mapel_id")->fetchColumn() ?: '') : '';
+                $namaKelas = $kelas_id ? ($siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = $kelas_id")->fetchColumn() ?: '') : '';
+
+                $stmt = $db->prepare("INSERT INTO kurikulum_supervisi_kelas (guru_id, kelas_id, mapel_id, mata_pelajaran, kelas, supervisor_id, penilai_nama, tanggal, tanggal_supervisi, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Jadwal')");
                 $stmt->execute([
-                    $_POST['guru_id'],
-                    $_POST['kelas_id'],
-                    $_POST['mapel_id'],
-                    $_POST['supervisor_id'],
-                    $_POST['tanggal'],
-                    $_POST['keterangan'] ?? ''
+                    $guru_id,
+                    $kelas_id,
+                    $mapel_id,
+                    $namaMapel,
+                    $namaKelas,
+                    $supervisor_id,
+                    $spNama,
+                    $tanggal,
+                    $tanggal,
+                    $keterangan
                 ]);
                 header('Location: ' . base_url('kurikulum/supervisi/kelas'));
                 exit;
@@ -1208,15 +1297,33 @@ class KurikulumController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
             try {
                 $db = \App\Core\Database::connect('core');
-                $stmt = $db->prepare("UPDATE kurikulum_supervisi_kelas SET guru_id = ?, kelas_id = ?, mapel_id = ?, supervisor_id = ?, tanggal = ?, keterangan = ? WHERE id = ?");
+                $siakad_db = \App\Core\Database::connect('siakad');
+
+                $id = (int)$_POST['id'];
+                $guru_id = (int)$_POST['guru_id'];
+                $kelas_id = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+                $mapel_id = !empty($_POST['mapel_id']) ? (int)$_POST['mapel_id'] : null;
+                $supervisor_id = (int)$_POST['supervisor_id'];
+                $tanggal = $_POST['tanggal'];
+                $keterangan = $_POST['keterangan'] ?? '';
+
+                $spNama = $db->query("SELECT nama FROM guru WHERE id = $supervisor_id")->fetchColumn() ?: 'Supervisor';
+                $namaMapel = $mapel_id ? ($siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = $mapel_id")->fetchColumn() ?: '') : '';
+                $namaKelas = $kelas_id ? ($siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = $kelas_id")->fetchColumn() ?: '') : '';
+
+                $stmt = $db->prepare("UPDATE kurikulum_supervisi_kelas SET guru_id = ?, kelas_id = ?, mapel_id = ?, mata_pelajaran = ?, kelas = ?, supervisor_id = ?, penilai_nama = ?, tanggal = ?, tanggal_supervisi = ?, keterangan = ? WHERE id = ?");
                 $stmt->execute([
-                    $_POST['guru_id'],
-                    $_POST['kelas_id'],
-                    $_POST['mapel_id'],
-                    $_POST['supervisor_id'],
-                    $_POST['tanggal'],
-                    $_POST['keterangan'] ?? '',
-                    $_POST['id']
+                    $guru_id,
+                    $kelas_id,
+                    $mapel_id,
+                    $namaMapel,
+                    $namaKelas,
+                    $supervisor_id,
+                    $spNama,
+                    $tanggal,
+                    $tanggal,
+                    $keterangan,
+                    $id
                 ]);
                 header('Location: ' . base_url('kurikulum/supervisi/kelas'));
                 exit;
@@ -1245,11 +1352,23 @@ class KurikulumController {
         if (!$id) { header('Location: ' . base_url('kurikulum/supervisi/kelas')); exit; }
         
         $db = \App\Core\Database::connect('core');
-        $supervisi = $db->query("SELECT sk.*, g.nama as nama_guru, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor FROM kurikulum_supervisi_kelas sk JOIN guru g ON sk.guru_id = g.id JOIN guru sp ON sk.supervisor_id = sp.id WHERE sk.id = $id")->fetch();
+        $supervisi = $db->query("
+            SELECT sk.*, 
+                   COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                   COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Guru') as nama_guru, 
+                   COALESCE(g.nip, '-') as nip_guru, 
+                   COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor 
+            FROM kurikulum_supervisi_kelas sk 
+            LEFT JOIN guru g ON sk.guru_id = g.id 
+            LEFT JOIN guru sp ON sk.supervisor_id = sp.id 
+            WHERE sk.id = $id
+        ")->fetch();
         
         $siakad_db = \App\Core\Database::connect('siakad');
-        $supervisi['nama_mapel'] = $siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-';
-        $supervisi['nama_kelas'] = $siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-';
+        $supervisi['nama_mapel'] = !empty($supervisi['mata_pelajaran']) ? $supervisi['mata_pelajaran'] : ($siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-');
+        $supervisi['nama_kelas'] = !empty($supervisi['kelas']) ? $supervisi['kelas'] : ($siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-');
 
         $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Kelas' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
@@ -1269,7 +1388,17 @@ class KurikulumController {
         if (!$id) { header('Location: ' . base_url('kurikulum/supervisi/kelas/mobile')); exit; }
         
         $db = \App\Core\Database::connect('core');
-        $supervisi = $db->query("SELECT sk.*, g.nama as nama_guru, sp.nama as nama_supervisor FROM kurikulum_supervisi_kelas sk JOIN guru g ON sk.guru_id = g.id JOIN guru sp ON sk.supervisor_id = sp.id WHERE sk.id = $id AND sk.supervisor_id = $guru_id")->fetch();
+        $supervisi = $db->query("
+            SELECT sk.*, 
+                   COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                   COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Guru') as nama_guru, 
+                   COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor 
+            FROM kurikulum_supervisi_kelas sk 
+            LEFT JOIN guru g ON sk.guru_id = g.id 
+            LEFT JOIN guru sp ON sk.supervisor_id = sp.id 
+            WHERE sk.id = $id AND sk.supervisor_id = $guru_id
+        ")->fetch();
         
         if (!$supervisi || $supervisi['status'] === 'Dievaluasi') { 
             header('Location: ' . base_url('kurikulum/supervisi/kelas/mobile')); 
@@ -1277,8 +1406,8 @@ class KurikulumController {
         }
         
         $siakad_db = \App\Core\Database::connect('siakad');
-        $supervisi['nama_mapel'] = $siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-';
-        $supervisi['nama_kelas'] = $siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-';
+        $supervisi['nama_mapel'] = !empty($supervisi['mata_pelajaran']) ? $supervisi['mata_pelajaran'] : ($siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-');
+        $supervisi['nama_kelas'] = !empty($supervisi['kelas']) ? $supervisi['kelas'] : ($siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-');
 
         $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Kelas' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
@@ -1333,11 +1462,11 @@ class KurikulumController {
                 $tl_realisasi = trim($_POST['tindak_lanjut_realisasi'] ?? '');
 
                 if (!empty($tl_deskripsi) || !empty($tl_jenis)) {
-                    $stmt_update = $db->prepare("UPDATE kurikulum_supervisi_kelas SET nilai = ?, catatan_evaluasi = ?, tindak_lanjut_jenis = ?, tindak_lanjut = ?, tindak_lanjut_deadline = ?, tindak_lanjut_status = ?, tindak_lanjut_realisasi = ?, status = 'Dievaluasi' WHERE id = ?");
-                    $stmt_update->execute([$nilaiAkhir, $catatan, $tl_jenis, $tl_deskripsi, $tl_deadline, $tl_status, $tl_realisasi, $id]);
+                    $stmt_update = $db->prepare("UPDATE kurikulum_supervisi_kelas SET nilai = ?, nilai_akhir = ?, catatan_evaluasi = ?, catatan = ?, tindak_lanjut_jenis = ?, tindak_lanjut = ?, tindak_lanjut_deadline = ?, tindak_lanjut_status = ?, tindak_lanjut_realisasi = ?, status = 'Dievaluasi' WHERE id = ?");
+                    $stmt_update->execute([$nilaiAkhir, $nilaiAkhir, $catatan, $catatan, $tl_jenis, $tl_deskripsi, $tl_deadline, $tl_status, $tl_realisasi, $id]);
                 } else {
-                    $stmt_update = $db->prepare("UPDATE kurikulum_supervisi_kelas SET nilai = ?, catatan_evaluasi = ?, status = 'Dievaluasi' WHERE id = ?");
-                    $stmt_update->execute([$nilaiAkhir, $catatan, $id]);
+                    $stmt_update = $db->prepare("UPDATE kurikulum_supervisi_kelas SET nilai = ?, nilai_akhir = ?, catatan_evaluasi = ?, catatan = ?, status = 'Dievaluasi' WHERE id = ?");
+                    $stmt_update->execute([$nilaiAkhir, $nilaiAkhir, $catatan, $catatan, $id]);
                 }
                 
                 $db->commit();
@@ -1360,11 +1489,23 @@ class KurikulumController {
         if (!$id) { header('Location: ' . base_url('kurikulum/supervisi/kelas')); exit; }
         
         $db = \App\Core\Database::connect('core');
-        $supervisi = $db->query("SELECT sk.*, g.nama as nama_guru, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor FROM kurikulum_supervisi_kelas sk JOIN guru g ON sk.guru_id = g.id JOIN guru sp ON sk.supervisor_id = sp.id WHERE sk.id = $id")->fetch();
+        $supervisi = $db->query("
+            SELECT sk.*, 
+                   COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                   COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Guru') as nama_guru, 
+                   COALESCE(g.nip, '-') as nip_guru, 
+                   COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor 
+            FROM kurikulum_supervisi_kelas sk 
+            LEFT JOIN guru g ON sk.guru_id = g.id 
+            LEFT JOIN guru sp ON sk.supervisor_id = sp.id 
+            WHERE sk.id = $id
+        ")->fetch();
         
         $siakad_db = \App\Core\Database::connect('siakad');
-        $supervisi['nama_mapel'] = $siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-';
-        $supervisi['nama_kelas'] = $siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-';
+        $supervisi['nama_mapel'] = !empty($supervisi['mata_pelajaran']) ? $supervisi['mata_pelajaran'] : ($siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = " . ($supervisi['mapel_id'] ?? 0))->fetchColumn() ?: '-');
+        $supervisi['nama_kelas'] = !empty($supervisi['kelas']) ? $supervisi['kelas'] : ($siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = " . ($supervisi['kelas_id'] ?? 0))->fetchColumn() ?: '-');
 
         $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Kelas' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll();
         $hasil_raw = $db->query("SELECT instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Kelas' AND supervisi_id = $id")->fetchAll(\PDO::FETCH_ASSOC);
@@ -1392,16 +1533,22 @@ class KurikulumController {
         } catch (\Throwable $e) {}
 
         $daftar_supervisi = $db->query("
-            SELECT sk.*, g.nama as nama_guru, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor 
+            SELECT sk.*, 
+                   COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                   COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Guru') as nama_guru, 
+                   COALESCE(g.nip, '-') as nip_guru, 
+                   COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor 
             FROM kurikulum_supervisi_kelas sk 
             JOIN guru g ON sk.guru_id = g.id 
             LEFT JOIN guru sp ON sk.supervisor_id = sp.id 
-            ORDER BY sk.tanggal DESC, sk.id DESC
+            ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) DESC, sk.id DESC
         ")->fetchAll(\PDO::FETCH_ASSOC);
 
         foreach ($daftar_supervisi as &$s) {
-            $s['nama_mapel'] = $mapels[$s['mapel_id'] ?? 0] ?? '-';
-            $s['nama_kelas'] = $kelasList[$s['kelas_id'] ?? 0] ?? '-';
+            $s['nama_mapel'] = !empty($s['mata_pelajaran']) ? $s['mata_pelajaran'] : ($mapels[$s['mapel_id'] ?? 0] ?? '-');
+            $s['nama_kelas'] = !empty($s['kelas']) ? $s['kelas'] : ($kelasList[$s['kelas_id'] ?? 0] ?? '-');
         }
         unset($s);
 
@@ -1436,16 +1583,21 @@ class KurikulumController {
         } catch (\Throwable $e) {}
 
         $daftar_supervisi = $db->query("
-            SELECT sk.*, g.nama as nama_guru, g.nip as nip_guru, sp.nama as nama_supervisor, sp.nip as nip_supervisor 
+            SELECT sk.*, 
+                   COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                   g.nama as nama_guru, 
+                   g.nip as nip_guru, 
+                   COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor 
             FROM kurikulum_supervisi_kelas sk 
             JOIN guru g ON sk.guru_id = g.id 
             LEFT JOIN guru sp ON sk.supervisor_id = sp.id 
-            ORDER BY sk.tanggal ASC, sk.id ASC
+            ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) ASC, sk.id ASC
         ")->fetchAll(\PDO::FETCH_ASSOC);
 
         foreach ($daftar_supervisi as &$s) {
-            $s['nama_mapel'] = $mapels[$s['mapel_id'] ?? 0] ?? '-';
-            $s['nama_kelas'] = $kelasList[$s['kelas_id'] ?? 0] ?? '-';
+            $s['nama_mapel'] = !empty($s['mata_pelajaran']) ? $s['mata_pelajaran'] : ($mapels[$s['mapel_id'] ?? 0] ?? '-');
+            $s['nama_kelas'] = !empty($s['kelas']) ? $s['kelas'] : ($kelasList[$s['kelas_id'] ?? 0] ?? '-');
         }
         unset($s);
 
@@ -1647,21 +1799,30 @@ class KurikulumController {
         $daftar_supervisi = [];
         try {
             $stmt = $db->query("
-                SELECT sk.*, g.nama as nama_guru, g.nip as guru_nip, sp.nama as nama_supervisor
+                SELECT sk.*, 
+                       COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                       COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                       COALESCE(g.nama, 'Guru') as nama_guru, 
+                       COALESCE(g.nip, '-') as guru_nip, 
+                       COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor
                 FROM kurikulum_supervisi_kelas sk
                 JOIN guru g ON sk.guru_id = g.id
-                JOIN guru sp ON sk.supervisor_id = sp.id
-                ORDER BY sk.tanggal DESC
+                LEFT JOIN guru sp ON sk.supervisor_id = sp.id
+                ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) DESC, sk.id DESC
             ");
             $daftar_supervisi = $stmt ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : [];
 
             $siakad_db = \App\Core\Database::connect('siakad');
-            $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
-            $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR);
+            $mapels = [];
+            $kelasList = [];
+            try {
+                $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+                $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            } catch (\Throwable $e) {}
 
             foreach($daftar_supervisi as &$s) {
-                $s['nama_mapel'] = $mapels[$s['mapel_id']] ?? 'Mapel ID: ' . $s['mapel_id'];
-                $s['nama_kelas'] = $kelasList[$s['kelas_id']] ?? 'Kelas ID: ' . $s['kelas_id'];
+                $s['nama_mapel'] = !empty($s['mata_pelajaran']) ? $s['mata_pelajaran'] : ($mapels[$s['mapel_id'] ?? 0] ?? 'Mapel ID: ' . ($s['mapel_id'] ?? 0));
+                $s['nama_kelas'] = !empty($s['kelas']) ? $s['kelas'] : ($kelasList[$s['kelas_id'] ?? 0] ?? 'Kelas ID: ' . ($s['kelas_id'] ?? 0));
             }
             unset($s);
         } catch (\Exception $e) {}
@@ -1704,21 +1865,26 @@ class KurikulumController {
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC) ?: [];
 
         $daftar_supervisi = $db->query("
-            SELECT sk.*, g.nama as nama_guru, g.nip as guru_nip, sp.nama as nama_supervisor
+            SELECT sk.*, 
+                   COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                   COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Guru') as nama_guru, 
+                   COALESCE(g.nip, '-') as guru_nip, 
+                   COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor
             FROM kurikulum_supervisi_kelas sk
             JOIN guru g ON sk.guru_id = g.id
-            JOIN guru sp ON sk.supervisor_id = sp.id
-            ORDER BY sk.tanggal DESC
+            LEFT JOIN guru sp ON sk.supervisor_id = sp.id
+            ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) DESC, sk.id DESC
         ")->fetchAll(\PDO::FETCH_ASSOC);
 
         try {
             $siakad_db = \App\Core\Database::connect('siakad');
-            $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
-            $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR);
+            $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
 
             foreach($daftar_supervisi as &$s) {
-                $s['nama_mapel'] = $mapels[$s['mapel_id']] ?? '-';
-                $s['nama_kelas'] = $kelasList[$s['kelas_id']] ?? '-';
+                $s['nama_mapel'] = !empty($s['mata_pelajaran']) ? $s['mata_pelajaran'] : ($mapels[$s['mapel_id'] ?? 0] ?? '-');
+                $s['nama_kelas'] = !empty($s['kelas']) ? $s['kelas'] : ($kelasList[$s['kelas_id'] ?? 0] ?? '-');
             }
             unset($s);
         } catch (\Exception $e) {}
@@ -1736,21 +1902,31 @@ class KurikulumController {
         $supervisiData = [];
         try {
             $stmt = $db->query("
-                SELECT sk.*, g.nama as nama_guru, g.nip as guru_nip, sp.nama as nama_supervisor
+                SELECT sk.*, 
+                       COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                       COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                       IF((sk.nilai IS NOT NULL AND sk.nilai > 0) OR (sk.nilai_akhir IS NOT NULL AND sk.nilai_akhir > 0), 'Dievaluasi', COALESCE(sk.status, 'Jadwal')) as status,
+                       COALESCE(g.nama, 'Guru') as nama_guru, 
+                       COALESCE(g.nip, '-') as guru_nip, 
+                       COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor
                 FROM kurikulum_supervisi_kelas sk
                 JOIN guru g ON sk.guru_id = g.id
-                JOIN guru sp ON sk.supervisor_id = sp.id
-                ORDER BY sk.tanggal DESC
+                LEFT JOIN guru sp ON sk.supervisor_id = sp.id
+                ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) DESC, sk.id DESC
             ");
             $supervisiData = $stmt ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : [];
 
             $siakad_db = \App\Core\Database::connect('siakad');
-            $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
-            $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR);
+            $mapels = [];
+            $kelasList = [];
+            try {
+                $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+                $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            } catch (\Throwable $e) {}
 
             foreach ($supervisiData as &$s) {
-                $s['nama_mapel'] = $mapels[$s['mapel_id']] ?? 'Guru Kelas';
-                $s['nama_kelas'] = $kelasList[$s['kelas_id']] ?? '-';
+                $s['nama_mapel'] = !empty($s['mata_pelajaran']) ? $s['mata_pelajaran'] : ($mapels[$s['mapel_id'] ?? 0] ?? 'Guru Kelas');
+                $s['nama_kelas'] = !empty($s['kelas']) ? $s['kelas'] : ($kelasList[$s['kelas_id'] ?? 0] ?? '-');
             }
             unset($s);
         } catch (\Exception $e) {}
@@ -2191,17 +2367,67 @@ class KurikulumController {
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
-            // Ensure columns
-            $ensureCols = ['kurikulum_supervisi_administrasi', 'kurikulum_supervisi_kelas', 'kurikulum_supervisi_universal'];
-            foreach ($ensureCols as $tbl) {
-                try { $db->exec("ALTER TABLE `$tbl` ADD COLUMN `is_released` TINYINT(1) DEFAULT 0"); } catch (\Throwable $e) {}
-                try { $db->exec("ALTER TABLE `$tbl` ADD COLUMN `is_hasil_released` TINYINT(1) DEFAULT 0"); } catch (\Throwable $e) {}
+            // Master Instrumen table
+            $db->exec("CREATE TABLE IF NOT EXISTS `kurikulum_instrumen_supervisi` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `tipe_supervisi` VARCHAR(100) NOT NULL,
+                `kategori` VARCHAR(100) NOT NULL,
+                `kode` VARCHAR(50) NOT NULL,
+                `aspek` TEXT NOT NULL,
+                `bobot_maksimal` INT DEFAULT 4,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+            // Hasil Nilai Instrumen table
+            $db->exec("CREATE TABLE IF NOT EXISTS `kurikulum_supervisi_hasil` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `tipe_supervisi` VARCHAR(100) NOT NULL,
+                `supervisi_id` INT NOT NULL,
+                `instrumen_id` INT NOT NULL,
+                `skor` INT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                KEY `idx_lookup` (`tipe_supervisi`, `supervisi_id`, `instrumen_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+            // Ensure columns for Administrasi
+            $ensureAdm = [
+                'pegawai_id' => 'INT NULL',
+                'supervisor_id' => 'INT NULL',
+                'tanggal' => 'DATE NULL',
+                'nilai' => 'FLOAT NULL',
+                'catatan_evaluasi' => 'TEXT NULL',
+                'status' => "VARCHAR(50) DEFAULT 'Jadwal'",
+                'is_released' => 'TINYINT(1) DEFAULT 0',
+                'is_hasil_released' => 'TINYINT(1) DEFAULT 0'
+            ];
+            foreach ($ensureAdm as $col => $def) {
+                try { $db->exec("ALTER TABLE `kurikulum_supervisi_administrasi` ADD COLUMN `$col` $def"); } catch (\Throwable $e) {}
             }
-            try { $db->exec("ALTER TABLE `kurikulum_supervisi_kelas` ADD COLUMN `tindak_lanjut_jenis` VARCHAR(100) NULL"); } catch (\Throwable $e) {}
-            try { $db->exec("ALTER TABLE `kurikulum_supervisi_kelas` ADD COLUMN `tindak_lanjut` TEXT NULL"); } catch (\Throwable $e) {}
-            try { $db->exec("ALTER TABLE `kurikulum_supervisi_kelas` ADD COLUMN `tindak_lanjut_deadline` VARCHAR(50) NULL"); } catch (\Throwable $e) {}
-            try { $db->exec("ALTER TABLE `kurikulum_supervisi_kelas` ADD COLUMN `tindak_lanjut_status` VARCHAR(50) DEFAULT 'Belum Terlaksana'"); } catch (\Throwable $e) {}
-            try { $db->exec("ALTER TABLE `kurikulum_supervisi_kelas` ADD COLUMN `tindak_lanjut_realisasi` TEXT NULL"); } catch (\Throwable $e) {}
+
+            // Ensure columns for Kelas
+            $ensureKls = [
+                'tanggal' => 'DATE NULL',
+                'nilai' => 'FLOAT NULL',
+                'catatan_evaluasi' => 'TEXT NULL',
+                'status' => "VARCHAR(50) DEFAULT 'Jadwal'",
+                'kelas_id' => 'INT NULL',
+                'mapel_id' => 'INT NULL',
+                'supervisor_id' => 'INT NULL',
+                'is_released' => 'TINYINT(1) DEFAULT 0',
+                'is_hasil_released' => 'TINYINT(1) DEFAULT 0',
+                'tindak_lanjut_jenis' => 'VARCHAR(100) NULL',
+                'tindak_lanjut' => 'TEXT NULL',
+                'tindak_lanjut_deadline' => 'VARCHAR(50) NULL',
+                'tindak_lanjut_status' => "VARCHAR(50) DEFAULT 'Belum Terlaksana'",
+                'tindak_lanjut_realisasi' => 'TEXT NULL'
+            ];
+            foreach ($ensureKls as $col => $def) {
+                try { $db->exec("ALTER TABLE `kurikulum_supervisi_kelas` ADD COLUMN `$col` $def"); } catch (\Throwable $e) {}
+            }
+
+            // Ensure columns for Universal
+            try { $db->exec("ALTER TABLE `kurikulum_supervisi_universal` ADD COLUMN `is_released` TINYINT(1) DEFAULT 0"); } catch (\Throwable $e) {}
+            try { $db->exec("ALTER TABLE `kurikulum_supervisi_universal` ADD COLUMN `is_hasil_released` TINYINT(1) DEFAULT 0"); } catch (\Throwable $e) {}
         } catch (\Throwable $e) {}
     }
 

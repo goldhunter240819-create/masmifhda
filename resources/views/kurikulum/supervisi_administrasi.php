@@ -53,7 +53,7 @@
                     <tbody>
                         <?php if(empty($jadwal_supervisi)): ?>
                         <tr>
-                            <td colspan="6" align="center" style="padding: 2rem;">
+                            <td colspan="8" align="center" style="padding: 2rem;">
                                 <div style="color: var(--z-muted);">
                                     <i data-lucide="folder-search" style="width:48px;height:48px;opacity:0.3;margin-bottom:1rem;"></i>
                                     <p>Belum ada data supervisi administrasi.</p>
@@ -111,7 +111,7 @@
                                         <?php if($row['status'] == 'Dievaluasi'): ?>
                                         <button onclick="cetakJadwal(<?= $row['id'] ?>)" class="e-btn e-btn-outline" style="padding:0.3rem 0.5rem; color:#8b5cf6; border-color:rgba(139,92,246,0.2); background:rgba(139,92,246,0.05);" title="Cetak"><i data-lucide="printer" style="width:16px;height:16px;"></i></button>
                                         <?php endif; ?>
-                                        <button onclick="editJadwal(<?= $row['id'] ?>, <?= $row['pegawai_id'] ?>, <?= $row['supervisor_id'] ?>, '<?= $row['tanggal'] ?>', `<?= htmlspecialchars($row['keterangan'] ?? '') ?>`)" class="e-btn e-btn-outline" style="padding:0.3rem 0.5rem; color:#3b82f6; border-color:rgba(59,130,246,0.2); background:rgba(59,130,246,0.05);" title="Edit"><i data-lucide="edit" style="width:16px;height:16px;"></i></button>
+                                        <button onclick="editJadwal(<?= $row['id'] ?>, <?= (int)($row['pegawai_id'] ?? $row['guru_id'] ?? 0) ?>, <?= (int)($row['supervisor_id'] ?? $row['penilai_id'] ?? 0) ?>, '<?= $row['tanggal'] ?? $row['tanggal_supervisi'] ?? '' ?>', `<?= htmlspecialchars($row['keterangan'] ?? '') ?>`)" class="e-btn e-btn-outline" style="padding:0.3rem 0.5rem; color:#3b82f6; border-color:rgba(59,130,246,0.2); background:rgba(59,130,246,0.05);" title="Edit"><i data-lucide="edit" style="width:16px;height:16px;"></i></button>
                                         <button onclick="deleteJadwal(<?= $row['id'] ?>)" class="e-btn e-btn-outline" style="padding:0.3rem 0.5rem; color:#ef4444; border-color:rgba(239,68,68,0.2); background:rgba(239,68,68,0.05);" title="Hapus"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
                                     </div>
                                 </td>

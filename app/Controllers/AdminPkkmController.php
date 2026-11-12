@@ -1362,11 +1362,16 @@ class AdminPkkmController {
 
             // Ambil data evaluasi supervisi kelas riil dari kurikulum
             $stmt_jadwal = $db->query("
-                SELECT sk.*, g.nama as nama_guru, g.nip as guru_nip, sp.nama as nama_supervisor 
+                SELECT sk.*, 
+                       COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                       COALESCE(sk.nilai, sk.nilai_akhir, 0) as nilai,
+                       COALESCE(g.nama, 'Guru') as nama_guru, 
+                       COALESCE(g.nip, '-') as guru_nip, 
+                       COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor 
                 FROM kurikulum_supervisi_kelas sk
-                JOIN guru g ON sk.guru_id = g.id
-                JOIN guru sp ON sk.supervisor_id = sp.id
-                ORDER BY sk.tanggal DESC
+                LEFT JOIN guru g ON sk.guru_id = g.id
+                LEFT JOIN guru sp ON sk.supervisor_id = sp.id
+                ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) DESC, sk.id DESC
             ");
             $supervisiData = $stmt_jadwal ? $stmt_jadwal->fetchAll(PDO::FETCH_ASSOC) : [];
 
@@ -1375,8 +1380,8 @@ class AdminPkkmController {
                 $mapels = $siakad_db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(PDO::FETCH_KEY_PAIR);
                 $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
                 foreach ($supervisiData as &$j) {
-                    $j['nama_mapel'] = $mapels[$j['mapel_id']] ?? 'Mata Pelajaran';
-                    $j['nama_kelas'] = $kelasList[$j['kelas_id']] ?? '-';
+                    $j['nama_mapel'] = !empty($j['mata_pelajaran']) ? $j['mata_pelajaran'] : ($mapels[$j['mapel_id'] ?? 0] ?? 'Mata Pelajaran');
+                    $j['nama_kelas'] = !empty($j['kelas']) ? $j['kelas'] : ($kelasList[$j['kelas_id'] ?? 0] ?? '-');
                 }
                 unset($j);
             } catch (\Exception $e) {}
