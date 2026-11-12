@@ -143,6 +143,22 @@ include 'header.php';
                 <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 0.8rem;"></i>
             </a>
 
+            <a href="panduan_aplikasi.php" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0; text-decoration: none; color: var(--text-main); background: #f0fdf4;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="background: #dcfce7; color: #16a34a; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.95rem; color: #15803d;">Buku Panduan Aplikasi (PDF)</div>
+                        <div style="font-size: 0.7rem; color: #16a34a;">Panduan lengkap fitur & tata cara pemakaian</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: #16a34a; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 999px;">PDF</span>
+                    <i class="fa-solid fa-chevron-right" style="color: #86efac; font-size: 0.8rem;"></i>
+                </div>
+            </a>
+
             <a href="buku_saku.php" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0; text-decoration: none; color: var(--text-main);">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="background: #ecfdf5; color: #10b981; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">

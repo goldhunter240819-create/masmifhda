@@ -2494,6 +2494,19 @@ $router->add('GET', '/kurikulum/supervisi/laporan-tindak-lanjut', [\App\Controll
 $router->add('GET', '/kurikulum/supervisi/laporan-tindak-lanjut/cetak', [\App\Controllers\KurikulumController::class, 'cetakLaporanTindakLanjutSupervisi']);
 $router->add('GET', '/kurikulum/supervisi/laporan-rtl', [\App\Controllers\KurikulumController::class, 'laporanTindakLanjutSupervisi']);
 
+$router->add('GET', '/panduan', function() {
+    require __DIR__ . '/../apk/panduan_aplikasi.php';
+    exit;
+});
+$router->add('GET', '/panduan-apk', function() {
+    require __DIR__ . '/../apk/panduan_aplikasi.php';
+    exit;
+});
+$router->add('GET', '/apk/panduan', function() {
+    require __DIR__ . '/../apk/panduan_aplikasi.php';
+    exit;
+});
+
 $router->run();
 
 

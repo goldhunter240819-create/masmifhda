@@ -260,10 +260,15 @@ include 'header.php';
 
 
 
-    <!-- ================= JADWAL BUTTON ================= -->
-    <button onclick="document.getElementById('modal-jadwal').style.display='flex'" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px; display: flex; align-items: center; justify-content: center; gap: 10px;">
-        <i class="fa-solid fa-calendar-alt"></i> Lihat Jadwal Mengajar
-    </button>
+    <!-- ================= JADWAL & PANDUAN BUTTON ================= -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px;">
+        <button onclick="document.getElementById('modal-jadwal').style.display='flex'" style="width: 100%; padding: 14px 10px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="fa-solid fa-calendar-alt"></i> Jadwal Mengajar
+        </button>
+        <a href="panduan_aplikasi.php" style="width: 100%; padding: 14px 10px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border: none; border-radius: 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(5,150,105,0.2); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
+            <i class="fa-solid fa-file-pdf"></i> Panduan APK (PDF)
+        </a>
+    </div>
 
     <!-- Modal Jadwal -->
     <div id="modal-jadwal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; padding:20px; backdrop-filter: blur(3px);">

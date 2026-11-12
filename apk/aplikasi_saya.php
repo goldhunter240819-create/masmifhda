@@ -132,6 +132,22 @@ include 'header.php';
 
 <div class="main-content">
     <div class="data-card" style="margin-top: -2.5rem; z-index: 10;">
+        <!-- Banner Unduh Buku Panduan -->
+        <a href="panduan_aplikasi.php" style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border-radius: 14px; padding: 12px 16px; margin-bottom: 20px; text-decoration: none; box-shadow: 0 4px 12px rgba(2,132,199,0.25); transition: 0.2s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 38px; height: 38px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div>
+                    <div style="font-weight: 800; font-size: 0.92rem; line-height: 1.2;">Buku Panduan Aplikasi</div>
+                    <div style="font-size: 0.72rem; color: rgba(255,255,255,0.85); margin-top: 2px;">User Manual Resmi Penggunaan Seluruh Modul</div>
+                </div>
+            </div>
+            <span style="background: rgba(255,255,255,0.25); font-size: 0.72rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                Unduh PDF <i class="fa-solid fa-download" style="font-size: 0.7rem;"></i>
+            </span>
+        </a>
+
         <h3 class="section-title" style="margin-top: 0; margin-bottom: 15px;">Daftar Aplikasi</h3>
         
         <?php 
