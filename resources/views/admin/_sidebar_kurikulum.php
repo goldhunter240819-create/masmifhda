@@ -4,7 +4,34 @@ $ap = isset($active_page) ? $active_page : '';
 
 $sub_menus = array(
     'kurikulum' => array(
-        array('icon'=>'layout-dashboard', 'label'=>'Dashboard', 'url'=>base_url('admin/kurikulum'), 'page'=>'dashboard'),
+        array('icon'=>'layout-dashboard', 'label'=>'Dashboard', 'url'=>base_url('kurikulum'), 'page'=>'overview'),
+        array(
+            'icon'=>'folder',
+            'label'=>'Manajemen Berkas',
+            'page'=>'berkas',
+            'subpages'=>array('berkas_pribadi','berkas_perangkat'),
+            'dropdown'=>array(
+                array('icon'=>'user', 'label'=>'Berkas Pribadi', 'url'=>base_url('kurikulum/berkas/pribadi'), 'page'=>'berkas_pribadi'),
+                array('icon'=>'book', 'label'=>'Perangkat Pembelajaran', 'url'=>base_url('kurikulum/berkas/perangkat'), 'page'=>'berkas_perangkat'),
+            )
+        ),
+        array(
+            'icon'=>'eye',
+            'label'=>'Supervisi',
+            'page'=>'supervisi',
+            'subpages'=>array('supervisi_dashboard','program_supervisi','supervisi_tim','supervisi_administrasi','supervisi_kelas','supervisi_tindak_lanjut','supervisi_instrumen','supervisi_laporan_hasil','supervisi_laporan_tindak_lanjut'),
+            'dropdown'=>array(
+                array('icon'=>'layout-dashboard','label'=>'Dashboard Supervisi', 'url'=>base_url('kurikulum/supervisi'), 'page'=>'supervisi_dashboard'),
+                array('icon'=>'calendar-check','label'=>'Program Supervisi', 'url'=>base_url('kurikulum/supervisi/program'), 'page'=>'program_supervisi'),
+                array('icon'=>'user-check','label'=>'Tim Supervisi & SK', 'url'=>base_url('kurikulum/supervisi/tim'), 'page'=>'supervisi_tim'),
+                array('icon'=>'file-text','label'=>'Supervisi Administrasi', 'url'=>base_url('kurikulum/supervisi/administrasi'), 'page'=>'supervisi_administrasi'),
+                array('icon'=>'users','label'=>'Supervisi Kelas', 'url'=>base_url('kurikulum/supervisi/kelas'), 'page'=>'supervisi_kelas'),
+                array('icon'=>'arrow-right-circle','label'=>'Tindak Lanjut Supervisi', 'url'=>base_url('kurikulum/supervisi/tindak-lanjut'), 'page'=>'supervisi_tindak_lanjut'),
+                array('icon'=>'clipboard-list','label'=>'Instrumen Supervisi Kelas', 'url'=>base_url('kurikulum/supervisi/instrumen'), 'page'=>'supervisi_instrumen'),
+                array('icon'=>'file-bar-chart-2','label'=>'Laporan Hasil Supervisi', 'url'=>base_url('kurikulum/supervisi/laporan-hasil'), 'page'=>'supervisi_laporan_hasil'),
+                array('icon'=>'file-check','label'=>'Laporan Hasil Tindak Lanjut', 'url'=>base_url('kurikulum/supervisi/laporan-tindak-lanjut'), 'page'=>'supervisi_laporan_tindak_lanjut'),
+            )
+        ),
         array(
             'icon'=>'activity',
             'label'=>'Akademik & Monitoring',
@@ -15,18 +42,6 @@ $sub_menus = array(
                 array('icon'=>'book-open', 'label'=>'Monitoring Jurnal', 'url'=>base_url('admin/kurikulum/monitoring-jurnal'), 'page'=>'monitoring_jurnal'),
                 array('icon'=>'settings-2', 'label'=>'Pengaturan KKM', 'url'=>base_url('admin/kurikulum/pengaturan-kkm'), 'page'=>'pengaturan_kkm'),
                 array('icon'=>'bar-chart-2', 'label'=>'Rekap Ketuntasan', 'url'=>base_url('admin/kurikulum/rekap-ketuntasan'), 'page'=>'rekap_ketuntasan'),
-            )
-        ),
-        array(
-            'icon'=>'clipboard-list',
-            'label'=>'Supervisi & Evaluasi',
-            'page'=>'supervisi',
-            'subpages'=>array('supervisi_administrasi','manajemen_berkas','supervisi_kelas','supervisi_penilaian'),
-            'dropdown'=>array(
-                array('icon'=>'folder-check', 'label'=>'Supervisi Administrasi', 'url'=>base_url('admin/kurikulum/supervisi-administrasi'), 'page'=>'supervisi_administrasi'),
-                array('icon'=>'folder-kanban', 'label'=>'Monitoring Berkas Guru', 'url'=>base_url('admin/manajemen-berkas'), 'page'=>'manajemen_berkas'),
-                array('icon'=>'monitor-play', 'label'=>'Supervisi Kelas', 'url'=>base_url('admin/kurikulum/supervisi-kelas'), 'page'=>'supervisi_kelas'),
-                array('icon'=>'clipboard-check', 'label'=>'Supervisi Penilaian', 'url'=>base_url('admin/kurikulum/supervisi-penilaian'), 'page'=>'supervisi_penilaian'),
             )
         )
     )

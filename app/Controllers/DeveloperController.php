@@ -6,6 +6,122 @@ use App\Core\Database;
 use App\Services\AuditLogger;
 
 class DeveloperController {
+
+    public static function gitPull() {
+        self::checkDev();
+        @set_time_limit(180);
+
+        // Deteksi binary git di Windows / Linux
+        $gitBin = 'git';
+        if (file_exists('C:\\Program Files\\Git\\cmd\\git.exe')) {
+            $gitBin = '"C:\\Program Files\\Git\\cmd\\git.exe"';
+        } elseif (file_exists('C:\\Program Files (x86)\\Git\\cmd\\git.exe')) {
+            $gitBin = '"C:\\Program Files (x86)\\Git\\cmd\\git.exe"';
+        } elseif (file_exists('C:\\Git\\bin\\git.exe')) {
+            $gitBin = '"C:\\Git\\bin\\git.exe"';
+        }
+
+        $projectRoot = realpath(__DIR__ . '/../../');
+        if (!$projectRoot) {
+            $projectRoot = dirname(dirname(__DIR__));
+        }
+
+        // 1. Daftarkan safe.directory agar git 2.35+ tidak menolak akses eksekusi
+        @shell_exec("{$gitBin} config --global --add safe.directory \"{$projectRoot}\" 2>&1");
+        @shell_exec("{$gitBin} config --global --add safe.directory \"*\" 2>&1");
+
+        // 2. Git Stash untuk mengamankan perubahan lokal jika ada bentrok
+        $cmdStash = "{$gitBin} -C \"{$projectRoot}\" stash 2>&1";
+        $outStash = @shell_exec($cmdStash);
+
+        // 3. Git Pull origin main
+        $cmdPull = "{$gitBin} -C \"{$projectRoot}\" pull origin main 2>&1";
+        $outPull = @shell_exec($cmdPull);
+
+        // 4. Ambil ringkasan commit terbaru
+        $cmdLog = "{$gitBin} -C \"{$projectRoot}\" log -1 --pretty=format:\"%h - %an, %ar : %s\" 2>&1";
+        $outLog = @shell_exec($cmdLog);
+
+        // Cek status keberhasilan
+        $success = true;
+        $msg = 'Git pull berhasil dijalankan.';
+        if ($outPull === null || $outPull === false) {
+            $success = false;
+            $msg = 'Perintah shell_exec tidak menghasilkan output atau dinonaktifkan di konfigurasi PHP server.';
+        } elseif (stripos($outPull, 'fatal:') !== false || stripos($outPull, 'error:') !== false) {
+            $success = false;
+            $msg = 'Git melaporkan error atau kendala saat melakukan pull repositori.';
+        } elseif (stripos($outPull, 'Already up to date') !== false) {
+            $msg = 'Repositori server sudah dalam versi terbaru (Already up to date).';
+        } else {
+            $msg = 'Update terbaru dari GitHub berhasil ditarik dan diterapkan ke server!';
+        }
+
+        // Catat ke storage/webhook.log
+        $logDir = $projectRoot . '/storage';
+        if (!is_dir($logDir)) @mkdir($logDir, 0777, true);
+        $userIdentifier = $_SESSION['user_id'] ?? 'dev';
+        $logData = date('Y-m-d H:i:s') . " [USER: {$userIdentifier}] Dev Panel Git Pull:\n" .
+                   "Stash: " . trim($outStash ?? '') . "\n" .
+                   "Pull: " . trim($outPull ?? '') . "\n" .
+                   "Commit: " . trim($outLog ?? '') . "\n-----------------------------------------\n";
+        @file_put_contents($logDir . '/webhook.log', $logData, FILE_APPEND);
+
+        // Deteksi apakah request berasal dari fetch/AJAX/POST
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                  || (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+                  || $_SERVER['REQUEST_METHOD'] === 'POST'
+                  || isset($_GET['ajax']);
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => $success,
+                'message' => $msg,
+                'stash' => trim($outStash ?? ''),
+                'output' => trim($outPull ?? ''),
+                'commit' => trim($outLog ?? ''),
+                'timestamp' => date('Y-m-d H:i:s'),
+                'root' => $projectRoot
+            ]);
+            exit;
+        }
+
+        // Tampilan fallback jika dibuka via GET manual di browser
+        $title = "Git Pull Sync - GH-SSS";
+        ob_start();
+        ?>
+        <div class="siakad-container">
+            <?php include __DIR__ . '/../../resources/views/developer/sidebar.php'; ?>
+            <div class="siakad-main">
+                <?php include __DIR__ . '/../../resources/views/developer/header.php'; ?>
+                <div class="card" style="background: #0f172a; color: white; padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                    <h2 style="display:flex; align-items:center; gap:10px; margin-top:0;">
+                        <i data-lucide="git-pull-request" style="color:#0ea5e9;"></i> Git Pull Sync Terminal
+                    </h2>
+                    <p style="color:#94a3b8; margin-bottom:1.5rem;"><?php echo htmlspecialchars($msg); ?></p>
+                    <div style="background:#020617; border:1px solid #1e293b; border-radius:10px; padding:15px; font-family:Consolas, Monaco, monospace; font-size:0.85rem; color:#e2e8f0; white-space:pre-wrap; margin-bottom:1.5rem; line-height:1.6;">
+<span style="color:#38bdf8;">$ git stash</span>
+<?php echo htmlspecialchars($outStash ?: '(tidak ada perubahan lokal)'); ?>
+
+<span style="color:#38bdf8;">$ git pull origin main</span>
+<span style="<?php echo $success ? 'color:#4ade80;' : 'color:#f87171;'; ?>"><?php echo htmlspecialchars($outPull ?: '(tidak ada output)'); ?></span>
+
+<span style="color:#eab308;">$ git log -1</span>
+<?php echo htmlspecialchars($outLog ?: '-'); ?>
+                    </div>
+                    <a href="<?php echo base_url('dev-panel'); ?>" style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, #10b981, #059669); color:white; padding:10px 20px; border-radius:10px; text-decoration:none; font-weight:bold;">
+                        <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Kembali ke Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/layout.php';
+        exit;
+    }
+
     public static function index() {
         self::checkDev();
         $active_menu = 'dashboard';
@@ -37,11 +153,19 @@ class DeveloperController {
             <div class="siakad-main">
                 <?php include __DIR__ . '/../../resources/views/developer/header.php'; ?>
 
-                <div class="card" style="margin-bottom: 2rem; background: #0f172a; color: white; border: none;">
-                    <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                        <i data-lucide="layout-dashboard" style="color: #0ea5e9;"></i> Developer Dashboard
-                    </h2>
-                    <p style="opacity: 0.7; margin-top: 5px;">Ringkasan Sistem & Status Server Utama</p>
+                <div class="card" style="margin-bottom: 2rem; background: #0f172a; color: white; border: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="layout-dashboard" style="color: #0ea5e9;"></i> Developer Dashboard
+                        </h2>
+                        <p style="opacity: 0.7; margin-top: 5px; font-size: 0.9rem;">Ringkasan Sistem & Status Server Utama</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <button type="button" onclick="triggerGitPull()" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; border: 1px solid rgba(255,255,255,0.15); padding: 10px 18px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.03em; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(37,99,235,0.35); transition: all 0.2s;" onmouseover="this.style.filter='brightness(1.15)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.filter='none'; this.style.transform='none';">
+                            <i data-lucide="git-pull-request" style="width: 18px; height: 18px;"></i>
+                            <span>PULL GIT (SYNC REPO)</span>
+                        </button>
+                    </div>
                 </div>
 
                 <style>

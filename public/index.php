@@ -606,7 +606,7 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
 
             <!-- WAKA KURIKULUM -->
             <?php if ($isAdmin): ?>
-            <div class="mod-card theme-teal d4" onclick="location.href='<?php echo base_url('admin/kurikulum'); ?>'">
+            <div class="mod-card theme-teal d4" onclick="location.href='<?php echo base_url('kurikulum'); ?>'">
                 <span class="mod-badge badge-new" style="background: #e0f2fe; color: #0284c7; border-color: #7dd3fc;">Baru</span>
                 <div class="mod-icon-wrap icon-sky" style="background:#f0f9ff; color:#0284c7;"><i data-lucide="book-open-check"></i></div>
                 <div class="mod-body">
@@ -926,6 +926,8 @@ $router->add('POST', '/admin/apk-settings/aplikasi/save-akses', function() {
 
 $router->add('GET', '/dev-panel', [\App\Controllers\DeveloperController::class, 'index']);
 $router->add('POST', '/dev-panel', [\App\Controllers\DeveloperController::class, 'index']);
+$router->add('GET', '/dev-panel/git-pull', [\App\Controllers\DeveloperController::class, 'gitPull']);
+$router->add('POST', '/dev-panel/git-pull', [\App\Controllers\DeveloperController::class, 'gitPull']);
 $router->add('GET', '/dev-panel/stats', [\App\Controllers\DeveloperController::class, 'dashboardStats']);
 $router->add('GET', '/dev-panel/monitor', [\App\Controllers\DeveloperController::class, 'monitor']);
 $router->add('POST', '/dev-panel/monitor', [\App\Controllers\DeveloperController::class, 'monitor']);
@@ -1489,15 +1491,8 @@ $router->add('POST', '/bk/pelanggaran/save', [\App\Controllers\BkController::cla
 $router->add('GET', '/bk/pelanggaran/delete/{id}', [\App\Controllers\BkController::class, 'deletePelanggaran']);
 
 
-$router->add('GET', '/admin/kurikulum', function() {
-    $role = isset($_SESSION['role_id']) ? $_SESSION['role_id'] : null;
-    if (!isset($_SESSION['user_id']) || !in_array($role, [1, 99])) {
-        redirect('/login');
-        exit;
-    }
-    include __DIR__ . '/../resources/views/admin/kurikulum_dashboard.php';
-    exit;
-});
+$router->add('GET', '/admin/kurikulum', [\App\Controllers\KurikulumController::class, 'dashboard']);
+$router->add('GET', '/admin/kurikulum/supervisi', [\App\Controllers\KurikulumController::class, 'dashboardSupervisi']);
 
 $router->add('GET', '/admin/kurikulum/dalam-pengembangan', function() {
     $role = isset($_SESSION['role_id']) ? $_SESSION['role_id'] : null;
@@ -2425,6 +2420,78 @@ $router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::cla
 $router->add('POST', '/cbt/token/expire', [\App\Controllers\CbtController::class, 'expireToken']);
 $router->add('GET', '/cbt/hasil', [\App\Controllers\CbtController::class, 'hasil']);
 $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'analisis']);
+
+
+// ─── Kurikulum & Supervisi Suite (Full Port from Mismifhda) ─────────────────
+$router->add('GET', '/kurikulum', [\App\Controllers\KurikulumController::class, 'dashboard']);
+$router->add('GET', '/kurikulum/berkas/pribadi', [\App\Controllers\KurikulumController::class, 'berkasPribadi']);
+$router->add('GET', '/kurikulum/berkas/perangkat', [\App\Controllers\KurikulumController::class, 'berkasPerangkat']);
+$router->add('POST', '/kurikulum/berkas/perangkat/upload', [\App\Controllers\KurikulumController::class, 'uploadBerkasPerangkat']);
+$router->add('POST', '/kurikulum/berkas/perangkat/status', [\App\Controllers\KurikulumController::class, 'updateStatusPerangkat']);
+$router->add('POST', '/kurikulum/berkas/perangkat/delete', [\App\Controllers\KurikulumController::class, 'deleteBerkasPerangkat']);
+$router->add('POST', '/kurikulum/berkas/perangkat/sync-pkkm', [\App\Controllers\KurikulumController::class, 'syncPerangkatToPkkm']);
+$router->add('POST', '/kurikulum/berkas/perangkat/unsync-pkkm', [\App\Controllers\KurikulumController::class, 'unsyncPerangkatFromPkkm']);
+$router->add('POST', '/kurikulum/berkas/perangkat/pasang-link-pkkm', [\App\Controllers\KurikulumController::class, 'pasangLinkPkkm']);
+$router->add('POST', '/kurikulum/berkas/perangkat/lepas-link-pkkm', [\App\Controllers\KurikulumController::class, 'lepasLinkPkkm']);
+$router->add('GET', '/kurikulum/supervisi/administrasi', [\App\Controllers\KurikulumController::class, 'supervisiAdministrasi']);
+$router->add('POST', '/kurikulum/supervisi/administrasi', [\App\Controllers\KurikulumController::class, 'storeSupervisiAdministrasi']);
+$router->add('POST', '/kurikulum/supervisi/administrasi/update', [\App\Controllers\KurikulumController::class, 'updateSupervisiAdministrasi']);
+$router->add('POST', '/kurikulum/supervisi/administrasi/delete', [\App\Controllers\KurikulumController::class, 'deleteSupervisiAdministrasi']);
+$router->add('POST', '/kurikulum/supervisi/administrasi/rilis', [\App\Controllers\KurikulumController::class, 'rilisSupervisiAdministrasi']);
+$router->add('POST', '/kurikulum/supervisi/administrasi/rilis-hasil', [\App\Controllers\KurikulumController::class, 'rilisHasilSupervisiAdministrasi']);
+$router->add('GET', '/kurikulum/supervisi/administrasi/evaluasi', [\App\Controllers\KurikulumController::class, 'evaluasiSupervisiAdministrasiForm']);
+$router->add('POST', '/kurikulum/supervisi/administrasi/evaluasi', [\App\Controllers\KurikulumController::class, 'storeEvaluasiSupervisiAdministrasi']);
+$router->add('GET', '/kurikulum/supervisi/administrasi/cetak', [\App\Controllers\KurikulumController::class, 'cetakSupervisiAdministrasi']);
+$router->add('GET', '/kurikulum/supervisi/kelas', [\App\Controllers\KurikulumController::class, 'supervisiKelas']);
+$router->add('POST', '/kurikulum/supervisi/kelas', [\App\Controllers\KurikulumController::class, 'storeSupervisiKelas']);
+$router->add('POST', '/kurikulum/supervisi/kelas/update', [\App\Controllers\KurikulumController::class, 'updateSupervisiKelas']);
+$router->add('POST', '/kurikulum/supervisi/kelas/delete', [\App\Controllers\KurikulumController::class, 'deleteSupervisiKelas']);
+$router->add('POST', '/kurikulum/supervisi/kelas/rilis', [\App\Controllers\KurikulumController::class, 'rilisSupervisiKelas']);
+$router->add('POST', '/kurikulum/supervisi/kelas/rilis-hasil', [\App\Controllers\KurikulumController::class, 'rilisHasilSupervisiKelas']);
+$router->add('GET', '/kurikulum/supervisi/kelas/evaluasi', [\App\Controllers\KurikulumController::class, 'evaluasiSupervisiKelasForm']);
+$router->add('POST', '/kurikulum/supervisi/kelas/evaluasi', [\App\Controllers\KurikulumController::class, 'storeEvaluasiSupervisiKelas']);
+$router->add('GET', '/kurikulum/supervisi/kelas/cetak', [\App\Controllers\KurikulumController::class, 'cetakSupervisiKelas']);
+$router->add('GET', '/kurikulum/supervisi/kelas/cetak-semua', [\App\Controllers\KurikulumController::class, 'cetakSemuaSupervisiKelas']);
+$router->add('GET', '/kurikulum/supervisi/kelas/cetak-jadwal', [\App\Controllers\KurikulumController::class, 'cetakJadwalSupervisiKelas']);
+$router->add('GET', '/kurikulum/supervisi/kelas/mobile', [\App\Controllers\KurikulumController::class, 'supervisiKelasMobile']);
+$router->add('GET', '/kurikulum/supervisi/kelas/evaluasi/mobile', [\App\Controllers\KurikulumController::class, 'evaluasiSupervisiKelasMobile']);
+$router->add('GET', '/kurikulum/supervisi/api/guru-kelas', [\App\Controllers\KurikulumController::class, 'getGuruKelas']);
+$router->add('GET', '/kurikulum/supervisi/api/guru-kelas-mapel', [\App\Controllers\KurikulumController::class, 'getGuruKelasMapel']);
+$router->add('GET', '/kurikulum/supervisi', [\App\Controllers\KurikulumController::class, 'dashboardSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/rekapitulasi', [\App\Controllers\KurikulumController::class, 'rekapitulasiSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/buku-program', [\App\Controllers\KurikulumController::class, 'cetakBukuProgramTahunan']);
+$router->add('GET', '/kurikulum/supervisi/tindak-lanjut', [\App\Controllers\KurikulumController::class, 'supervisiTindakLanjut']);
+$router->add('POST', '/kurikulum/supervisi/tindak-lanjut/update', [\App\Controllers\KurikulumController::class, 'updateSupervisiTindakLanjut']);
+$router->add('GET', '/kurikulum/supervisi/tindak-lanjut/cetak', [\App\Controllers\KurikulumController::class, 'cetakRtlSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/universal/{tipe}', [\App\Controllers\KurikulumController::class, 'supervisiUniversal']);
+$router->add('POST', '/kurikulum/supervisi/universal/{tipe}', [\App\Controllers\KurikulumController::class, 'storeSupervisiUniversal']);
+$router->add('POST', '/kurikulum/supervisi/universal/{tipe}/update', [\App\Controllers\KurikulumController::class, 'updateSupervisiUniversal']);
+$router->add('POST', '/kurikulum/supervisi/universal/{tipe}/delete', [\App\Controllers\KurikulumController::class, 'deleteSupervisiUniversal']);
+$router->add('GET', '/kurikulum/supervisi/universal/{tipe}/evaluasi', [\App\Controllers\KurikulumController::class, 'evaluasiSupervisiUniversal']);
+$router->add('POST', '/kurikulum/supervisi/universal/{tipe}/evaluasi', [\App\Controllers\KurikulumController::class, 'storeEvaluasiSupervisiUniversal']);
+$router->add('POST', '/kurikulum/supervisi/universal/{tipe}/rilis', [\App\Controllers\KurikulumController::class, 'rilisSupervisiUniversal']);
+$router->add('POST', '/kurikulum/supervisi/universal/{tipe}/rilis-hasil', [\App\Controllers\KurikulumController::class, 'rilisHasilSupervisiUniversal']);
+$router->add('GET', '/kurikulum/supervisi/universal/{tipe}/cetak', [\App\Controllers\KurikulumController::class, 'cetakSupervisiUniversal']);
+$router->add('GET', '/kurikulum/supervisi/program', [\App\Controllers\KurikulumController::class, 'programSupervisi']);
+$router->add('POST', '/kurikulum/supervisi/program', [\App\Controllers\KurikulumController::class, 'storeProgramSupervisi']);
+$router->add('POST', '/kurikulum/supervisi/program/update', [\App\Controllers\KurikulumController::class, 'updateProgramSupervisi']);
+$router->add('POST', '/kurikulum/supervisi/program/delete', [\App\Controllers\KurikulumController::class, 'deleteProgramSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/program/cetak', [\App\Controllers\KurikulumController::class, 'cetakProgramSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/instrumen', [\App\Controllers\KurikulumController::class, 'supervisiInstrumen']);
+$router->add('POST', '/kurikulum/supervisi/instrumen/tambah', [\App\Controllers\KurikulumController::class, 'storeSupervisiInstrumen']);
+$router->add('POST', '/kurikulum/supervisi/instrumen/delete', [\App\Controllers\KurikulumController::class, 'deleteSupervisiInstrumen']);
+$router->add('GET', '/kurikulum/supervisi/tim', [\App\Controllers\KurikulumController::class, 'timSupervisi']);
+$router->add('POST', '/kurikulum/supervisi/tim/update-config', [\App\Controllers\KurikulumController::class, 'updateTimSupervisiConfig']);
+$router->add('POST', '/kurikulum/supervisi/tim/add-member', [\App\Controllers\KurikulumController::class, 'addTimSupervisiMember']);
+$router->add('POST', '/kurikulum/supervisi/tim/update-member', [\App\Controllers\KurikulumController::class, 'updateTimSupervisiMember']);
+$router->add('POST', '/kurikulum/supervisi/tim/delete-member', [\App\Controllers\KurikulumController::class, 'deleteTimSupervisiMember']);
+$router->add('GET', '/kurikulum/supervisi/tim/sk-cetak', [\App\Controllers\KurikulumController::class, 'cetakSKTimSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/laporan-hasil', [\App\Controllers\KurikulumController::class, 'laporanHasilSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/laporan-hasil/cetak', [\App\Controllers\KurikulumController::class, 'cetakLaporanHasilSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/laporan', [\App\Controllers\KurikulumController::class, 'laporanHasilSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/laporan-tindak-lanjut', [\App\Controllers\KurikulumController::class, 'laporanTindakLanjutSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/laporan-tindak-lanjut/cetak', [\App\Controllers\KurikulumController::class, 'cetakLaporanTindakLanjutSupervisi']);
+$router->add('GET', '/kurikulum/supervisi/laporan-rtl', [\App\Controllers\KurikulumController::class, 'laporanTindakLanjutSupervisi']);
 
 $router->run();
 

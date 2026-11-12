@@ -43,6 +43,10 @@
                         <i data-lucide="monitor-smartphone"></i>
                         <span>APK Phone Emulator</span>
                     </a>
+                    <a href="javascript:void(0)" onclick="triggerGitPull()" class="submenu-item" style="color: #38bdf8;">
+                        <i data-lucide="git-pull-request" style="color: #38bdf8;"></i>
+                        <span style="color: #38bdf8; font-weight: 600;">Pull Git (Sync Repo)</span>
+                    </a>
                 </div>
             </div>
 

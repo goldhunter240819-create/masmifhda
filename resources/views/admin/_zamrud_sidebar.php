@@ -10,9 +10,13 @@ $am = isset($active_module) ? $active_module : '';
 if (empty($am) && strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/perpus') !== false) {
     $am = 'perpus';
 }
+if (empty($am) && (strpos($_SERVER['REQUEST_URI'] ?? '', '/kurikulum') !== false || strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/kurikulum') !== false)) {
+    $am = 'kurikulum';
+}
 $ap = isset($active_page)   ? $active_page   : '';
 
 $modules = array(
+    'kurikulum'    => array('icon'=>'book-open',     'label'=>'Kurikulum',       'url'=>base_url('kurikulum')),
     'finance'      => array('icon'=>'credit-card',  'label'=>'Keuangan',       'url'=>base_url('admin/finance')),
     'absen_v2'     => array('icon'=>'calendar-check', 'label'=>'Absen',       'url'=>base_url('admin/absen-v2')),
     'siakad'       => array('icon'=>'graduation-cap', 'label'=>'SIAKAD',         'url'=>base_url('admin/siakad')),
@@ -23,6 +27,36 @@ $modules = array(
 );
 
 $sub_menus = array(
+    'kurikulum' => array(
+        array('icon'=>'layout-dashboard','label'=>'Dashboard', 'url'=>base_url('kurikulum'), 'page'=>'overview'),
+        array(
+            'icon'=>'folder',
+            'label'=>'Manajemen Berkas',
+            'page'=>'berkas',
+            'subpages'=>array('berkas_pribadi','berkas_perangkat'),
+            'dropdown'=>array(
+                array('icon'=>'user','label'=>'Berkas Pribadi', 'url'=>base_url('kurikulum/berkas/pribadi'), 'page'=>'berkas_pribadi'),
+                array('icon'=>'book','label'=>'Perangkat Pembelajaran', 'url'=>base_url('kurikulum/berkas/perangkat'), 'page'=>'berkas_perangkat'),
+            )
+        ),
+        array(
+            'icon'=>'eye',
+            'label'=>'Supervisi',
+            'page'=>'supervisi',
+            'subpages'=>array('supervisi_dashboard','program_supervisi','supervisi_tim','supervisi_administrasi','supervisi_kelas','supervisi_tindak_lanjut','supervisi_instrumen','supervisi_laporan_hasil','supervisi_laporan_tindak_lanjut'),
+            'dropdown'=>array(
+                array('icon'=>'layout-dashboard','label'=>'Dashboard Supervisi', 'url'=>base_url('kurikulum/supervisi'), 'page'=>'supervisi_dashboard'),
+                array('icon'=>'calendar-check','label'=>'Program Supervisi', 'url'=>base_url('kurikulum/supervisi/program'), 'page'=>'program_supervisi'),
+                array('icon'=>'user-check','label'=>'Tim Supervisi & SK', 'url'=>base_url('kurikulum/supervisi/tim'), 'page'=>'supervisi_tim'),
+                array('icon'=>'file-text','label'=>'Supervisi Administrasi', 'url'=>base_url('kurikulum/supervisi/administrasi'), 'page'=>'supervisi_administrasi'),
+                array('icon'=>'users','label'=>'Supervisi Kelas', 'url'=>base_url('kurikulum/supervisi/kelas'), 'page'=>'supervisi_kelas'),
+                array('icon'=>'arrow-right-circle','label'=>'Tindak Lanjut Supervisi', 'url'=>base_url('kurikulum/supervisi/tindak-lanjut'), 'page'=>'supervisi_tindak_lanjut'),
+                array('icon'=>'clipboard-list','label'=>'Instrumen Supervisi Kelas', 'url'=>base_url('kurikulum/supervisi/instrumen'), 'page'=>'supervisi_instrumen'),
+                array('icon'=>'file-bar-chart-2','label'=>'Laporan Hasil Supervisi', 'url'=>base_url('kurikulum/supervisi/laporan-hasil'), 'page'=>'supervisi_laporan_hasil'),
+                array('icon'=>'file-check','label'=>'Laporan Hasil Tindak Lanjut', 'url'=>base_url('kurikulum/supervisi/laporan-tindak-lanjut'), 'page'=>'supervisi_laporan_tindak_lanjut'),
+            )
+        ),
+    ),
     'finance' => array(
         array('icon'=>'layout-dashboard','label'=>'Overview',    'url'=>base_url('admin/finance'),          'page'=>'overview'),
         array(
