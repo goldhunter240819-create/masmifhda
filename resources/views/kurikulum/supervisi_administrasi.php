@@ -134,7 +134,7 @@
             <h3 id="modalTitle" style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:0.5rem; color:#1e293b;"><i data-lucide="plus-circle" style="color:#10b981;"></i> Jadwalkan Supervisi Administrasi</h3>
             <button onclick="document.getElementById('modalJadwal').style.display='none'" style="background:none; border:none; cursor:pointer; font-size:1.5rem; color:#64748b;">&times;</button>
         </div>
-        <form id="jadwalForm" action="/kurikulum/supervisi/administrasi" method="POST">
+        <form id="jadwalForm" action="/kurikulum/supervisi/administrasi" method="POST" onsubmit="const btn = this.querySelector('button[type=submit]'); if(btn){btn.disabled=true; btn.textContent='Menyimpan...';}">
             <input type="hidden" name="id" id="jadwal_id">
             <div style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem;">
                 <div>

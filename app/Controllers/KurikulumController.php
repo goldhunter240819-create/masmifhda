@@ -913,6 +913,16 @@ class KurikulumController {
                 $tanggal = $_POST['tanggal'];
                 $keterangan = $_POST['keterangan'] ?? '';
 
+                // Proteksi duplikasi: Jika guru & tanggal yang sama sudah terdaftar
+                $cekDobel = $db->prepare("SELECT id FROM kurikulum_supervisi_administrasi WHERE (pegawai_id = ? OR guru_id = ?) AND (tanggal = ? OR tanggal_supervisi = ?) LIMIT 1");
+                $cekDobel->execute([$pegawai_id, $pegawai_id, $tanggal, $tanggal]);
+                if ($cekDobel->fetchColumn()) {
+                    if (session_status() === PHP_SESSION_NONE) session_start();
+                    $_SESSION['alert'] = ['type' => 'warning', 'message' => 'Jadwal supervisi administrasi untuk guru dan tanggal tersebut sudah terdaftar!'];
+                    header('Location: ' . base_url('kurikulum/supervisi/administrasi'));
+                    exit;
+                }
+
                 $spNama = $db->query("SELECT nama FROM guru WHERE id = $supervisor_id")->fetchColumn() ?: 'Supervisor';
 
                 $stmt = $db->prepare("INSERT INTO kurikulum_supervisi_administrasi (pegawai_id, guru_id, supervisor_id, penilai_id, penilai_nama, tanggal, tanggal_supervisi, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Jadwal')");
@@ -926,6 +936,8 @@ class KurikulumController {
                     $tanggal,
                     $keterangan
                 ]);
+                if (session_status() === PHP_SESSION_NONE) session_start();
+                $_SESSION['alert'] = ['type' => 'success', 'message' => 'Jadwal supervisi administrasi berhasil ditambahkan!'];
                 header('Location: ' . base_url('kurikulum/supervisi/administrasi'));
                 exit;
             } catch (\Exception $e) {
@@ -958,10 +970,16 @@ class KurikulumController {
 
     public function deleteSupervisiAdministrasi() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
             try {
                 $db = \App\Core\Database::connect('core');
                 $stmt = $db->prepare("DELETE FROM kurikulum_supervisi_administrasi WHERE id = ?");
-                $stmt->execute([$_POST['id']]);
+                $stmt->execute([$id]);
+                try {
+                    $db->prepare("DELETE FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Administrasi' AND supervisi_id = ?")->execute([$id]);
+                } catch (\Throwable $e) {}
+                if (session_status() === PHP_SESSION_NONE) session_start();
+                $_SESSION['alert'] = ['type' => 'success', 'message' => 'Data supervisi administrasi berhasil dihapus!'];
                 header('Location: ' . base_url('kurikulum/supervisi/administrasi'));
                 exit;
             } catch (\Exception $e) {
@@ -1268,6 +1286,16 @@ class KurikulumController {
                 $tanggal = $_POST['tanggal'];
                 $keterangan = $_POST['keterangan'] ?? '';
 
+                // Proteksi duplikasi: Jika guru & tanggal yang sama sudah terdaftar, cegah insert dobel
+                $cekDobel = $db->prepare("SELECT id FROM kurikulum_supervisi_kelas WHERE guru_id = ? AND (tanggal = ? OR tanggal_supervisi = ?) LIMIT 1");
+                $cekDobel->execute([$guru_id, $tanggal, $tanggal]);
+                if ($cekDobel->fetchColumn()) {
+                    if (session_status() === PHP_SESSION_NONE) session_start();
+                    $_SESSION['alert'] = ['type' => 'warning', 'message' => 'Jadwal supervisi kelas untuk guru dan tanggal tersebut sudah terdaftar!'];
+                    header('Location: ' . base_url('kurikulum/supervisi/kelas'));
+                    exit;
+                }
+
                 $spNama = $db->query("SELECT nama FROM guru WHERE id = $supervisor_id")->fetchColumn() ?: 'Supervisor';
                 $namaMapel = $mapel_id ? ($siakad_db->query("SELECT nama_mapel FROM mapel WHERE id = $mapel_id")->fetchColumn() ?: '') : '';
                 $namaKelas = $kelas_id ? ($siakad_db->query("SELECT nama_kelas FROM kelas WHERE id = $kelas_id")->fetchColumn() ?: '') : '';
@@ -1285,6 +1313,8 @@ class KurikulumController {
                     $tanggal,
                     $keterangan
                 ]);
+                if (session_status() === PHP_SESSION_NONE) session_start();
+                $_SESSION['alert'] = ['type' => 'success', 'message' => 'Jadwal supervisi kelas berhasil ditambahkan!'];
                 header('Location: ' . base_url('kurikulum/supervisi/kelas'));
                 exit;
             } catch (\Exception $e) {
@@ -1335,10 +1365,16 @@ class KurikulumController {
 
     public function deleteSupervisiKelas() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
             try {
                 $db = \App\Core\Database::connect('core');
                 $stmt = $db->prepare("DELETE FROM kurikulum_supervisi_kelas WHERE id = ?");
-                $stmt->execute([$_POST['id']]);
+                $stmt->execute([$id]);
+                try {
+                    $db->prepare("DELETE FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Kelas' AND supervisi_id = ?")->execute([$id]);
+                } catch (\Throwable $e) {}
+                if (session_status() === PHP_SESSION_NONE) session_start();
+                $_SESSION['alert'] = ['type' => 'success', 'message' => 'Data supervisi kelas berhasil dihapus!'];
                 header('Location: ' . base_url('kurikulum/supervisi/kelas'));
                 exit;
             } catch (\Exception $e) {
