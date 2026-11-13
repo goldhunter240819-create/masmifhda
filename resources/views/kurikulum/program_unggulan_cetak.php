@@ -1316,37 +1316,37 @@ if (!is_array($sopConfig) || empty($sopConfig)) $sopConfig = $defaultSop;
                 <tr>
                     <td align="center">1</td>
                     <td><strong>Penanggung Jawab</strong></td>
-                    <td><strong><?= htmlspecialchars($kamad_nama) ?></strong><br>Kepala Madrasah</td>
+                    <td><strong><?= htmlspecialchars($kamad_nama) ?></strong></td>
                     <td>Penetapan regulasi SK, alokasi anggaran, dan koordinasi dengan Kemenag.</td>
                 </tr>
                 <tr>
                     <td align="center">2</td>
                     <td><strong>Ketua Pengembang</strong></td>
-                    <td><strong><?= htmlspecialchars($waka_nama) ?></strong><br>Waka Kurikulum</td>
+                    <td><strong><?= htmlspecialchars($waka_nama) ?></strong></td>
                     <td>Penyusunan kurikulum operasional 3 pilar, monitoring KBM, & evaluasi berkala.</td>
                 </tr>
                 <tr>
                     <td align="center">3</td>
                     <td><strong>Koordinator Pesantren</strong></td>
-                    <td><strong><?= htmlspecialchars($kord_pesantren_nama) ?></strong><br>Waka Kesiswaan</td>
+                    <td><strong><?= htmlspecialchars($kord_pesantren_nama) ?></strong></td>
                     <td>Tata tertib santri, pengawasan halaqah tahfidz pagi, & munaqosyah.</td>
                 </tr>
                 <tr>
                     <td align="center">4</td>
                     <td><strong>Pembina ROHIS</strong></td>
-                    <td><strong><?= htmlspecialchars($pembina_rohis_nama) ?></strong><br>Pembina Keagamaan</td>
+                    <td><strong><?= htmlspecialchars($pembina_rohis_nama) ?></strong></td>
                     <td>Mentoring adab, kajian keputrian, peringatan PHBI, & dai santri.</td>
                 </tr>
                 <tr>
                     <td align="center">5</td>
                     <td><strong>Koordinator Life Skill</strong></td>
-                    <td><strong><?= htmlspecialchars($kord_lifeskill_nama) ?></strong><br>Bendahara Madrasah</td>
+                    <td><strong><?= htmlspecialchars($kord_lifeskill_nama) ?></strong></td>
                     <td>Jadwal praktik vokasi menjahit, tata boga, komputer, dan expo santri.</td>
                 </tr>
                 <tr>
                     <td align="center">6</td>
                     <td><strong>Koordinator Digital & IT</strong></td>
-                    <td><strong><?= htmlspecialchars($kord_digital_nama) ?></strong><br>Pembina Lab Komputer</td>
+                    <td><strong><?= htmlspecialchars($kord_digital_nama) ?></strong></td>
                     <td>Server MASMIFHDA SYSTEM, lab komputer, mapel koding, & CBT paperless.</td>
                 </tr>
             </tbody>
