@@ -205,7 +205,7 @@ include 'header.php';
     <div style="text-align: center; margin-top: 2rem; padding-bottom: 80px;">
         <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); padding: 10px 25px; border-radius: 20px; border: 1px solid rgba(14, 165, 233, 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 20px;">
             <p style="font-size: 0.8rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Sistem Informasi Terpadu</p>
-            <p style="font-size: 0.65rem; color: #64748b; margin: 0; font-weight: 600; letter-spacing: 0.5px; margin-top: 3px; text-align: center;">AULA SYSTEM &bull; v26.2.2</p>
+            <p style="font-size: 0.65rem; color: #64748b; margin: 0; font-weight: 600; letter-spacing: 0.5px; margin-top: 3px; text-align: center;">MASMIFHDA SYSTEM &bull; v26.2.2</p>
         </div>
         
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
@@ -241,7 +241,7 @@ function openBantuan() {
 
 function openTentang() {
     Swal.fire({
-        title: 'AULA SYSTEM',
+        title: 'MASMIFHDA SYSTEM',
         html: `
             <div style="text-align:left; padding-top:10px; max-height: 400px; overflow-y: auto;">
                 <div style="text-align:center;">
@@ -265,7 +265,7 @@ function openTentang() {
                     <li>🔐 Peningkatan proteksi keamanan halaman admin & anti spam.</li>
                 </ul>
                 <div style="text-align:center; margin-top:20px; font-size:0.75rem; color:#94a3b8; font-weight:600;">
-                    &copy; 2026 Aula System. All rights reserved.
+                    &copy; 2026 MASMIFHDA SYSTEM. All rights reserved.
                 </div>
             </div>
         `,

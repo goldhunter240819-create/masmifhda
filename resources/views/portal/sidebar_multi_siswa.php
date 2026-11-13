@@ -5,7 +5,7 @@
                 <img src="<?php echo \App\Core\Branding::getInstitusiLogo(); ?>" alt="Logo Institusi" style="width:34px;height:34px;object-fit:contain;border-radius:6px;">
             </div>
             <div>
-                <div class="logo-text">Aula System</div>
+                <div class="logo-text">MASMIFHDA SYSTEM</div>
                 <div class="logo-sub">Portal Siswa</div>
             </div>
         </div>

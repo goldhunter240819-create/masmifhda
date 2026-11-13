@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -112,7 +112,7 @@
 <div class="wrapper">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <i data-lucide="graduation-cap"></i> Aula System Portal
+            <i data-lucide="graduation-cap"></i> MASMIFHDA SYSTEM Portal
         </div>
         
         <div class="sidebar-scroll">
@@ -324,5 +324,6 @@
 </script>
 </body>
 </html>
+
 
 

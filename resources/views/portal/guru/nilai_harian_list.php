@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'User');
 $initial = strtoupper(substr($nama, 0, 1));
 
@@ -17,7 +17,7 @@ if(isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Nilai Harian - Aula System</title>
+    <title>Rekap Nilai Harian - MASMIFHDA SYSTEM</title>
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>">
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
@@ -128,5 +128,6 @@ if(isset($_SESSION['user_id'])) {
 <script>lucide.createIcons();</script>
 </body>
 </html>
+
 
 

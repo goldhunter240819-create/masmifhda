@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'User');
 $roleName = "Pengguna";
 if(isset($_SESSION['role_id'])) {
@@ -76,7 +76,7 @@ if ($conn_absen && isset($identitas)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi Saya - Aula System</title>
+    <title>Absensi Saya - MASMIFHDA SYSTEM</title>
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>">
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
@@ -160,7 +160,7 @@ if ($conn_absen && isset($identitas)) {
 <div class="wrapper">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <i data-lucide="graduation-cap"></i> Aula System Portal
+            <i data-lucide="graduation-cap"></i> MASMIFHDA SYSTEM Portal
         </div>
         
         <div class="sidebar-scroll">
@@ -400,6 +400,7 @@ if ($conn_absen && isset($identitas)) {
 </script>
 </body>
 </html>
+
 
 
 

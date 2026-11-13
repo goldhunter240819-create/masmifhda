@@ -224,7 +224,7 @@ include 'header.php';
             </div>
             <div style="text-align: left;">
                 <p style="font-size: 0.8rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.5px;">Sistem Informasi Terpadu</p>
-                <p style="font-size: 0.65rem; color: #64748b; margin: 0; font-weight: 600; letter-spacing: 0.5px; margin-top: 2px;">AULA SYSTEM &bull; v26.2.2</p>
+                <p style="font-size: 0.65rem; color: #64748b; margin: 0; font-weight: 600; letter-spacing: 0.5px; margin-top: 2px;">MASMIFHDA SYSTEM &bull; v26.2.2</p>
             </div>
         </div>
         
@@ -261,7 +261,7 @@ function openBantuan() {
 
 function openTentang() {
     Swal.fire({
-        title: 'AULA SYSTEM',
+        title: 'MASMIFHDA SYSTEM',
         html: `
             <div style="text-align:left; padding-top:10px; max-height: 400px; overflow-y: auto;">
                 <div style="text-align:center;">
@@ -285,7 +285,7 @@ function openTentang() {
                     <li>🔐 Peningkatan proteksi keamanan sistem secara menyeluruh.</li>
                 </ul>
                 <div style="text-align:center; margin-top:20px; font-size:0.75rem; color:#94a3b8; font-weight:600;">
-                    &copy; 2026 Aula System. All rights reserved.
+                    &copy; 2026 MASMIFHDA SYSTEM. All rights reserved.
                 </div>
             </div>
         `,

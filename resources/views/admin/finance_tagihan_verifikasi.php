@@ -345,7 +345,7 @@
     <button onclick="window.close()" class="close-btn">Tutup Halaman</button>
 
     <div class="footer-credit">
-        Powered by Aula System Platform &copy; <?php echo date('Y'); ?>
+        Powered by MASMIFHDA SYSTEM &copy; <?php echo date('Y'); ?>
     </div>
 </div>
 

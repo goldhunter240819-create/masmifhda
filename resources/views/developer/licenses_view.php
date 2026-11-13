@@ -1,4 +1,4 @@
-<div class="siakad-container">
+﻿<div class="siakad-container">
     <?php include __DIR__ . '/sidebar.php'; ?>
 
     <div class="siakad-main">
@@ -11,7 +11,7 @@
                     <h2 style="margin: 0; display: flex; align-items: center; gap: 10px; color: #0ea5e9; text-shadow: 0 0 15px rgba(16,185,129,0.5);">
                         <i data-lucide="key"></i> Keymaster Pro
                     </h2>
-                    <p style="opacity: 0.7; margin-top: 5px; color: #94a3b8;">Sistem manajemen Lisensi dan Kode Aktivasi Master Aula System.</p>
+                    <p style="opacity: 0.7; margin-top: 5px; color: #94a3b8;">Sistem manajemen Lisensi dan Kode Aktivasi Master MASMIFHDA SYSTEM.</p>
                 </div>
                 <button onclick="document.getElementById('add-license-modal').style.display='flex'" class="btn btn-primary" style="padding: 10px 20px; font-weight: bold;">
                     <i data-lucide="plus"></i> GENERATE LICENSE
@@ -116,5 +116,6 @@
 </div>
 
 <script>lucide.createIcons();</script>
+
 
 

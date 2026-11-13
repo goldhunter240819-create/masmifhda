@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -260,7 +260,7 @@
             $tglCetak = date('j') . ' ' . $bulanIndo[(int)date('m')] . ' ' . date('Y');
             $kotaCetak = isset($inst['kota']) && $inst['kota'] ? $inst['kota'] : 'Jakarta';
             $namaKepala = isset($inst['nama_kepala']) && $inst['nama_kepala'] ? $inst['nama_kepala'] : 'Kepala Sekolah';
-            $instName = $inst ? $inst['nama'] : 'Aula System ACADEMY';
+            $instName = $inst ? $inst['nama'] : 'MASMIFHDA SYSTEM ACADEMY';
         ?>
         <?php
             $useThumb = isset($_GET['thumb']) && $_GET['thumb'] == '1';
@@ -434,5 +434,6 @@
     </script>
 </body>
 </html>
+
 
 

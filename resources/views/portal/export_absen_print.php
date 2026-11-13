@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 error_reporting(0); // Suppress notices
 include __DIR__ . '/../../../public/absen/includes/koneksi.php';
 
@@ -123,7 +123,7 @@ $institusi = $db_core->query("SELECT * FROM institusi LIMIT 1")->fetch();
         <div class="signature">
             <p>Dicetak pada: <?php echo date('d/m/Y H:i'); ?><br>Mengetahui,</p>
             <br><br>
-            <div style="border-bottom: 1px solid #333; font-weight: bold;">Sistem Aula System</div>
+            <div style="border-bottom: 1px solid #333; font-weight: bold;">Sistem MASMIFHDA SYSTEM</div>
             <span>Administrator</span>
         </div>
     </div>
@@ -134,4 +134,5 @@ $institusi = $db_core->query("SELECT * FROM institusi LIMIT 1")->fetch();
     </script>
 </body>
 </html>
+
 

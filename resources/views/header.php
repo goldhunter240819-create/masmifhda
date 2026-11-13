@@ -4,7 +4,7 @@
         $_header_logo = isset($site_logo) ? $site_logo : \App\Core\Branding::getInstitusiLogo();
         ?>
         <img src="<?php echo $_header_logo; ?>" alt="Logo" style="height:35px; width:auto; border-radius:6px; object-fit:contain;">
-        <span style="font-size:1.3rem; font-weight:800; color:#fff; letter-spacing:-0.5px;"><?php echo isset($site_name) ? $site_name : 'Aula System'; ?></span>
+        <span style="font-size:1.3rem; font-weight:800; color:#fff; letter-spacing:-0.5px;"><?php echo isset($site_name) ? $site_name : 'MASMIFHDA SYSTEM'; ?></span>
     </a>
 
     <div class="nav-links" style="display:flex; gap:2.5rem; position:absolute; left:50%; transform:translateX(-50%);">

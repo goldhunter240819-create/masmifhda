@@ -8,7 +8,7 @@ $adminInitial = strtoupper(substr($adminNama, 0, 2));
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <i data-lucide="shield-check"></i>
-        <span>Aula System Admin</span>
+        <span>MASMIFHDA SYSTEM Admin</span>
     </div>
     <div class="sidebar-scroll">
         <?php include __DIR__ . '/../partials/academic_year_widget.php'; ?>

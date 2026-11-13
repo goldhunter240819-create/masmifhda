@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // data variables: $siswas, $kelas, $selected_kelas, $title
 $db = \App\Core\Database::connect('core');
 $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
@@ -849,7 +849,7 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
                 <?php endif; ?>
                 <div class="card-header-text">
                     <div class="card-type">KARTU PELAJAR</div>
-                    <div class="inst-name"><?php echo $inst ? $inst['nama'] : 'Aula System ACADEMY'; ?></div>
+                    <div class="inst-name"><?php echo $inst ? $inst['nama'] : 'MASMIFHDA SYSTEM ACADEMY'; ?></div>
                     <div class="inst-addr"><?php echo $inst ? $inst['alamat'] : ''; ?></div>
                 </div>
             </div>
@@ -1268,5 +1268,6 @@ $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
     // Initialize Lucide
     lucide.createIcons();
 </script>
+
 
 

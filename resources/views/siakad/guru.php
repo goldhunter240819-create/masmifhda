@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // data variables: $gurus, $inst, $title
 ?>
 <style>
@@ -598,7 +598,7 @@
                     <?php endif; ?>
                     <div class="inst-info">
                         <span class="card-label">KARTU IDENTITAS GURU</span>
-                        <span class="inst-name"><?php echo $inst ? $inst['nama'] : 'Aula System ACADEMY'; ?></span>
+                        <span class="inst-name"><?php echo $inst ? $inst['nama'] : 'MASMIFHDA SYSTEM ACADEMY'; ?></span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -813,5 +813,6 @@
         });
     });
 </script>
+
 
 

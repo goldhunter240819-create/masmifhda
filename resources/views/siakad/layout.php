@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($title) ? $title : 'SIAKAD - Aula System'; ?></title>
+    <title><?php echo isset($title) ? $title : 'SIAKAD - MASMIFHDA SYSTEM'; ?></title>
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>?v=<?php echo time(); ?>">
     <!-- Zamrud Design System -->
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/zamrud.css?v=' . time()); ?>">
@@ -714,6 +714,7 @@ const ZNS = {
 </script>
 </body>
 </html>
+
 
 
 

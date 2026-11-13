@@ -15,6 +15,65 @@ class KurikulumController {
     public function dashboard() {
         $active_module = 'kurikulum';
         $active_page   = 'overview';
+
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        // 1. Stat Total Guru (MAS Miftahul Huda real count)
+        $statTotalGuru = (int) $db->query("SELECT COUNT(*) FROM guru")->fetchColumn();
+
+        // 2. Stat Supervisi Administrasi
+        $statAdminLengkap = (int) $db->query("
+            SELECT COUNT(DISTINCT pegawai_id) 
+            FROM kurikulum_supervisi_administrasi 
+            WHERE status = 'Dievaluasi' OR (nilai IS NOT NULL AND nilai > 0)
+        ")->fetchColumn();
+
+        // 3. Stat Supervisi Kelas
+        $statSupervisiKelas = (int) $db->query("
+            SELECT COUNT(DISTINCT guru_id) 
+            FROM kurikulum_supervisi_kelas 
+            WHERE status = 'Dievaluasi' OR (nilai IS NOT NULL AND nilai > 0)
+        ")->fetchColumn();
+
+        // 4. Mapel dictionary from siakad and core
+        $mapelList = [];
+        try {
+            $mapelList = $db_siakad->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
+        } catch (\Exception $e) {}
+        try {
+            $coreMapels = $db->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
+            foreach ($coreMapels as $mid => $mname) {
+                if (!isset($mapelList[$mid])) $mapelList[$mid] = $mname;
+            }
+        } catch (\Exception $e) {}
+
+        // 5. Supervisi Kelas Terbaru
+        $stmtRecent = $db->query("
+            SELECT ksk.id, ksk.tanggal, ksk.guru_id, ksk.kelas_id, ksk.mapel_id, ksk.status, ksk.nilai,
+                   g.nama as nama_guru, k.nama_kelas
+            FROM kurikulum_supervisi_kelas ksk
+            LEFT JOIN guru g ON ksk.guru_id = g.id
+            LEFT JOIN kelas k ON ksk.kelas_id = k.id
+            ORDER BY ksk.tanggal DESC, ksk.id DESC
+            LIMIT 5
+        ");
+        $recentRows = $stmtRecent ? $stmtRecent->fetchAll(\PDO::FETCH_ASSOC) : [];
+
+        $recentSupervisi = [];
+        foreach ($recentRows as $r) {
+            $m_nama = $mapelList[$r['mapel_id']] ?? ('Mapel #' . $r['mapel_id']);
+            $recentSupervisi[] = [
+                'id' => $r['id'],
+                'tanggal_supervisi' => $r['tanggal'],
+                'nama_guru' => $r['nama_guru'] ?: 'Guru',
+                'mata_pelajaran' => $m_nama,
+                'kelas' => $r['nama_kelas'] ?: '-',
+                'nilai' => $r['nilai'],
+                'status' => $r['status']
+            ];
+        }
+
         require_once __DIR__ . '/../../resources/views/kurikulum/dashboard.php';
     }
 
@@ -2701,5 +2760,824 @@ class KurikulumController {
         extract($legalitas);
 
         require __DIR__ . '/../../resources/views/kurikulum/supervisi_tim_sk_cetak.php';
+    }
+
+    // ─── AKADEMIK & MONITORING SUITE ──────────────────────────────────────────
+
+    public function jadwalPelajaran() {
+        $active_module = 'kurikulum';
+        $active_page   = 'kurikulum_jadwal';
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+
+        $kelas = $db->query("SELECT * FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll();
+        $guruList = $db->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll();
+        $guruMap = [];
+        foreach ($guruList as $g) $guruMap[$g['id']] = $g['nama'];
+
+        $mapelList = [];
+        try {
+            $siakadMapels = $db_siakad->query("SELECT id, nama_mapel FROM mapel")->fetchAll();
+            foreach ($siakadMapels as $sm) $mapelList[$sm['id']] = $sm['nama_mapel'];
+        } catch (\Exception $e) {}
+        try {
+            $coreMapels = $db->query("SELECT id, nama_mapel FROM mapel")->fetchAll();
+            foreach ($coreMapels as $cm) {
+                if (!isset($mapelList[$cm['id']])) $mapelList[$cm['id']] = $cm['nama_mapel'];
+            }
+        } catch (\Exception $e) {}
+
+        // Query jadwal from siakad
+        $stmt_jadwal = $db_siakad->prepare("
+            SELECT id, tahun_ajaran_id, semester, kelas_id, hari, jam_mulai, jam_selesai,
+                   mata_pelajaran_id as mapel_id, guru_id
+            FROM jadwal_pelajaran
+            WHERE tahun_ajaran_id = ?
+            ORDER BY jam_mulai ASC
+        ");
+        $stmt_jadwal->execute([$tahun_ajaran_id]);
+        $jadwal_raw = $stmt_jadwal->fetchAll();
+        if (empty($jadwal_raw)) {
+            $jadwal_raw = $db_siakad->query("SELECT id, tahun_ajaran_id, semester, kelas_id, hari, jam_mulai, jam_selesai, mata_pelajaran_id as mapel_id, guru_id FROM jadwal_pelajaran ORDER BY jam_mulai ASC")->fetchAll();
+        }
+
+        $jadwal_master = [];
+        $jam_list = [];
+        $hari_list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+        foreach ($jadwal_raw as $j) {
+            $h = $j['hari'];
+            if ($h == "Jum'at" || $h == 'Jum`at') $h = 'Jumat';
+            $jam = substr($j['jam_mulai'], 0, 5) . ' - ' . substr($j['jam_selesai'], 0, 5);
+            $j['nama_mapel'] = $mapelList[$j['mapel_id']] ?? ('Mapel #' . $j['mapel_id']);
+            $j['nama_guru'] = $guruMap[$j['guru_id']] ?? ('Guru #' . $j['guru_id']);
+            $jadwal_master[$h][$jam][$j['kelas_id']] = $j;
+            if (!in_array($jam, $jam_list)) {
+                $jam_list[] = $jam;
+            }
+        }
+        sort($jam_list);
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/jadwal.php';
+    }
+
+    public function monitoringJurnal() {
+        $active_module = 'kurikulum';
+        $active_page   = 'kurikulum_monitoring_jurnal';
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $filter_tanggal_mulai = $_GET['tanggal_mulai'] ?? date('Y-m-01');
+        $filter_tanggal_akhir = $_GET['tanggal_akhir'] ?? date('Y-m-d');
+        $filter_kelas = $_GET['kelas_id'] ?? '';
+        $filter_guru = $_GET['guru_id'] ?? '';
+        $filter_mapel = $_GET['mapel_id'] ?? '';
+
+        $kelasList = $db->query("SELECT id, nama_kelas FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll();
+        $guruList = $db->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll();
+        $guruMap = [];
+        foreach ($guruList as $g) $guruMap[$g['id']] = $g['nama'];
+
+        $mapelList = [];
+        try {
+            $mapels = $db_siakad->query("SELECT id, nama_mapel FROM mapel ORDER BY nama_mapel ASC")->fetchAll();
+            $mapelList = $mapels;
+        } catch (\Exception $e) {}
+        if (empty($mapelList)) {
+            try {
+                $mapelList = $db->query("SELECT id, nama_mapel FROM mapel ORDER BY nama_mapel ASC")->fetchAll();
+            } catch (\Exception $e) {}
+        }
+        $mapelMap = [];
+        foreach ($mapelList as $m) $mapelMap[$m['id']] = $m['nama_mapel'];
+        $kelasMap = [];
+        foreach ($kelasList as $k) $kelasMap[$k['id']] = $k['nama_kelas'];
+
+        $where = ["j.tanggal >= '$filter_tanggal_mulai' AND j.tanggal <= '$filter_tanggal_akhir'"];
+        if (!empty($filter_kelas)) $where[] = "j.kelas_id = " . intval($filter_kelas);
+        if (!empty($filter_guru))  $where[] = "j.guru_id = " . intval($filter_guru);
+        if (!empty($filter_mapel)) $where[] = "j.mapel_id = " . intval($filter_mapel);
+        $whereClause = implode(" AND ", $where);
+
+        $jurnalList = $db_siakad->query("SELECT j.* FROM jurnal_guru j WHERE $whereClause ORDER BY j.tanggal DESC, j.id DESC LIMIT 100")->fetchAll();
+
+        foreach ($jurnalList as &$r) {
+            $j_id = $r['id'];
+            $r['nama_guru'] = $guruMap[$r['guru_id']] ?? ('Guru #' . $r['guru_id']);
+            $r['nama_mapel'] = $mapelMap[$r['mapel_id']] ?? ('Mapel #' . $r['mapel_id']);
+            $r['nama_kelas'] = $kelasMap[$r['kelas_id']] ?? ('Kelas #' . $r['kelas_id']);
+
+            // Absensi counts
+            $stmt_absen = $db_siakad->prepare("SELECT status, COUNT(*) as jml FROM absensi_permapel WHERE jurnal_id = ? GROUP BY status");
+            $stmt_absen->execute([$j_id]);
+            $counts = $stmt_absen->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+            $r['hadir'] = $counts['Hadir'] ?? 0;
+            $r['sakit'] = $counts['Sakit'] ?? 0;
+            $r['izin']  = $counts['Izin'] ?? 0;
+            $r['alpha'] = ($counts['Alpha'] ?? 0) + ($counts['Alpa'] ?? 0) + ($counts['Bolos'] ?? 0);
+
+            // Absent students
+            $stmt_absent = $db_siakad->prepare("SELECT ap.status, ap.siswa_id FROM absensi_permapel ap WHERE ap.jurnal_id = ? AND ap.status != 'Hadir'");
+            $stmt_absent->execute([$j_id]);
+            $absent_rows = $stmt_absent->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Map student names from core
+            $absent_list = [];
+            foreach ($absent_rows as $ab) {
+                $s_name = $db->query("SELECT nama FROM siswa WHERE id = " . intval($ab['siswa_id']))->fetchColumn();
+                $absent_list[] = [
+                    'status' => $ab['status'],
+                    'siswa_id' => $ab['siswa_id'],
+                    'nama' => $s_name ?: ('Siswa #' . $ab['siswa_id'])
+                ];
+            }
+            $r['absent_list'] = $absent_list;
+        }
+        unset($r);
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/monitoring_jurnal.php';
+    }
+
+    public function monitoringNilai() {
+        $active_module = 'kurikulum';
+        $active_page   = 'kurikulum_monitoring_nilai';
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+        $semester = $institusi['semester'] ?? 'Ganjil';
+
+        $kelas_id = $_GET['kelas_id'] ?? null;
+        $guru_id = $_GET['guru_id'] ?? null;
+
+        $kelas_list = $db->query("SELECT * FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $guru_list = $db->query("SELECT * FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $guruMap = [];
+        foreach ($guru_list as $g) $guruMap[$g['id']] = $g['nama'];
+        $kelasMap = [];
+        foreach ($kelas_list as $k) $kelasMap[$k['id']] = $k['nama_kelas'];
+
+        $mapelList = [];
+        try {
+            $siakadMapels = $db_siakad->query("SELECT id, nama_mapel FROM mapel")->fetchAll();
+            foreach ($siakadMapels as $sm) $mapelList[$sm['id']] = $sm['nama_mapel'];
+        } catch (\Exception $e) {}
+
+        $monitoring_data = [];
+        if ($kelas_id || $guru_id) {
+            $query = "SELECT DISTINCT kelas_id, mata_pelajaran_id as mapel_id, guru_id 
+                      FROM jadwal_pelajaran WHERE 1=1 ";
+            $params = [];
+            if ($kelas_id) {
+                $query .= " AND kelas_id = ?";
+                $params[] = $kelas_id;
+            }
+            if ($guru_id) {
+                $query .= " AND guru_id = ?";
+                $params[] = $guru_id;
+            }
+            $query .= " ORDER BY kelas_id ASC";
+            $stmt_j = $db_siakad->prepare($query);
+            $stmt_j->execute($params);
+            $jadwals = $stmt_j->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Total active students per class in core
+            $kelas_totals = [];
+            $stmt_s = $db->query("SELECT kelas_id, COUNT(*) as total FROM siswa WHERE status = 'Aktif' GROUP BY kelas_id");
+            foreach ($stmt_s->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $kelas_totals[$row['kelas_id']] = $row['total'];
+            }
+
+            // Evaluations from unified view in core
+            $stmt_n = $db->prepare("
+                SELECT kelas_id, mapel_id, jenis_evaluasi, COUNT(DISTINCT siswa_id) as total_dinilai, MAX(materi) as materi
+                FROM view_nilai_harian_unified
+                WHERE (tahun_ajaran_id = ? OR tahun_ajaran_id IS NULL)
+                GROUP BY kelas_id, mapel_id, jenis_evaluasi
+            ");
+            $stmt_n->execute([$tahun_ajaran_id]);
+            $nilai_raw = $stmt_n->fetchAll(\PDO::FETCH_ASSOC);
+
+            $nilai_grouped = [];
+            foreach ($nilai_raw as $nr) {
+                $nilai_grouped[$nr['kelas_id']][$nr['mapel_id']][$nr['jenis_evaluasi']] = [
+                    'total_dinilai' => $nr['total_dinilai'],
+                    'materi' => $nr['materi']
+                ];
+            }
+
+            foreach ($jadwals as $j) {
+                $k_id = $j['kelas_id'];
+                $m_id = $j['mapel_id'];
+                $total_siswa = $kelas_totals[$k_id] ?? 0;
+
+                $evaluasi_list = [];
+                if (isset($nilai_grouped[$k_id][$m_id])) {
+                    foreach ($nilai_grouped[$k_id][$m_id] as $jenis => $data) {
+                        $evaluasi_list[] = [
+                            'jenis' => $jenis,
+                            'total_dinilai' => $data['total_dinilai'],
+                            'materi' => $data['materi']
+                        ];
+                    }
+                }
+
+                $monitoring_data[] = [
+                    'kelas_id' => $k_id,
+                    'mapel_id' => $m_id,
+                    'kelas' => $kelasMap[$k_id] ?? ('Kelas #' . $k_id),
+                    'mapel' => $mapelList[$m_id] ?? ('Mapel #' . $m_id),
+                    'guru' => $guruMap[$j['guru_id']] ?? ('Guru #' . $j['guru_id']),
+                    'evaluasi' => $evaluasi_list,
+                    'total_siswa' => $total_siswa
+                ];
+            }
+        }
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/monitoring_nilai.php';
+    }
+
+    public function simpanBobotNilai() {
+        $db = \App\Core\Database::connect('core');
+        $bobot_harian = isset($_POST['bobot_harian']) ? intval($_POST['bobot_harian']) : 50;
+        $bobot_pas = isset($_POST['bobot_pas']) ? intval($_POST['bobot_pas']) : 50;
+        $stmt = $db->prepare("UPDATE institusi SET bobot_harian = ?, bobot_pas = ?");
+        $stmt->execute([$bobot_harian, $bobot_pas]);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'message' => 'Bobot berhasil disimpan']);
+        exit;
+    }
+
+    public function monitoringNilaiDetail() {
+        $active_module = 'kurikulum';
+        $active_page   = 'kurikulum_monitoring_nilai';
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+        $semester = $institusi['semester'] ?? 'Ganjil';
+
+        $kelas_id = (int)($_GET['kelas_id'] ?? 0);
+        $mapel_id = (int)($_GET['mapel_id'] ?? 0);
+
+        if (!$kelas_id || !$mapel_id) {
+            die("Kelas dan Mapel harus dipilih.");
+        }
+
+        // Kelas
+        $stmt_k = $db->prepare("SELECT * FROM kelas WHERE id = ?");
+        $stmt_k->execute([$kelas_id]);
+        $kelas = $stmt_k->fetch(\PDO::FETCH_ASSOC);
+
+        // Wali Kelas from guru_tugas
+        $stmt_wali = $db->prepare("SELECT g.nama FROM guru_tugas gt JOIN guru g ON gt.guru_id = g.id WHERE gt.tugas = 'Wali Kelas' AND gt.keterangan LIKE ? LIMIT 1");
+        $stmt_wali->execute(['%' . ($kelas['nama_kelas'] ?? '') . '%']);
+        $wali = $stmt_wali->fetchColumn();
+        $kelas['wali_kelas'] = $wali ?: '-';
+
+        // Mapel & Guru Pengampu
+        $stmt_j = $db_siakad->prepare("SELECT guru_id FROM jadwal_pelajaran WHERE kelas_id = ? AND mata_pelajaran_id = ? LIMIT 1");
+        $stmt_j->execute([$kelas_id, $mapel_id]);
+        $guru_id = $stmt_j->fetchColumn();
+        $guru_nama = $guru_id ? $db->query("SELECT nama FROM guru WHERE id = " . intval($guru_id))->fetchColumn() : '-';
+
+        $mapel_nama = $db_siakad->query("SELECT nama_mapel FROM mapel WHERE id = " . $mapel_id)->fetchColumn();
+        if (!$mapel_nama) $mapel_nama = $db->query("SELECT nama_mapel FROM mapel WHERE id = " . $mapel_id)->fetchColumn();
+
+        $mapel_info = [
+            'nama_mapel' => $mapel_nama ?: ('Mapel #' . $mapel_id),
+            'guru_pengampu' => $guru_nama ?: '-'
+        ];
+
+        // KKM
+        $tingkat = (int)($kelas['tingkat'] ?? 10);
+        $stmt_kkm = $db->prepare("SELECT nilai_kkm FROM kurikulum_kkm WHERE (tahun_ajaran_id = ? OR tahun_ajaran_id IS NULL) AND mapel_id = ? AND tingkat = ?");
+        $stmt_kkm->execute([$tahun_ajaran_id, $mapel_id, $tingkat]);
+        $kkm = $stmt_kkm->fetchColumn() ?: 75;
+
+        // Active students
+        $stmt_s = $db->prepare("SELECT id, nis, nama FROM siswa WHERE kelas_id = ? AND status = 'Aktif' ORDER BY nama ASC");
+        $stmt_s->execute([$kelas_id]);
+        $siswa_list = $stmt_s->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Evaluasi list from view_nilai_harian_unified
+        $stmt_ev = $db->prepare("
+            SELECT jenis_evaluasi, MAX(materi) as materi 
+            FROM view_nilai_harian_unified 
+            WHERE kelas_id = ? AND mapel_id = ? AND (tahun_ajaran_id = ? OR tahun_ajaran_id IS NULL)
+            GROUP BY jenis_evaluasi ORDER BY jenis_evaluasi ASC
+        ");
+        $stmt_ev->execute([$kelas_id, $mapel_id, $tahun_ajaran_id]);
+        $ph_raw = $stmt_ev->fetchAll(\PDO::FETCH_ASSOC);
+
+        $ph_list = [];
+        $ph_materi = [];
+        foreach ($ph_raw as $ph) {
+            $ph_list[] = $ph['jenis_evaluasi'];
+            if (!empty($ph['materi'])) $ph_materi[$ph['jenis_evaluasi']] = $ph['materi'];
+        }
+        if (empty($ph_list)) {
+            $ph_list = ['PH 1'];
+        }
+
+        // Grades grouped
+        $stmt_val = $db->prepare("
+            SELECT siswa_id, jenis_evaluasi, nilai 
+            FROM view_nilai_harian_unified 
+            WHERE kelas_id = ? AND mapel_id = ? AND (tahun_ajaran_id = ? OR tahun_ajaran_id IS NULL)
+        ");
+        $stmt_val->execute([$kelas_id, $mapel_id, $tahun_ajaran_id]);
+        $nilai_grouped = [];
+        foreach ($stmt_val->fetchAll(\PDO::FETCH_ASSOC) as $n) {
+            $nilai_grouped[$n['siswa_id']][$n['jenis_evaluasi']] = $n['nilai'];
+        }
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/monitoring_nilai_detail.php';
+    }
+
+    public function monitoringNilaiCetak() {
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+        $semester = $institusi['semester'] ?? 'Ganjil';
+
+        $kelas_id = (int)($_GET['kelas_id'] ?? 0);
+        $mapel_id = (int)($_GET['mapel_id'] ?? 0);
+
+        if (!$kelas_id || !$mapel_id) die("Kelas dan Mapel harus dipilih.");
+
+        $stmt_k = $db->prepare("SELECT * FROM kelas WHERE id = ?");
+        $stmt_k->execute([$kelas_id]);
+        $kelas = $stmt_k->fetch(\PDO::FETCH_ASSOC);
+
+        $stmt_wali = $db->prepare("SELECT g.nama FROM guru_tugas gt JOIN guru g ON gt.guru_id = g.id WHERE gt.tugas = 'Wali Kelas' AND gt.keterangan LIKE ? LIMIT 1");
+        $stmt_wali->execute(['%' . ($kelas['nama_kelas'] ?? '') . '%']);
+        $wali = $stmt_wali->fetchColumn();
+        $kelas['wali_kelas'] = $wali ?: '-';
+
+        $stmt_j = $db_siakad->prepare("SELECT guru_id FROM jadwal_pelajaran WHERE kelas_id = ? AND mata_pelajaran_id = ? LIMIT 1");
+        $stmt_j->execute([$kelas_id, $mapel_id]);
+        $guru_id = $stmt_j->fetchColumn();
+        $guru_nama = $guru_id ? $db->query("SELECT nama FROM guru WHERE id = " . intval($guru_id))->fetchColumn() : '-';
+
+        $mapel_nama = $db_siakad->query("SELECT nama_mapel FROM mapel WHERE id = " . $mapel_id)->fetchColumn();
+        if (!$mapel_nama) $mapel_nama = $db->query("SELECT nama_mapel FROM mapel WHERE id = " . $mapel_id)->fetchColumn();
+
+        $mapel_info = [
+            'nama_mapel' => $mapel_nama ?: ('Mapel #' . $mapel_id),
+            'guru_pengampu' => $guru_nama ?: '-'
+        ];
+
+        $tingkat = (int)($kelas['tingkat'] ?? 10);
+        $kkm = $db->query("SELECT nilai_kkm FROM kurikulum_kkm WHERE mapel_id = $mapel_id AND tingkat = $tingkat")->fetchColumn() ?: 75;
+
+        $stmt_s = $db->prepare("SELECT id, nis, nama, jenis_kelamin FROM siswa WHERE kelas_id = ? AND status = 'Aktif' ORDER BY nama ASC");
+        $stmt_s->execute([$kelas_id]);
+        $siswa_list = $stmt_s->fetchAll(\PDO::FETCH_ASSOC);
+
+        $stmt_ev = $db->prepare("SELECT jenis_evaluasi, MAX(materi) as materi FROM view_nilai_harian_unified WHERE kelas_id = ? AND mapel_id = ? GROUP BY jenis_evaluasi ORDER BY jenis_evaluasi ASC");
+        $stmt_ev->execute([$kelas_id, $mapel_id]);
+        $ph_raw = $stmt_ev->fetchAll(\PDO::FETCH_ASSOC);
+        $ph_list = [];
+        $ph_materi = [];
+        foreach ($ph_raw as $ph) {
+            $ph_list[] = $ph['jenis_evaluasi'];
+            if (!empty($ph['materi'])) $ph_materi[$ph['jenis_evaluasi']] = $ph['materi'];
+        }
+        if (empty($ph_list)) $ph_list = ['PH 1'];
+
+        $stmt_val = $db->prepare("SELECT siswa_id, jenis_evaluasi, nilai FROM view_nilai_harian_unified WHERE kelas_id = ? AND mapel_id = ?");
+        $stmt_val->execute([$kelas_id, $mapel_id]);
+        $nilai_grouped = [];
+        foreach ($stmt_val->fetchAll(\PDO::FETCH_ASSOC) as $n) {
+            $nilai_grouped[$n['siswa_id']][$n['jenis_evaluasi']] = $n['nilai'];
+        }
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/monitoring_nilai_cetak.php';
+    }
+
+    public function monitoringNilaiGlobal() {
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+        $semester = $institusi['semester'] ?? 'Ganjil';
+
+        $kelas_list = $db->query("SELECT * FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $guru_list = $db->query("SELECT * FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $guruMap = [];
+        foreach ($guru_list as $g) $guruMap[$g['id']] = $g['nama'];
+
+        $mapelList = [];
+        try {
+            $mapelList = $db_siakad->query("SELECT id, nama_mapel FROM mapel ORDER BY nama_mapel ASC")->fetchAll(\PDO::FETCH_KEY_PAIR);
+        } catch (\Exception $e) {}
+
+        // Global progress matrix
+        $jadwal_raw = $db_siakad->query("
+            SELECT DISTINCT kelas_id, mata_pelajaran_id as mapel_id, guru_id 
+            FROM jadwal_pelajaran
+            ORDER BY kelas_id ASC
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $global_data = [];
+        foreach ($jadwal_raw as $j) {
+            $k_id = $j['kelas_id'];
+            $m_id = $j['mapel_id'];
+            $total_siswa = (int)$db->query("SELECT COUNT(*) FROM siswa WHERE kelas_id = $k_id AND status = 'Aktif'")->fetchColumn();
+            $dinilai = (int)$db->query("SELECT COUNT(DISTINCT siswa_id) FROM view_nilai_harian_unified WHERE kelas_id = $k_id AND mapel_id = $m_id")->fetchColumn();
+            $m_nama = $mapelList[$m_id] ?? ('Mapel #' . $m_id);
+            $k_nama = $db->query("SELECT nama_kelas FROM kelas WHERE id = $k_id")->fetchColumn() ?: ('Kelas #' . $k_id);
+
+            $global_data[] = [
+                'kelas' => $k_nama,
+                'mapel' => $m_nama,
+                'guru' => $guruMap[$j['guru_id']] ?? '-',
+                'total_siswa' => $total_siswa,
+                'total_dinilai' => $dinilai,
+                'persen' => $total_siswa > 0 ? min(100, round(($dinilai / $total_siswa) * 100)) : 0
+            ];
+        }
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/monitoring_nilai_global.php';
+    }
+
+    public static function getKelayakanPasData($db, $tahun_ajaran_id, $semester, $kelas_id) {
+        if (!$kelas_id) return null;
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        // Kelas
+        $stmt_k = $db->prepare("SELECT * FROM kelas WHERE id = ?");
+        $stmt_k->execute([$kelas_id]);
+        $kelas = $stmt_k->fetch(\PDO::FETCH_ASSOC);
+        if (!$kelas) return null;
+
+        // Wali Kelas
+        $stmt_wali = $db->prepare("SELECT g.nama FROM guru_tugas gt JOIN guru g ON gt.guru_id = g.id WHERE gt.tugas = 'Wali Kelas' AND gt.keterangan LIKE ? LIMIT 1");
+        $stmt_wali->execute(['%' . ($kelas['nama_kelas'] ?? '') . '%']);
+        $kelas['wali_kelas'] = $stmt_wali->fetchColumn() ?: '-';
+
+        // Siswa aktif
+        $stmt_s = $db->prepare("SELECT id, nis, nama, jenis_kelamin FROM siswa WHERE kelas_id = ? AND status = 'Aktif' ORDER BY nama ASC");
+        $stmt_s->execute([$kelas_id]);
+        $siswa_list = $stmt_s->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Mapel list from jadwal
+        $stmt_m = $db_siakad->prepare("
+            SELECT DISTINCT j.mata_pelajaran_id as mapel_id, j.guru_id
+            FROM jadwal_pelajaran j
+            WHERE j.kelas_id = ?
+        ");
+        $stmt_m->execute([$kelas_id]);
+        $jadwal_mapels = $stmt_m->fetchAll(\PDO::FETCH_ASSOC);
+
+        $mapelList = [];
+        try {
+            $mapelList = $db_siakad->query("SELECT id, nama_mapel FROM mapel")->fetchAll(\PDO::FETCH_KEY_PAIR);
+        } catch (\Exception $e) {}
+
+        $mapel_list = [];
+        foreach ($jadwal_mapels as $jm) {
+            $m_id = $jm['mapel_id'];
+            $g_nama = $db->query("SELECT nama FROM guru WHERE id = " . intval($jm['guru_id']))->fetchColumn();
+            $mapel_list[] = [
+                'mapel_id' => $m_id,
+                'nama_mapel' => $mapelList[$m_id] ?? ('Mapel #' . $m_id),
+                'nama_guru' => $g_nama ?: '-'
+            ];
+        }
+
+        // Target evaluasi per mapel
+        $target_evaluasi = [];
+        foreach ($mapel_list as $mp) {
+            $m_id = $mp['mapel_id'];
+            $stmt_ev = $db->prepare("SELECT DISTINCT jenis_evaluasi FROM view_nilai_harian_unified WHERE kelas_id = ? AND mapel_id = ?");
+            $stmt_ev->execute([$kelas_id, $m_id]);
+            $evals = $stmt_ev->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+            if (empty($evals)) {
+                $evals = ['PH 1', 'PTS'];
+            } else {
+                if (!in_array('PTS', $evals)) $evals[] = 'PTS';
+            }
+            $target_evaluasi[$m_id] = $evals;
+        }
+
+        // Grades map
+        $stmt_n = $db->prepare("SELECT siswa_id, mapel_id, jenis_evaluasi, nilai FROM view_nilai_harian_unified WHERE kelas_id = ?");
+        $stmt_n->execute([$kelas_id]);
+        $nilai_map = [];
+        foreach ($stmt_n->fetchAll(\PDO::FETCH_ASSOC) as $n) {
+            $nilai_map[$n['siswa_id']][$n['mapel_id']][$n['jenis_evaluasi']] = $n['nilai'];
+        }
+
+        $siswa_data = [];
+        $stat = [
+            'total_siswa' => count($siswa_list),
+            'layak' => 0,
+            'tidak_layak' => 0,
+            'total_tagihan_global' => 0,
+            'total_terisi_global' => 0
+        ];
+
+        foreach ($siswa_list as $s) {
+            $s_id = $s['id'];
+            $total_tagihan = 0;
+            $total_terisi = 0;
+            $tagihan_kosong = [];
+            $rincian_mapel = [];
+
+            foreach ($mapel_list as $mp) {
+                $m_id = $mp['mapel_id'];
+                $evals = $target_evaluasi[$m_id] ?? ['PH 1', 'PTS'];
+
+                $items = [];
+                foreach ($evals as $ev) {
+                    $total_tagihan++;
+                    $val = $nilai_map[$s_id][$m_id][$ev] ?? null;
+                    $is_filled = ($val !== null && $val !== '' && is_numeric($val));
+
+                    if ($is_filled) {
+                        $total_terisi++;
+                        $items[] = ['eval' => $ev, 'terisi' => true, 'nilai' => $val];
+                    } else {
+                        $items[] = ['eval' => $ev, 'terisi' => false, 'nilai' => null];
+                        $tagihan_kosong[] = [
+                            'mapel_id' => $m_id,
+                            'mapel' => $mp['nama_mapel'],
+                            'guru' => $mp['nama_guru'],
+                            'eval' => $ev,
+                            'jenis' => $ev
+                        ];
+                    }
+                }
+
+                $rincian_mapel[] = [
+                    'mapel_id' => $m_id,
+                    'mapel' => $mp['nama_mapel'],
+                    'guru' => $mp['nama_guru'],
+                    'items' => $items
+                ];
+            }
+
+            $persen = $total_tagihan > 0 ? round(($total_terisi / $total_tagihan) * 100) : 0;
+            $is_layak = ($total_tagihan > 0 && $total_terisi >= $total_tagihan);
+
+            if ($is_layak) {
+                $stat['layak']++;
+            } else {
+                $stat['tidak_layak']++;
+            }
+            $stat['total_tagihan_global'] += $total_tagihan;
+            $stat['total_terisi_global'] += $total_terisi;
+
+            $siswa_data[] = [
+                'id' => $s_id,
+                'nis' => $s['nis'],
+                'nama' => $s['nama'],
+                'jk' => $s['jenis_kelamin'],
+                'total_tagihan' => $total_tagihan,
+                'total_terisi' => $total_terisi,
+                'total_kosong' => count($tagihan_kosong),
+                'persen' => $persen,
+                'is_layak' => $is_layak,
+                'tagihan_kosong' => $tagihan_kosong,
+                'rincian_mapel' => $rincian_mapel
+            ];
+        }
+
+        $stat['persen_kesiapan_kelas'] = ($stat['total_siswa'] > 0) ? round(($stat['layak'] / $stat['total_siswa']) * 100) : 0;
+
+        return [
+            'kelas' => $kelas,
+            'mapel_list' => $mapel_list,
+            'target_evaluasi' => $target_evaluasi,
+            'siswa_data' => $siswa_data,
+            'stat' => $stat
+        ];
+    }
+
+    public function syaratPas() {
+        $active_module = 'kurikulum';
+        $active_page   = 'kurikulum_syarat_pas';
+        $db = \App\Core\Database::connect('core');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+        $semester = $institusi['semester'] ?? 'Ganjil';
+
+        $kelas_list = $db->query("SELECT * FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $kelas_id = $_GET['kelas_id'] ?? ($kelas_list[0]['id'] ?? 1);
+        $filter_status = $_GET['status'] ?? 'all';
+        $search = $_GET['q'] ?? '';
+
+        $pasData = self::getKelayakanPasData($db, $tahun_ajaran_id, $semester, $kelas_id);
+        $display_siswa = $pasData['siswa_data'] ?? [];
+        if ($filter_status === 'layak') {
+            $display_siswa = array_values(array_filter($display_siswa, fn($s) => $s['is_layak']));
+        } elseif ($filter_status === 'tidak_layak') {
+            $display_siswa = array_values(array_filter($display_siswa, fn($s) => !$s['is_layak']));
+        }
+        if (!empty($search)) {
+            $display_siswa = array_values(array_filter($display_siswa, fn($s) => stripos($s['nama'], $search) !== false || stripos($s['nis'], $search) !== false));
+        }
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/syarat_pas.php';
+    }
+
+    public function syaratPasCetak() {
+        $db = \App\Core\Database::connect('core');
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+        $semester = $institusi['semester'] ?? 'Ganjil';
+
+        $kelas_id = (int)($_GET['kelas_id'] ?? 0);
+        $pasData = self::getKelayakanPasData($db, $tahun_ajaran_id, $semester, $kelas_id);
+        if (!$pasData) die("Data kelas tidak valid.");
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/syarat_pas_cetak.php';
+    }
+
+    public function syaratPasCetakTagihan() {
+        $db = \App\Core\Database::connect('core');
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+        $semester = $institusi['semester'] ?? 'Ganjil';
+
+        $kelas_id = (int)($_GET['kelas_id'] ?? 0);
+        $pasData = self::getKelayakanPasData($db, $tahun_ajaran_id, $semester, $kelas_id);
+        if (!$pasData) die("Data kelas tidak valid.");
+
+        $filter_siswa_id = isset($_GET['siswa_id']) ? (int)$_GET['siswa_id'] : null;
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/syarat_pas_cetak_tagihan.php';
+    }
+
+    public function monitoringKkm() {
+        $active_module = 'kurikulum';
+        $active_page   = 'kurikulum_kkm';
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+
+        $mapels = [];
+        try {
+            $mapels = $db_siakad->query("SELECT id, nama_mapel, kelompok FROM mapel ORDER BY kelompok ASC, nama_mapel ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($mapels)) {
+            $mapels = $db->query("SELECT id, nama_mapel, 'Umum' as kelompok FROM mapel ORDER BY nama_mapel ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        }
+
+        $stmt_kkm = $db->prepare("SELECT mapel_id, tingkat, nilai_kkm FROM kurikulum_kkm WHERE (tahun_ajaran_id = ? OR tahun_ajaran_id IS NULL)");
+        $stmt_kkm->execute([$tahun_ajaran_id]);
+        $kkm_raw = $stmt_kkm->fetchAll(\PDO::FETCH_ASSOC);
+
+        $kkm_data = [];
+        foreach ($kkm_raw as $kr) {
+            $kkm_data[$kr['mapel_id']][$kr['tingkat']] = $kr['nilai_kkm'];
+        }
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/monitoring_kkm.php';
+    }
+
+    public function monitoringKkmSave() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+
+        $kkm_input = $_POST['kkm'] ?? [];
+        $bobot_harian = isset($_POST['bobot_harian']) ? intval($_POST['bobot_harian']) : 50;
+        $bobot_pas = isset($_POST['bobot_pas']) ? intval($_POST['bobot_pas']) : 50;
+
+        try {
+            $db->beginTransaction();
+
+            $stmt_bobot = $db->prepare("UPDATE institusi SET bobot_harian = ?, bobot_pas = ?");
+            $stmt_bobot->execute([$bobot_harian, $bobot_pas]);
+
+            $stmt = $db->prepare("
+                INSERT INTO kurikulum_kkm (tahun_ajaran_id, mapel_id, tingkat, nilai_kkm) 
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE nilai_kkm = VALUES(nilai_kkm)
+            ");
+
+            foreach ($kkm_input as $mapel_id => $tingkat_data) {
+                foreach ($tingkat_data as $tingkat => $nilai_kkm) {
+                    if ($nilai_kkm !== '' && is_numeric($nilai_kkm)) {
+                        $stmt->execute([$tahun_ajaran_id, $mapel_id, $tingkat, $nilai_kkm]);
+                    }
+                }
+            }
+
+            $db->commit();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Data KKM & Bobot berhasil disimpan']);
+        } catch (\Exception $e) {
+            $db->rollBack();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Gagal menyimpan: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    public function rekapKetuntasan() {
+        $active_module = 'kurikulum';
+        $active_page   = 'kurikulum_rekap_ketuntasan';
+        $db = \App\Core\Database::connect('core');
+        $db_siakad = \App\Core\Database::connect('siakad');
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
+        $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
+
+        $guru_list = $db->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $kelas_list = $db->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $mapel_list = [];
+        try {
+            $mapel_list = $db_siakad->query("SELECT id, nama_mapel FROM mapel ORDER BY nama_mapel ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $guru_id = $_GET['guru_id'] ?? null;
+        $kelas_id = $_GET['kelas_id'] ?? null;
+        $mapel_id = $_GET['mapel_id'] ?? null;
+        $jenis_evaluasi = $_GET['jenis_evaluasi'] ?? null;
+
+        $kkm_nilai = null;
+        $summary = ['total' => 0, 'tuntas' => 0, 'remedial' => 0, 'persentase' => 0];
+        $nilai_data = [];
+
+        if ($kelas_id && $mapel_id && $jenis_evaluasi) {
+            $kls = $db->query("SELECT tingkat FROM kelas WHERE id = " . intval($kelas_id))->fetch();
+            $tingkat = (int)($kls['tingkat'] ?? 10);
+
+            $stmt_kkm = $db->prepare("SELECT nilai_kkm FROM kurikulum_kkm WHERE mapel_id = ? AND tingkat = ?");
+            $stmt_kkm->execute([$mapel_id, $tingkat]);
+            $kkm_nilai = $stmt_kkm->fetchColumn() ?: 75;
+
+            $stmt_s = $db->prepare("SELECT id, nis, nama FROM siswa WHERE kelas_id = ? AND status = 'Aktif' ORDER BY nama ASC");
+            $stmt_s->execute([$kelas_id]);
+            $siswa = $stmt_s->fetchAll(\PDO::FETCH_ASSOC);
+
+            $stmt_n = $db->prepare("SELECT siswa_id, nilai FROM view_nilai_harian_unified WHERE kelas_id = ? AND mapel_id = ? AND jenis_evaluasi = ?");
+            $stmt_n->execute([$kelas_id, $mapel_id, $jenis_evaluasi]);
+            $scores = $stmt_n->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+            foreach ($siswa as $s) {
+                $val = $scores[$s['id']] ?? null;
+                $is_tuntas = ($val !== null) ? ((float)$val >= (float)$kkm_nilai) : null;
+                if ($val !== null) {
+                    $summary['total']++;
+                    if ($is_tuntas) $summary['tuntas']++;
+                    else $summary['remedial']++;
+                }
+                $nilai_data[] = [
+                    'id' => $s['id'],
+                    'nis' => $s['nis'],
+                    'nama' => $s['nama'],
+                    'nilai' => $val,
+                    'is_tuntas' => $is_tuntas
+                ];
+            }
+            $summary['persentase'] = $summary['total'] > 0 ? round(($summary['tuntas'] / $summary['total']) * 100) : 0;
+        }
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/rekap_ketuntasan.php';
+    }
+
+    public function apiJenisEvaluasi() {
+        $db = \App\Core\Database::connect('core');
+        $kelas_id = $_GET['kelas_id'] ?? 0;
+        $mapel_id = $_GET['mapel_id'] ?? 0;
+
+        $evals = [];
+        if ($kelas_id && $mapel_id) {
+            $stmt = $db->prepare("SELECT DISTINCT jenis_evaluasi FROM view_nilai_harian_unified WHERE kelas_id = ? AND mapel_id = ? ORDER BY jenis_evaluasi ASC");
+            $stmt->execute([$kelas_id, $mapel_id]);
+            $evals = $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+        }
+        if (empty($evals)) {
+            $evals = ['PH 1', 'PH 2', 'PTS', 'PAS'];
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['evaluasi' => $evals]);
+        exit;
     }
 }

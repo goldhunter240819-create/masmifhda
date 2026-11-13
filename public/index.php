@@ -504,7 +504,7 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
                 <span class="dot"></span>
                 <?php echo $greet; ?>, <?php echo htmlspecialchars($userName); ?>!
             </div>
-            <h1>MASMIFHDA<br><span class="grad">Aula System</span></h1>
+            <h1>MASMIFHDA<br><span class="grad">MASMIFHDA SYSTEM</span></h1>
             <p>Ekosistem digital terintegrasi untuk manajemen akademik, keuangan, dan absensi.</p>
         </div>
 
@@ -2424,6 +2424,24 @@ $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'an
 
 // ─── Kurikulum & Supervisi Suite (Full Port from Mismifhda) ─────────────────
 $router->add('GET', '/kurikulum', [\App\Controllers\KurikulumController::class, 'dashboard']);
+
+// ─── Kurikulum: Akademik & Monitoring ──────────────────────────────────
+$router->add('GET', '/kurikulum/jadwal-pelajaran', [\App\Controllers\KurikulumController::class, 'jadwalPelajaran']);
+$router->add('GET', '/kurikulum/jadwal', [\App\Controllers\KurikulumController::class, 'jadwalPelajaran']);
+$router->add('GET', '/kurikulum/monitoring-jurnal', [\App\Controllers\KurikulumController::class, 'monitoringJurnal']);
+$router->add('GET', '/kurikulum/monitoring-nilai', [\App\Controllers\KurikulumController::class, 'monitoringNilai']);
+$router->add('POST', '/kurikulum/monitoring-nilai/bobot', [\App\Controllers\KurikulumController::class, 'simpanBobotNilai']);
+$router->add('GET', '/kurikulum/monitoring-nilai/detail', [\App\Controllers\KurikulumController::class, 'monitoringNilaiDetail']);
+$router->add('GET', '/kurikulum/monitoring-nilai/cetak', [\App\Controllers\KurikulumController::class, 'monitoringNilaiCetak']);
+$router->add('GET', '/kurikulum/monitoring-nilai/global', [\App\Controllers\KurikulumController::class, 'monitoringNilaiGlobal']);
+$router->add('GET', '/kurikulum/syarat-pas', [\App\Controllers\KurikulumController::class, 'syaratPas']);
+$router->add('GET', '/kurikulum/syarat-pas/cetak', [\App\Controllers\KurikulumController::class, 'syaratPasCetak']);
+$router->add('GET', '/kurikulum/syarat-pas/cetak-tagihan', [\App\Controllers\KurikulumController::class, 'syaratPasCetakTagihan']);
+$router->add('GET', '/kurikulum/monitoring-kkm', [\App\Controllers\KurikulumController::class, 'monitoringKkm']);
+$router->add('POST', '/kurikulum/monitoring-kkm/save', [\App\Controllers\KurikulumController::class, 'monitoringKkmSave']);
+$router->add('GET', '/kurikulum/rekap-ketuntasan', [\App\Controllers\KurikulumController::class, 'rekapKetuntasan']);
+$router->add('GET', '/kurikulum/api/jenis-evaluasi', [\App\Controllers\KurikulumController::class, 'apiJenisEvaluasi']);
+
 $router->add('GET', '/kurikulum/berkas/pribadi', [\App\Controllers\KurikulumController::class, 'berkasPribadi']);
 $router->add('GET', '/kurikulum/berkas/perangkat', [\App\Controllers\KurikulumController::class, 'berkasPerangkat']);
 $router->add('POST', '/kurikulum/berkas/perangkat/upload', [\App\Controllers\KurikulumController::class, 'uploadBerkasPerangkat']);

@@ -13,7 +13,7 @@ $initial = strtoupper(substr($nama, 0, 2));
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($page_title) ? $page_title : 'Pengaturan APK - Aula System'; ?></title>
+    <title><?php echo isset($page_title) ? $page_title : 'Pengaturan APK - MASMIFHDA SYSTEM'; ?></title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>?v=<?php echo time(); ?>">
     <!-- Zamrud Design System -->

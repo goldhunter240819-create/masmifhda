@@ -105,7 +105,7 @@
     <div class="scanner-header">
         <div class="header-title">
             <i data-lucide="scan-line"></i>
-            Aula System Scanner V2
+            MASMIFHDA SYSTEM Scanner V2
         </div>
         <button class="btn-close" onclick="window.close() || (window.location.href="<?php echo base_url('admin/absen_v2'); ?>")">
             <i data-lucide="x"></i>

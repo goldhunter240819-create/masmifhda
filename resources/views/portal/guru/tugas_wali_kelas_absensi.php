@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'User');
 $initial = strtoupper(substr($nama, 0, 2));
 
@@ -16,7 +16,7 @@ if(isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($title_page) ? $title_page : 'Absensi Kelas'; ?> - Aula System</title>
+    <title><?php echo isset($title_page) ? $title_page : 'Absensi Kelas'; ?> - MASMIFHDA SYSTEM</title>
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/zamrud.css?v=' . date('YmdH')); ?>">
@@ -195,5 +195,6 @@ if(isset($_SESSION['user_id'])) {
 </script>
 </body>
 </html>
+
 
 

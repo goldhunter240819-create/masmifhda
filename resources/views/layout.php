@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($title) ? $title : 'Aula System'; ?></title>
+    <title><?php echo isset($title) ? $title : 'MASMIFHDA SYSTEM'; ?></title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="<?php echo isset($site_favicon) ? $site_favicon : base_url('public/assets/images/favicon.png'); ?>">
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">

@@ -6,20 +6,24 @@ $sub_menus = array(
     'kurikulum' => array(
         array('icon'=>'layout-dashboard', 'label'=>'Dashboard', 'url'=>base_url('kurikulum'), 'page'=>'overview'),
         array(
-            'icon'=>'folder',
-            'label'=>'Manajemen Berkas',
-            'page'=>'berkas',
-            'subpages'=>array('berkas_pribadi','berkas_perangkat'),
+            'icon'=>'activity',
+            'label'=>'Akademik & Monitoring',
+            'page'=>'akademik',
+            'subpages'=>array('kurikulum_jadwal','kurikulum_monitoring_jurnal','kurikulum_monitoring_nilai','kurikulum_syarat_pas','kurikulum_kkm','kurikulum_rekap_ketuntasan','monitoring_jadwal','monitoring_jurnal','pengaturan_kkm','rekap_ketuntasan'),
             'dropdown'=>array(
-                array('icon'=>'user', 'label'=>'Berkas Pribadi', 'url'=>base_url('kurikulum/berkas/pribadi'), 'page'=>'berkas_pribadi'),
-                array('icon'=>'book', 'label'=>'Perangkat Pembelajaran', 'url'=>base_url('kurikulum/berkas/perangkat'), 'page'=>'berkas_perangkat'),
+                array('icon'=>'calendar', 'label'=>'Monitoring Jadwal', 'url'=>base_url('kurikulum/jadwal-pelajaran'), 'page'=>'kurikulum_jadwal'),
+                array('icon'=>'book-open', 'label'=>'Monitoring Jurnal', 'url'=>base_url('kurikulum/monitoring-jurnal'), 'page'=>'kurikulum_monitoring_jurnal'),
+                array('icon'=>'bar-chart-2', 'label'=>'Monitoring Nilai', 'url'=>base_url('kurikulum/monitoring-nilai'), 'page'=>'kurikulum_monitoring_nilai'),
+                array('icon'=>'shield-check', 'label'=>'Kelayakan Ikut PAS', 'url'=>base_url('kurikulum/syarat-pas'), 'page'=>'kurikulum_syarat_pas'),
+                array('icon'=>'settings-2', 'label'=>'Pengaturan KKM', 'url'=>base_url('kurikulum/monitoring-kkm'), 'page'=>'kurikulum_kkm'),
+                array('icon'=>'check-square', 'label'=>'Rekap Ketuntasan', 'url'=>base_url('kurikulum/rekap-ketuntasan'), 'page'=>'kurikulum_rekap_ketuntasan'),
             )
         ),
         array(
-            'icon'=>'eye',
-            'label'=>'Supervisi',
+            'icon'=>'clipboard-list',
+            'label'=>'Supervisi & Evaluasi',
             'page'=>'supervisi',
-            'subpages'=>array('supervisi_dashboard','program_supervisi','supervisi_tim','supervisi_administrasi','supervisi_kelas','supervisi_tindak_lanjut','supervisi_instrumen','supervisi_laporan_hasil','supervisi_laporan_tindak_lanjut'),
+            'subpages'=>array('supervisi_dashboard','program_supervisi','supervisi_tim','supervisi_administrasi','supervisi_kelas','supervisi_tindak_lanjut','supervisi_instrumen','supervisi_laporan_hasil','supervisi_laporan_tindak_lanjut','kurikulum_supervisi_administrasi','kurikulum_supervisi_kelas','kurikulum_supervisi_penilaian'),
             'dropdown'=>array(
                 array('icon'=>'layout-dashboard','label'=>'Dashboard Supervisi', 'url'=>base_url('kurikulum/supervisi'), 'page'=>'supervisi_dashboard'),
                 array('icon'=>'calendar-check','label'=>'Program Supervisi', 'url'=>base_url('kurikulum/supervisi/program'), 'page'=>'program_supervisi'),
@@ -33,17 +37,15 @@ $sub_menus = array(
             )
         ),
         array(
-            'icon'=>'activity',
-            'label'=>'Akademik & Monitoring',
-            'page'=>'akademik',
-            'subpages'=>array('monitoring_jadwal','monitoring_jurnal','pengaturan_kkm','rekap_ketuntasan'),
+            'icon'=>'folder',
+            'label'=>'Manajemen Berkas',
+            'page'=>'berkas',
+            'subpages'=>array('berkas_pribadi','berkas_perangkat'),
             'dropdown'=>array(
-                array('icon'=>'calendar', 'label'=>'Monitoring Jadwal', 'url'=>base_url('admin/kurikulum/monitoring-jadwal'), 'page'=>'monitoring_jadwal'),
-                array('icon'=>'book-open', 'label'=>'Monitoring Jurnal', 'url'=>base_url('admin/kurikulum/monitoring-jurnal'), 'page'=>'monitoring_jurnal'),
-                array('icon'=>'settings-2', 'label'=>'Pengaturan KKM', 'url'=>base_url('admin/kurikulum/pengaturan-kkm'), 'page'=>'pengaturan_kkm'),
-                array('icon'=>'bar-chart-2', 'label'=>'Rekap Ketuntasan', 'url'=>base_url('admin/kurikulum/rekap-ketuntasan'), 'page'=>'rekap_ketuntasan'),
+                array('icon'=>'user', 'label'=>'Berkas Pribadi', 'url'=>base_url('kurikulum/berkas/pribadi'), 'page'=>'berkas_pribadi'),
+                array('icon'=>'book', 'label'=>'Perangkat Pembelajaran', 'url'=>base_url('kurikulum/berkas/perangkat'), 'page'=>'berkas_perangkat'),
             )
-        )
+        ),
     )
 );
 ?>
@@ -53,7 +55,7 @@ $sub_menus = array(
             <img src="<?php echo \App\Core\Branding::getInstitusiLogo(); ?>" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 6px;">
         </div>
         <div>
-            <div class="logo-text">MASMIFHDA</div>
+            <div class="logo-text">MASMIFHDA SYSTEM</div>
             <div class="logo-sub">Platform Digital</div>
         </div>
     </div>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'User');
 $initial = strtoupper(substr($nama, 0, 2));
 
@@ -19,7 +19,7 @@ $inst = $db_c->query("SELECT * FROM institusi LIMIT 1")->fetch();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $title_page; ?> - Aula System</title>
+    <title><?php echo $title_page; ?> - MASMIFHDA SYSTEM</title>
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>">
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
@@ -903,5 +903,6 @@ document.addEventListener('click', function(e) {
 </script>
 </body>
 </html>
+
 
 

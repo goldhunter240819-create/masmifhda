@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Load changelog data
 $changelogPath = __DIR__ . '/../../../config/changelog.json';
 $changelog = json_decode(file_get_contents($changelogPath), true);
@@ -13,8 +13,8 @@ if (!$latest) $latest = $versions[0];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update & Changelog â€” Aula System System</title>
-    <meta name="description" content="Riwayat perubahan dan panduan update Aula System System.">
+    <title>Update & Changelog â€” MASMIFHDA SYSTEM</title>
+    <meta name="description" content="Riwayat perubahan dan panduan update MASMIFHDA SYSTEM.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -328,7 +328,7 @@ if (!$latest) $latest = $versions[0];
 <!-- Page Hero -->
 <div class="page-hero">
     <div class="page-tag">Riwayat Pembaruan</div>
-    <h1 class="page-title">Changelog & <span>Update</span><br>Aula System System</h1>
+    <h1 class="page-title">Changelog & <span>Update</span><br>MASMIFHDA SYSTEM</h1>
     <p class="page-sub">Unduh versi terbaru dan ikuti panduan instalasi untuk memperbarui sistem Anda dengan aman.</p>
 </div>
 
@@ -378,7 +378,7 @@ if (!$latest) $latest = $versions[0];
     <div class="guide-card">
         <div class="guide-header">
             <div class="guide-title">ðŸ“¦ Panduan Update Sistem</div>
-            <div class="guide-sub">Ikuti langkah-langkah berikut secara berurutan untuk memperbarui Aula System dengan aman.</div>
+            <div class="guide-sub">Ikuti langkah-langkah berikut secara berurutan untuk memperbarui MASMIFHDA SYSTEM dengan aman.</div>
         </div>
 
         <div class="steps-list">
@@ -461,11 +461,12 @@ if (!$latest) $latest = $versions[0];
 <!-- Footer -->
 <footer>
     <div class="footer-logo">GH<span>Smart</span>SchoolSystem</div>
-    <div class="footer-note">Â© <?php echo date('Y'); ?> Aula System Platform Â· Tim Developer GH</div>
+    <div class="footer-note">Â© <?php echo date('Y'); ?> MASMIFHDA SYSTEM Platform Â· Tim Developer GH</div>
 </footer>
 
 <script>lucide.createIcons();</script>
 </body>
 </html>
+
 
 

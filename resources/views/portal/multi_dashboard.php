@@ -47,7 +47,7 @@ if(isset($_SESSION['role_id']) && isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Terpadu - Aula System</title>
+    <title>Portal Terpadu - MASMIFHDA SYSTEM</title>
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>">
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
@@ -91,7 +91,7 @@ if ($role_id == 2) {
                     <h1 style="font-size: 1.8rem; font-weight: 800; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 10px;">
                         <i data-lucide="graduation-cap" style="color: rgba(255,255,255,0.8);"></i> Selamat Datang, <?php echo $nama; ?>! 👋
                     </h1>
-                    <p style="margin: 0 0 1rem; color: rgba(255,255,255,0.9); font-size: 0.95rem;">Ini adalah Portal Terpadu Aula System. Akses semua modul — SIAKAD, Keuangan, dan Absensi — dari satu tempat.</p>
+                    <p style="margin: 0 0 1rem; color: rgba(255,255,255,0.9); font-size: 0.95rem;">Ini adalah Portal Terpadu MASMIFHDA SYSTEM. Akses semua modul — SIAKAD, Keuangan, dan Absensi — dari satu tempat.</p>
                     <div class="badge-row" style="display: flex; gap: 10px;">
                         <span class="pb" style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;"><i data-lucide="shield-check" style="width:14px;height:14px; margin-right:4px;"></i> Portal Resmi</span>
                         <span class="pb pb-white" style="background: white; color: #0ea5e9; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700;"><i data-lucide="calendar" style="width:14px;height:14px; margin-right:4px;"></i> <?php echo date('l, d F Y'); ?></span>
@@ -334,7 +334,7 @@ if ($role_id == 2) {
                             <div class="notif-dot"></div>
                             <div>
                                 <div class="notif-title">Selamat Datang!</div>
-                                <div class="notif-sub">Portal Terpadu Aula System aktif dan siap digunakan.</div>
+                                <div class="notif-sub">Portal Terpadu MASMIFHDA SYSTEM aktif dan siap digunakan.</div>
                             </div>
                         </div>
                         <div class="notif-item">

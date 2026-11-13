@@ -30,20 +30,24 @@ $sub_menus = array(
     'kurikulum' => array(
         array('icon'=>'layout-dashboard','label'=>'Dashboard', 'url'=>base_url('kurikulum'), 'page'=>'overview'),
         array(
-            'icon'=>'folder',
-            'label'=>'Manajemen Berkas',
-            'page'=>'berkas',
-            'subpages'=>array('berkas_pribadi','berkas_perangkat'),
+            'icon'=>'activity',
+            'label'=>'Akademik & Monitoring',
+            'page'=>'akademik',
+            'subpages'=>array('kurikulum_jadwal','kurikulum_monitoring_jurnal','kurikulum_monitoring_nilai','kurikulum_syarat_pas','kurikulum_kkm','kurikulum_rekap_ketuntasan','monitoring_jadwal','monitoring_jurnal','pengaturan_kkm','rekap_ketuntasan'),
             'dropdown'=>array(
-                array('icon'=>'user','label'=>'Berkas Pribadi', 'url'=>base_url('kurikulum/berkas/pribadi'), 'page'=>'berkas_pribadi'),
-                array('icon'=>'book','label'=>'Perangkat Pembelajaran', 'url'=>base_url('kurikulum/berkas/perangkat'), 'page'=>'berkas_perangkat'),
+                array('icon'=>'calendar', 'label'=>'Monitoring Jadwal', 'url'=>base_url('kurikulum/jadwal-pelajaran'), 'page'=>'kurikulum_jadwal'),
+                array('icon'=>'book-open', 'label'=>'Monitoring Jurnal', 'url'=>base_url('kurikulum/monitoring-jurnal'), 'page'=>'kurikulum_monitoring_jurnal'),
+                array('icon'=>'bar-chart-2', 'label'=>'Monitoring Nilai', 'url'=>base_url('kurikulum/monitoring-nilai'), 'page'=>'kurikulum_monitoring_nilai'),
+                array('icon'=>'shield-check', 'label'=>'Kelayakan Ikut PAS', 'url'=>base_url('kurikulum/syarat-pas'), 'page'=>'kurikulum_syarat_pas'),
+                array('icon'=>'settings-2', 'label'=>'Pengaturan KKM', 'url'=>base_url('kurikulum/monitoring-kkm'), 'page'=>'kurikulum_kkm'),
+                array('icon'=>'check-square', 'label'=>'Rekap Ketuntasan', 'url'=>base_url('kurikulum/rekap-ketuntasan'), 'page'=>'kurikulum_rekap_ketuntasan'),
             )
         ),
         array(
-            'icon'=>'eye',
-            'label'=>'Supervisi',
+            'icon'=>'clipboard-list',
+            'label'=>'Supervisi & Evaluasi',
             'page'=>'supervisi',
-            'subpages'=>array('supervisi_dashboard','program_supervisi','supervisi_tim','supervisi_administrasi','supervisi_kelas','supervisi_tindak_lanjut','supervisi_instrumen','supervisi_laporan_hasil','supervisi_laporan_tindak_lanjut'),
+            'subpages'=>array('supervisi_dashboard','program_supervisi','supervisi_tim','supervisi_administrasi','supervisi_kelas','supervisi_tindak_lanjut','supervisi_instrumen','supervisi_laporan_hasil','supervisi_laporan_tindak_lanjut','kurikulum_supervisi_administrasi','kurikulum_supervisi_kelas','kurikulum_supervisi_penilaian'),
             'dropdown'=>array(
                 array('icon'=>'layout-dashboard','label'=>'Dashboard Supervisi', 'url'=>base_url('kurikulum/supervisi'), 'page'=>'supervisi_dashboard'),
                 array('icon'=>'calendar-check','label'=>'Program Supervisi', 'url'=>base_url('kurikulum/supervisi/program'), 'page'=>'program_supervisi'),
@@ -54,6 +58,16 @@ $sub_menus = array(
                 array('icon'=>'clipboard-list','label'=>'Instrumen Supervisi', 'url'=>base_url('kurikulum/supervisi/instrumen'), 'page'=>'supervisi_instrumen'),
                 array('icon'=>'file-bar-chart-2','label'=>'Laporan Hasil Supervisi', 'url'=>base_url('kurikulum/supervisi/laporan-hasil'), 'page'=>'supervisi_laporan_hasil'),
                 array('icon'=>'file-check','label'=>'Laporan Hasil Tindak Lanjut', 'url'=>base_url('kurikulum/supervisi/laporan-tindak-lanjut'), 'page'=>'supervisi_laporan_tindak_lanjut'),
+            )
+        ),
+        array(
+            'icon'=>'folder',
+            'label'=>'Manajemen Berkas',
+            'page'=>'berkas',
+            'subpages'=>array('berkas_pribadi','berkas_perangkat'),
+            'dropdown'=>array(
+                array('icon'=>'user','label'=>'Berkas Pribadi', 'url'=>base_url('kurikulum/berkas/pribadi'), 'page'=>'berkas_pribadi'),
+                array('icon'=>'book','label'=>'Perangkat Pembelajaran', 'url'=>base_url('kurikulum/berkas/perangkat'), 'page'=>'berkas_perangkat'),
             )
         ),
     ),

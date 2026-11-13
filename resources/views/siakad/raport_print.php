@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // data variables: $siswa, $tahun, $nilai, $total, $inst
 ?>
 <!DOCTYPE html>
@@ -138,7 +138,7 @@
                 <img src="<?php echo base_url('uploads/logo/' . $inst['logo']); ?>" class="logo">
             <?php endif; ?>
             <div class="header-text">
-                <h1><?php echo $inst ? $inst['nama'] : 'Aula System SMART SCHOOL'; ?></h1>
+                <h1><?php echo $inst ? $inst['nama'] : 'MASMIFHDA SYSTEM SMART SCHOOL'; ?></h1>
                 <h2>LAPORAN HASIL BELAJAR SISWA</h2>
                 <p><?php echo $inst ? $inst['alamat'] : 'Jl. Pendidikan No. 123, Indonesia'; ?></p>
             </div>
@@ -222,5 +222,6 @@
     </div>
 </body>
 </html>
+
 
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Load changelog data
 $changelogPath = __DIR__ . '/../../../config/changelog.json';
 $changelog = json_decode(file_get_contents($changelogPath), true);
@@ -19,7 +19,7 @@ if (!isset($portal_version)) $portal_version = $latestVersion['version'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($portal_title); ?> Ã¢â‚¬â€ Selamat Datang</title>
     <link rel="icon" type="image/png" href="<?php echo htmlspecialchars(isset($portal_favicon) ? $portal_favicon : base_url('public/assets/images/favicon.png')); ?>">
-    <meta name="description" content="Aula System System Ã¢â‚¬â€ Ekosistem digital terintegrasi untuk manajemen sekolah modern.">
+    <meta name="description" content="MASMIFHDA SYSTEM Ã¢â‚¬â€ Ekosistem digital terintegrasi untuk manajemen sekolah modern.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -432,7 +432,7 @@ if (!isset($portal_version)) $portal_version = $latestVersion['version'];
 
         <h1 class="hero-title">
             Selamat Datang di<br>
-            <span class="grad">Aula System</span><br>
+            <span class="grad">MASMIFHDA SYSTEM</span><br>
             System
         </h1>
 
@@ -504,7 +504,7 @@ if (!isset($portal_version)) $portal_version = $latestVersion['version'];
         <div class="updates-inner">
             <div class="section-tag">Pembaruan Sistem</div>
             <h2 class="section-title">Apa yang Baru?</h2>
-            <p class="section-sub">Pembaruan terbaru yang telah dirilis untuk Aula System System.</p>
+            <p class="section-sub">Pembaruan terbaru yang telah dirilis untuk MASMIFHDA SYSTEM.</p>
 
             <div class="latest-update-card">
                 <div class="update-header">
@@ -553,7 +553,7 @@ if (!isset($portal_version)) $portal_version = $latestVersion['version'];
 <!-- Footer -->
 <footer>
     <div class="footer-logo">GH<span>Smart</span>SchoolSystem</div>
-    <div class="footer-note">Ã‚Â© <?php echo date('Y'); ?> Aula System Platform Ã‚Â· Dikembangkan oleh Tim Developer GH</div>
+    <div class="footer-note">Ã‚Â© <?php echo date('Y'); ?> MASMIFHDA SYSTEM Platform Ã‚Â· Dikembangkan oleh Tim Developer GH</div>
 </footer>
 
 <script>
@@ -581,5 +581,6 @@ lucide.createIcons();
 </script>
 </body>
 </html>
+
 
 

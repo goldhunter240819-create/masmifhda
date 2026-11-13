@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $sekolah_nama = $inst['nama'] ?? 'MI MIFTAHUL HUDA MATHLA\'UL ANWAR';
 $npsn = $inst['npsn'] ?? '60705617';
 $nsm = $inst['nsm'] ?? '111218040009';
@@ -634,7 +634,7 @@ $tahun_ajaran = $active_year_name ?? '2026/2027';
                         <ul>
                             <li>Ciri khas keagamaan Islam menjadi pilar kepercayaan masyarakat.</li>
                             <li>Kualifikasi akademik pendidik mayoritas sarjana (S1).</li>
-                            <li>Infrastruktur internet dan portal ajar digital (Aula System) sudah berjalan.</li>
+                            <li>Infrastruktur internet dan portal ajar digital (MASMIFHDA SYSTEM) sudah berjalan.</li>
                         </ul>
                     </td>
                     <td>
@@ -770,7 +770,7 @@ $tahun_ajaran = $active_year_name ?? '2026/2027';
         <p>PPK berbasis keagamaan diwujudkan melalui pembiasaan shalat dhuha bersama, shalat dzuhur berjamaah, pembacaan asmaul husna, hafalan juz 30, serta pembentukan karakter disiplin, mandiri, dan cinta tanah air.</p>
 
         <h3>C. Digitalisasi Madrasah</h3>
-        <p>Digitalisasi madrasah mencakup pemanfaatan portal smart school digital (Aula System) untuk input nilai rapor RDM, absensi guru, pengisian jurnal mengajar harian guru, ujian berbasis komputer CBT, dan persuratan digital.</p>
+        <p>Digitalisasi madrasah mencakup pemanfaatan portal smart school digital (MASMIFHDA SYSTEM) untuk input nilai rapor RDM, absensi guru, pengisian jurnal mengajar harian guru, ujian berbasis komputer CBT, dan persuratan digital.</p>
 
         <h3>D. Pengembangan Kemitraan</h3>
         <p>Meningkatkan kerja sama kemitraan beasiswa pendidikan bagi siswa berprestasi dan kurang mampu dengan yayasan donasi eksternal serta dinas terkait.</p>
@@ -841,5 +841,6 @@ $tahun_ajaran = $active_year_name ?? '2026/2027';
     </script>
 </body>
 </html>
+
 
 

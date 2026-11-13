@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'User');
 $role_id = isset($_SESSION['role_id']) ? $_SESSION['role_id'] : 0;
 $roleName = "Pengguna";
@@ -79,7 +79,7 @@ $profileUrl = ($role_id == 2) ? '/profil-guru' : '/profil-siswa';
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <i data-lucide="graduation-cap"></i> Aula System Portal
+            <i data-lucide="graduation-cap"></i> MASMIFHDA SYSTEM Portal
         </div>
         
         <div class="sidebar-scroll">
@@ -158,7 +158,7 @@ $profileUrl = ($role_id == 2) ? '/profil-guru' : '/profil-siswa';
                 </div>
                 <h1 style="font-size: 1.8rem; margin-bottom: 1rem;">Fitur Sedang Dikembangkan</h1>
                 <p style="color: var(--text-muted); line-height: 1.6;">
-                    Halaman <strong><?php echo $title_page; ?></strong> saat ini sedang dalam proses integrasi sistem oleh pengembang Aula System.
+                    Halaman <strong><?php echo $title_page; ?></strong> saat ini sedang dalam proses integrasi sistem oleh pengembang MASMIFHDA SYSTEM.
                 </p>
                 <div class="progress-bar">
                     <div class="progress-fill"></div>
@@ -187,5 +187,6 @@ $profileUrl = ($role_id == 2) ? '/profil-guru' : '/profil-siswa';
 
 </body>
 </html>
+
 
 

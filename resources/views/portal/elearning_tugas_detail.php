@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'User');
 $role_id = isset($_SESSION['role_id']) ? $_SESSION['role_id'] : 0;
 $roleName = "Siswa";
@@ -90,7 +90,7 @@ $profileUrl = '/profil-siswa';
 <div class="wrapper">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <i data-lucide="graduation-cap"></i> Aula System Portal
+            <i data-lucide="graduation-cap"></i> MASMIFHDA SYSTEM Portal
         </div>
         
         <div class="sidebar-scroll">
@@ -296,5 +296,6 @@ $profileUrl = '/profil-siswa';
 </script>
 </body>
 </html>
+
 
 
