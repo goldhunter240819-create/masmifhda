@@ -14,21 +14,11 @@ $waka_nip = $ketua_panitia['nip'] ?? '1804072704000002';
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3 Program Unggulan - <?= htmlspecialchars($sekolah_nama) ?></title>
-    <link rel="icon" type="image/png" href="<?= htmlspecialchars($brand['favicon']) ?>">
-    <link rel="stylesheet" href="/assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <?php 
+    $page_title = '3 Program Unggulan'; 
+    include __DIR__ . '/../admin/_zamrud_head.php'; 
+    ?>
     <style>
-        body {
-            background-color: #f8fafc;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            color: #1e293b;
-            margin: 0;
-            padding: 0;
-        }
         .prog-card {
             background: #ffffff;
             border-radius: 16px;
