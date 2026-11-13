@@ -45,6 +45,38 @@ $bulanIndo = [
 ];
 $tgl_obj = strtotime($tanggal_sk);
 $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_obj)] . ' ' . date('Y', $tgl_obj);
+
+// DATA JADWAL RUTINITAS SANTRI (3 PILAR)
+$defaultJadwal = [
+    ['hari' => 'Setiap Hari', 'waktu' => '04.30 - 06.30 WIB', 'pilar' => 'Pesantren', 'kegiatan' => 'Sholat Subuh Berjamaah, Dzikir Pagi, dan Halaqah Tahfidz & Tahsin Al-Qur\'an', 'pj' => 'Kord. Pesantren & Asatidz'],
+    ['hari' => 'Senin - Sabtu', 'waktu' => '07.00 - 07.25 WIB', 'pilar' => 'ROHIS', 'kegiatan' => 'Apel Kedisiplinan Pagi, Sholat Dhuha Berjamaah, & Asmaul Husna', 'pj' => 'Pembina ROHIS & Guru Piket'],
+    ['hari' => 'Senin - Sabtu', 'waktu' => '07.30 - 13.30 WIB', 'pilar' => 'KBM Reguler', 'kegiatan' => 'Kegiatan Belajar Mengajar (KBM) Kurikulum Merdeka Terpadu & Digital Classroom', 'pj' => 'Waka Kurikulum & Dewan Guru'],
+    ['hari' => 'Senin - Sabtu', 'waktu' => '12.00 - 12.45 WIB', 'pilar' => 'Pesantren', 'kegiatan' => 'Sholat Dzuhur Berjamaah, Tadarus Al-Qur\'an, & Kultum Santri Mandiri', 'pj' => 'Pembina ROHIS & OSIS'],
+    ['hari' => 'Kamis Sore', 'waktu' => '14.00 - 16.30 WIB', 'pilar' => 'Life Skill', 'kegiatan' => 'Praktik Vokasi Terapan: Menjahit Busana Muslim, Tata Boga Halal, & Teknisi Komputer', 'pj' => 'Kord. Life Skill & Instruktur'],
+    ['hari' => 'Jumat Siang', 'waktu' => '13.30 - 15.30 WIB', 'pilar' => 'ROHIS', 'kegiatan' => 'Mentoring Karakter ROHIS, Kajian Fiqih Keputrian, & Kaderisasi Da\'i Santri', 'pj' => 'Pembina ROHIS'],
+    ['hari' => 'Sabtu Sore', 'waktu' => '14.00 - 16.00 WIB', 'pilar' => 'Digital & AI', 'kegiatan' => 'Praktik Lab Koding Komputer, Literasi AI, & Penguasaan MASMIFHDA SYSTEM', 'pj' => 'Kord. Digital & IT'],
+    ['hari' => 'Setiap Malam', 'waktu' => '18.30 - 20.30 WIB', 'pilar' => 'Pesantren', 'kegiatan' => 'Sholat Maghrib & Isya Berjamaah, Muraja\'ah Tahfidz Berpasangan, & Kajian Kitab Kuning', 'pj' => 'Musyrif Asrama Santri']
+];
+
+$jadwalSantri = !empty($cfg['jadwal_santri_json']) ? json_decode($cfg['jadwal_santri_json'], true) : $defaultJadwal;
+if (!is_array($jadwalSantri) || empty($jadwalSantri)) $jadwalSantri = $defaultJadwal;
+
+// DATA SOP UJI KELAYAKAN & SERTIFIKASI MUTU
+$defaultSop = [
+    'tahfidz_target' => 'Juz 30 Mutqin (Plus Juz 1 & 2 Pilihan)',
+    'tahfidz_kelulusan' => 'Minimal Nilai 80 (Predikat Jayyid Jiddan) - Tasmi\' Bil Ghaib 1 Majelis',
+    'tahfidz_output' => 'Syahadah Tahfidz Al-Qur\'an Resmi & Sertifikat Munaqosyah Kemenag/Madrasah',
+    'tahfidz_reward' => 'Beasiswa Bebas SPP & Apresiasi Wisuda Tahfidz bagi santri Mumtaz (90-100)',
+    'lifeskill_presensi' => 'Kehadiran Praktik Vokasi Minimal 85% Jam Efektif',
+    'lifeskill_ujian' => 'Uji Petik Hasil Karya Nyata Mandiri (Busana Siap Pakai / Masakan Higienis / Perakitan PC & LAN)',
+    'lifeskill_expo' => 'Expo Gelar Karya Santri (Market Day & Pameran Terbuka Akhir Semester)',
+    'lifeskill_output' => 'Sertifikat Uji Kompetensi Kejuruan (Life Skill Certificate) Berstandar Industri',
+    'digital_ujian' => '100% Ujian Paperless via MASMIFHDA CBT & Transkrip Portofolio Koding Web',
+    'digital_output' => 'Sertifikat Literasi Digital, Pemrograman Dasar & Etika Kecerdasan Buatan (AI)'
+];
+
+$sopConfig = !empty($cfg['sop_config_json']) ? json_decode($cfg['sop_config_json'], true) : $defaultSop;
+if (!is_array($sopConfig) || empty($sopConfig)) $sopConfig = $defaultSop;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -899,16 +931,40 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
                 <td style="text-align: right; color: #334155;">Hal. 9</td>
             </tr>
             <tr>
-                <td><strong>BAB V &bull; STRUKTUR TIM PENGELOLA & MATRIKS KPI</strong></td>
+                <td><strong>BAB V &bull; MATRIKS JADWAL RITME SANTRI & SOP SERTIFIKASI</strong></td>
                 <td style="text-align: right;"><strong>Hal. 10</strong></td>
             </tr>
             <tr>
-                <td style="padding-left: 20px; color: #334155;">5.1 Susunan Tim Pengembang & Pengelola Tiga Program</td>
+                <td style="padding-left: 20px; color: #334155;">5.1 Matriks Alokasi Waktu & Rutinitas Mingguan Tiga Pilar</td>
                 <td style="text-align: right; color: #334155;">Hal. 10</td>
             </tr>
             <tr>
-                <td style="padding-left: 20px; color: #334155;">5.2 Key Performance Indicators (KPI) & Penjaminan Mutu</td>
+                <td style="padding-left: 20px; color: #334155;">5.2 SOP Munaqosyah & Syahadah Tahfidz Al-Qur'an</td>
                 <td style="text-align: right; color: #334155;">Hal. 10</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px; color: #334155;">5.3 SOP Uji Kompetensi Kejuruan & Expo Vokasi Life Skill</td>
+                <td style="text-align: right; color: #334155;">Hal. 10</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px; color: #334155;">5.4 SOP Portofolio Literasi Koding & Ujian CBT Paperless</td>
+                <td style="text-align: right; color: #334155;">Hal. 10</td>
+            </tr>
+            <tr>
+                <td><strong>BAB VI &bull; STRUKTUR TIM PENGELOLA, MATRIKS KPI & PENETAPAN</strong></td>
+                <td style="text-align: right;"><strong>Hal. 11</strong></td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px; color: #334155;">6.1 Susunan Tim Pengembang & Pengelola Tiga Program</td>
+                <td style="text-align: right; color: #334155;">Hal. 11</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px; color: #334155;">6.2 Key Performance Indicators (KPI) & Penjaminan Mutu</td>
+                <td style="text-align: right; color: #334155;">Hal. 11</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px; color: #334155;">6.3 Naskah Pengesahan & Penetapan Kepala Madrasah</td>
+                <td style="text-align: right; color: #334155;">Hal. 11</td>
             </tr>
         </table>
     </div>
@@ -1167,12 +1223,85 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
 </div>
 
 <!-- ========================================================================= -->
-<!-- HALAMAN 10: BAB V STRUKTUR PENGELOLA, MATRIKS KPI & PENETAPAN             -->
+<!-- HALAMAN 10: BAB V MATRIKS JADWAL RITME SANTRI & SOP SERTIFIKASI MUTU      -->
 <!-- ========================================================================= -->
 <div class="container">
-    <h2 class="bab-head"><span>BAB V &bull; STRUKTUR TIM PENGELOLA & MATRIKS KPI</span> <span>BAGIAN AKHIR</span></h2>
+    <h2 class="bab-head"><span>BAB V &bull; MATRIKS JADWAL SANTRI & SOP SERTIFIKASI</span> <span>BAGIAN V</span></h2>
 
-    <h3 class="sub-head">5.1 Susunan Tim Pengembang & Pengelola Program</h3>
+    <h3 class="sub-head">5.1 Matriks Alokasi Waktu & Rutinitas Mingguan Santri</h3>
+    <div class="section-body">
+        <table class="formal-table" style="font-size: 8pt; margin: 4px 0 8px 0; line-height: 1.35;">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">No</th>
+                    <th style="width: 14%;">Hari / Sesi</th>
+                    <th style="width: 17%;">Alokasi Waktu</th>
+                    <th style="width: 14%;">Pilar</th>
+                    <th style="width: 33%;">Uraian Kegiatan Pokok Santri</th>
+                    <th style="width: 17%;">Penanggung Jawab</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                $noJ = 1;
+                foreach($jadwalSantri as $rowJ): 
+                    $badgeBg = '#f1f5f9'; $badgeCol = '#334155';
+                    if (stripos($rowJ['pilar'], 'pesantren') !== false) { $badgeBg = '#ecfdf5'; $badgeCol = '#047857'; }
+                    elseif (stripos($rowJ['pilar'], 'rohis') !== false) { $badgeBg = '#f0fdf4'; $badgeCol = '#15803d'; }
+                    elseif (stripos($rowJ['pilar'], 'life') !== false) { $badgeBg = '#fffbeb'; $badgeCol = '#b45309'; }
+                    elseif (stripos($rowJ['pilar'], 'digital') !== false) { $badgeBg = '#f0f9ff'; $badgeCol = '#0369a1'; }
+                ?>
+                <tr>
+                    <td align="center"><?= $noJ++ ?></td>
+                    <td><strong><?= htmlspecialchars($rowJ['hari']) ?></strong></td>
+                    <td style="font-family: monospace; font-size: 7.8pt; color: #0f172a;"><?= htmlspecialchars($rowJ['waktu']) ?></td>
+                    <td><span style="display: inline-block; padding: 1px 5px; border-radius: 4px; font-weight: 700; font-size: 7.2pt; background: <?= $badgeBg ?>; color: <?= $badgeCol ?>;"><?= htmlspecialchars($rowJ['pilar']) ?></span></td>
+                    <td><?= htmlspecialchars($rowJ['kegiatan']) ?></td>
+                    <td style="font-size: 7.8pt; color: #475569;"><?= htmlspecialchars($rowJ['pj']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="sub-head">5.2 Standar Operasional Prosedur (SOP) Munaqosyah & Sertifikasi Kelayakan Santri</h3>
+    <div class="section-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; font-size: 8.2pt; line-height: 1.42;">
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 3.5px solid #059669; padding: 7px 10px; border-radius: 4px;">
+                <div style="font-weight: 800; color: #047857; margin-bottom: 2px;">A. SOP Munaqosyah & Syahadah Tahfidz:</div>
+                <ul style="margin: 0; padding-left: 14px;">
+                    <li><strong>Target Capaian:</strong> <?= htmlspecialchars($sopConfig['tahfidz_target']) ?>.</li>
+                    <li><strong>Mekanisme Uji:</strong> Tasmi' Bil Ghaib sekali duduk di hadapan Penguji Kemenag / Asatidz.</li>
+                    <li><strong>Standar Kelulusan:</strong> <?= htmlspecialchars($sopConfig['tahfidz_kelulusan']) ?>.</li>
+                    <li><strong>Output & Reward:</strong> <?= htmlspecialchars($sopConfig['tahfidz_output']) ?>. <?= htmlspecialchars($sopConfig['tahfidz_reward']) ?>.</li>
+                </ul>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 3.5px solid #d97706; padding: 7px 10px; border-radius: 4px;">
+                <div style="font-weight: 800; color: #b45309; margin-bottom: 2px;">B. SOP Uji Kompetensi Kejuruan (Life Skill):</div>
+                <ul style="margin: 0; padding-left: 14px;">
+                    <li><strong>Syarat Kehadiran:</strong> <?= htmlspecialchars($sopConfig['lifeskill_presensi']) ?>.</li>
+                    <li><strong>Materi Uji Petik:</strong> <?= htmlspecialchars($sopConfig['lifeskill_ujian']) ?>.</li>
+                    <li><strong>Gelar Karya:</strong> Wajib dipamerkan pada <?= htmlspecialchars($sopConfig['lifeskill_expo']) ?>.</li>
+                    <li><strong>Legitimasi:</strong> <?= htmlspecialchars($sopConfig['lifeskill_output']) ?>.</li>
+                </ul>
+            </div>
+        </div>
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-left: 3.5px solid #0284c7; padding: 6px 10px; border-radius: 4px; margin-top: 6px; font-size: 8.2pt; line-height: 1.42;">
+            <div style="font-weight: 800; color: #0369a1; margin-bottom: 2px;">C. SOP Portofolio Literasi Digital & AI Terpadu:</div>
+            <div style="text-align: justify;">
+                Setiap peserta didik wajib mengoperasikan akun mandiri MASMIFHDA PWA, menuntaskan <strong><?= htmlspecialchars($sopConfig['digital_ujian']) ?></strong>, serta menghasilkan proyek web atau kalkulasi terapan untuk diterbitkan <strong><?= htmlspecialchars($sopConfig['digital_output']) ?></strong> sebagai lampiran SKPI (Surat Keterangan Pendamping Ijazah).
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- HALAMAN 11: BAB VI STRUKTUR PENGELOLA, MATRIKS KPI & PENETAPAN            -->
+<!-- ========================================================================= -->
+<div class="container">
+    <h2 class="bab-head"><span>BAB VI &bull; STRUKTUR TIM PENGELOLA & MATRIKS KPI</span> <span>BAGIAN AKHIR</span></h2>
+
+    <h3 class="sub-head">6.1 Susunan Tim Pengembang & Pengelola Program</h3>
     <div class="section-body">
         <table class="formal-table">
             <thead>
@@ -1224,10 +1353,10 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
         </table>
     </div>
 
-    <h3 class="sub-head">5.2 Key Performance Indicators (KPI) & Penjaminan Mutu:</h3>
+    <h3 class="sub-head">6.2 Key Performance Indicators (KPI) & Penjaminan Mutu:</h3>
     <div class="section-body">
         <ol style="font-size: 9pt; padding-left: 18px; line-height: 1.45;">
-            <li><strong>KPI Pesantren & ROHIS:</strong> 100% peserta didik lulusan tuntas hafalan mutqin minimal Juz 30 dan hadir tertib dalam ibadah ubudiyah serta mentoring ROHIS.</li>
+            <li><strong>KPI Pesantren & ROHIS:</strong> 100% peserta didik lulusan tuntas hafalan mutqin minimal <?= htmlspecialchars($sopConfig['tahfidz_target']) ?> dan hadir tertib dalam ibadah ubudiyah serta mentoring ROHIS.</li>
             <li><strong>KPI Life Skill Vokasi:</strong> 100% peserta didik menguasai minimal 1 cabang kejuruan vokasi yang dibuktikan dengan karya riil pada Expo Gelar Karya Santri akhir semester.</li>
             <li><strong>KPI Madrasah Digital:</strong> 100% dewan guru tertib mengisi jurnal mengajar online, 100% ujian berlangsung paperless via CBT, dan tersedianya portofolio koding siswa.</li>
         </ol>

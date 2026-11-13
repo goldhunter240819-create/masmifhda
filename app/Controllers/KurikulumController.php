@@ -2624,7 +2624,15 @@ class KurikulumController {
                 $db->exec("INSERT INTO `kurikulum_program_unggulan_config` 
                     (nomor_sk, tanggal_sk, tahun_ajaran, semester, kamad_nama, waka_nama, kord_pesantren_nama, pembina_rohis_nama, kord_lifeskill_nama, kord_digital_nama, komite_nama, pengawas_nama, pengawas_nip)
                     VALUES 
-                    ('421.3/088/MAS-MH/SK-PROG/VII/2026', '2026-07-15', '2026/2027', 'Ganjil', 'Drs. Hamim Hasyim', 'M AZIZ SULAIMAN, S.Pd', 'SAIPUDIN AZIZ, S.Pd', 'DIDI HARTONO, S.Pd.I', 'INDAH YUNITASARI, S.Pd', 'SYAIFUL BAHRI, S.Pd', 'H. AHMAD ROFIQ, S.Ag', 'Drs. H. M. YUSUF, M.Pd.I', '196805141994031002')");
+                    ('421.3/088/MAS-MH/SK-PROG/VII/2026', '2026-07-15', '2026/2027', 'Ganjil', 'AHMAD RIFA\'I, M.Pd', 'Drs. Hamim Hasyim', 'SAIPUDIN AZIZ, S.Pd', 'DIDI HARTONO, S.Pd.I', 'INDAH YUNITASARI, S.Pd', 'SYAIFUL BAHRI, S.Pd', 'IMAM SYAFE\'I', '', '')");
+            }
+
+            $cols = $db->query("SHOW COLUMNS FROM `kurikulum_program_unggulan_config`")->fetchAll(\PDO::FETCH_COLUMN);
+            if (!in_array('jadwal_santri_json', $cols)) {
+                $db->exec("ALTER TABLE `kurikulum_program_unggulan_config` ADD COLUMN `jadwal_santri_json` LONGTEXT NULL AFTER `pengawas_nip`");
+            }
+            if (!in_array('sop_config_json', $cols)) {
+                $db->exec("ALTER TABLE `kurikulum_program_unggulan_config` ADD COLUMN `sop_config_json` LONGTEXT NULL AFTER `jadwal_santri_json`");
             }
         } catch (\Throwable $e) {
             error_log("ensureProgramUnggulanTables failed: " . $e->getMessage());
@@ -2641,11 +2649,11 @@ class KurikulumController {
             'tahun_ajaran' => '2026/2027',
             'semester' => 'Ganjil',
             'kamad_id' => null,
-            'kamad_nama' => 'Drs. Hamim Hasyim',
+            'kamad_nama' => 'AHMAD RIFA\'I, M.Pd',
             'kamad_nip' => '-',
             'waka_id' => null,
-            'waka_nama' => 'M AZIZ SULAIMAN, S.Pd',
-            'waka_nip' => '1804072704000002',
+            'waka_nama' => 'Drs. Hamim Hasyim',
+            'waka_nip' => '-',
             'kord_pesantren_id' => null,
             'kord_pesantren_nama' => 'SAIPUDIN AZIZ, S.Pd',
             'pembina_rohis_id' => null,
@@ -2654,15 +2662,17 @@ class KurikulumController {
             'kord_lifeskill_nama' => 'INDAH YUNITASARI, S.Pd',
             'kord_digital_id' => null,
             'kord_digital_nama' => 'SYAIFUL BAHRI, S.Pd',
-            'komite_nama' => 'H. AHMAD ROFIQ, S.Ag',
-            'pengawas_nama' => 'Drs. H. M. YUSUF, M.Pd.I',
-            'pengawas_nip' => '196805141994031002'
+            'komite_nama' => 'IMAM SYAFE\'I',
+            'pengawas_nama' => '',
+            'pengawas_nip' => '',
+            'jadwal_santri_json' => null,
+            'sop_config_json' => null
         ];
 
         try {
             $row = $db->query("SELECT * FROM kurikulum_program_unggulan_config ORDER BY id DESC LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
             if ($row) {
-                return array_merge($default, array_filter($row));
+                return array_merge($default, $row);
             }
         } catch (\Throwable $e) {}
 
@@ -2734,6 +2744,48 @@ class KurikulumController {
         $pengawas_nama = trim($_POST['pengawas_nama'] ?? '');
         $pengawas_nip = trim($_POST['pengawas_nip'] ?? '');
 
+        // JADWAL RUTINITAS SANTRI JSON
+        $jadwal_santri_json = null;
+        if (!empty($_POST['jadwal_santri_json']) && trim($_POST['jadwal_santri_json']) !== '') {
+            $jadwal_santri_json = trim($_POST['jadwal_santri_json']);
+        } elseif (!empty($_POST['jadwal']) && is_array($_POST['jadwal'])) {
+            $cleanJadwal = [];
+            foreach ($_POST['jadwal'] as $row) {
+                if (!empty($row['waktu']) || !empty($row['kegiatan'])) {
+                    $cleanJadwal[] = [
+                        'hari' => trim($row['hari'] ?? 'Setiap Hari'),
+                        'waktu' => trim($row['waktu'] ?? ''),
+                        'pilar' => trim($row['pilar'] ?? 'Pesantren'),
+                        'kegiatan' => trim($row['kegiatan'] ?? ''),
+                        'pj' => trim($row['pj'] ?? '')
+                    ];
+                }
+            }
+            if (!empty($cleanJadwal)) {
+                $jadwal_santri_json = json_encode($cleanJadwal, JSON_UNESCAPED_UNICODE);
+            }
+        }
+
+        // SOP SERTIFIKASI MUTU JSON
+        $sop_config_json = null;
+        if (!empty($_POST['sop_config_json']) && trim($_POST['sop_config_json']) !== '') {
+            $sop_config_json = trim($_POST['sop_config_json']);
+        } elseif (!empty($_POST['sop']) && is_array($_POST['sop'])) {
+            $cleanSop = [
+                'tahfidz_target' => trim($_POST['sop']['tahfidz_target'] ?? 'Juz 30 Mutqin (Plus Juz 1 & 2 Pilihan)'),
+                'tahfidz_kelulusan' => trim($_POST['sop']['tahfidz_kelulusan'] ?? 'Minimal Nilai 80 (Predikat Jayyid Jiddan) - Tasmi\' Bil Ghaib 1 Majelis'),
+                'tahfidz_output' => trim($_POST['sop']['tahfidz_output'] ?? 'Syahadah Tahfidz Al-Qur\'an Resmi & Sertifikat Munaqosyah Kemenag/Madrasah'),
+                'tahfidz_reward' => trim($_POST['sop']['tahfidz_reward'] ?? 'Beasiswa Bebas SPP & Apresiasi Wisuda Tahfidz bagi santri Mumtaz (90-100)'),
+                'lifeskill_presensi' => trim($_POST['sop']['lifeskill_presensi'] ?? 'Kehadiran Praktik Vokasi Minimal 85% Jam Efektif'),
+                'lifeskill_ujian' => trim($_POST['sop']['lifeskill_ujian'] ?? 'Uji Petik Hasil Karya Nyata Mandiri (Busana Siap Pakai / Masakan Higienis / Perakitan PC & LAN)'),
+                'lifeskill_expo' => trim($_POST['sop']['lifeskill_expo'] ?? 'Expo Gelar Karya Santri (Market Day & Pameran Terbuka Akhir Semester)'),
+                'lifeskill_output' => trim($_POST['sop']['lifeskill_output'] ?? 'Sertifikat Uji Kompetensi Kejuruan (Life Skill Certificate) Berstandar Industri'),
+                'digital_ujian' => trim($_POST['sop']['digital_ujian'] ?? '100% Ujian Paperless via MASMIFHDA CBT & Transkrip Portofolio Koding Web'),
+                'digital_output' => trim($_POST['sop']['digital_output'] ?? 'Sertifikat Literasi Digital, Pemrograman Dasar & Etika Kecerdasan Buatan (AI)')
+            ];
+            $sop_config_json = json_encode($cleanSop, JSON_UNESCAPED_UNICODE);
+        }
+
         try {
             $exists = $db->query("SELECT id FROM kurikulum_program_unggulan_config LIMIT 1")->fetchColumn();
             if ($exists) {
@@ -2758,7 +2810,9 @@ class KurikulumController {
                     kord_digital_nama = :kord_digital_nama,
                     komite_nama = :komite_nama,
                     pengawas_nama = :pengawas_nama,
-                    pengawas_nip = :pengawas_nip
+                    pengawas_nip = :pengawas_nip,
+                    jadwal_santri_json = :jadwal_santri_json,
+                    sop_config_json = :sop_config_json
                     WHERE id = :id");
                 $stmt->execute([
                     ':nomor_sk' => $nomor_sk,
@@ -2782,13 +2836,15 @@ class KurikulumController {
                     ':komite_nama' => $komite_nama,
                     ':pengawas_nama' => $pengawas_nama,
                     ':pengawas_nip' => $pengawas_nip,
+                    ':jadwal_santri_json' => $jadwal_santri_json,
+                    ':sop_config_json' => $sop_config_json,
                     ':id' => $exists
                 ]);
             } else {
                 $stmt = $db->prepare("INSERT INTO kurikulum_program_unggulan_config
-                    (nomor_sk, tanggal_sk, tahun_ajaran, semester, kamad_id, kamad_nama, kamad_nip, waka_id, waka_nama, waka_nip, kord_pesantren_id, kord_pesantren_nama, pembina_rohis_id, pembina_rohis_nama, kord_lifeskill_id, kord_lifeskill_nama, kord_digital_id, kord_digital_nama, komite_nama, pengawas_nama, pengawas_nip)
+                    (nomor_sk, tanggal_sk, tahun_ajaran, semester, kamad_id, kamad_nama, kamad_nip, waka_id, waka_nama, waka_nip, kord_pesantren_id, kord_pesantren_nama, pembina_rohis_id, pembina_rohis_nama, kord_lifeskill_id, kord_lifeskill_nama, kord_digital_id, kord_digital_nama, komite_nama, pengawas_nama, pengawas_nip, jadwal_santri_json, sop_config_json)
                     VALUES
-                    (:nomor_sk, :tanggal_sk, :tahun_ajaran, :semester, :kamad_id, :kamad_nama, :kamad_nip, :waka_id, :waka_nama, :waka_nip, :kord_pesantren_id, :kord_pesantren_nama, :pembina_rohis_id, :pembina_rohis_nama, :kord_lifeskill_id, :kord_lifeskill_nama, :kord_digital_id, :kord_digital_nama, :komite_nama, :pengawas_nama, :pengawas_nip)");
+                    (:nomor_sk, :tanggal_sk, :tahun_ajaran, :semester, :kamad_id, :kamad_nama, :kamad_nip, :waka_id, :waka_nama, :waka_nip, :kord_pesantren_id, :kord_pesantren_nama, :pembina_rohis_id, :pembina_rohis_nama, :kord_lifeskill_id, :kord_lifeskill_nama, :kord_digital_id, :kord_digital_nama, :komite_nama, :pengawas_nama, :pengawas_nip, :jadwal_santri_json, :sop_config_json)");
                 $stmt->execute([
                     ':nomor_sk' => $nomor_sk,
                     ':tanggal_sk' => $tanggal_sk,
@@ -2810,7 +2866,9 @@ class KurikulumController {
                     ':kord_digital_nama' => $kord_digital_nama,
                     ':komite_nama' => $komite_nama,
                     ':pengawas_nama' => $pengawas_nama,
-                    ':pengawas_nip' => $pengawas_nip
+                    ':pengawas_nip' => $pengawas_nip,
+                    ':jadwal_santri_json' => $jadwal_santri_json,
+                    ':sop_config_json' => $sop_config_json
                 ]);
             }
             if (session_status() === PHP_SESSION_NONE) session_start();
