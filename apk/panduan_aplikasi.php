@@ -150,6 +150,7 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
 
         /* ==================== COVER PAGE ==================== */
         .cover-page {
+            min-height: 980px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -157,6 +158,8 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
             border-bottom: 3px double #cbd5e1;
             position: relative;
             overflow: hidden;
+            box-sizing: border-box;
+            padding: 35px 50px 25px 50px;
         }
         .cover-decor {
             position: absolute;
@@ -183,7 +186,7 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
         }
         .cover-title-box {
             text-align: center;
-            margin: 25px 0 15px 0;
+            margin: 12px 0 6px 0;
             position: relative;
             z-index: 2;
         }
@@ -191,89 +194,89 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
             display: inline-block;
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: white;
-            padding: 6px 18px;
+            padding: 4px 14px;
             border-radius: 999px;
-            font-size: 0.8rem;
+            font-size: 0.72rem;
             font-weight: 800;
             letter-spacing: 1px;
             text-transform: uppercase;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(2,132,199,0.3);
+            margin-bottom: 8px;
+            box-shadow: 0 4px 10px rgba(2,132,199,0.25);
         }
         .cover-title {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 2.15rem;
+            font-size: 1.7rem;
             font-weight: 900;
             color: #0f172a;
-            margin: 0 0 10px 0;
-            line-height: 1.25;
+            margin: 0 0 6px 0;
+            line-height: 1.22;
             text-transform: uppercase;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.3px;
         }
         .cover-subtitle {
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             color: #0369a1;
             font-weight: 700;
             margin: 0;
-            line-height: 1.4;
+            line-height: 1.35;
         }
         .cover-desc {
-            font-size: 0.88rem;
+            font-size: 0.8rem;
             color: var(--gray-sub);
-            max-width: 620px;
-            margin: 12px auto 0;
-            line-height: 1.5;
+            max-width: 550px;
+            margin: 6px auto 0;
+            line-height: 1.45;
         }
 
         /* =====================================================================
-           VECTOR SMARTPHONE MOCKUPS (PURE CSS & SVG - NO RAW JAGGED SCREENSHOTS)
+           VECTOR SMARTPHONE MOCKUPS (COMPACT 1-PAGE A4 FIT)
            ===================================================================== */
         .cover-mockup-wrap {
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            gap: 25px;
-            margin: 20px 0;
+            gap: 18px;
+            margin: 10px 0;
             position: relative;
             z-index: 2;
         }
         .v-phone {
-            width: 215px;
+            width: 175px;
             background: #0f172a;
-            border-radius: 32px;
-            padding: 8px;
-            box-shadow: 0 20px 45px rgba(15,23,42,0.35), 0 0 0 2px #334155;
+            border-radius: 26px;
+            padding: 6px;
+            box-shadow: 0 16px 36px rgba(15,23,42,0.3), 0 0 0 1.5px #334155;
             position: relative;
             transition: transform 0.3s;
         }
         .v-phone-notch {
             position: absolute;
-            top: 13px;
+            top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            width: 70px;
-            height: 14px;
+            width: 55px;
+            height: 11px;
             background: #0f172a;
-            border-radius: 10px;
+            border-radius: 8px;
             z-index: 10;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 4px;
         }
         .v-phone-camera {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             background: #1e293b;
             border: 1px solid #334155;
         }
         .v-phone-screen {
             background: #ffffff;
-            border-radius: 24px;
+            border-radius: 20px;
             overflow: hidden;
-            font-size: 9px;
-            height: 380px;
+            font-size: 8px;
+            height: 280px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -281,25 +284,25 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
             color: #0f172a;
         }
         .v-status-bar {
-            height: 22px;
-            padding: 4px 14px;
+            height: 18px;
+            padding: 2px 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 8px;
+            font-size: 7px;
             font-weight: 700;
             color: #0f172a;
             background: #f8fafc;
         }
         .v-status-icons {
             display: flex;
-            gap: 4px;
-            font-size: 7px;
+            gap: 3px;
+            font-size: 6.5px;
         }
         .v-app-bar {
             background: linear-gradient(135deg, #064e3b 0%, #059669 100%);
             color: white;
-            padding: 10px 12px;
+            padding: 6px 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -307,11 +310,11 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
         .v-user-info {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         .v-user-avatar {
-            width: 26px;
-            height: 26px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: white;
             color: #064e3b;
@@ -319,73 +322,73 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 10px;
+            font-size: 8px;
         }
         .v-card-absen {
-            margin: 8px 10px;
+            margin: 5px 6px;
             background: #ecfdf5;
-            border: 1.5px solid #a7f3d0;
-            border-radius: 10px;
-            padding: 8px 10px;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 5px 8px;
             text-align: left;
         }
         .v-chip-green {
             background: #059669;
             color: white;
-            padding: 2px 6px;
+            padding: 1.5px 5px;
             border-radius: 999px;
             font-weight: 800;
-            font-size: 7.5px;
+            font-size: 6.5px;
             display: inline-flex;
             align-items: center;
-            gap: 3px;
+            gap: 2px;
         }
         .v-grid-4 {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            padding: 0 10px;
-            margin: 6px 0;
+            gap: 4px;
+            padding: 0 6px;
+            margin: 4px 0;
             text-align: center;
         }
         .v-tile {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 6px 2px;
+            border-radius: 6px;
+            padding: 4px 2px;
         }
-        .v-tile i { font-size: 11px; margin-bottom: 2px; display: block; }
-        .v-tile span { font-size: 7px; font-weight: 700; color: #475569; display: block; }
+        .v-tile i { font-size: 9px; margin-bottom: 1px; display: block; }
+        .v-tile span { font-size: 6px; font-weight: 700; color: #475569; display: block; }
 
         .v-bottom-bar {
-            height: 38px;
+            height: 30px;
             background: #ffffff;
             border-top: 1px solid #e2e8f0;
             display: flex;
             align-items: center;
             justify-content: space-around;
-            padding: 0 6px;
+            padding: 0 4px;
             color: #94a3b8;
-            font-size: 11px;
+            font-size: 9px;
         }
         .v-bottom-bar .active { color: #0284c7; }
         .v-bottom-center-btn {
-            width: 28px;
-            height: 28px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 3px 8px rgba(2,132,199,0.4);
-            transform: translateY(-4px);
-            font-size: 10px;
+            box-shadow: 0 2px 6px rgba(2,132,199,0.4);
+            transform: translateY(-3px);
+            font-size: 8px;
         }
 
         .cover-footer {
-            border-top: 2px solid #e2e8f0;
-            padding-top: 15px;
+            border-top: 1.5px solid #e2e8f0;
+            padding-top: 10px;
             text-align: center;
             position: relative;
             z-index: 2;
@@ -537,9 +540,25 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
             body { background: white !important; }
             .top-navbar { display: none !important; }
             .doc-wrapper { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
-            .page-sheet { padding: 12mm 16mm !important; min-height: 100vh !important; }
+            .page-sheet { padding: 8mm 14mm !important; min-height: auto !important; box-sizing: border-box !important; }
             .page-break { page-break-before: always; break-before: page; }
-            @page { size: A4 portrait; margin: 10mm 12mm 12mm 12mm; }
+            .cover-page {
+                height: 250mm !important;
+                max-height: 250mm !important;
+                min-height: 250mm !important;
+                padding: 6mm 12mm !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+            .cover-page .v-phone {
+                width: 165px !important;
+            }
+            .cover-page .v-phone-screen {
+                height: 255px !important;
+            }
+            @page { size: A4 portrait; margin: 8mm 10mm 10mm 10mm; }
         }
     </style>
 </head>
@@ -600,9 +619,9 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
             </p>
         </div>
 
-        <!-- PURE VECTOR SMARTPHONE SHOWCASE MOCKUPS (NO RAW JAGGED SCREENSHOTS) -->
+        <!-- PURE VECTOR SMARTPHONE SHOWCASE MOCKUPS (DUAL PORTAL: GURU & SISWA) -->
         <div class="cover-mockup-wrap">
-            <!-- Mockup Phone 1: Dashboard Guru -->
+            <!-- Mockup Phone 1: PORTAL GURU & TENDIK -->
             <div class="v-phone">
                 <div class="v-phone-notch"><div class="v-phone-camera"></div></div>
                 <div class="v-phone-screen">
@@ -615,15 +634,18 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
                                 <i class="fa-solid fa-battery-full"></i>
                             </div>
                         </div>
+                        <div style="background: #064e3b; color: white; padding: 2px 8px; font-size: 7px; font-weight: 800; text-align: center; letter-spacing: 0.5px;">
+                            📱 PORTAL GURU & TENDIK
+                        </div>
                         <div class="v-app-bar">
                             <div class="v-user-info">
-                                <div class="v-user-avatar"><i class="fa-solid fa-user"></i></div>
+                                <div class="v-user-avatar" style="background:#ecfdf5; color:#059669;"><i class="fa-solid fa-user-tie"></i></div>
                                 <div style="text-align: left;">
-                                    <div style="font-weight: 800; font-size: 9px;">M AZIZ SULAIMAN</div>
-                                    <div style="font-size: 7.5px; opacity: 0.9;">Waka Kurikulum</div>
+                                    <div style="font-weight: 800; font-size: 8.5px;">DEWAN GURU</div>
+                                    <div style="font-size: 7px; opacity: 0.9;">Pendidik & Guru Mapel</div>
                                 </div>
                             </div>
-                            <i class="fa-solid fa-bell" style="font-size: 10px;"></i>
+                            <span class="v-chip-green" style="font-size: 6.5px;">Online</span>
                         </div>
                         <div class="v-card-absen">
                             <div class="v-chip-green"><i class="fa-solid fa-circle-check"></i> Sudah Hadir</div>
@@ -637,7 +659,7 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
                             <div class="v-tile"><i class="fa-solid fa-layer-group" style="color: #7c3aed;"></i><span>Aplikasi</span></div>
                         </div>
                         <div style="margin: 0 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; text-align: left;">
-                            <div style="font-size: 7.5px; font-weight: 800; color: #0284c7;">KBM HARI INI &bull; KELAS X E.1</div>
+                            <div style="font-size: 7.5px; font-weight: 800; color: #0284c7;">AGENDA KBM &bull; KELAS X E.1</div>
                             <div style="font-size: 8px; font-weight: 800; color: #0f172a;">Informatika & Koding</div>
                             <div style="font-size: 7px; color: #64748b;">Jam 1-2 (07.30 - 09.00 WIB)</div>
                         </div>
@@ -652,7 +674,7 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
                 </div>
             </div>
 
-            <!-- Mockup Phone 2: Hub Aplikasi Delegasi -->
+            <!-- Mockup Phone 2: PORTAL SISWA & SANTRI -->
             <div class="v-phone" style="transform: translateY(12px);">
                 <div class="v-phone-notch"><div class="v-phone-camera"></div></div>
                 <div class="v-phone-screen">
@@ -664,28 +686,60 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
                                 <i class="fa-solid fa-battery-full"></i>
                             </div>
                         </div>
-                        <div style="background: #0284c7; color: white; padding: 10px 12px; text-align: left;">
-                            <div style="font-size: 8px; opacity: 0.85;">AULA DIGITAL PLATFORM</div>
-                            <div style="font-weight: 900; font-size: 11px;">Hub Aplikasi Saya</div>
+                        <div style="background: #0284c7; color: white; padding: 2px 8px; font-size: 7px; font-weight: 800; text-align: center; letter-spacing: 0.5px;">
+                            📱 PORTAL SISWA & SANTRI
                         </div>
-                        <div style="padding: 6px 10px; text-align: left;">
-                            <div style="font-size: 7.5px; font-weight: 800; color: #64748b; margin-bottom: 4px;">AKADEMIK & SUPERVISI</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px;">
-                                <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 5px; font-size: 7.5px; font-weight: 700; color: #0369a1;"><i class="fa-solid fa-file-signature"></i> Supervisi KBM</div>
-                                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 5px; font-size: 7.5px; font-weight: 700; color: #15803d;"><i class="fa-solid fa-chart-simple"></i> Nilai Harian</div>
+                        <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 7px;">
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background: white; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 10px;"><i class="fa-solid fa-user-graduate"></i></div>
+                                <div style="text-align: left;">
+                                    <div style="font-weight: 800; font-size: 8.5px;">MUHAMMAD SANTRI</div>
+                                    <div style="font-size: 7px; opacity: 0.9;">Kelas X &bull; NISN: 10816858</div>
+                                </div>
                             </div>
-                            <div style="font-size: 7.5px; font-weight: 800; color: #64748b; margin-bottom: 4px;">KEUANGAN & KASIR</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                                <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 5px; font-size: 7.5px; font-weight: 700; color: #a16207;"><i class="fa-solid fa-cash-register"></i> Kasir SPP</div>
-                                <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 5px; font-size: 7.5px; font-weight: 700; color: #7e22ce;"><i class="fa-solid fa-book"></i> BKU Bendahara</div>
+                            <span style="background: rgba(255,255,255,0.25); color: white; padding: 1px 5px; border-radius: 999px; font-size: 6.5px; font-weight: 700;">Aktif</span>
+                        </div>
+                        <!-- Kartu Pelajar Digital Mini -->
+                        <div style="margin: 6px 8px; background: #eff6ff; border: 1.2px solid #bfdbfe; border-radius: 8px; padding: 6px 8px; text-align: left;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 7px; font-weight: 800; color: #1e40af;"><i class="fa-solid fa-id-card"></i> E-KTA KARTU PELAJAR</span>
+                                <span style="font-size: 6.5px; background: #10b981; color: white; padding: 1px 4px; border-radius: 4px; font-weight: 700;">QR Ready</span>
+                            </div>
+                            <div style="font-size: 8px; font-weight: 800; color: #0f172a; margin-top: 2px;">Presensi: Hadir di Kelas</div>
+                        </div>
+                        <!-- 6 Layanan Siswa -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 0 8px; text-align: center;">
+                            <div style="background: #fee2e2; border-radius: 6px; padding: 5px 2px;">
+                                <i class="fa-solid fa-file-invoice-dollar" style="color: #ef4444; font-size: 10px;"></i>
+                                <span style="font-size: 6.5px; font-weight: 700; color: #991b1b; display: block; margin-top: 1px;">Keuangan</span>
+                            </div>
+                            <div style="background: #ecfdf5; border-radius: 6px; padding: 5px 2px;">
+                                <i class="fa-solid fa-calendar-check" style="color: #10b981; font-size: 10px;"></i>
+                                <span style="font-size: 6.5px; font-weight: 700; color: #065f46; display: block; margin-top: 1px;">Absensi</span>
+                            </div>
+                            <div style="background: #fffbeb; border-radius: 6px; padding: 5px 2px;">
+                                <i class="fa-solid fa-wallet" style="color: #f59e0b; font-size: 10px;"></i>
+                                <span style="font-size: 6.5px; font-weight: 700; color: #92400e; display: block; margin-top: 1px;">Tabungan</span>
+                            </div>
+                            <div style="background: #f0fdf4; border-radius: 6px; padding: 5px 2px;">
+                                <i class="fa-solid fa-comment-dots" style="color: #10b981; font-size: 10px;"></i>
+                                <span style="font-size: 6.5px; font-weight: 700; color: #065f46; display: block; margin-top: 1px;">Wali Kelas</span>
+                            </div>
+                            <div style="background: #fdf2f8; border-radius: 6px; padding: 5px 2px;">
+                                <i class="fa-solid fa-user-tie" style="color: #ec4899; font-size: 10px;"></i>
+                                <span style="font-size: 6.5px; font-weight: 700; color: #9d174d; display: block; margin-top: 1px;">Mentor</span>
+                            </div>
+                            <div style="background: #eff6ff; border-radius: 6px; padding: 5px 2px;">
+                                <i class="fa-solid fa-book-open-reader" style="color: #3b82f6; font-size: 10px;"></i>
+                                <span style="font-size: 6.5px; font-weight: 700; color: #1e40af; display: block; margin-top: 1px;">E-Library</span>
                             </div>
                         </div>
                     </div>
                     <div class="v-bottom-bar">
-                        <i class="fa-solid fa-house"></i>
-                        <i class="fa-solid fa-book-bookmark"></i>
-                        <div class="v-bottom-center-btn"><i class="fa-solid fa-layer-group"></i></div>
-                        <i class="fa-solid fa-folder-closed"></i>
+                        <i class="fa-solid fa-house active"></i>
+                        <i class="fa-solid fa-calendar-check"></i>
+                        <div class="v-bottom-center-btn"><i class="fa-solid fa-qrcode"></i></div>
+                        <i class="fa-solid fa-comments"></i>
                         <i class="fa-solid fa-user"></i>
                     </div>
                 </div>
@@ -746,25 +800,25 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
             </table>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 45px; text-align: center;">
+        <!-- Tanda Tangan 3 Kolom Bersih Tanpa NIP Sesuai Arahan -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 55px; text-align: center;">
+            <div>
+                <div style="font-size: 0.85rem; color: #64748b;">Penyusun / Pengembang:</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-top: 4px;">Tim IT Madrasah</div>
+                <div style="height: 85px;"></div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; text-decoration: underline;">M AZIZ SULAIMAN, S.Pd</div>
+            </div>
+            <div>
+                <div style="font-size: 0.85rem; color: #64748b;">Memeriksa / Menyetujui:</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-top: 4px;">Waka Kurikulum</div>
+                <div style="height: 85px;"></div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; text-decoration: underline;">Drs. Hamim Hasyim</div>
+            </div>
             <div>
                 <div style="font-size: 0.85rem; color: #64748b;">Mengetahui / Mengesahkan:</div>
                 <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-top: 4px;">Kepala Madrasah</div>
-                <div style="height: 80px; display: flex; align-items: center; justify-content: center;">
-                    <img src="/public/stempelma.png" alt="Stempel" style="height: 65px; opacity: 0.85;" onerror="this.style.display='none'">
-                    <img src="/public/ttdkamad.png" alt="TTD" style="height: 60px; margin-left: -40px;" onerror="this.style.display='none'">
-                </div>
-                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; text-decoration: underline;"><?= htmlspecialchars($kamad_nama) ?></div>
-                <div style="font-size: 0.8rem; color: #64748b;">NIP. <?= htmlspecialchars($kamad_nip) ?></div>
-            </div>
-            <div>
-                <div style="font-size: 0.85rem; color: #64748b;">Penyusun Dokumen:</div>
-                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-top: 4px;">Waka Kurikulum / Tim IT</div>
-                <div style="height: 80px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-solid fa-signature" style="font-size: 2.5rem; color: #94a3b8;"></i>
-                </div>
-                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; text-decoration: underline;"><?= htmlspecialchars($waka_nama) ?></div>
-                <div style="font-size: 0.8rem; color: #64748b;">NIP. <?= htmlspecialchars($waka_nip) ?></div>
+                <div style="height: 85px;"></div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a; text-decoration: underline;">AHMAD RIFA'I, M.Pd</div>
             </div>
         </div>
     </div>

@@ -2,27 +2,21 @@
 use App\Core\Branding;
 
 $brand = Branding::get();
-$sekolah_nama = !empty($institusi['nama']) ? $institusi['nama'] : 'MADRASAH ALIYAH MIFTAHUL HUDA';
+$sekolah_nama = !empty($institusi['nama']) && $institusi['nama'] !== 'MADRASAH ALIYAH MIFTAHUL HUDA' && $institusi['nama'] !== 'MAS MIFTAHUL HUDA' ? $institusi['nama'] : 'MA MIFTAHUL HUDA MATHLA\'UL ANWAR';
 $nama_yayasan = !empty($institusi['nama_yayasan']) ? $institusi['nama_yayasan'] : 'YAYASAN PONDOK PESANTREN MIFTAHUL HUDA MATHLA\'UL ANWAR';
 $logoUrl = !empty($institusi['logo']) ? '/public/uploads/logo/' . $institusi['logo'] : Branding::getInstitusiLogo();
 $logoKemenag = '/public/logo_kemenag.png';
 
-$alamatParts = [];
-if (!empty($institusi['alamat'])) $alamatParts[] = $institusi['alamat'];
-if (!empty($institusi['desa'])) $alamatParts[] = 'Ds. ' . $institusi['desa'];
-if (!empty($institusi['kecamatan'])) $alamatParts[] = 'Kec. ' . $institusi['kecamatan'];
-if (!empty($institusi['kota'])) $alamatParts[] = 'Kab. ' . $institusi['kota'];
-if (!empty($institusi['provinsi'])) $alamatParts[] = 'Prov. ' . $institusi['provinsi'];
-$alamatLengkap = implode(', ', $alamatParts);
-if (empty($alamatLengkap)) {
-    $alamatLengkap = 'Jl. Tirtomoyo No. 083, Margorahayu, Ds. Tambak Jaya, Kec. Way Tenong, Kab. Lampung Barat, Prov. Lampung';
+$alamatLengkap = 'Jl. Tirtomoyo, No. 083, Margorahayu, Ds. Tambak Jaya, Kec. Way Tenong, Kab. Lampung Barat, Prov. Lampung';
+if (!empty($institusi['alamat']) && !empty($institusi['desa'])) {
+    $alamatLengkap = 'Jl. Tirtomoyo, No. 083, Margorahayu, Ds. ' . $institusi['desa'] . ', Kec. ' . ($institusi['kecamatan'] ?? 'Way Tenong') . ', Kab. ' . ($institusi['kota'] ?? 'Lampung Barat') . ', Prov. ' . ($institusi['provinsi'] ?? 'Lampung');
 }
 
-$nsm = !empty($institusi['nsm']) ? $institusi['nsm'] : '131218040003';
-$npsn = !empty($institusi['npsn']) ? $institusi['npsn'] : '69988776';
+$nsm = '111218040009';
+$npsn = '10648392';
 $webUrl = !empty($institusi['website']) ? $institusi['website'] : 'masmifhda.sch.id';
-$emailAddr = !empty($institusi['email']) ? $institusi['email'] : 'masmiftahulhuda@gmail.com';
-$telepon = !empty($institusi['telepon']) ? $institusi['telepon'] : '0819-3824-0819';
+$emailAddr = 'masmifhda083@gmail.com';
+$telepon = '081938240819';
 $kecamatan = !empty($institusi['kecamatan']) ? $institusi['kecamatan'] : 'Way Tenong';
 
 $cfg = $cfgProg ?? [];
@@ -294,9 +288,9 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
            OFFICIAL KOP SURAT STYLES (DUAL LOGO KEMENAG & MADRASAH)
            ===================================================================== */
         .kop-surat-resmi {
-            border-bottom: 3.5px double #000;
-            padding-bottom: 8px;
-            margin-bottom: 20px;
+            border-bottom: 3px double #000;
+            padding-bottom: 4px;
+            margin-bottom: 16px;
         }
         .kop-table-wrap {
             width: 100%;
@@ -306,45 +300,51 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
             vertical-align: middle;
         }
         .kop-logo-cell {
-            width: 72px;
+            width: 62px;
             text-align: center;
         }
         .kop-logo-cell img {
-            width: 66px;
-            height: 66px;
+            width: 55px;
+            height: 55px;
             object-fit: contain;
         }
         .kop-text-cell {
             text-align: center;
-            padding: 0 8px;
+            padding: 0 6px;
         }
         .kop-title-yayasan {
-            font-size: 10pt;
+            font-size: 8.2pt;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.2px;
             margin: 0;
             color: #000;
+            line-height: 1.25;
+            white-space: nowrap;
         }
         .kop-title-sekolah {
-            font-size: 14pt;
+            font-size: 11pt;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
-            margin: 2px 0 1px 0;
+            letter-spacing: 0.4px;
+            margin: 1.5px 0 1px 0;
             color: #000;
+            line-height: 1.2;
+            white-space: nowrap;
         }
         .kop-meta-resmi {
-            font-size: 8.5pt;
+            font-size: 7.2pt;
             font-weight: 700;
-            margin: 0;
+            margin: 1px 0;
             color: #000;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
         }
         .kop-alamat-resmi {
-            font-size: 8pt;
-            margin-top: 2px;
-            line-height: 1.3;
-            color: #222;
+            font-size: 6.8pt;
+            margin-top: 1px;
+            line-height: 1.25;
+            color: #111;
         }
 
         /* =====================================================================
