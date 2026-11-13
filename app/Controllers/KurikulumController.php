@@ -10,6 +10,7 @@ class KurikulumController {
             exit;
         }
         self::ensureSupervisiTables();
+        self::ensureMonitoringTables();
     }
 
     public function dashboard() {
@@ -2526,6 +2527,50 @@ class KurikulumController {
         } catch (\Throwable $e) {}
     }
 
+    public static function ensureMonitoringTables($db = null) {
+        if (!$db) $db = \App\Core\Database::connect('core');
+        try {
+            // Ensure bobot institusi
+            try { $db->exec("ALTER TABLE `institusi` ADD COLUMN `bobot_harian` INT DEFAULT 50"); } catch (\Throwable $e) {}
+            try { $db->exec("ALTER TABLE `institusi` ADD COLUMN `bobot_pas` INT DEFAULT 50"); } catch (\Throwable $e) {}
+
+            // Ensure kurikulum_kkm table
+            $db->exec("CREATE TABLE IF NOT EXISTS `kurikulum_kkm` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `tahun_ajaran_id` INT NULL,
+                `mapel_id` INT NOT NULL,
+                `tingkat` INT NOT NULL,
+                `nilai_kkm` INT NOT NULL DEFAULT 75,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `kkm_mapel_tingkat` (`tahun_ajaran_id`, `mapel_id`, `tingkat`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Ensure view_nilai_harian_unified exists
+            $db->exec("CREATE OR REPLACE ALGORITHM=UNDEFINED VIEW `view_nilai_harian_unified` AS
+                SELECT 
+                    nhd.id,
+                    nhd.siswa_id,
+                    nh.mapel_id,
+                    nh.kelas_id,
+                    nh.guru_id,
+                    nh.tahun_ajaran_id,
+                    nh.semester,
+                    TRIM(SUBSTRING_INDEX(nh.judul_materi, ' - ', 1)) as jenis_evaluasi,
+                    CASE 
+                        WHEN nh.judul_materi LIKE '% - %' THEN TRIM(SUBSTRING(nh.judul_materi, LOCATE(' - ', nh.judul_materi) + 3))
+                        ELSE nh.judul_materi
+                    END as materi,
+                    nhd.nilai,
+                    nh.tanggal,
+                    nh.created_at
+                FROM nilai_harian nh
+                JOIN nilai_harian_detail nhd ON nhd.nilai_harian_id = nh.id");
+        } catch (\Throwable $e) {
+            error_log("ensureMonitoringTables failed: " . $e->getMessage());
+        }
+    }
+
     private static function ensureTimSupervisiTables($db) {
         self::ensureSupervisiTables($db);
     }
@@ -2907,6 +2952,7 @@ class KurikulumController {
         $active_page   = 'kurikulum_monitoring_nilai';
         $db = \App\Core\Database::connect('core');
         $db_siakad = \App\Core\Database::connect('siakad');
+        self::ensureMonitoringTables($db);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
@@ -3018,6 +3064,7 @@ class KurikulumController {
         $active_page   = 'kurikulum_monitoring_nilai';
         $db = \App\Core\Database::connect('core');
         $db_siakad = \App\Core\Database::connect('siakad');
+        self::ensureMonitoringTables($db);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
@@ -3104,6 +3151,7 @@ class KurikulumController {
     public function monitoringNilaiCetak() {
         $db = \App\Core\Database::connect('core');
         $db_siakad = \App\Core\Database::connect('siakad');
+        self::ensureMonitoringTables($db);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
@@ -3167,6 +3215,7 @@ class KurikulumController {
     public function monitoringNilaiGlobal() {
         $db = \App\Core\Database::connect('core');
         $db_siakad = \App\Core\Database::connect('siakad');
+        self::ensureMonitoringTables($db);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
@@ -3213,6 +3262,7 @@ class KurikulumController {
 
     public static function getKelayakanPasData($db, $tahun_ajaran_id, $semester, $kelas_id) {
         if (!$kelas_id) return null;
+        self::ensureMonitoringTables($db);
         $db_siakad = \App\Core\Database::connect('siakad');
 
         // Kelas
@@ -3426,6 +3476,7 @@ class KurikulumController {
         $active_page   = 'kurikulum_kkm';
         $db = \App\Core\Database::connect('core');
         $db_siakad = \App\Core\Database::connect('siakad');
+        self::ensureMonitoringTables($db);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
@@ -3457,6 +3508,7 @@ class KurikulumController {
         }
 
         $db = \App\Core\Database::connect('core');
+        self::ensureMonitoringTables($db);
         $db_siakad = \App\Core\Database::connect('siakad');
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
@@ -3502,6 +3554,7 @@ class KurikulumController {
         $active_page   = 'kurikulum_rekap_ketuntasan';
         $db = \App\Core\Database::connect('core');
         $db_siakad = \App\Core\Database::connect('siakad');
+        self::ensureMonitoringTables($db);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch();
         $tahun_ajaran_id = $institusi['tahun_ajaran_id'] ?? 2;
