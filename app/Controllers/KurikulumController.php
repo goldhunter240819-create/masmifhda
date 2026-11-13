@@ -2590,12 +2590,93 @@ class KurikulumController {
         require __DIR__ . '/../../resources/views/kurikulum/supervisi_tim.php';
     }
 
+    public static function ensureProgramUnggulanTables($db = null) {
+        if (!$db) $db = \App\Core\Database::connect('core');
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS `kurikulum_program_unggulan_config` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `nomor_sk` VARCHAR(100) DEFAULT '421.3/088/MAS-MH/SK-PROG/VII/2026',
+                `tanggal_sk` DATE DEFAULT '2026-07-15',
+                `tahun_ajaran` VARCHAR(20) DEFAULT '2026/2027',
+                `semester` VARCHAR(20) DEFAULT 'Ganjil',
+                `kamad_id` INT NULL,
+                `kamad_nama` VARCHAR(150) DEFAULT 'Drs. Hamim Hasyim',
+                `kamad_nip` VARCHAR(50) DEFAULT '-',
+                `waka_id` INT NULL,
+                `waka_nama` VARCHAR(150) DEFAULT 'M AZIZ SULAIMAN, S.Pd',
+                `waka_nip` VARCHAR(50) DEFAULT '1804072704000002',
+                `kord_pesantren_id` INT NULL,
+                `kord_pesantren_nama` VARCHAR(150) DEFAULT 'SAIPUDIN AZIZ, S.Pd',
+                `pembina_rohis_id` INT NULL,
+                `pembina_rohis_nama` VARCHAR(150) DEFAULT 'DIDI HARTONO, S.Pd.I',
+                `kord_lifeskill_id` INT NULL,
+                `kord_lifeskill_nama` VARCHAR(150) DEFAULT 'INDAH YUNITASARI, S.Pd',
+                `kord_digital_id` INT NULL,
+                `kord_digital_nama` VARCHAR(150) DEFAULT 'SYAIFUL BAHRI, S.Pd',
+                `komite_nama` VARCHAR(150) DEFAULT 'H. AHMAD ROFIQ, S.Ag',
+                `pengawas_nama` VARCHAR(150) DEFAULT 'Drs. H. M. YUSUF, M.Pd.I',
+                `pengawas_nip` VARCHAR(50) DEFAULT '196805141994031002',
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $cnt = (int)$db->query("SELECT COUNT(*) FROM `kurikulum_program_unggulan_config`")->fetchColumn();
+            if ($cnt === 0) {
+                $db->exec("INSERT INTO `kurikulum_program_unggulan_config` 
+                    (nomor_sk, tanggal_sk, tahun_ajaran, semester, kamad_nama, waka_nama, kord_pesantren_nama, pembina_rohis_nama, kord_lifeskill_nama, kord_digital_nama, komite_nama, pengawas_nama, pengawas_nip)
+                    VALUES 
+                    ('421.3/088/MAS-MH/SK-PROG/VII/2026', '2026-07-15', '2026/2027', 'Ganjil', 'Drs. Hamim Hasyim', 'M AZIZ SULAIMAN, S.Pd', 'SAIPUDIN AZIZ, S.Pd', 'DIDI HARTONO, S.Pd.I', 'INDAH YUNITASARI, S.Pd', 'SYAIFUL BAHRI, S.Pd', 'H. AHMAD ROFIQ, S.Ag', 'Drs. H. M. YUSUF, M.Pd.I', '196805141994031002')");
+            }
+        } catch (\Throwable $e) {
+            error_log("ensureProgramUnggulanTables failed: " . $e->getMessage());
+        }
+    }
+
+    public static function getProgramUnggulanConfig($db = null) {
+        if (!$db) $db = \App\Core\Database::connect('core');
+        self::ensureProgramUnggulanTables($db);
+
+        $default = [
+            'nomor_sk' => '421.3/088/MAS-MH/SK-PROG/VII/2026',
+            'tanggal_sk' => '2026-07-15',
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Ganjil',
+            'kamad_id' => null,
+            'kamad_nama' => 'Drs. Hamim Hasyim',
+            'kamad_nip' => '-',
+            'waka_id' => null,
+            'waka_nama' => 'M AZIZ SULAIMAN, S.Pd',
+            'waka_nip' => '1804072704000002',
+            'kord_pesantren_id' => null,
+            'kord_pesantren_nama' => 'SAIPUDIN AZIZ, S.Pd',
+            'pembina_rohis_id' => null,
+            'pembina_rohis_nama' => 'DIDI HARTONO, S.Pd.I',
+            'kord_lifeskill_id' => null,
+            'kord_lifeskill_nama' => 'INDAH YUNITASARI, S.Pd',
+            'kord_digital_id' => null,
+            'kord_digital_nama' => 'SYAIFUL BAHRI, S.Pd',
+            'komite_nama' => 'H. AHMAD ROFIQ, S.Ag',
+            'pengawas_nama' => 'Drs. H. M. YUSUF, M.Pd.I',
+            'pengawas_nip' => '196805141994031002'
+        ];
+
+        try {
+            $row = $db->query("SELECT * FROM kurikulum_program_unggulan_config ORDER BY id DESC LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+            if ($row) {
+                return array_merge($default, array_filter($row));
+            }
+        } catch (\Throwable $e) {}
+
+        return $default;
+    }
+
     public function programUnggulan() {
         $active_module = 'kurikulum';
         $active_page   = 'program_unggulan';
         $db = \App\Core\Database::connect('core');
         $legalitas = self::getSupervisiLegalitas($db);
         extract($legalitas);
+
+        $cfgProg = self::getProgramUnggulanConfig($db);
 
         $daftarGuru = [];
         try {
@@ -2610,12 +2691,137 @@ class KurikulumController {
         $legalitas = self::getSupervisiLegalitas($db);
         extract($legalitas);
 
+        $cfgProg = self::getProgramUnggulanConfig($db);
+
         $daftarGuru = [];
         try {
             $daftarGuru = $db->query("SELECT id, nama, nip, jabatan, is_kamad FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable $e) {}
 
         require __DIR__ . '/../../resources/views/kurikulum/program_unggulan_cetak.php';
+    }
+
+    public function updateProgramUnggulanConfig() {
+        $db = \App\Core\Database::connect('core');
+        self::ensureProgramUnggulanTables($db);
+
+        $nomor_sk = trim($_POST['nomor_sk'] ?? '421.3/088/MAS-MH/SK-PROG/VII/2026');
+        $tanggal_sk = trim($_POST['tanggal_sk'] ?? '2026-07-15');
+        $tahun_ajaran = trim($_POST['tahun_ajaran'] ?? '2026/2027');
+        $semester = trim($_POST['semester'] ?? 'Ganjil');
+
+        $kamad_id = !empty($_POST['kamad_id']) ? (int)$_POST['kamad_id'] : null;
+        $kamad_nama = trim($_POST['kamad_nama'] ?? 'Drs. Hamim Hasyim');
+        $kamad_nip = trim($_POST['kamad_nip'] ?? '-');
+
+        $waka_id = !empty($_POST['waka_id']) ? (int)$_POST['waka_id'] : null;
+        $waka_nama = trim($_POST['waka_nama'] ?? 'M AZIZ SULAIMAN, S.Pd');
+        $waka_nip = trim($_POST['waka_nip'] ?? '1804072704000002');
+
+        $kord_pesantren_id = !empty($_POST['kord_pesantren_id']) ? (int)$_POST['kord_pesantren_id'] : null;
+        $kord_pesantren_nama = trim($_POST['kord_pesantren_nama'] ?? 'SAIPUDIN AZIZ, S.Pd');
+
+        $pembina_rohis_id = !empty($_POST['pembina_rohis_id']) ? (int)$_POST['pembina_rohis_id'] : null;
+        $pembina_rohis_nama = trim($_POST['pembina_rohis_nama'] ?? 'DIDI HARTONO, S.Pd.I');
+
+        $kord_lifeskill_id = !empty($_POST['kord_lifeskill_id']) ? (int)$_POST['kord_lifeskill_id'] : null;
+        $kord_lifeskill_nama = trim($_POST['kord_lifeskill_nama'] ?? 'INDAH YUNITASARI, S.Pd');
+
+        $kord_digital_id = !empty($_POST['kord_digital_id']) ? (int)$_POST['kord_digital_id'] : null;
+        $kord_digital_nama = trim($_POST['kord_digital_nama'] ?? 'SYAIFUL BAHRI, S.Pd');
+
+        $komite_nama = trim($_POST['komite_nama'] ?? 'H. AHMAD ROFIQ, S.Ag');
+        $pengawas_nama = trim($_POST['pengawas_nama'] ?? 'Drs. H. M. YUSUF, M.Pd.I');
+        $pengawas_nip = trim($_POST['pengawas_nip'] ?? '196805141994031002');
+
+        try {
+            $exists = $db->query("SELECT id FROM kurikulum_program_unggulan_config LIMIT 1")->fetchColumn();
+            if ($exists) {
+                $stmt = $db->prepare("UPDATE kurikulum_program_unggulan_config SET
+                    nomor_sk = :nomor_sk,
+                    tanggal_sk = :tanggal_sk,
+                    tahun_ajaran = :tahun_ajaran,
+                    semester = :semester,
+                    kamad_id = :kamad_id,
+                    kamad_nama = :kamad_nama,
+                    kamad_nip = :kamad_nip,
+                    waka_id = :waka_id,
+                    waka_nama = :waka_nama,
+                    waka_nip = :waka_nip,
+                    kord_pesantren_id = :kord_pesantren_id,
+                    kord_pesantren_nama = :kord_pesantren_nama,
+                    pembina_rohis_id = :pembina_rohis_id,
+                    pembina_rohis_nama = :pembina_rohis_nama,
+                    kord_lifeskill_id = :kord_lifeskill_id,
+                    kord_lifeskill_nama = :kord_lifeskill_nama,
+                    kord_digital_id = :kord_digital_id,
+                    kord_digital_nama = :kord_digital_nama,
+                    komite_nama = :komite_nama,
+                    pengawas_nama = :pengawas_nama,
+                    pengawas_nip = :pengawas_nip
+                    WHERE id = :id");
+                $stmt->execute([
+                    ':nomor_sk' => $nomor_sk,
+                    ':tanggal_sk' => $tanggal_sk,
+                    ':tahun_ajaran' => $tahun_ajaran,
+                    ':semester' => $semester,
+                    ':kamad_id' => $kamad_id,
+                    ':kamad_nama' => $kamad_nama,
+                    ':kamad_nip' => $kamad_nip,
+                    ':waka_id' => $waka_id,
+                    ':waka_nama' => $waka_nama,
+                    ':waka_nip' => $waka_nip,
+                    ':kord_pesantren_id' => $kord_pesantren_id,
+                    ':kord_pesantren_nama' => $kord_pesantren_nama,
+                    ':pembina_rohis_id' => $pembina_rohis_id,
+                    ':pembina_rohis_nama' => $pembina_rohis_nama,
+                    ':kord_lifeskill_id' => $kord_lifeskill_id,
+                    ':kord_lifeskill_nama' => $kord_lifeskill_nama,
+                    ':kord_digital_id' => $kord_digital_id,
+                    ':kord_digital_nama' => $kord_digital_nama,
+                    ':komite_nama' => $komite_nama,
+                    ':pengawas_nama' => $pengawas_nama,
+                    ':pengawas_nip' => $pengawas_nip,
+                    ':id' => $exists
+                ]);
+            } else {
+                $stmt = $db->prepare("INSERT INTO kurikulum_program_unggulan_config
+                    (nomor_sk, tanggal_sk, tahun_ajaran, semester, kamad_id, kamad_nama, kamad_nip, waka_id, waka_nama, waka_nip, kord_pesantren_id, kord_pesantren_nama, pembina_rohis_id, pembina_rohis_nama, kord_lifeskill_id, kord_lifeskill_nama, kord_digital_id, kord_digital_nama, komite_nama, pengawas_nama, pengawas_nip)
+                    VALUES
+                    (:nomor_sk, :tanggal_sk, :tahun_ajaran, :semester, :kamad_id, :kamad_nama, :kamad_nip, :waka_id, :waka_nama, :waka_nip, :kord_pesantren_id, :kord_pesantren_nama, :pembina_rohis_id, :pembina_rohis_nama, :kord_lifeskill_id, :kord_lifeskill_nama, :kord_digital_id, :kord_digital_nama, :komite_nama, :pengawas_nama, :pengawas_nip)");
+                $stmt->execute([
+                    ':nomor_sk' => $nomor_sk,
+                    ':tanggal_sk' => $tanggal_sk,
+                    ':tahun_ajaran' => $tahun_ajaran,
+                    ':semester' => $semester,
+                    ':kamad_id' => $kamad_id,
+                    ':kamad_nama' => $kamad_nama,
+                    ':kamad_nip' => $kamad_nip,
+                    ':waka_id' => $waka_id,
+                    ':waka_nama' => $waka_nama,
+                    ':waka_nip' => $waka_nip,
+                    ':kord_pesantren_id' => $kord_pesantren_id,
+                    ':kord_pesantren_nama' => $kord_pesantren_nama,
+                    ':pembina_rohis_id' => $pembina_rohis_id,
+                    ':pembina_rohis_nama' => $pembina_rohis_nama,
+                    ':kord_lifeskill_id' => $kord_lifeskill_id,
+                    ':kord_lifeskill_nama' => $kord_lifeskill_nama,
+                    ':kord_digital_id' => $kord_digital_id,
+                    ':kord_digital_nama' => $kord_digital_nama,
+                    ':komite_nama' => $komite_nama,
+                    ':pengawas_nama' => $pengawas_nama,
+                    ':pengawas_nip' => $pengawas_nip
+                ]);
+            }
+            if (session_status() === PHP_SESSION_NONE) session_start();
+            $_SESSION['flash_msg'] = 'Pengaturan Tim & Program Unggulan berhasil diperbarui!';
+        } catch (\Throwable $e) {
+            if (session_status() === PHP_SESSION_NONE) session_start();
+            $_SESSION['flash_err'] = 'Gagal menyimpan pengaturan: ' . $e->getMessage();
+        }
+
+        header('Location: ' . base_url('kurikulum/program-unggulan'));
+        exit;
     }
 
     public function updateTimSupervisiConfig() {

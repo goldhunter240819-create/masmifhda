@@ -2514,6 +2514,7 @@ $router->add('GET', '/kurikulum/supervisi/laporan-rtl', [\App\Controllers\Kuriku
 
 // 3 PROGRAM UNGGULAN (Madrasah Pesantren, Life Skill, Digital)
 $router->add('GET', '/kurikulum/program-unggulan', [\App\Controllers\KurikulumController::class, 'programUnggulan']);
+$router->add('POST', '/kurikulum/program-unggulan/update-config', [\App\Controllers\KurikulumController::class, 'updateProgramUnggulanConfig']);
 $router->add('GET', '/kurikulum/program-unggulan/cetak', [\App\Controllers\KurikulumController::class, 'cetakProgramUnggulan']);
 $router->add('GET', '/kurikulum/program-unggulan/pdf', [\App\Controllers\KurikulumController::class, 'cetakProgramUnggulan']);
 

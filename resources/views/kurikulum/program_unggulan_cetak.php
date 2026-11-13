@@ -21,23 +21,38 @@ $webUrl = !empty($institusi['website']) ? $institusi['website'] : 'masmifhda.sch
 $emailAddr = !empty($institusi['email']) ? $institusi['email'] : 'masmiftahulhuda@gmail.com';
 $kecamatan = !empty($institusi['kecamatan']) ? $institusi['kecamatan'] : 'Way Tenong';
 
-$tahun_ajaran = $tahun_ajaran ?? '2026/2027';
-$semester = $semester ?? 'Ganjil';
-$kamad_nama = $kamad['nama'] ?? 'Drs. Hamim Hasyim';
-$kamad_nip = $kamad['nip'] ?? '-';
-$waka_nama = $ketua_panitia['nama'] ?? 'M AZIZ SULAIMAN, S.Pd';
-$waka_nip = $ketua_panitia['nip'] ?? '1804072704000002';
-$pengawas_nama = $pengawas['nama'] ?? 'Drs. H. M. YUSUF, M.Pd.I';
-$pengawas_nip = $pengawas['nip'] ?? '196805141994031002';
+$cfg = $cfgProg ?? [];
+$nomor_sk = $cfg['nomor_sk'] ?? '421.3/088/MAS-MH/SK-PROG/VII/2026';
+$tanggal_sk = $cfg['tanggal_sk'] ?? '2026-07-15';
+$tahun_ajaran = $cfg['tahun_ajaran'] ?? '2026/2027';
+$semester = $cfg['semester'] ?? 'Ganjil';
 
-$sk_nomor = '421.3/088/MAS-MH/SK-PROG/VII/2026';
-$tgl_penetapan = '15 Juli 2026';
+$kamad_nama = $cfg['kamad_nama'] ?? 'Drs. Hamim Hasyim';
+$kamad_nip = $cfg['kamad_nip'] ?? '-';
+$waka_nama = $cfg['waka_nama'] ?? 'M AZIZ SULAIMAN, S.Pd';
+$waka_nip = $cfg['waka_nip'] ?? '1804072704000002';
+
+$kord_pesantren_nama = $cfg['kord_pesantren_nama'] ?? 'SAIPUDIN AZIZ, S.Pd';
+$pembina_rohis_nama = $cfg['pembina_rohis_nama'] ?? 'DIDI HARTONO, S.Pd.I';
+$kord_lifeskill_nama = $cfg['kord_lifeskill_nama'] ?? 'INDAH YUNITASARI, S.Pd';
+$kord_digital_nama = $cfg['kord_digital_nama'] ?? 'SYAIFUL BAHRI, S.Pd';
+
+$komite_nama = $cfg['komite_nama'] ?? 'H. AHMAD ROFIQ, S.Ag';
+$pengawas_nama = $cfg['pengawas_nama'] ?? 'Drs. H. M. YUSUF, M.Pd.I';
+$pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
+
+$bulanIndo = [
+    1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+$tgl_obj = strtotime($tanggal_sk);
+$tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_obj)] . ' ' . date('Y', $tgl_obj);
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Buku Pedoman 3 Program Unggulan TP <?= htmlspecialchars($tahun_ajaran) ?> - <?= htmlspecialchars($sekolah_nama) ?></title>
+    <title>Buku Pedoman 3 Program Unggulan - <?= htmlspecialchars($sekolah_nama) ?></title>
     <link rel="icon" type="image/png" href="<?= htmlspecialchars($brand['favicon']) ?>">
     <style>
         @page {
@@ -48,14 +63,14 @@ $tgl_penetapan = '15 Juli 2026';
             .no-print { display: none !important; }
             body { padding: 0 !important; background: #fff !important; }
             .page-break { page-break-before: always; }
-            .container { box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+            .container { box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
         }
         body {
             font-family: 'Times New Roman', Times, serif;
             font-size: 11pt;
             line-height: 1.5;
             color: #000;
-            background: #e2e8f0;
+            background: #cbd5e1;
             margin: 0;
             padding: 30px 10px;
         }
@@ -66,12 +81,69 @@ $tgl_penetapan = '15 Juli 2026';
             background: #ffffff;
             padding: 2.2cm 2.2cm 2.2cm 2.8cm;
             box-sizing: border-box;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            position: relative;
         }
+        /* COVER PAGE STYLES */
+        .cover-wrapper {
+            border: 4px double #064e3b;
+            padding: 25px 20px;
+            min-height: 252mm;
+            box-sizing: border-box;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .cover-header {
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 11pt;
+            letter-spacing: 1px;
+            color: #0f172a;
+            line-height: 1.4;
+        }
+        .cover-title {
+            margin: 30px 0;
+        }
+        .cover-title h1 {
+            font-size: 18pt;
+            font-weight: 900;
+            color: #064e3b;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .cover-title h2 {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #1e293b;
+            margin: 0 0 14px 0;
+            text-transform: uppercase;
+        }
+        .cover-title p {
+            font-size: 10.5pt;
+            font-style: italic;
+            color: #334155;
+            max-width: 80%;
+            margin: 0 auto;
+            line-height: 1.4;
+            text-align: center;
+        }
+        .cover-footer {
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 10.5pt;
+            color: #0f172a;
+            line-height: 1.45;
+            border-top: 2px solid #064e3b;
+            padding-top: 15px;
+        }
+        /* STANDARD DOCUMENT STYLES */
         .kop-surat {
             border-bottom: 3px double #000;
             padding-bottom: 10px;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
             text-align: center;
         }
         .kop-table {
@@ -107,10 +179,10 @@ $tgl_penetapan = '15 Juli 2026';
         }
         .doc-title {
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
         }
         .doc-title h1 {
-            font-size: 13pt;
+            font-size: 12.5pt;
             font-weight: bold;
             text-transform: uppercase;
             margin: 0;
@@ -127,29 +199,29 @@ $tgl_penetapan = '15 Juli 2026';
             margin-top: 3px;
         }
         h2.bab-heading {
-            font-size: 12pt;
+            font-size: 11.5pt;
             font-weight: bold;
             text-transform: uppercase;
             border-bottom: 1.5px solid #000;
             padding-bottom: 4px;
-            margin-top: 22px;
-            margin-bottom: 12px;
+            margin-top: 20px;
+            margin-bottom: 10px;
         }
         h3.sub-heading {
             font-size: 11pt;
             font-weight: bold;
-            margin-top: 14px;
+            margin-top: 12px;
             margin-bottom: 6px;
         }
         p, li {
             text-align: justify;
             margin-top: 4px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         table.data-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 12px 0 18px 0;
+            margin: 10px 0 16px 0;
             font-size: 10pt;
         }
         table.data-table th, table.data-table td {
@@ -165,7 +237,7 @@ $tgl_penetapan = '15 Juli 2026';
         .ttd-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 30px;
+            margin-top: 25px;
             page-break-inside: avoid;
         }
         .ttd-table td {
@@ -182,7 +254,7 @@ $tgl_penetapan = '15 Juli 2026';
             border: 1px solid #cbd5e1;
             padding: 8px 16px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.18);
             display: flex;
             gap: 10px;
             align-items: center;
@@ -221,24 +293,65 @@ $tgl_penetapan = '15 Juli 2026';
 <!-- FLOATING PRINT CONTROLS -->
 <div class="floating-bar no-print">
     <button onclick="window.print()" class="btn-print">
-        🖨️ Cetak / Simpan Dokumen (PDF)
+        🖨️ Cetak Dokumen PDF (A4)
     </button>
     <a href="/kurikulum/program-unggulan" class="btn-back">
-        ⬅ Kembali ke Dashboard
+        ⬅ Kembali ke Halaman Utama
     </a>
 </div>
 
 <!-- ========================================================================= -->
-<!-- HALAMAN 1: KOP, SK PENETAPAN & BAB I                                     -->
+<!-- HALAMAN 1: COVER DEPAN RESMI                                             -->
 <!-- ========================================================================= -->
 <div class="container">
-    
-    <!-- KOP SURAT RESMI -->
+    <div class="cover-wrapper">
+        <div class="cover-header">
+            KEMENTERIAN AGAMA REPUBLIK INDONESIA<br>
+            KANTOR KEMENTERIAN AGAMA KABUPATEN LAMPUNG BARAT<br>
+            <?= htmlspecialchars($nama_yayasan) ?><br>
+            <strong style="font-size: 13pt; color: #064e3b;"><?= htmlspecialchars($sekolah_nama) ?></strong>
+        </div>
+
+        <div>
+            <div style="margin: 25px auto;">
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo Madrasah" style="width: 125px; height: 125px; object-fit: contain;">
+            </div>
+
+            <div class="cover-title">
+                <h1>BUKU PEDOMAN & BLUEPRINT<br>TIGA PROGRAM UNGGULAN</h1>
+                <h2>MADRASAH ALIYAH MIFTAHUL HUDA</h2>
+                <div style="font-size: 12pt; font-weight: bold; color: #0f172a; margin-bottom: 8px;">
+                    1. MADRASAH BERBASIS PESANTREN & ROHIS<br>
+                    2. MADRASAH BERBASIS LIFE SKILL<br>
+                    3. MADRASAH BERBASIS DIGITAL
+                </div>
+                <div style="font-size: 11pt; font-weight: bold; margin-bottom: 12px;">
+                    TAHUN PELAJARAN <?= htmlspecialchars($tahun_ajaran) ?>
+                </div>
+                <p>
+                    "Harmonisasi Pendidikan Karakter Qur'ani, Kemandirian Wirausaha Santri melalui Kejuruan Vokasi, serta Penguasaan Teknologi Cerdas Berbasis Sistem Modern Menuju Era AI 5.0"
+                </p>
+            </div>
+        </div>
+
+        <div class="cover-footer">
+            TIM PENGEMBANG KURIKULUM & INOVASI MADRASAH<br>
+            MADRASAH ALIYAH MIFTAHUL HUDA<br>
+            KECAMATAN WAY TENONG, KABUPATEN LAMPUNG BARAT<br>
+            PROVINSI LAMPUNG &bull; TAHUN 2026
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- HALAMAN 2: LEMBAR PENGESAHAN RESMI                                       -->
+<!-- ========================================================================= -->
+<div class="container page-break">
     <div class="kop-surat">
         <table class="kop-table">
             <tr>
-                <td style="width: 80px; text-align: center;">
-                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" style="width: 75px; height: 75px; object-fit: contain;">
+                <td style="width: 75px; text-align: center;">
+                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" style="width: 70px; height: 70px; object-fit: contain;">
                 </td>
                 <td style="text-align: center; padding: 0 10px;">
                     <div class="kop-yayasan"><?= htmlspecialchars($nama_yayasan) ?></div>
@@ -253,23 +366,91 @@ $tgl_penetapan = '15 Juli 2026';
         </table>
     </div>
 
-    <!-- JUDUL DOKUMEN -->
     <div class="doc-title">
-        <h1>SURAT KEPUTUSAN KEPALA MADRASAH ALIYAH MIFTAHUL HUDA</h1>
-        <div class="sk-no">Nomor: <?= htmlspecialchars($sk_nomor) ?></div>
-        <div class="sub-title">TENTANG<br>PENETAPAN BLUEPRINT DAN PEDOMAN IMPLEMENTASI TIGA PROGRAM UNGGULAN<br>(MADRASAH PESANTREN, MADRASAH LIFE SKILL, DAN MADRASAH DIGITAL)<br>TAHUN PELAJARAN <?= htmlspecialchars($tahun_ajaran) ?></div>
+        <h1>LEMBAR PENGESAHAN</h1>
+        <div class="sub-title">DOKUMEN PEDOMAN & BLUEPRINT TIGA PROGRAM UNGGULAN<br><?= htmlspecialchars($sekolah_nama) ?><br>TAHUN PELAJARAN <?= htmlspecialchars($tahun_ajaran) ?></div>
     </div>
 
-    <!-- KONSIDERANS SK -->
-    <table style="width: 100%; border-collapse: collapse; font-size: 10.5pt; margin-bottom: 14px;">
+    <p style="text-indent: 30px;">
+        Setelah melalui proses kajian, penyelarasan kurikulum, dan rapat pleno dewan guru bersama Tim Pengembang Kurikulum serta Pengurus Komite Madrasah, maka dokumen <strong>Buku Pedoman dan Blueprint Tiga Program Unggulan (Madrasah Berbasis Pesantren & ROHIS, Madrasah Berbasis Life Skill, dan Madrasah Berbasis Digital)</strong> ini secara resmi disahkan untuk dipergunakan sebagai panduan operasional KBM, pembinaan kesiswaan, alokasi sarana, dan evaluasi capaian mutu di <?= htmlspecialchars($sekolah_nama) ?> pada Tahun Pelajaran <?= htmlspecialchars($tahun_ajaran) ?>.
+    </p>
+
+    <div style="margin-top: 35px;">
+        <table class="ttd-table">
+            <tr>
+                <td style="width: 50%;">
+                    Disetujui oleh:<br>
+                    <strong>Ketua Komite Madrasah</strong><br>
+                    MAS Miftahul Huda<br><br><br><br><br>
+                    <strong><?= htmlspecialchars($komite_nama) ?></strong><br>
+                    Ketua Komite
+                </td>
+                <td style="width: 50%;">
+                    Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
+                    Pada tanggal : <?= htmlspecialchars($tgl_sk_formatted) ?><br>
+                    <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br>
+                    <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
+                    NIP. <?= htmlspecialchars($kamad_nip) ?>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding-top: 40px;">
+                    Penyusun:<br>
+                    <strong>Ketua Tim Pengembang Kurikulum</strong><br>
+                    Waka Kurikulum MAS Miftahul Huda<br><br><br><br><br>
+                    <strong><?= htmlspecialchars($waka_nama) ?></strong><br>
+                    NIP. <?= htmlspecialchars($waka_nip) ?>
+                </td>
+                <td style="padding-top: 40px;">
+                    Mengetahui / Mengesahkan:<br>
+                    <strong>Pengawas Pembina Madrasah Ahli Madya</strong><br>
+                    Kantor Kementerian Agama Kab. Lampung Barat<br><br><br><br><br>
+                    <strong><?= htmlspecialchars($pengawas_nama) ?></strong><br>
+                    NIP. <?= htmlspecialchars($pengawas_nip) ?>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- HALAMAN 3: SURAT KEPUTUSAN (SK) PENETAPAN KEPALA MADRASAH                -->
+<!-- ========================================================================= -->
+<div class="container page-break">
+    <div class="kop-surat">
+        <table class="kop-table">
+            <tr>
+                <td style="width: 75px; text-align: center;">
+                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" style="width: 70px; height: 70px; object-fit: contain;">
+                </td>
+                <td style="text-align: center; padding: 0 10px;">
+                    <div class="kop-yayasan"><?= htmlspecialchars($nama_yayasan) ?></div>
+                    <div class="kop-madrasah"><?= htmlspecialchars($sekolah_nama) ?></div>
+                    <div class="kop-status">NSM : 131218040003 &nbsp;|&nbsp; NPSN : 10816823 &nbsp;|&nbsp; STATUS : TERAKREDITASI</div>
+                    <div class="kop-alamat">
+                        <?= htmlspecialchars($alamatLengkap) ?><br>
+                        Website: <?= htmlspecialchars($webUrl) ?> &nbsp;|&nbsp; Email: <?= htmlspecialchars($emailAddr) ?>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="doc-title">
+        <h1>SURAT KEPUTUSAN KEPALA MADRASAH ALIYAH MIFTAHUL HUDA</h1>
+        <div class="sk-no">Nomor: <?= htmlspecialchars($nomor_sk) ?></div>
+        <div class="sub-title">TENTANG<br>PENETAPAN TIGA PROGRAM UNGGULAN MADRASAH<br>TAHUN PELAJARAN <?= htmlspecialchars($tahun_ajaran) ?></div>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 12px;">
         <tr>
             <td style="width: 15%; vertical-align: top; font-weight: bold;">Menimbang</td>
             <td style="width: 3%; vertical-align: top;">:</td>
             <td style="width: 82%; text-align: justify;">
-                <ol style="margin: 0; padding-left: 18px;">
-                    <li>Bahwa dalam rangka merespons dinamika era globalisasi, revolusi industri 5.0, serta tuntutan kemandirian generasi muda Islam, diperlukan akselerasi mutu pendidikan madrasah yang adaptif dan komprehensif;</li>
-                    <li>Bahwa integrasi keilmuan Imtaq, keterampilan kemandirian (life skill), dan teknologi digital merupakan pilar fundamental dalam melahirkan lulusan yang berkepribadian Qur'ani, mandiri, dan berdaya saing;</li>
-                    <li>Bahwa berdasarkan pertimbangan huruf a dan b, perlu menetapkan Keputusan Kepala Madrasah tentang Tiga Program Unggulan MAS Miftahul Huda Tahun Pelajaran <?= htmlspecialchars($tahun_ajaran) ?>.</li>
+                <ol style="margin: 0; padding-left: 16px;">
+                    <li>Bahwa dalam rangka menjawab tantangan zaman dan membekali lulusan dengan imtaq kokoh, kemandirian ekonomi, dan literasi teknologi modern, diperlukan program terarah dan berkesinambungan;</li>
+                    <li>Bahwa perpaduan antara karakter kepesantrenan, organisasi kerohanian Islam (ROHIS), keterampilan life skill, dan otomasi madrasah digital merupakan pilar keunggulan MAS Miftahul Huda;</li>
+                    <li>Bahwa berdasarkan pertimbangan huruf a dan b, perlu menetapkan Surat Keputusan Kepala Madrasah tentang Tiga Program Unggulan TP <?= htmlspecialchars($tahun_ajaran) ?>.</li>
                 </ol>
             </td>
         </tr>
@@ -277,12 +458,11 @@ $tgl_penetapan = '15 Juli 2026';
             <td style="font-weight: bold; vertical-align: top; padding-top: 6px;">Mengingat</td>
             <td style="vertical-align: top; padding-top: 6px;">:</td>
             <td style="text-align: justify; padding-top: 6px;">
-                <ol style="margin: 0; padding-left: 18px;">
-                    <li>Undang-Undang Republik Indonesia Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional;</li>
-                    <li>Undang-Undang Republik Indonesia Nomor 18 Tahun 2019 tentang Pesantren;</li>
-                    <li>Peraturan Menteri Agama RI Nomor 90 Tahun 2013 tentang Penyelenggaraan Pendidikan Madrasah;</li>
+                <ol style="margin: 0; padding-left: 16px;">
+                    <li>Undang-Undang RI Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional;</li>
+                    <li>Undang-Undang RI Nomor 18 Tahun 2019 tentang Pesantren;</li>
                     <li>KMA Nomor 347 Tahun 2022 tentang Pedoman Implementasi Kurikulum Merdeka pada Madrasah;</li>
-                    <li>Rencana Strategis (Renstra) dan Kurikulum Operasional Madrasah (KOM) MAS Miftahul Huda.</li>
+                    <li>Rencana Kerja Tahunan dan Kurikulum Operasional Madrasah (KOM) MAS Miftahul Huda.</li>
                 </ol>
             </td>
         </tr>
@@ -290,259 +470,201 @@ $tgl_penetapan = '15 Juli 2026';
             <td style="font-weight: bold; vertical-align: top; padding-top: 6px;">Memutuskan</td>
             <td style="vertical-align: top; padding-top: 6px;">:</td>
             <td style="padding-top: 6px; font-weight: bold;">
-                KEPUTUSAN KEPALA MAS MIFTAHUL HUDA TENTANG IMPLEMENTASI TIGA PROGRAM UNGGULAN MADRASAH TP <?= htmlspecialchars($tahun_ajaran) ?>.
+                KEPUTUSAN KEPALA MADRASAH ALIYAH MIFTAHUL HUDA TENTANG PENETAPAN TIGA PROGRAM UNGGULAN TAHUN PELAJARAN <?= htmlspecialchars($tahun_ajaran) ?>.
             </td>
         </tr>
     </table>
 
-    <table style="width: 100%; border-collapse: collapse; font-size: 10.5pt;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
         <tr>
             <td style="width: 15%; vertical-align: top; font-weight: bold;">KESATU</td>
             <td style="width: 3%; vertical-align: top;">:</td>
             <td style="text-align: justify;">
-                Menetapkan Tiga Program Unggulan Resmi pada <?= htmlspecialchars($sekolah_nama) ?> yang meliputi: <strong>(1) Madrasah Berbasis Pesantren</strong>, <strong>(2) Madrasah Berbasis Life Skill</strong>, dan <strong>(3) Madrasah Berbasis Digital</strong>.
+                Menetapkan Tiga Program Unggulan Resmi MAS Miftahul Huda yaitu: <strong>(1) Madrasah Berbasis Pesantren & ROHIS</strong>, <strong>(2) Madrasah Berbasis Life Skill</strong>, dan <strong>(3) Madrasah Berbasis Digital</strong>.
             </td>
         </tr>
         <tr>
             <td style="font-weight: bold; vertical-align: top; padding-top: 4px;">KEDUA</td>
             <td style="vertical-align: top; padding-top: 4px;">:</td>
             <td style="text-align: justify; padding-top: 4px;">
-                Tiga Program Unggulan sebagaimana Diktum KESATU menjadi acuan operasional KBM, ekstrakurikuler, pembiasaan karakter, alokasi sarana prasarana, serta sistem evaluasi kelulusan santri/siswa.
+                Menunjuk koordinator dan pembina pelaksanaan program: Koordinator Pesantren (<strong><?= htmlspecialchars($kord_pesantren_nama) ?></strong>), Pembina ROHIS (<strong><?= htmlspecialchars($pembina_rohis_nama) ?></strong>), Koordinator Life Skill (<strong><?= htmlspecialchars($kord_lifeskill_nama) ?></strong>), dan Koordinator Digital (<strong><?= htmlspecialchars($kord_digital_nama) ?></strong>).
             </td>
         </tr>
         <tr>
             <td style="font-weight: bold; vertical-align: top; padding-top: 4px;">KETIGA</td>
             <td style="vertical-align: top; padding-top: 4px;">:</td>
             <td style="text-align: justify; padding-top: 4px;">
-                Segala biaya yang timbul akibat pelaksanaan keputusan ini dibebankan pada Rencana Anggaran Pendapatan dan Belanja Madrasah (RAPBM) serta sumber dana lain yang sah dan halal.
+                Keputusan ini berlaku sejak tanggal ditetapkan, dan apabila terdapat kekeliruan akan diperbaiki sebagaimana mestinya.
             </td>
         </tr>
     </table>
 
+    <div style="margin-top: 25px; float: right; width: 45%; text-align: center; font-size: 10.5pt;">
+        Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
+        Pada tanggal : <?= htmlspecialchars($tgl_sk_formatted) ?><br>
+        <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br>
+        <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
+        NIP. <?= htmlspecialchars($kamad_nip) ?>
+    </div>
+    <div style="clear: both;"></div>
 </div>
 
 <!-- ========================================================================= -->
-<!-- HALAMAN 2: BAB I & BLUEPRINT PROGRAM 1 (PESANTREN)                        -->
+<!-- HALAMAN 4: BLUEPRINT TIGA PROGRAM (RINGKAS & TEPAT SESUAI ARAHAN)        -->
 <!-- ========================================================================= -->
 <div class="container page-break">
+    <h2 class="bab-heading">RANCANG BANGUN & DESAIN TIGA PROGRAM UNGGULAN</h2>
 
-    <h2 class="bab-heading">BAB I: PENDAHULUAN & VISI STRATEGIS</h2>
+    <h3 class="sub-heading">1. PROGRAM MADRASAH BERBASIS PESANTREN & ROHIS</h3>
     <p>
-        Pendidikan Islam di tingkat Madrasah Aliyah dituntut tidak hanya mentransfer pengetahuan kognitif semata, melainkan juga harus mampu membangun integritas moral-spiritual, memberikan bekal kecakapan hidup (life skill) yang mandiri, serta membekali peserta didik dengan literasi digital yang mumpuni. MAS Miftahul Huda, yang tumbuh dan mengakar di lingkungan Pondok Pesantren Mathla'ul Anwar, memiliki keunggulan komparatif dan historis untuk menyatukan tiga pilar peradaban modern: <em>Kekokohan Aqidah-Syariah</em>, <em>Kreativitas Kemandirian Ekonomi</em>, dan <em>Kecanggihan Teknologi Informasi</em>.
+        Program ini bertujuan memperkuat karakter religius, pembinaan akhlakul karimah, serta kepemimpinan dakwah santri melalui sinergi pesantren dan organisasi Kerohanian Islam (ROHIS):
     </p>
-
-    <h3 class="sub-heading">Visi Program Unggulan</h3>
-    <p>
-        <em>"Terwujudnya Generasi Santri-Pelajar yang Berakhlak Mulia, Mutafaqqih Fiddin, Mandiri Berdaya Saing melalui Keterampilan Vokasi, dan Unggul dalam Ekosistem Teknologi Digital 5.0."</em>
-    </p>
-
-    <h2 class="bab-heading">BAB II: RANCANG BANGUN TIGA PROGRAM UNGGULAN</h2>
-
-    <h3 class="sub-heading">PROGRAM 1: MADRASAH BERBASIS PESANTREN (ISLAMIC BOARDING EXCELLENCE)</h3>
-    <p>
-        Program Madrasah Berbasis Pesantren dirancang untuk mempertahankan dan mengembangkan tradisi keilmuan Islam <em>Ahlussunnah wal Jama'ah</em> yang bersanad. Program ini mengintegrasikan kurikulum Kementerian Agama dengan kurikulum salafiyah pesantren melalui empat pilar pokok:
-    </p>
-
-    <ol style="padding-left: 20px;">
+    <ul style="padding-left: 20px; font-size: 10pt;">
         <li>
-            <strong>Tahfidz & Tahsin Al-Qur'an Standar Mutqin:</strong>
-            <p>
-                Setiap peserta didik ditargetkan menyelesaikan hafalan minimal 3 Juz (Juz 30, Juz 1, dan Juz 2) dengan kaidah tajwid dan fashahah makharijul huruf yang tepat. Bagi santri kelas peminatan asrama, dibuka kelas akselerasi tahfidz 10 hingga 30 Juz. Evaluasi hafalan dilaksanakan melalui sima'an berkala, muraja'ah yaumiyyah, dan Munaqosyah Uji Publik resmi.
-            </p>
+            <strong>Tahfidz & Tahsin Al-Qur'an Terpadu:</strong>
+            Target capaian minimal mutqin 3 Juz (Juz 30, Juz 1, dan Juz 2) bagi peserta didik reguler, serta kelas akselerasi 10–30 Juz bagi santri peminatan asrama melalui sistem talaqqi, muraja'ah terjadwal, dan munaqosyah resmi.
         </li>
         <li>
-            <strong>Penguasaan Turats & Kitab Kuning Klasik:</strong>
-            <p>
-                Membekali santri kemampuan membaca kitab gundul (fathul kutub) dengan tata bahasa Arab mendalam. Silabus kurikulum kitab kuning disusun secara berjenjang:
-            </p>
-            <ul style="padding-left: 20px; font-size: 10pt;">
-                <li><em>Bidang Nahwu & Shorof:</em> Matan Al-Ajurumiyyah, Nadhom Al-Imrithi, dan Al-Amtsilah At-Tashrifiyyah.</li>
-                <li><em>Bidang Fiqih & Ibadah:</em> Safinatun Naja, Sullamut Taufiq, dan Fathul Qorib Al-Mujib.</li>
-                <li><em>Bidang Akhlak & Tasawuf:</em> Taisirul Khalaq, Akhlaq Lil Banin/Banat, dan Ta'limul Muta'allim.</li>
-                <li><em>Bidang Hadits & Tauhid:</em> Al-Arba'in An-Nawawiyyah, Riyadhus Shalihin, dan Aqidatul Awwam.</li>
-            </ul>
+            <strong>Pembinaan & Aktivitas ROHIS (Kerohanian Islam):</strong>
+            Mentoring adab dan keislaman mingguan, kajian keputrian, pembinaan dai muda santri, peringatan hari besar Islam (PHBI), tadarus bersama, serta kaderisasi dakwah santri teladan.
         </li>
         <li>
-            <strong>Muhadatsah 3 Bahasa & Retorika Dakwah (Khitobah):</strong>
-            <p>
-                Penerapan <em>Bi'ah Lughawiyyah</em> (Lingkungan Berbahasa) aktif dengan pembiasaan Bahasa Arab dan Bahasa Inggris. Dilengkapi latihan khutbah Jumat, pidato tiga bahasa, dan pelatihan jurnalistik dakwah.
-            </p>
+            <strong>Pembiasaan Ubudiyah & Amaliah Harian:</strong>
+            Sholat fardhu berjamaah di masjid, Sholat Dhuha harian, Qiyamul Lail (Tahajjud), pembacaan Ratibul Haddad, dzikir pagi-petang, serta pendampingan adab santri kepada guru dan orang tua.
         </li>
-        <li>
-            <strong>Pembiasaan Ubudiyah & Akhlakul Karimah:</strong>
-            <p>
-                Pembudayaan sholat fardhu berjamaah tepat waktu, Qiyamul Lail harian, Sholat Dhuha bersama, pembacaan Ratibul Haddad, Maulid Simtudduror, serta pendampingan adab santri kepada orang tua, guru, dan sesama.
-            </p>
-        </li>
-    </ol>
+    </ul>
 
-</div>
-
-<!-- ========================================================================= -->
-<!-- HALAMAN 3: BLUEPRINT PROGRAM 2 (LIFE SKILL) & PROGRAM 3 (DIGITAL)         -->
-<!-- ========================================================================= -->
-<div class="container page-break">
-
-    <h3 class="sub-heading">PROGRAM 2: MADRASAH BERBASIS LIFE SKILL (VOKASI & KEMANDIRIAN SANTRI)</h3>
+    <h3 class="sub-heading">2. PROGRAM MADRASAH BERBASIS LIFE SKILL (VOKASI & MANDIRI)</h3>
     <p>
-        Program Life Skill dihadirkan untuk menjawab tantangan bonus demografi dan tingginya angka pengangguran usia muda. MAS Miftahul Huda membekali seluruh santri dengan keterampilan vokasional konkret yang bernilai ekonomis tinggi. Setiap siswa wajib memilih minimal 1 dari 5 bidang kejuruan terapan:
+        Membekali setiap peserta didik dengan keahlian vokasional praktis bernilai ekonomi tinggi agar mandiri secara finansial dan siap berwirausaha:
     </p>
-
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 25%;">Divisi Kejuruan</th>
-                <th style="width: 45%;">Materi & Keterampilan Praktik</th>
-                <th style="width: 30%;">Target Output / Produk Nyata</th>
+                <th style="width: 28%;">Bidang Vokasi</th>
+                <th style="width: 44%;">Fokus Keterampilan Terapan</th>
+                <th style="width: 28%;">Target Luaran / Produk</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td><strong>1. Agribisnis Terpadu & Greenhouse</strong></td>
-                <td>Teknik hidroponik NFT/DFT, nutrisi AB Mix, budidaya ikan air tawar kolam bioflok (nila & lele), pembuatan pupuk kompos/organik.</td>
-                <td>Panen sayuran segar mingguan, bibit ikan unggul, serta pasokan pangan asrama pesantren mandiri.</td>
+                <td><strong>Desain Grafis & Digital Marketing</strong></td>
+                <td>Desain branding logo, kemasan produk UMKM, poster promosi, fotografi produk gawai/kamera, copywriting, etalase marketplace.</td>
+                <td>Portofolio karya komersil siswa & jasa desain madrasah.</td>
             </tr>
             <tr>
-                <td><strong>2. Desain Grafis & Digital Marketing</strong></td>
-                <td>Desain branding logo, spanduk, kemasan produk, teknik fotografi produk HP/kamera, copywriting iklan, etalase Shopee/TikTok Shop.</td>
-                <td>Portofolio portofolio komersil siswa, jasa desain madrasah, dan pengelolaan akun UMKM mandiri.</td>
+                <td><strong>Tata Boga & Olahan Pangan Halal</strong></td>
+                <td>Produksi aneka kue/bakery madrasah, kuliner nusantara, pengemasan kedap udara higienis, serta edukasi sertifikasi halal.</td>
+                <td>Kantin mandiri santri, penjualan kue halal, & sertifikat kecakapan.</td>
             </tr>
             <tr>
-                <td><strong>3. Tata Boga & Pangan Halal Santri</strong></td>
-                <td>Pembuatan aneka roti/bakery, olahan keripik khas Lampung, pengemasan vakum higienis, pengenalan sertifikasi halal LPPOM MUI & P-IRT.</td>
-                <td>Unit usaha kantin mandiri santri, penjualan kue/roti halal, serta sertifikat kecakapan boga.</td>
+                <td><strong>Teknisi Komputer & Elektronika</strong></td>
+                <td>Perakitan PC komputer, maintenance software/hardware ringan, instalasi jaringan Wi-Fi/LAN, dan instalasi kelistrikan dasar.</td>
+                <td>Tim teknisi madrasah & jasa perbaikan laptop warga.</td>
             </tr>
             <tr>
-                <td><strong>4. Teknisi Hardware & Elektronika</strong></td>
-                <td>Perakitan PC komputer, instalasi OS Windows/Linux, penggantian pasta processor, troubleshooting LAN/Wi-Fi, perbaikan instalasi listrik.</td>
-                <td>Tim teknisi madrasah mandiri, jasa servis laptop warga sekitar, dan sertifikasi teknisi pemula.</td>
-            </tr>
-            <tr>
-                <td><strong>5. Tata Busana & Kriya Sablon</strong></td>
-                <td>Pengukuran badan, pembuatan pola, pengoperasian mesin jahit, pembuatan jilbab, gamis santri, dan sablon digital/manual kaos.</td>
-                <td>Seragam kegiatan santri mandiri, tote bag, merchandise kaligrafi, dan busana muslim siap pakai.</td>
+                <td><strong>Tata Busana & Kriya Kreatif</strong></td>
+                <td>Pembuatan pola, menjahit busana muslim santri, jilbab, gamis, dan bordir/sablon digital seragam madrasah.</td>
+                <td>Seragam kegiatan santri & cinderamata madrasah mandiri.</td>
             </tr>
         </tbody>
     </table>
 
-    <h3 class="sub-heading">PROGRAM 3: MADRASAH BERBASIS DIGITAL (SMART DIGITAL MADRASAH 5.0)</h3>
+    <h3 class="sub-heading">3. PROGRAM MADRASAH BERBASIS DIGITAL (SMART SCHOOL 5.0)</h3>
     <p>
-        Program Madrasah Digital mentransformasi seluruh ekosistem pembelajaran dan tata kelola madrasah menjadi modern, terintegrasi, efisien, dan <em>paperless</em> berbasis cloud dan kecerdasan buatan (AI):
+        Transformasi digital cerdas menyeluruh pada KBM dan tata kelola madrasah berbasis cloud, paperless, dan AI:
     </p>
-
-    <ol style="padding-left: 20px;">
+    <ul style="padding-left: 20px; font-size: 10pt;">
         <li>
-            <strong>Platform Terpadu MASMIFHDA SYSTEM:</strong>
-            Pusat otomasi administrasi digital mencakup: Portal Guru, Portal Siswa, Presensi Elektronik QR/Face Scan, Jurnal Mengajar Harian Real-time, E-Kinerja PTK, serta Raport Digital. Seluruh rekaman tersimpan aman dan terintegrasi antar departemen.
+            <strong>MASMIFHDA SYSTEM Terpadu:</strong>
+            Portal Guru, Portal Siswa, Presensi Scanner QR/Face, Jurnal Mengajar Real-time, E-Kinerja, dan E-Rapor Digital yang terintegrasi.
         </li>
         <li>
-            <strong>Mata Pelajaran Koding & Literasi Kecerdasan Buatan (AI):</strong>
-            Penerapan kurikulum koding wajib bagi siswa (Computational Thinking, HTML5, CSS3, logika pemrograman dasar, dan pengantar Python). Pelatihan etika pemanfaatan AI (Prompt Engineering) untuk riset edukatif dan penyelesaian masalah.
+            <strong>Mata Pelajaran Koding & Literasi AI:</strong>
+            Pembelajaran computational thinking, pemrograman web (HTML/CSS/JS), dasar Python, dan etika pemanfaatan Artificial Intelligence secara bijak.
         </li>
         <li>
-            <strong>Asesmen Berbasis Komputer (CBT) & Paperless Exam:</strong>
-            Ujian STS, PAS, dan PAT diselenggarakan 100% digital tanpa menggunakan kertas, meminimalkan anggaran cetak naskah, sistem acak butir soal anti-curang, dan analisis butir soal seketika.
+            <strong>CBT & Asesmen Paperless 100%:</strong>
+            Ujian STS, PAS, dan PAT digital tanpa kertas, acak soal otomatis, sistem anti-curang, dan rekapitulasi nilai otomatis.
         </li>
         <li>
-            <strong>Perpustakaan Digital (E-Library) & Smart Classroom:</strong>
-            Akses ratusan referensi buku mata pelajaran, ensiklopedia sains, serta ribuan manuskrip kitab kuning digital melalui gawai pintar dan komputer lab madrasah.
+            <strong>E-Library & Repositori Digital:</strong>
+            Perpustakaan digital terintegrasi e-book resmi dan bahan ajar interaktif multi-perangkat.
         </li>
-    </ol>
-
+    </ul>
 </div>
 
 <!-- ========================================================================= -->
-<!-- HALAMAN 4: STRUKTUR PENGELOLA, KPI, ANGGARAN & LEMBAR PENGESAHAN           -->
+<!-- HALAMAN 5: STRUKTUR PENGELOLA & MATRIKS AKSI                             -->
 <!-- ========================================================================= -->
 <div class="container page-break">
+    <h2 class="bab-heading">STRUKTUR TIM PENGELOLA & TARGET CAPAIAN (KPI)</h2>
 
-    <h2 class="bab-heading">BAB III: STRUKTUR TIM PENGEMBANG & TANGGUNG JAWAB</h2>
-    
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 8%;">No</th>
-                <th style="width: 25%;">Posisi Kepanitiaan</th>
-                <th style="width: 32%;">Nama Personel & NIP</th>
-                <th style="width: 35%;">Tugas Pokok & Wewenang</th>
+                <th style="width: 27%;">Jabatan Tim Program</th>
+                <th style="width: 33%;">Nama Personel</th>
+                <th style="width: 32%;">Tanggung Jawab Pokok</th>
             </tr>
         </thead>
         <tbody>
             <tr>
                 <td align="center">1</td>
-                <td><strong>Penanggung Jawab Utama</strong></td>
-                <td><strong><?= htmlspecialchars($kamad_nama) ?></strong><br>NIP: <?= htmlspecialchars($kamad_nip) ?></td>
-                <td>Pengarah kebijakan makro, penjaminan mutu madrasah, dan legalitas kerjasama eksternal.</td>
+                <td><strong>Penanggung Jawab</strong></td>
+                <td><strong><?= htmlspecialchars($kamad_nama) ?></strong><br>Kepala Madrasah</td>
+                <td>Pengarah kebijakan makro, mutu madrasah, dan legalitas.</td>
             </tr>
             <tr>
                 <td align="center">2</td>
-                <td><strong>Ketua Pelaksana Kurikulum</strong></td>
-                <td><strong><?= htmlspecialchars($waka_nama) ?></strong><br>NIP: <?= htmlspecialchars($waka_nip) ?></td>
-                <td>Penyusunan silabus terintegrasi, jadwal KBM peminatan, monitoring dan evaluasi pembelajaran.</td>
+                <td><strong>Ketua Pengembang</strong></td>
+                <td><strong><?= htmlspecialchars($waka_nama) ?></strong><br>Waka Kurikulum</td>
+                <td>Penyusunan kurikulum terpadu, monitoring KBM & evaluasi.</td>
             </tr>
             <tr>
                 <td align="center">3</td>
-                <td><strong>Kordinator Madrasah Pesantren</strong></td>
-                <td><strong>SAIPUDIN AZIZ, S.Pd</strong><br>Waka Kesiswaan</td>
-                <td>Pengawasan halaqah tahfidz, kurikulum kitab turats, jadwal muhadatsah dan pembiasaan ibadah.</td>
+                <td><strong>Kordinator Pesantren</strong></td>
+                <td><strong><?= htmlspecialchars($kord_pesantren_nama) ?></strong><br>Waka Kesiswaan</td>
+                <td>Pengawasan halaqah tahfidz & pembiasaan ubudiyah santri.</td>
             </tr>
             <tr>
                 <td align="center">4</td>
-                <td><strong>Kordinator Madrasah Life Skill</strong></td>
-                <td><strong>INDAH YUNITASARI, S.Pd</strong><br>Bendahara Madrasah</td>
-                <td>Manajemen jadwal praktikum vokasi, pengadaan sarana bengkel kerja, dan pelaksanaan expo santri.</td>
+                <td><strong>Pembina ROHIS</strong></td>
+                <td><strong><?= htmlspecialchars($pembina_rohis_nama) ?></strong><br>Pembina Keagamaan</td>
+                <td>Mentoring kajian keislaman, tadarus & kaderisasi dakwah santri.</td>
             </tr>
             <tr>
                 <td align="center">5</td>
-                <td><strong>Kordinator Madrasah Digital & IT</strong></td>
-                <td><strong>SYAIFUL BAHRI, S.Pd</strong><br>Pembina Laboratorium IT</td>
-                <td>Pemeliharaan server MASMIFHDA SYSTEM, lab komputer, infrastruktur Wi-Fi, dan pelatihan koding.</td>
+                <td><strong>Kordinator Life Skill</strong></td>
+                <td><strong><?= htmlspecialchars($kord_lifeskill_nama) ?></strong><br>Bendahara Madrasah</td>
+                <td>Jadwal praktikum vokasi, pengadaan sarana & expo karya siswa.</td>
+            </tr>
+            <tr>
+                <td align="center">6</td>
+                <td><strong>Kordinator Digital & IT</strong></td>
+                <td><strong><?= htmlspecialchars($kord_digital_nama) ?></strong><br>Pembina Lab IT</td>
+                <td>Infrastruktur MASMIFHDA SYSTEM, lab komputer & CBT paperless.</td>
             </tr>
         </tbody>
     </table>
 
-    <h2 class="bab-heading">BAB IV: INDIKATOR KEBERHASILAN (KPI) & PENUTUP</h2>
-    <p>
-        Keberhasilan implementasi program ini dievaluasi secara berkala pada setiap akhir semester berdasarkan Key Performance Indicators (KPI):
-    </p>
-    <ul style="padding-left: 20px; font-size: 10pt;">
-        <li>100% lulusan MAS Miftahul Huda hafal Al-Qur'an minimal 3 Juz dan lulus ujian munaqosyah kitab kuning dasar.</li>
-        <li>100% peserta didik memiliki minimal 1 keahlian life skill terapan yang dibuktikan dengan portofolio dan sertifikat kompetensi.</li>
-        <li>100% tata kelola administrasi penilaian, presensi, jurnal mengajar, dan ujian berbasis paperless pada MASMIFHDA SYSTEM.</li>
-        <li>Terselenggaranya <strong>Gelar Karya & Expo Entrepreneur Santri</strong> minimal 1 kali setiap tahun ajaran.</li>
-    </ul>
+    <h3 class="sub-heading">Key Performance Indicators (KPI) & Target Capaian:</h3>
+    <ol style="padding-left: 20px; font-size: 10pt;">
+        <li>100% peserta didik tuntas hafalan minimal Juz 30 dan aktif dalam kegiatan keislaman ROHIS.</li>
+        <li>100% siswa kelas X, XI, XII menguasai minimal 1 keahlian life skill yang dibuktikan dengan portofolio produk nyata.</li>
+        <li>100% penyelenggaraan ujian, presensi, jurnal mengajar, dan raport terdigitalisasi penuh tanpa kertas pada MASMIFHDA SYSTEM.</li>
+        <li>Terselenggaranya <strong>Gelar Karya & Expo Entrepreneur Santri</strong> setiap akhir semester.</li>
+    </ol>
 
-    <!-- LEMBAR PENGESAHAN DOKUMEN -->
-    <div style="margin-top: 30px;">
-        <table class="ttd-table">
-            <tr>
-                <td style="width: 50%;">
-                    Menyetujui,<br>
-                    <strong>Ketua Komite Madrasah</strong><br>
-                    MAS Miftahul Huda<br><br><br><br><br>
-                    <strong>H. AHMAD ROFIQ, S.Ag</strong><br>
-                    Ketua Komite
-                </td>
-                <td style="width: 50%;">
-                    Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
-                    Pada tanggal : <?= htmlspecialchars($tgl_penetapan) ?><br>
-                    <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br>
-                    <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
-                    NIP. <?= htmlspecialchars($kamad_nip) ?>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" style="padding-top: 35px;">
-                    Mengetahui / Mengesahkan:<br>
-                    <strong>Pengawas Pembina Madrasah Ahli Madya</strong><br>
-                    Kantor Kementerian Agama Kabupaten Lampung Barat<br><br><br><br><br>
-                    <strong><?= htmlspecialchars($pengawas_nama) ?></strong><br>
-                    NIP. <?= htmlspecialchars($pengawas_nip) ?>
-                </td>
-            </tr>
-        </table>
+    <div style="margin-top: 35px; float: right; width: 45%; text-align: center; font-size: 10.5pt;">
+        Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
+        Pada tanggal : <?= htmlspecialchars($tgl_sk_formatted) ?><br>
+        <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br>
+        <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
+        NIP. <?= htmlspecialchars($kamad_nip) ?>
     </div>
-
+    <div style="clear: both;"></div>
 </div>
 
 </body>
