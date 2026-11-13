@@ -319,11 +319,11 @@ $pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
 
                         <div class="subprog-item">
                             <div style="font-weight:700; color:#0f172a; font-size:0.88rem; display:flex; align-items:center; gap:6px;">
-                                <i data-lucide="palette" style="width:16px;height:16px;color:#d97706;"></i>
-                                Desain Grafis & Digital Marketing UMKM
+                                <i data-lucide="scissors" style="width:16px;height:16px;color:#d97706;"></i>
+                                Menjahit
                             </div>
                             <div style="font-size:0.78rem; color:#64748b; margin-top:4px;">
-                                Pembuatan desain kemasan produk, poster promosi, fotografi produk, copywriting, dan pengelolaan etalase marketplace online.
+                                Pelatihan teknik dasar memotong kain, pembuatan pola sederhana, serta menjahit pakaian santri, jilbab, gamis, dan seragam madrasah secara mandiri.
                             </div>
                         </div>
 
@@ -344,16 +344,6 @@ $pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
                             </div>
                             <div style="font-size:0.78rem; color:#64748b; margin-top:4px;">
                                 Perakitan PC, perbaikan hardware/software ringan, instalasi jaringan internet LAN/Wi-Fi, dan instalasi listrik dasar.
-                            </div>
-                        </div>
-
-                        <div class="subprog-item">
-                            <div style="font-weight:700; color:#0f172a; font-size:0.88rem; display:flex; align-items:center; gap:6px;">
-                                <i data-lucide="scissors" style="width:16px;height:16px;color:#d97706;"></i>
-                                Tata Busana & Kriya Kreatif
-                            </div>
-                            <div style="font-size:0.78rem; color:#64748b; margin-top:4px;">
-                                Pembuatan pola, menjahit busana muslim santri, jilbab, gamis, dan bordir/sablon digital seragam madrasah.
                             </div>
                         </div>
                     </div>
@@ -484,7 +474,7 @@ $pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
                                 <td><strong>Praktikum Terjadwal & Workshop Vokasi</strong></td>
                                 <td><span class="badge-pill" style="background:#fffbeb; color:#92400e;">Life Skill</span></td>
                                 <td>Setiap Hari Sabtu</td>
-                                <td>Produk roti batch pertama, portofolio desain kemasan, dan instalasi PC lab siswa</td>
+                                <td>Produk roti batch pertama, keterampilan menjahit busana santri, dan instalasi PC lab siswa</td>
                                 <td>Kordinator Divisi Vokasi</td>
                             </tr>
                             <tr>
@@ -508,7 +498,7 @@ $pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
                                 <td><strong>Pameran Karya & Expo Entrepreneur Santri</strong></td>
                                 <td><span class="badge-pill" style="background:#fffbeb; color:#92400e;">Life Skill & ROHIS</span></td>
                                 <td>Januari 2027</td>
-                                <td>Gelar produk karya siswa, bazar kuliner halal, pameran desain grafis, dan pentas dakwah santri</td>
+                                <td>Gelar produk karya siswa, busana jahitan santri, bazar kuliner halal, dan pentas dakwah santri</td>
                                 <td>Seluruh Sivitas & OSIM/ROHIS</td>
                             </tr>
                         </tbody>
