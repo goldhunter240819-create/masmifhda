@@ -31,9 +31,9 @@ $kord_lifeskill_nama = $cfg['kord_lifeskill_nama'] ?? 'INDAH YUNITASARI, S.Pd';
 $kord_digital_id = $cfg['kord_digital_id'] ?? null;
 $kord_digital_nama = $cfg['kord_digital_nama'] ?? 'SYAIFUL BAHRI, S.Pd';
 
-$komite_nama = $cfg['komite_nama'] ?? 'H. AHMAD ROFIQ, S.Ag';
-$pengawas_nama = $cfg['pengawas_nama'] ?? 'Drs. H. M. YUSUF, M.Pd.I';
-$pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
+$komite_nama = $cfg['komite_nama'] ?? 'IMAM SYAFE\'I';
+$pengawas_nama = $cfg['pengawas_nama'] ?? '';
+$pengawas_nip = $cfg['pengawas_nip'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -564,8 +564,9 @@ $pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
                     <div>
                         <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Penanggung Jawab (Kepala Madrasah)</label>
                         <select name="kamad_id" class="form-control-custom" onchange="autoFillGuruProg(this, 'kamad')">
+                            <option value="0" data-nama="AHMAD RIFA'I, M.Pd" data-nip="-" <?= ($kamad_nama === 'AHMAD RIFA\'I, M.Pd' || empty($kamad_id)) ? 'selected' : '' ?>>AHMAD RIFA'I, M.Pd (Kepala Madrasah)</option>
                             <?php foreach($daftarGuru as $dg): 
-                                $sel = ($kamad_id && $kamad_id == $dg['id']) || (!$kamad_id && (stripos($dg['nama'], 'hamim') !== false || !empty($dg['is_kamad'])));
+                                $sel = ($kamad_id && $kamad_id == $dg['id']) || ($kamad_nama === $dg['nama']);
                             ?>
                             <option value="<?= $dg['id'] ?>" data-nama="<?= htmlspecialchars($dg['nama']) ?>" data-nip="<?= htmlspecialchars($dg['nip'] ?: '-') ?>" <?= $sel ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($dg['nama']) ?>
@@ -580,7 +581,7 @@ $pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
                         <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Ketua Pelaksana (Waka Kurikulum)</label>
                         <select name="waka_id" class="form-control-custom" onchange="autoFillGuruProg(this, 'waka')">
                             <?php foreach($daftarGuru as $dg): 
-                                $sel = ($waka_id && $waka_id == $dg['id']) || (!$waka_id && (stripos($dg['nama'], 'aziz') !== false && stripos($dg['nama'], 'sulaiman') !== false));
+                                $sel = ($waka_id && $waka_id == $dg['id']) || ($waka_nama === $dg['nama']) || (!$waka_id && stripos($dg['nama'], 'hamim') !== false);
                             ?>
                             <option value="<?= $dg['id'] ?>" data-nama="<?= htmlspecialchars($dg['nama']) ?>" data-nip="<?= htmlspecialchars($dg['nip'] ?: '-') ?>" <?= $sel ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($dg['nama']) ?>
@@ -655,23 +656,10 @@ $pengawas_nip = $cfg['pengawas_nip'] ?? '196805141994031002';
                 </div>
             </div>
 
-            <!-- SECTION 3: PENGESAH EKSTERNAL -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:20px;">
-                <h4 style="margin:0 0 10px 0; font-size:0.86rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
-                    <i data-lucide="check-square" style="width:16px;height:16px;color:#d97706;"></i> Lembaga Pengesah / Eksternal
-                </h4>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                    <div>
-                        <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Nama Ketua Komite Madrasah</label>
-                        <input type="text" name="komite_nama" class="form-control-custom" value="<?= htmlspecialchars($komite_nama) ?>" required>
-                    </div>
-                    <div>
-                        <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Pengawas Pembina Kemenag & NIP</label>
-                        <input type="text" name="pengawas_nama" class="form-control-custom" value="<?= htmlspecialchars($pengawas_nama) ?>" placeholder="Nama Pengawas" required style="margin-bottom:6px;">
-                        <input type="text" name="pengawas_nip" class="form-control-custom" value="<?= htmlspecialchars($pengawas_nip) ?>" placeholder="NIP Pengawas">
-                    </div>
-                </div>
-            </div>
+            <!-- Field Pengesah Eksternal (Pengesahan Mandiri Internal oleh Kepala Madrasah & Waka Kurikulum) -->
+            <input type="hidden" name="komite_nama" value="<?= htmlspecialchars($komite_nama) ?>">
+            <input type="hidden" name="pengawas_nama" value="">
+            <input type="hidden" name="pengawas_nip" value="">
 
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button type="button" onclick="closeConfigModal()" style="background:#f1f5f9; color:#475569; border:none; padding:10px 18px; border-radius:8px; font-weight:600; cursor:pointer;">Batal</button>

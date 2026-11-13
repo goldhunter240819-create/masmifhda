@@ -9,10 +9,11 @@ $npsn = '69988776';
 $alamat = 'Margorahayu, Ds. Tambak Jaya, Kec. Way Tenong, Kab. Lampung Barat, Lampung 34884';
 $website = 'apk.masmifhda.sch.id';
 $email = 'masmiftahulhuda@gmail.com';
-$kamad_nama = 'Drs. Hamim Hasyim';
+$kamad_nama = 'AHMAD RIFA\'I, M.Pd';
 $kamad_nip = '-';
-$waka_nama = 'M AZIZ SULAIMAN, S.Pd';
-$waka_nip = '1804072704000002';
+$waka_nama = 'Drs. Hamim Hasyim';
+$waka_nip = '-';
+$it_nama = 'M AZIZ SULAIMAN, S.Pd';
 $versi_apk = 'v26.2.2 (Build 2026.11 - Modern Edition)';
 
 $favicon_url = '/public/assets/images/logo.png';
@@ -549,8 +550,8 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
                 padding: 6mm 12mm !important;
                 box-sizing: border-box !important;
                 overflow: hidden !important;
-                page-break-after: always !important;
-                break-after: page !important;
+                page-break-after: auto !important;
+                break-after: auto !important;
             }
             .cover-page .v-phone {
                 width: 165px !important;

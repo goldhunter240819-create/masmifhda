@@ -2711,12 +2711,12 @@ class KurikulumController {
         $semester = trim($_POST['semester'] ?? 'Ganjil');
 
         $kamad_id = !empty($_POST['kamad_id']) ? (int)$_POST['kamad_id'] : null;
-        $kamad_nama = trim($_POST['kamad_nama'] ?? 'Drs. Hamim Hasyim');
+        $kamad_nama = trim($_POST['kamad_nama'] ?? 'AHMAD RIFA\'I, M.Pd');
         $kamad_nip = trim($_POST['kamad_nip'] ?? '-');
 
         $waka_id = !empty($_POST['waka_id']) ? (int)$_POST['waka_id'] : null;
-        $waka_nama = trim($_POST['waka_nama'] ?? 'M AZIZ SULAIMAN, S.Pd');
-        $waka_nip = trim($_POST['waka_nip'] ?? '1804072704000002');
+        $waka_nama = trim($_POST['waka_nama'] ?? 'Drs. Hamim Hasyim');
+        $waka_nip = trim($_POST['waka_nip'] ?? '-');
 
         $kord_pesantren_id = !empty($_POST['kord_pesantren_id']) ? (int)$_POST['kord_pesantren_id'] : null;
         $kord_pesantren_nama = trim($_POST['kord_pesantren_nama'] ?? 'SAIPUDIN AZIZ, S.Pd');
@@ -2730,9 +2730,9 @@ class KurikulumController {
         $kord_digital_id = !empty($_POST['kord_digital_id']) ? (int)$_POST['kord_digital_id'] : null;
         $kord_digital_nama = trim($_POST['kord_digital_nama'] ?? 'SYAIFUL BAHRI, S.Pd');
 
-        $komite_nama = trim($_POST['komite_nama'] ?? 'H. AHMAD ROFIQ, S.Ag');
-        $pengawas_nama = trim($_POST['pengawas_nama'] ?? 'Drs. H. M. YUSUF, M.Pd.I');
-        $pengawas_nip = trim($_POST['pengawas_nip'] ?? '196805141994031002');
+        $komite_nama = trim($_POST['komite_nama'] ?? 'IMAM SYAFE\'I');
+        $pengawas_nama = trim($_POST['pengawas_nama'] ?? '');
+        $pengawas_nip = trim($_POST['pengawas_nip'] ?? '');
 
         try {
             $exists = $db->query("SELECT id FROM kurikulum_program_unggulan_config LIMIT 1")->fetchColumn();
