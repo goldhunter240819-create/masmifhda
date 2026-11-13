@@ -25,7 +25,9 @@ if ($logged_in_guru && $logged_in_guru['is_kamad'] == 1) {
     }
 }
 
-if (!$is_kamad && !$is_wakakur) {
+$is_supervisor = cek_akses_supervisor($logged_in_guru_id, $core_db);
+
+if (!$is_kamad && !$is_wakakur && !$is_supervisor) {
     echo "<script>alert('Akses Ditolak'); window.close();</script>";
     exit;
 }

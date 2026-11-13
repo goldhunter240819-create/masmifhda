@@ -26,6 +26,16 @@ try {
     if ($stmt_gwm->fetchColumn() > 0) {
         $akses[] = 'chat_mentor';
     }
+
+    // Cek Hak Akses Supervisor / Tim Supervisi
+    if (cek_akses_supervisor($_SESSION['guru_id'], $core_db)) {
+        $akses[] = 'supervisi_kunjungan';
+        $akses[] = 'supervisi_kelas';
+        $akses[] = 'val_ekinerja';
+        $akses[] = 'mon_penilaian';
+        $akses[] = 'mon_jurnal';
+        $akses[] = 'wakakur_jadwal';
+    }
 } catch (Exception $e) {}
 
 // Akses default untuk semua guru
@@ -33,6 +43,7 @@ $akses[] = 'absen_pribadi';
 $akses[] = 'nilai_harian';
 $akses[] = 'tugas_daring';
 $akses[] = 'perpus_digital';
+$akses[] = 'program_unggulan';
 
 // Hitung izin pending untuk badge (hanya jika punya akses admin_izin)
 $pending_izin_count = 0;
@@ -49,7 +60,8 @@ $apk_apps = [
         'absen_pribadi' => ['icon' => 'fa-calendar-check', 'name' => 'Rekap Absen', 'color' => '#4f46e5', 'bg' => '#e0e7ff', 'url' => 'absen_guru.php'],
         'nilai_harian' => ['icon' => 'fa-file-pen', 'name' => 'Nilai Harian', 'color' => '#d97706', 'bg' => '#fffbeb', 'url' => 'nilai_harian.php'],
         'tugas_daring' => ['icon' => 'fa-laptop-file', 'name' => 'Tugas Daring', 'color' => '#ef4444', 'bg' => '#fef2f2', 'url' => 'guru_tugas_mandiri.php'],
-        'perpus_digital' => ['icon' => 'fa-book-open-reader', 'name' => 'E-Library', 'color' => '#3b82f6', 'bg' => '#eff6ff', 'url' => 'https://e-library.masmifhda.sch.id/']
+        'perpus_digital' => ['icon' => 'fa-book-open-reader', 'name' => 'E-Library', 'color' => '#3b82f6', 'bg' => '#eff6ff', 'url' => 'https://e-library.masmifhda.sch.id/'],
+        'program_unggulan' => ['icon' => 'fa-award', 'name' => 'Prog. Unggulan', 'color' => '#059669', 'bg' => '#ecfdf5', 'url' => '/kurikulum/program-unggulan']
     ],
     'Keuangan & Tabungan' => [
         'kasir_tabungan' => ['icon' => 'fa-wallet', 'name' => 'Kasir Tab.', 'color' => '#f59e0b', 'bg' => '#fffbeb', 'url' => 'admin_tabungan.php'],

@@ -25,8 +25,10 @@ if ($logged_in_guru && $logged_in_guru['is_kamad'] == 1) {
     }
 }
 
-if (!$is_kamad && !$is_wakakur) {
-    echo json_encode(['status' => 'error', 'message' => 'Akses Ditolak']);
+$is_supervisor = cek_akses_supervisor($logged_in_guru_id, $core_db);
+
+if (!$is_kamad && !$is_wakakur && !$is_supervisor) {
+    echo json_encode(['status' => 'error', 'message' => 'Akses Ditolak: Anda bukan supervisor atau tim supervisi']);
     exit;
 }
 
@@ -96,13 +98,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $existing = $stmt_cek->fetch();
 
     $penilai_nama = $logged_in_guru['nama'] ?? 'Admin';
+    $supervisor_id = $logged_in_guru_id;
     
     if ($existing) {
-        $stmt_upd = $core_db->prepare("UPDATE kurikulum_supervisi_kelas SET mata_pelajaran=?, kelas=?, tanggal_supervisi=?, instrumen_json=?, nilai_akhir=?, catatan=?, penilai_nama=? WHERE id=?");
-        $stmt_upd->execute([$mata_pelajaran, $kelas, $tanggal_supervisi, $instrumen_json, $nilai_akhir, $catatan, $penilai_nama, $existing['id']]);
+        $stmt_upd = $core_db->prepare("UPDATE kurikulum_supervisi_kelas SET mata_pelajaran=?, kelas=?, tanggal_supervisi=?, instrumen_json=?, nilai_akhir=?, catatan=?, penilai_nama=?, supervisor_id=? WHERE id=?");
+        $stmt_upd->execute([$mata_pelajaran, $kelas, $tanggal_supervisi, $instrumen_json, $nilai_akhir, $catatan, $penilai_nama, $supervisor_id, $existing['id']]);
     } else {
-        $stmt_ins = $core_db->prepare("INSERT INTO kurikulum_supervisi_kelas (tahun_ajaran_id, guru_id, mata_pelajaran, kelas, jam_ke, materi_pokok, tanggal_supervisi, instrumen_json, nilai_akhir, catatan, tindak_lanjut, penilai_nama) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt_ins->execute([$tahun_ajaran_id, $guru_id, $mata_pelajaran, $kelas, $jam_ke, $materi_pokok, $tanggal_supervisi, $instrumen_json, $nilai_akhir, $catatan, $tindak_lanjut, $penilai_nama]);
+        $stmt_ins = $core_db->prepare("INSERT INTO kurikulum_supervisi_kelas (tahun_ajaran_id, guru_id, mata_pelajaran, kelas, jam_ke, materi_pokok, tanggal_supervisi, instrumen_json, nilai_akhir, catatan, tindak_lanjut, penilai_nama, supervisor_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt_ins->execute([$tahun_ajaran_id, $guru_id, $mata_pelajaran, $kelas, $jam_ke, $materi_pokok, $tanggal_supervisi, $instrumen_json, $nilai_akhir, $catatan, $tindak_lanjut, $penilai_nama, $supervisor_id]);
     }
 
     echo json_encode(['status' => 'success', 'message' => 'Berhasil disimpan']);

@@ -2584,10 +2584,38 @@ class KurikulumController {
 
         $daftarGuru = [];
         try {
-            $daftarGuru = $db->query("SELECT id, nama, nip, jabatan FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            $daftarGuru = $db->query("SELECT id, nama, nip, jabatan, is_kamad FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable $e) {}
 
         require __DIR__ . '/../../resources/views/kurikulum/supervisi_tim.php';
+    }
+
+    public function programUnggulan() {
+        $active_module = 'kurikulum';
+        $active_page   = 'program_unggulan';
+        $db = \App\Core\Database::connect('core');
+        $legalitas = self::getSupervisiLegalitas($db);
+        extract($legalitas);
+
+        $daftarGuru = [];
+        try {
+            $daftarGuru = $db->query("SELECT id, nama, nip, jabatan, is_kamad FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {}
+
+        require __DIR__ . '/../../resources/views/kurikulum/program_unggulan.php';
+    }
+
+    public function cetakProgramUnggulan() {
+        $db = \App\Core\Database::connect('core');
+        $legalitas = self::getSupervisiLegalitas($db);
+        extract($legalitas);
+
+        $daftarGuru = [];
+        try {
+            $daftarGuru = $db->query("SELECT id, nama, nip, jabatan, is_kamad FROM guru ORDER BY nama ASC")->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {}
+
+        require __DIR__ . '/../../resources/views/kurikulum/program_unggulan_cetak.php';
     }
 
     public function updateTimSupervisiConfig() {
@@ -2672,9 +2700,20 @@ class KurikulumController {
         $nama = trim($_POST['nama'] ?? '');
         $nip = trim($_POST['nip'] ?? '-');
         $jabatan_madrasah = trim($_POST['jabatan_madrasah'] ?? 'Guru');
-        $peran_tim = trim($_POST['peran_tim'] ?? 'Anggota Observer');
+        $peran_tim = trim($_POST['peran_tim'] ?? 'Supervisor');
         $tugas_fokus = trim($_POST['tugas_fokus'] ?? '');
         $urutan = !empty($_POST['urutan']) ? (int)$_POST['urutan'] : 99;
+
+        if ($guru_id) {
+            $g = $db->query("SELECT nama, nip, jabatan, is_kamad FROM guru WHERE id = " . $guru_id)->fetch(\PDO::FETCH_ASSOC);
+            if ($g) {
+                if (empty($nama)) $nama = $g['nama'];
+                if (($nip === '-' || empty($nip)) && !empty($g['nip'])) $nip = $g['nip'];
+                if (($jabatan_madrasah === 'Guru' || empty($jabatan_madrasah)) && !empty($g['jabatan'])) {
+                    $jabatan_madrasah = $g['jabatan'];
+                }
+            }
+        }
 
         if (empty($tugas_fokus)) {
             $p = strtolower($peran_tim);
@@ -2692,15 +2731,6 @@ class KurikulumController {
         }
 
         try {
-            if ($guru_id) {
-                $g = $db->query("SELECT nama, nip, jabatan FROM guru WHERE id = " . $guru_id)->fetch(\PDO::FETCH_ASSOC);
-                if ($g) {
-                    if (empty($nama)) $nama = $g['nama'];
-                    if ($nip === '-' && !empty($g['nip'])) $nip = $g['nip'];
-                    if ($jabatan_madrasah === 'Guru' && !empty($g['jabatan'])) $jabatan_madrasah = $g['jabatan'];
-                }
-            }
-
             if (!empty($nama)) {
                 $stmt = $db->prepare("INSERT INTO kurikulum_supervisi_tim 
                     (tahun_ajaran, semester, guru_id, nama, nip, jabatan_madrasah, peran_tim, tugas_fokus, urutan)
@@ -2731,12 +2761,24 @@ class KurikulumController {
         $db = \App\Core\Database::connect('core');
         self::ensureTimSupervisiTables($db);
         $id = (int)($_POST['id'] ?? 0);
+        $guru_id = !empty($_POST['guru_id']) ? (int)$_POST['guru_id'] : null;
         $nama = trim($_POST['nama'] ?? '');
         $nip = trim($_POST['nip'] ?? '-');
         $jabatan_madrasah = trim($_POST['jabatan_madrasah'] ?? 'Guru');
-        $peran_tim = trim($_POST['peran_tim'] ?? 'Anggota Observer');
+        $peran_tim = trim($_POST['peran_tim'] ?? 'Supervisor');
         $tugas_fokus = trim($_POST['tugas_fokus'] ?? '');
         $urutan = !empty($_POST['urutan']) ? (int)$_POST['urutan'] : 1;
+
+        if ($guru_id) {
+            $g = $db->query("SELECT nama, nip, jabatan, is_kamad FROM guru WHERE id = " . $guru_id)->fetch(\PDO::FETCH_ASSOC);
+            if ($g) {
+                if (empty($nama)) $nama = $g['nama'];
+                if (($nip === '-' || empty($nip)) && !empty($g['nip'])) $nip = $g['nip'];
+                if (($jabatan_madrasah === 'Guru' || empty($jabatan_madrasah)) && !empty($g['jabatan'])) {
+                    $jabatan_madrasah = $g['jabatan'];
+                }
+            }
+        }
 
         if (empty($tugas_fokus)) {
             $p = strtolower($peran_tim);
@@ -2756,6 +2798,7 @@ class KurikulumController {
         try {
             if ($id > 0 && !empty($nama)) {
                 $stmt = $db->prepare("UPDATE kurikulum_supervisi_tim SET 
+                    guru_id = :guru_id,
                     nama = :nama,
                     nip = :nip,
                     jabatan_madrasah = :jabatan,
@@ -2764,6 +2807,7 @@ class KurikulumController {
                     urutan = :urutan
                     WHERE id = :id");
                 $stmt->execute([
+                    ':guru_id' => $guru_id,
                     ':nama' => $nama,
                     ':nip' => $nip,
                     ':jabatan' => $jabatan_madrasah,

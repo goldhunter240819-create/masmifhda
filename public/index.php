@@ -2512,6 +2512,11 @@ $router->add('GET', '/kurikulum/supervisi/laporan-tindak-lanjut', [\App\Controll
 $router->add('GET', '/kurikulum/supervisi/laporan-tindak-lanjut/cetak', [\App\Controllers\KurikulumController::class, 'cetakLaporanTindakLanjutSupervisi']);
 $router->add('GET', '/kurikulum/supervisi/laporan-rtl', [\App\Controllers\KurikulumController::class, 'laporanTindakLanjutSupervisi']);
 
+// 3 PROGRAM UNGGULAN (Madrasah Pesantren, Life Skill, Digital)
+$router->add('GET', '/kurikulum/program-unggulan', [\App\Controllers\KurikulumController::class, 'programUnggulan']);
+$router->add('GET', '/kurikulum/program-unggulan/cetak', [\App\Controllers\KurikulumController::class, 'cetakProgramUnggulan']);
+$router->add('GET', '/kurikulum/program-unggulan/pdf', [\App\Controllers\KurikulumController::class, 'cetakProgramUnggulan']);
+
 $router->add('GET', '/panduan', function() {
     require __DIR__ . '/../apk/panduan_aplikasi.php';
     exit;

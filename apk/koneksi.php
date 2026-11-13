@@ -232,4 +232,56 @@ function sinkronisasi_status_pusat($siswa_id, $tanggal, $core_db, $siakad_db) {
         $stmt_ins->execute([$siswa_id, $kelas_id, $tanggal, $status_final]);
     }
 }
+
+// ============================================================================
+// FUNGSI CEK HAK AKSES SUPERVISOR / TIM SUPERVISI
+// ============================================================================
+function cek_akses_supervisor($guru_id, $core_db) {
+    if (!$guru_id) return false;
+
+    // 0. Cek jika role Admin / Developer
+    if (isset($_SESSION['role_id']) && ($_SESSION['role_id'] == 1 || $_SESSION['role_id'] == 99)) {
+        return true;
+    }
+
+    try {
+        // 1. Cek jika Kepala Madrasah (is_kamad = 1)
+        $stmt = $core_db->prepare("SELECT is_kamad FROM guru WHERE id = ? LIMIT 1");
+        $stmt->execute([$guru_id]);
+        if ($stmt->fetchColumn() == 1) return true;
+
+        // 2. Cek jika Waka Kurikulum di guru_tugas
+        $stmt = $core_db->prepare("SELECT id FROM guru_tugas WHERE guru_id = ? AND (tugas LIKE '%Kurikulum%' OR tugas LIKE '%Waka Kurikulum%') LIMIT 1");
+        $stmt->execute([$guru_id]);
+        if ($stmt->fetch()) return true;
+
+        // 3. Cek apakah terdaftar di Tim Supervisi (kurikulum_supervisi_tim)
+        $stmt = $core_db->prepare("SELECT id FROM kurikulum_supervisi_tim WHERE guru_id = ? LIMIT 1");
+        $stmt->execute([$guru_id]);
+        if ($stmt->fetch()) return true;
+
+        // Cek juga berdasarkan nama guru di kurikulum_supervisi_tim
+        $stmt = $core_db->prepare("SELECT t.id FROM kurikulum_supervisi_tim t JOIN guru g ON g.id = ? WHERE t.nama = g.nama LIMIT 1");
+        $stmt->execute([$guru_id]);
+        if ($stmt->fetch()) return true;
+
+        // 4. Cek apakah ada izin spesifik di apk_akses_guru
+        $stmt = $core_db->prepare("SELECT id FROM apk_akses_guru WHERE guru_id = ? AND app_code IN ('supervisi_kunjungan', 'supervisi_kelas', 'val_ekinerja', 'mon_penilaian') LIMIT 1");
+        $stmt->execute([$guru_id]);
+        if ($stmt->fetch()) return true;
+
+        // 5. Cek apakah ditugaskan sebagai supervisor di tabel supervisi kelas/adm
+        $stmt = $core_db->prepare("SELECT id FROM kurikulum_supervisi_kelas WHERE supervisor_id = ? LIMIT 1");
+        $stmt->execute([$guru_id]);
+        if ($stmt->fetch()) return true;
+
+        $stmt = $core_db->prepare("SELECT id FROM kurikulum_supervisi_administrasi WHERE supervisor_id = ? OR penilai_id = ? LIMIT 1");
+        $stmt->execute([$guru_id, $guru_id]);
+        if ($stmt->fetch()) return true;
+    } catch (\Exception $e) {
+        error_log("cek_akses_supervisor error: " . $e->getMessage());
+    }
+
+    return false;
+}
 ?>

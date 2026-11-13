@@ -30,6 +30,12 @@ $sub_menus = array(
     'kurikulum' => array(
         array('icon'=>'layout-dashboard','label'=>'Dashboard', 'url'=>base_url('kurikulum'), 'page'=>'overview'),
         array(
+            'icon'=>'award',
+            'label'=>'3 Program Unggulan',
+            'url'=>base_url('kurikulum/program-unggulan'),
+            'page'=>'program_unggulan'
+        ),
+        array(
             'icon'=>'activity',
             'label'=>'Akademik & Monitoring',
             'page'=>'akademik',

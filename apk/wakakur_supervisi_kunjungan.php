@@ -2,6 +2,12 @@
 require_once 'koneksi.php';
 if (!isset($_SESSION['guru_id'])) { header("Location: login.php"); exit; }
 
+$logged_guru_id = (int)$_SESSION['guru_id'];
+if (!cek_akses_supervisor($logged_guru_id, $core_db)) {
+    echo "<script>alert('Akses Ditolak: Halaman ini khusus untuk Tim Supervisi & Supervisor Madrasah.'); window.location.href='aplikasi_saya.php';</script>";
+    exit;
+}
+
 $page_title = 'Supervisi Kunjungan Kelas';
 include 'header.php';
 

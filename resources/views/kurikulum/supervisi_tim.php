@@ -465,7 +465,7 @@ $sem = $config['semester'] ?? 'Ganjil';
 
 <!-- MODAL TAMBAH ANGGOTA -->
 <div id="modalAdd" class="modal-backdrop">
-    <div style="background:#fff; border-radius:14px; max-width:540px; width:90%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+    <div style="background:#fff; border-radius:14px; max-width:560px; width:92%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
             <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
                 <i data-lucide="user-plus" style="width:20px;height:20px;color:#2563eb;"></i>
@@ -475,32 +475,46 @@ $sem = $config['semester'] ?? 'Ganjil';
         </div>
 
         <form action="/kurikulum/supervisi/tim/add-member" method="POST">
+            <input type="hidden" name="nama" id="add_nama" value="">
+
             <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Pilih Guru dari Database (Opsional)</label>
-                <select id="selectGuruAdd" class="form-control-custom" onchange="autoFillGuruAdd(this)">
-                    <option value="">-- Pilih Guru atau Isi Manual di Bawah --</option>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">
+                    Nama Guru & PTK (Dropdown Database) <span style="color:#ef4444;">*</span>
+                </label>
+                <select name="guru_id" id="add_guru_id" class="form-control-custom" onchange="onGuruChange('add')" required>
+                    <option value="">-- Pilih Guru dari Database --</option>
                     <?php foreach($daftarGuru as $dg): ?>
-                    <option value="<?= $dg['id'] ?>" data-nama="<?= htmlspecialchars($dg['nama']) ?>" data-nip="<?= htmlspecialchars($dg['nip'] ?: '-') ?>" data-jabatan="<?= htmlspecialchars($dg['jabatan'] ?: 'Guru') ?>">
-                        <?= htmlspecialchars($dg['nama']) ?> (<?= htmlspecialchars($dg['jabatan'] ?: 'Guru') ?>)
+                    <option value="<?= $dg['id'] ?>" 
+                            data-nama="<?= htmlspecialchars($dg['nama']) ?>" 
+                            data-nip="<?= htmlspecialchars($dg['nip'] ?: '-') ?>" 
+                            data-jabatan="<?= htmlspecialchars($dg['jabatan'] ?: 'Guru') ?>"
+                            data-kamad="<?= !empty($dg['is_kamad']) ? '1' : '0' ?>">
+                        <?= htmlspecialchars($dg['nama']) ?> <?= !empty($dg['is_kamad']) ? '(Kepala Madrasah)' : (!empty($dg['jabatan']) ? '('.htmlspecialchars($dg['jabatan']).')' : '') ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
-                <input type="hidden" name="guru_id" id="add_guru_id" value="">
+                <small style="font-size:0.73rem; color:#64748b;">Pilih guru, NIP dan jabatan madrasah akan terisi otomatis.</small>
             </div>
 
-            <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Nama Lengkap & Gelar</label>
-                <input type="text" name="nama" id="add_nama" class="form-control-custom" placeholder="Contoh: AHMAD RIFA'I, M.Pd" required>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:12px; margin-bottom:14px;">
                 <div>
-                    <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">NIP</label>
-                    <input type="text" name="nip" id="add_nip" class="form-control-custom" value="-">
+                    <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">NIP / PegID</label>
+                    <input type="text" name="nip" id="add_nip" class="form-control-custom" value="-" readonly style="background:#f8fafc; color:#64748b;">
                 </div>
                 <div>
                     <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Jabatan Madrasah</label>
-                    <input type="text" name="jabatan_madrasah" id="add_jabatan" class="form-control-custom" placeholder="Misal: Waka Kurikulum" value="Guru">
+                    <select name="jabatan_madrasah" id="add_jabatan" class="form-control-custom">
+                        <option value="Kepala Madrasah">Kepala Madrasah</option>
+                        <option value="Waka Kurikulum">Waka Kurikulum</option>
+                        <option value="Waka Kesiswaan">Waka Kesiswaan</option>
+                        <option value="Waka Sarpras">Waka Sarpras</option>
+                        <option value="Waka Humas">Waka Humas</option>
+                        <option value="Bendahara Madrasah">Bendahara Madrasah</option>
+                        <option value="Pembina IT / Operator">Pembina IT / Operator</option>
+                        <option value="Guru Mata Pelajaran" selected>Guru Mata Pelajaran</option>
+                        <option value="Dewan Observer KBM">Dewan Observer KBM</option>
+                        <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
+                    </select>
                 </div>
             </div>
 
@@ -509,36 +523,41 @@ $sem = $config['semester'] ?? 'Ganjil';
                     Peran dalam Kepanitiaan (4 Posisi Baku):
                 </label>
                 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:8px;">
-                    <button type="button" class="btn-role-select" onclick="chooseRole('add', 'Penanggung Jawab', 1, 'Pengarah, Penanggung Jawab Mutu & Monev Keseluruhan KBM')">
+                    <button type="button" class="btn-role-select" id="btn-add-pj" onclick="chooseRole('add', 'Penanggung Jawab', 1, 'Pengarah, Penanggung Jawab Mutu & Monev Keseluruhan KBM')">
                         <span style="font-size:1.15rem;">👑</span>
                         <strong>Penanggung Jawab</strong>
                     </button>
-                    <button type="button" class="btn-role-select" onclick="chooseRole('add', 'Ketua Panitia', 2, 'Koordinasi Jadwal, Verifikasi Administrasi Guru & Analisis Hasil')">
+                    <button type="button" class="btn-role-select" id="btn-add-ketua" onclick="chooseRole('add', 'Ketua Panitia', 2, 'Koordinasi Jadwal, Verifikasi Administrasi Guru & Analisis Hasil')">
                         <span style="font-size:1.15rem;">⭐</span>
                         <strong>Ketua Panitia</strong>
                     </button>
-                    <button type="button" class="btn-role-select" onclick="chooseRole('add', 'Sekretaris', 3, 'Notulensi Coaching, Administrasi Rekapitulasi & Rapor Supervisi')">
+                    <button type="button" class="btn-role-select" id="btn-add-sek" onclick="chooseRole('add', 'Sekretaris', 3, 'Notulensi Coaching, Administrasi Rekapitulasi & Rapor Supervisi')">
                         <span style="font-size:1.15rem;">📝</span>
                         <strong>Sekretaris</strong>
                     </button>
-                    <button type="button" class="btn-role-select" onclick="chooseRole('add', 'Supervisor', <?= count($timSupervisi) + 1 ?>, 'Observasi KBM Tatap Muka, Penilaian Modul Ajar, dan Pendampingan Refleksi')">
+                    <button type="button" class="btn-role-select" id="btn-add-sup" onclick="chooseRole('add', 'Supervisor', <?= count($timSupervisi) + 1 ?>, 'Observasi KBM Tatap Muka Kelas, Penilaian 25 Indikator KBM & Bimbingan Klinis')">
                         <span style="font-size:1.15rem;">🔍</span>
                         <strong>Supervisor</strong>
                     </button>
                 </div>
                 <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px;">
                     <div>
-                        <input type="text" name="peran_tim" id="add_peran" list="peranOptions" class="form-control-custom" placeholder="Pilih dari 4 tombol di atas atau ketik peran" required>
+                        <select name="peran_tim" id="add_peran" class="form-control-custom" onchange="onPeranSelectChange('add')" required>
+                            <option value="Penanggung Jawab">Penanggung Jawab</option>
+                            <option value="Ketua Panitia">Ketua Panitia</option>
+                            <option value="Sekretaris">Sekretaris</option>
+                            <option value="Supervisor" selected>Supervisor</option>
+                        </select>
                     </div>
                     <div>
-                        <input type="number" name="urutan" id="add_urutan" class="form-control-custom" value="<?= count($timSupervisi) + 1 ?>" min="1" placeholder="Urutan Tampil">
+                        <input type="number" name="urutan" id="add_urutan" class="form-control-custom" value="<?= count($timSupervisi) + 1 ?>" min="1" placeholder="Urutan Tampil" title="Urutan susunan dalam SK & Laporan">
                     </div>
                 </div>
             </div>
 
             <div style="margin-bottom:20px;">
                 <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Fokus Tugas Observasi & Sasaran Guru</label>
-                <textarea name="tugas_fokus" class="form-control-custom" rows="2" placeholder="Misal: Observasi KBM Kelas Rendah (1-3), Penilaian Modul Ajar, Notulensi Coaching"></textarea>
+                <textarea name="tugas_fokus" id="add_fokus" class="form-control-custom" rows="2" placeholder="Misal: Observasi KBM Tatap Muka Kelas, Penilaian 25 Indikator KBM & Bimbingan Klinis">Observasi KBM Tatap Muka Kelas, Penilaian 25 Indikator KBM & Bimbingan Klinis</textarea>
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:10px;">
@@ -551,7 +570,7 @@ $sem = $config['semester'] ?? 'Ganjil';
 
 <!-- MODAL EDIT ANGGOTA -->
 <div id="modalEdit" class="modal-backdrop">
-    <div style="background:#fff; border-radius:14px; max-width:540px; width:90%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+    <div style="background:#fff; border-radius:14px; max-width:560px; width:92%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
             <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
                 <i data-lucide="edit-3" style="width:20px;height:20px;color:#059669;"></i>
@@ -562,20 +581,46 @@ $sem = $config['semester'] ?? 'Ganjil';
 
         <form action="/kurikulum/supervisi/tim/update-member" method="POST">
             <input type="hidden" name="id" id="edit_id">
+            <input type="hidden" name="nama" id="edit_nama">
 
             <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Nama Lengkap & Gelar</label>
-                <input type="text" name="nama" id="edit_nama" class="form-control-custom" required>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">
+                    Nama Guru & PTK (Dropdown Database) <span style="color:#ef4444;">*</span>
+                </label>
+                <select name="guru_id" id="edit_guru_id" class="form-control-custom" onchange="onGuruChange('edit')" required>
+                    <option value="">-- Pilih Guru dari Database --</option>
+                    <?php foreach($daftarGuru as $dg): ?>
+                    <option value="<?= $dg['id'] ?>" 
+                            data-nama="<?= htmlspecialchars($dg['nama']) ?>" 
+                            data-nip="<?= htmlspecialchars($dg['nip'] ?: '-') ?>" 
+                            data-jabatan="<?= htmlspecialchars($dg['jabatan'] ?: 'Guru') ?>"
+                            data-kamad="<?= !empty($dg['is_kamad']) ? '1' : '0' ?>">
+                        <?= htmlspecialchars($dg['nama']) ?> <?= !empty($dg['is_kamad']) ? '(Kepala Madrasah)' : (!empty($dg['jabatan']) ? '('.htmlspecialchars($dg['jabatan']).')' : '') ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="font-size:0.73rem; color:#64748b;">Ubah guru langsung dari daftar tanpa perlu mengetik ulang.</small>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:12px; margin-bottom:14px;">
                 <div>
-                    <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">NIP</label>
-                    <input type="text" name="nip" id="edit_nip" class="form-control-custom">
+                    <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">NIP / PegID</label>
+                    <input type="text" name="nip" id="edit_nip" class="form-control-custom" readonly style="background:#f8fafc; color:#64748b;">
                 </div>
                 <div>
                     <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Jabatan Madrasah</label>
-                    <input type="text" name="jabatan_madrasah" id="edit_jabatan" class="form-control-custom">
+                    <select name="jabatan_madrasah" id="edit_jabatan" class="form-control-custom">
+                        <option value="Kepala Madrasah">Kepala Madrasah</option>
+                        <option value="Waka Kurikulum">Waka Kurikulum</option>
+                        <option value="Waka Kesiswaan">Waka Kesiswaan</option>
+                        <option value="Waka Sarpras">Waka Sarpras</option>
+                        <option value="Waka Humas">Waka Humas</option>
+                        <option value="Bendahara Madrasah">Bendahara Madrasah</option>
+                        <option value="Pembina IT / Operator">Pembina IT / Operator</option>
+                        <option value="Guru Mata Pelajaran">Guru Mata Pelajaran</option>
+                        <option value="Dewan Observer KBM">Dewan Observer KBM</option>
+                        <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
+                    </select>
                 </div>
             </div>
 
@@ -584,29 +629,34 @@ $sem = $config['semester'] ?? 'Ganjil';
                     Peran dalam Kepanitiaan (4 Posisi Baku):
                 </label>
                 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:8px;">
-                    <button type="button" class="btn-role-select" onclick="chooseRole('edit', 'Penanggung Jawab', 1, 'Pengarah, Penanggung Jawab Mutu & Monev Keseluruhan KBM')">
+                    <button type="button" class="btn-role-select" id="btn-edit-pj" onclick="chooseRole('edit', 'Penanggung Jawab', 1, 'Pengarah, Penanggung Jawab Mutu & Monev Keseluruhan KBM')">
                         <span style="font-size:1.15rem;">👑</span>
                         <strong>Penanggung Jawab</strong>
                     </button>
-                    <button type="button" class="btn-role-select" onclick="chooseRole('edit', 'Ketua Panitia', 2, 'Koordinasi Jadwal, Verifikasi Administrasi Guru & Analisis Hasil')">
+                    <button type="button" class="btn-role-select" id="btn-edit-ketua" onclick="chooseRole('edit', 'Ketua Panitia', 2, 'Koordinasi Jadwal, Verifikasi Administrasi Guru & Analisis Hasil')">
                         <span style="font-size:1.15rem;">⭐</span>
                         <strong>Ketua Panitia</strong>
                     </button>
-                    <button type="button" class="btn-role-select" onclick="chooseRole('edit', 'Sekretaris', 3, 'Notulensi Coaching, Administrasi Rekapitulasi & Rapor Supervisi')">
+                    <button type="button" class="btn-role-select" id="btn-edit-sek" onclick="chooseRole('edit', 'Sekretaris', 3, 'Notulensi Coaching, Administrasi Rekapitulasi & Rapor Supervisi')">
                         <span style="font-size:1.15rem;">📝</span>
                         <strong>Sekretaris</strong>
                     </button>
-                    <button type="button" class="btn-role-select" onclick="chooseRole('edit', 'Supervisor', 4, 'Observasi KBM Tatap Muka, Penilaian Modul Ajar, dan Pendampingan Refleksi')">
+                    <button type="button" class="btn-role-select" id="btn-edit-sup" onclick="chooseRole('edit', 'Supervisor', 4, 'Observasi KBM Tatap Muka Kelas, Penilaian 25 Indikator KBM & Bimbingan Klinis')">
                         <span style="font-size:1.15rem;">🔍</span>
                         <strong>Supervisor</strong>
                     </button>
                 </div>
                 <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px;">
                     <div>
-                        <input type="text" name="peran_tim" id="edit_peran" list="peranOptions" class="form-control-custom" required>
+                        <select name="peran_tim" id="edit_peran" class="form-control-custom" onchange="onPeranSelectChange('edit')" required>
+                            <option value="Penanggung Jawab">Penanggung Jawab</option>
+                            <option value="Ketua Panitia">Ketua Panitia</option>
+                            <option value="Sekretaris">Sekretaris</option>
+                            <option value="Supervisor">Supervisor</option>
+                        </select>
                     </div>
                     <div>
-                        <input type="number" name="urutan" id="edit_urutan" class="form-control-custom" min="1" placeholder="Urutan Tampil">
+                        <input type="number" name="urutan" id="edit_urutan" class="form-control-custom" min="1" placeholder="Urutan Tampil" title="Urutan susunan dalam SK & Laporan">
                     </div>
                 </div>
             </div>
@@ -624,63 +674,223 @@ $sem = $config['semester'] ?? 'Ganjil';
     </div>
 </div>
 
-<!-- DATALIST PERAN TIM -->
-<datalist id="peranOptions">
-    <option value="Penanggung Jawab (Kepala Madrasah)"></option>
-    <option value="Ketua Tim Pelaksana (Waka Kurikulum)"></option>
-    <option value="Sekretaris Tim Supervisi"></option>
-    <option value="Supervisor / Observer KBM"></option>
-    <option value="Supervisor / Observer KBM (Kelas 1-3)"></option>
-    <option value="Supervisor / Observer KBM (Kelas 4-6)"></option>
-    <option value="Supervisor / Observer KBM (Rumpun PAI & RTL)"></option>
-</datalist>
-
 <!-- FORM DELETE -->
 <form id="deleteMemberForm" action="/kurikulum/supervisi/tim/delete-member" method="POST" style="display:none;">
     <input type="hidden" name="id" id="delete_member_id">
 </form>
 
 <script>
-    function setRoleQuick(mode, role, urutan, fokus) {
-        if (mode === 'add') {
-            document.getElementById('add_peran').value = role;
-            if (urutan) document.getElementById('add_urutan').value = urutan;
-            var curFokus = document.querySelector('#modalAdd textarea[name="tugas_fokus"]');
-            if (curFokus && fokus) curFokus.value = fokus;
-        } else {
-            document.getElementById('edit_peran').value = role;
-            if (urutan) document.getElementById('edit_urutan').value = urutan;
-            var editFokus = document.getElementById('edit_fokus');
-            if (editFokus && fokus) editFokus.value = fokus;
+    var standardFokus = {
+        'Penanggung Jawab': 'Pengarah, Penanggung Jawab Mutu & Monev Keseluruhan KBM',
+        'Ketua Panitia': 'Koordinasi Jadwal, Verifikasi Administrasi Guru & Analisis Hasil',
+        'Sekretaris': 'Notulensi Coaching, Administrasi Rekapitulasi & Rapor Supervisi',
+        'Supervisor': 'Observasi KBM Tatap Muka Kelas, Penilaian 25 Indikator KBM & Bimbingan Klinis'
+    };
+
+    function updateRoleButtonsActive(mode, role) {
+        var prefix = mode === 'add' ? 'btn-add-' : 'btn-edit-';
+        var r = (role || '').toLowerCase();
+        
+        var btns = ['pj', 'ketua', 'sek', 'sup'];
+        btns.forEach(function(b) {
+            var el = document.getElementById(prefix + b);
+            if (el) {
+                el.classList.remove('active');
+                el.style.border = '1px solid #cbd5e1';
+                el.style.background = '#f8fafc';
+                el.style.color = '#1e293b';
+            }
+        });
+
+        var targetId = null;
+        if (r.indexOf('penanggung') !== -1 || r.indexOf('utama') !== -1) targetId = prefix + 'pj';
+        else if (r.indexOf('ketua') !== -1) targetId = prefix + 'ketua';
+        else if (r.indexOf('sekretaris') !== -1) targetId = prefix + 'sek';
+        else if (r.indexOf('supervisor') !== -1 || r.indexOf('observer') !== -1) targetId = prefix + 'sup';
+
+        if (targetId) {
+            var activeEl = document.getElementById(targetId);
+            if (activeEl) {
+                activeEl.classList.add('active');
+                activeEl.style.border = '2px solid #2563eb';
+                activeEl.style.background = '#eff6ff';
+                activeEl.style.color = '#1d4ed8';
+            }
         }
     }
+
+    function chooseRole(mode, role, urutan, fokus) {
+        var peranSelect = document.getElementById(mode + '_peran');
+        if (peranSelect) {
+            // Find best matching option
+            for (var i = 0; i < peranSelect.options.length; i++) {
+                if (peranSelect.options[i].value === role || role.indexOf(peranSelect.options[i].value) !== -1) {
+                    peranSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (urutan) {
+            var urutanInput = document.getElementById(mode + '_urutan');
+            if (urutanInput) urutanInput.value = urutan;
+        }
+
+        var fokusEl = document.getElementById(mode + '_fokus');
+        if (fokusEl && fokus) {
+            fokusEl.value = fokus;
+        } else if (fokusEl && standardFokus[role]) {
+            fokusEl.value = standardFokus[role];
+        }
+
+        updateRoleButtonsActive(mode, role);
+    }
+
+    function onPeranSelectChange(mode) {
+        var peranSelect = document.getElementById(mode + '_peran');
+        var val = peranSelect ? peranSelect.value : '';
+        if (standardFokus[val]) {
+            var fokusEl = document.getElementById(mode + '_fokus');
+            if (fokusEl && (!fokusEl.value || fokusEl.value.trim() === '')) {
+                fokusEl.value = standardFokus[val];
+            }
+        }
+        updateRoleButtonsActive(mode, val);
+    }
+
+    function onGuruChange(mode) {
+        var sel = document.getElementById(mode + '_guru_id');
+        if (!sel) return;
+        var opt = sel.options[sel.selectedIndex];
+        if (!opt || !opt.value) return;
+
+        var nama = opt.getAttribute('data-nama') || '';
+        var nip = opt.getAttribute('data-nip') || '-';
+        var rawJabatan = opt.getAttribute('data-jabatan') || 'Guru';
+        var isKamad = opt.getAttribute('data-kamad') === '1';
+
+        var namaEl = document.getElementById(mode + '_nama');
+        if (namaEl) namaEl.value = nama;
+
+        var nipEl = document.getElementById(mode + '_nip');
+        if (nipEl) nipEl.value = nip;
+
+        var jabSelect = document.getElementById(mode + '_jabatan');
+        if (jabSelect) {
+            var found = false;
+            var jabLower = rawJabatan.toLowerCase();
+
+            if (isKamad) {
+                for (var i = 0; i < jabSelect.options.length; i++) {
+                    if (jabSelect.options[i].value.toLowerCase().indexOf('kepala madrasah') !== -1) {
+                        jabSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+            } else {
+                for (var j = 0; j < jabSelect.options.length; j++) {
+                    var optVal = jabSelect.options[j].value.toLowerCase();
+                    if (optVal === jabLower || (jabLower.indexOf('kurikulum') !== -1 && optVal.indexOf('kurikulum') !== -1) ||
+                        (jabLower.indexOf('kesiswaan') !== -1 && optVal.indexOf('kesiswaan') !== -1) ||
+                        (jabLower.indexOf('bendahara') !== -1 && optVal.indexOf('bendahara') !== -1) ||
+                        (jabLower.indexOf('it') !== -1 && optVal.indexOf('it') !== -1)) {
+                        jabSelect.selectedIndex = j;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                jabSelect.value = 'Guru Mata Pelajaran';
+            }
+        }
+
+        // Suggest role if mode is add
+        if (mode === 'add') {
+            if (isKamad) {
+                chooseRole('add', 'Penanggung Jawab', 1, standardFokus['Penanggung Jawab']);
+            } else if (rawJabatan.toLowerCase().indexOf('kurikulum') !== -1) {
+                chooseRole('add', 'Ketua Panitia', 2, standardFokus['Ketua Panitia']);
+            }
+        }
+    }
+
     function openAddModal() {
         document.getElementById('modalAdd').style.display = 'flex';
+        updateRoleButtonsActive('add', document.getElementById('add_peran').value);
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
+
     function openEditModal(data) {
         document.getElementById('edit_id').value = data.id;
         document.getElementById('edit_nama').value = data.nama;
         document.getElementById('edit_nip').value = data.nip || '-';
-        document.getElementById('edit_jabatan').value = data.jabatan_madrasah || 'Guru';
-        document.getElementById('edit_peran').value = data.peran_tim;
         document.getElementById('edit_urutan').value = data.urutan;
         document.getElementById('edit_fokus').value = data.tugas_fokus || '';
+
+        // Select Guru
+        var guruSel = document.getElementById('edit_guru_id');
+        var matchedGuru = false;
+        if (guruSel) {
+            for (var i = 0; i < guruSel.options.length; i++) {
+                var gOpt = guruSel.options[i];
+                if ((data.guru_id && gOpt.value == data.guru_id) || (gOpt.getAttribute('data-nama') && gOpt.getAttribute('data-nama').toLowerCase() === (data.nama || '').toLowerCase())) {
+                    guruSel.selectedIndex = i;
+                    matchedGuru = true;
+                    break;
+                }
+            }
+            if (!matchedGuru) {
+                guruSel.selectedIndex = 0;
+            }
+        }
+
+        // Select Jabatan
+        var jabSel = document.getElementById('edit_jabatan');
+        if (jabSel) {
+            var rawJab = (data.jabatan_madrasah || '').toLowerCase();
+            var matchedJab = false;
+            for (var j = 0; j < jabSel.options.length; j++) {
+                var oVal = jabSel.options[j].value.toLowerCase();
+                if (oVal === rawJab || rawJab.indexOf(oVal) !== -1 || oVal.indexOf(rawJab) !== -1) {
+                    jabSel.selectedIndex = j;
+                    matchedJab = true;
+                    break;
+                }
+            }
+            if (!matchedJab && data.jabatan_madrasah) {
+                var optNew = document.createElement('option');
+                optNew.value = data.jabatan_madrasah;
+                optNew.text = data.jabatan_madrasah;
+                optNew.selected = true;
+                jabSel.appendChild(optNew);
+            }
+        }
+
+        // Select Peran
+        var peranSel = document.getElementById('edit_peran');
+        var peranRaw = (data.peran_tim || 'Supervisor');
+        var pLower = peranRaw.toLowerCase();
+        var normalizedPeran = 'Supervisor';
+        if (pLower.indexOf('penanggung') !== -1 || pLower.indexOf('utama') !== -1) normalizedPeran = 'Penanggung Jawab';
+        else if (pLower.indexOf('ketua') !== -1) normalizedPeran = 'Ketua Panitia';
+        else if (pLower.indexOf('sekretaris') !== -1) normalizedPeran = 'Sekretaris';
+        else normalizedPeran = 'Supervisor';
+
+        if (peranSel) {
+            peranSel.value = normalizedPeran;
+        }
+        updateRoleButtonsActive('edit', normalizedPeran);
+
         document.getElementById('modalEdit').style.display = 'flex';
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
+
     function closeModal(id) {
         document.getElementById(id).style.display = 'none';
     }
-    function autoFillGuruAdd(sel) {
-        var opt = sel.options[sel.selectedIndex];
-        if (opt.value) {
-            document.getElementById('add_guru_id').value = opt.value;
-            document.getElementById('add_nama').value = opt.getAttribute('data-nama');
-            document.getElementById('add_nip').value = opt.getAttribute('data-nip');
-            document.getElementById('add_jabatan').value = opt.getAttribute('data-jabatan');
-        }
-    }
+
     function confirmDelete(id, nama) {
         Swal.fire({
             title: 'Hapus Anggota Tim?',
