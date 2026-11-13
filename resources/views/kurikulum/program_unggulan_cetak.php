@@ -1,4 +1,8 @@
 <?php
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 use App\Core\Branding;
 
 $brand = Branding::get();
@@ -34,10 +38,6 @@ $kord_pesantren_nama = $cfg['kord_pesantren_nama'] ?? 'SAIPUDIN AZIZ, S.Pd';
 $pembina_rohis_nama = $cfg['pembina_rohis_nama'] ?? 'DIDI HARTONO, S.Pd.I';
 $kord_lifeskill_nama = $cfg['kord_lifeskill_nama'] ?? 'INDAH YUNITASARI, S.Pd';
 $kord_digital_nama = $cfg['kord_digital_nama'] ?? 'SYAIFUL BAHRI, S.Pd';
-
-$komite_nama = !empty($cfg['komite_nama']) ? $cfg['komite_nama'] : 'IMAM SYAFE\'I';
-$pengawas_nama = !empty($cfg['pengawas_nama']) ? $cfg['pengawas_nama'] : 'DASTA KUSNANDAR, M.M.Pd';
-$pengawas_nip = $cfg['pengawas_nip'] ?? '-';
 
 $bulanIndo = [
     1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -103,10 +103,10 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
             .container {
                 width: 210mm !important;
                 max-width: 210mm !important;
-                height: 297mm !important;
-                max-height: 297mm !important;
-                min-height: 297mm !important;
-                padding: 1.6cm 2cm 1.5cm 2.2cm !important;
+                height: 296mm !important;
+                max-height: 296mm !important;
+                min-height: 296mm !important;
+                padding: 1.5cm 2cm 1.4cm 2.2cm !important;
                 margin: 0 !important;
                 box-shadow: none !important;
                 box-sizing: border-box !important;
@@ -116,8 +116,14 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
                 break-after: page !important;
                 overflow: hidden !important;
             }
+            .container:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
             .cover-container {
-                padding: 1.1cm 1.5cm !important;
+                padding: 1cm 1.4cm !important;
+                height: 296mm !important;
+                max-height: 296mm !important;
             }
         }
 
@@ -605,7 +611,7 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
 </div>
 
 <!-- ========================================================================= -->
-<!-- HALAMAN 2: LEMBAR PENGESAHAN RESMI (4 TANDA TANGAN)                       -->
+<!-- HALAMAN 2: LEMBAR PENGESAHAN RESMI (2 TTD: KAMAD & WAKAKUR)               -->
 <!-- ========================================================================= -->
 <div class="container">
     <!-- KOP SURAT RESMI 2 LOGO -->
@@ -636,42 +642,25 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
         <div class="sub-title">DOKUMEN PEDOMAN & BLUEPRINT TIGA PROGRAM UNGGULAN<br><?= htmlspecialchars($sekolah_nama) ?><br>TAHUN PELAJARAN <?= htmlspecialchars($tahun_ajaran) ?></div>
     </div>
 
-    <p style="text-indent: 30px; text-align: justify; line-height: 1.55;">
-        Setelah melalui proses kajian komprehensif, penyelarasan kurikulum operasional madrasah, dan rapat pleno bersama Tim Pengembang Kurikulum serta Pengurus Komite Madrasah, maka dokumen <strong>Buku Pedoman dan Blueprint Tiga Program Unggulan (Madrasah Berbasis Pesantren & ROHIS, Madrasah Berbasis Life Skill, dan Madrasah Berbasis Digital)</strong> ini disahkan secara resmi untuk diberlakukan sebagai panduan operasional penyelenggaraan KBM, pembinaan kesiswaan, penyediaan fasilitas vokasi, dan tolok ukur penjaminan mutu di <?= htmlspecialchars($sekolah_nama) ?> pada Tahun Pelajaran <?= htmlspecialchars($tahun_ajaran) ?>.
+    <p style="text-indent: 30px; text-align: justify; line-height: 1.6; font-size: 10.2pt;">
+        Setelah melalui proses kajian komprehensif, penyelarasan kurikulum operasional madrasah, dan rapat pleno bersama Tim Pengembang Kurikulum serta Pimpinan Madrasah, maka dokumen <strong>Buku Pedoman dan Blueprint Tiga Program Unggulan (Madrasah Berbasis Pesantren & ROHIS, Madrasah Berbasis Life Skill, dan Madrasah Berbasis Digital)</strong> ini disahkan secara resmi untuk diberlakukan sebagai panduan operasional penyelenggaraan KBM, pembinaan kesiswaan, penyediaan fasilitas vokasi, dan tolok ukur penjaminan mutu di <?= htmlspecialchars($sekolah_nama) ?> pada Tahun Pelajaran <?= htmlspecialchars($tahun_ajaran) ?>.
     </p>
 
-    <div style="margin-top: 30px;">
-        <table class="ttd-grid-4">
+    <!-- TANDA TANGAN RESMI 2 PIHAK: WAKA KURIKULUM (PENYUSUN) & KEPALA MADRASAH (MENGESAHKAN) -->
+    <div style="margin-top: 55px;">
+        <table style="width: 100%; text-align: center; font-size: 10.5pt; line-height: 1.55;">
             <tr>
-                <td>
-                    Disetujui oleh:<br>
-                    <strong>Ketua Komite Madrasah</strong><br>
-                    <?= htmlspecialchars($sekolah_nama) ?><br><br><br><br><br>
-                    <strong><?= htmlspecialchars($komite_nama) ?></strong><br>
-                    Ketua Komite
-                </td>
-                <td>
-                    Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
-                    Pada tanggal : <?= htmlspecialchars($tgl_sk_formatted) ?><br>
-                    <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br>
-                    <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
-                    NIP. <?= htmlspecialchars($kamad_nip) ?>
-                </td>
-            </tr>
-            <tr>
-                <td style="padding-top: 35px;">
+                <td style="width: 50%; vertical-align: top; padding: 0 25px;">
                     Penyusun:<br>
                     <strong>Ketua Tim Pengembang Kurikulum</strong><br>
-                    Waka Kurikulum<br><br><br><br><br>
-                    <strong><?= htmlspecialchars($waka_nama) ?></strong><br>
-                    NIP. <?= htmlspecialchars($waka_nip) ?>
+                    Waka Kurikulum<br><br><br><br><br><br>
+                    <strong style="text-decoration: underline; font-size: 11pt;"><?= htmlspecialchars($waka_nama) ?></strong>
                 </td>
-                <td style="padding-top: 35px;">
-                    Mengetahui / Mengesahkan:<br>
-                    <strong>Pengawas Pembina Madrasah Ahli Madya</strong><br>
-                    Kantor Kementerian Agama Kab. Lampung Barat<br><br><br><br><br>
-                    <strong><?= htmlspecialchars($pengawas_nama) ?></strong><br>
-                    NIP. <?= htmlspecialchars($pengawas_nip) ?>
+                <td style="width: 50%; vertical-align: top; padding: 0 25px;">
+                    Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
+                    Pada tanggal : <?= htmlspecialchars($tgl_sk_formatted) ?><br>
+                    <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br><br>
+                    <strong style="text-decoration: underline; font-size: 11pt;"><?= htmlspecialchars($kamad_nama) ?></strong>
                 </td>
             </tr>
         </table>
@@ -775,12 +764,11 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
         </tr>
     </table>
 
-    <div style="margin-top: 16px; float: right; width: 45%; text-align: center; font-size: 9.5pt;">
+    <div style="margin-top: 20px; float: right; width: 45%; text-align: center; font-size: 9.8pt;">
         Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
         Pada tanggal : <?= htmlspecialchars($tgl_sk_formatted) ?><br>
         <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br>
-        <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
-        NIP. <?= htmlspecialchars($kamad_nip) ?>
+        <strong style="text-decoration: underline; font-size: 10.5pt;"><?= htmlspecialchars($kamad_nama) ?></strong>
     </div>
     <div style="clear: both;"></div>
 </div>
@@ -806,11 +794,10 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
         </p>
     </div>
 
-    <div style="margin-top: 40px; float: right; width: 45%; text-align: center; font-size: 10pt;">
+    <div style="margin-top: 45px; float: right; width: 45%; text-align: center; font-size: 10pt;">
         <?= htmlspecialchars($kecamatan) ?>, <?= htmlspecialchars($tgl_sk_formatted) ?><br>
         <strong>Kepala Madrasah,</strong><br><br><br><br><br>
-        <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
-        NIP. <?= htmlspecialchars($kamad_nip) ?>
+        <strong style="text-decoration: underline; font-size: 10.5pt;"><?= htmlspecialchars($kamad_nama) ?></strong>
     </div>
     <div style="clear: both;"></div>
 </div>
@@ -1246,12 +1233,11 @@ $tgl_sk_formatted = date('j', $tgl_obj) . ' ' . $bulanIndo[(int)date('n', $tgl_o
         </ol>
     </div>
 
-    <div style="margin-top: 15px; float: right; width: 45%; text-align: center; font-size: 9.5pt;">
+    <div style="margin-top: 18px; float: right; width: 45%; text-align: center; font-size: 9.8pt;">
         Ditetapkan di : <?= htmlspecialchars($kecamatan) ?><br>
         Pada tanggal : <?= htmlspecialchars($tgl_sk_formatted) ?><br>
         <strong>Kepala Madrasah Aliyah Miftahul Huda</strong><br><br><br><br><br>
-        <strong><?= htmlspecialchars($kamad_nama) ?></strong><br>
-        NIP. <?= htmlspecialchars($kamad_nip) ?>
+        <strong style="text-decoration: underline; font-size: 10.5pt;"><?= htmlspecialchars($kamad_nama) ?></strong>
     </div>
     <div style="clear: both;"></div>
 </div>
