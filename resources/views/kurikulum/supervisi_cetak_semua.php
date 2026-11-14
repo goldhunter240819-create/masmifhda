@@ -85,6 +85,14 @@ $brand = \App\Core\Branding::get();
         .btn-back { background: rgba(255,255,255,0.15); color: #e2e8f0; }
         .btn-back:hover { background: rgba(255,255,255,0.25); color: #fff; }
 
+        @media screen {
+            .rtl-page-break {
+                margin-top: 40px;
+                padding-top: 25px;
+                border-top: 2px dashed #94a3b8;
+            }
+        }
+
         @media print {
             body { 
                 padding: 0; 
@@ -106,6 +114,14 @@ $brand = \App\Core\Branding::get();
             table { page-break-inside: auto; }
             tr { page-break-inside: avoid; page-break-after: auto; }
             .signatures { page-break-inside: avoid; }
+            .rtl-page-break {
+                page-break-before: always !important;
+                break-before: page !important;
+                display: block !important;
+                margin-top: 0 !important;
+                padding-top: 20px !important;
+                border-top: none !important;
+            }
         }
     </style>
 </head>
@@ -371,7 +387,7 @@ $brand = \App\Core\Branding::get();
         ?>
 
         <!-- MATRIKS RENCANA TINDAK LANJUT (RTL) - DIMULAI DI HALAMAN SELANJUTNYA -->
-        <div style="page-break-before: always; padding-top: 15px;">
+        <div class="rtl-page-break" style="page-break-before: always; break-before: page; padding-top: 15px;">
             <div style="font-weight:bold; font-size:12pt; margin-bottom:6px; text-transform:uppercase; border-bottom:2px solid #000; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                 <span>Rencana Tindak Lanjut (RTL) Hasil Supervisi <?= htmlspecialchars(ucfirst($kategori)) ?></span>
                 <span style="font-size:9pt; font-weight:normal; text-transform:none; color:#475569;">Standar PKKM Komponen 4 & Kemenag</span>
