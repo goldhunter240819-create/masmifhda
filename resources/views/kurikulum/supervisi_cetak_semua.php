@@ -264,6 +264,30 @@ $brand = \App\Core\Branding::get();
             <?= (!empty($supervisi['catatan_evaluasi']) && $supervisi['catatan_evaluasi'] !== '-') ? nl2br(htmlspecialchars($supervisi['catatan_evaluasi'])) : 'Telah dilaksanakan observasi supervisi pembelajaran secara terukur. Pendidik direkomendasikan untuk memperkuat variasi metode pembelajaran aktif, apersepsi kontekstual, pemanfaatan media ajar interaktif berbasis TIK, serta refleksi berkala di akhir KBM.' ?>
         </div>
 
+        <!-- TANDA TANGAN LEMBAR OBSERVASI (HALAMAN 1) -->
+        <table class="signatures" style="margin-top: 25px;">
+            <tr>
+                <td>
+                    <div>Mengetahui,</div>
+                    <div>Guru yang Disupervisi</div>
+                    <div style="height: 55px;"></div>
+                    <div style="font-weight: bold; text-decoration: underline;"><?= htmlspecialchars($supervisi['nama_guru'] ?? '-') ?></div>
+                    <?php if(!empty($supervisi['nip_guru']) && $supervisi['nip_guru'] !== '-'): ?>
+                    <div style="font-size: 9pt;">NIP. <?= htmlspecialchars($supervisi['nip_guru']) ?></div>
+                    <?php endif; ?>
+                </td>
+                <td>
+                    <div><?= htmlspecialchars($institusi['kabupaten'] ?? $institusi['kota'] ?? 'Lampung Barat') ?>, <?= tgl_indo($supervisi['tanggal']) ?></div>
+                    <div>Supervisor</div>
+                    <div style="height: 55px;"></div>
+                    <div style="font-weight: bold; text-decoration: underline;"><?= htmlspecialchars($supervisi['nama_supervisor'] ?? $supervisor['nama'] ?? 'Supervisor') ?></div>
+                    <?php if(!empty($supervisi['nip_supervisor']) && $supervisi['nip_supervisor'] !== '-'): ?>
+                    <div style="font-size: 9pt;">NIP. <?= htmlspecialchars($supervisi['nip_supervisor']) ?></div>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        </table>
+
         <?php
         // Persiapan data Rencana Tindak Lanjut (RTL)
         $rtl_jenis     = trim($supervisi['tindak_lanjut_jenis'] ?? '');
@@ -346,68 +370,98 @@ $brand = \App\Core\Branding::get();
         }
         ?>
 
-        <!-- MATRIKS RENCANA TINDAK LANJUT (RTL) -->
-        <div style="font-weight:bold; font-size:11.5pt; margin-top:22px; margin-bottom:8px; text-transform:uppercase; border-bottom:1.5px solid #000; padding-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-            <span>Rencana Tindak Lanjut (RTL) Hasil Supervisi</span>
-            <span style="font-size:8.5pt; font-weight:normal; text-transform:none; color:#475569;">Standar PKKM Komponen 4 & Kemenag</span>
-        </div>
+        <!-- MATRIKS RENCANA TINDAK LANJUT (RTL) - DIMULAI DI HALAMAN SELANJUTNYA -->
+        <div style="page-break-before: always; padding-top: 15px;">
+            <div style="font-weight:bold; font-size:12pt; margin-bottom:6px; text-transform:uppercase; border-bottom:2px solid #000; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                <span>Rencana Tindak Lanjut (RTL) Hasil Supervisi <?= htmlspecialchars(ucfirst($kategori)) ?></span>
+                <span style="font-size:9pt; font-weight:normal; text-transform:none; color:#475569;">Standar PKKM Komponen 4 & Kemenag</span>
+            </div>
 
-        <table class="rtl-table">
-            <thead>
+            <!-- Ringkasan Identitas Dokumen RTL -->
+            <table style="width:100%; border:none; margin-bottom:12px; font-size:9pt; line-height:1.4;">
                 <tr>
-                    <th style="width:35px;">No</th>
-                    <th style="width:200px; text-align:left;">Aspek yang Perlu Ditingkatkan</th>
-                    <th style="text-align:left;">Bentuk & Rencana Program Tindak Lanjut</th>
-                    <th style="width:130px;">Target Waktu</th>
-                    <th style="width:110px;">Status Realisasi</th>
+                    <td style="width:18%; border:none; padding:2px 0;"><strong>Nama Guru</strong></td>
+                    <td style="width:2%; border:none; padding:2px 0;">:</td>
+                    <td style="width:38%; border:none; padding:2px 0;"><?= htmlspecialchars($supervisi['nama_guru']) ?></td>
+                    <td style="width:18%; border:none; padding:2px 0;"><strong>Tanggal Observasi</strong></td>
+                    <td style="width:2%; border:none; padding:2px 0;">:</td>
+                    <td style="width:22%; border:none; padding:2px 0;"><?= tgl_indo($supervisi['tanggal']) ?></td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php 
-                $no_rtl = 1;
-                foreach($rtl_items as $rtl): 
-                ?>
                 <tr>
-                    <td align="center" style="font-weight:bold;"><?= $no_rtl++ ?></td>
-                    <td><strong><?= htmlspecialchars($rtl['aspek']) ?></strong></td>
-                    <td style="line-height:1.45;">
-                        <?= $rtl['program'] ?>
-                        <?php if(!empty($rtl['realisasi'])): ?>
-                        <div style="margin-top:5px; font-size:8.5pt; color:#475569; font-style:italic;">
-                            &bull; Realisasi: <?= htmlspecialchars($rtl['realisasi']) ?>
-                        </div>
+                    <td style="border:none; padding:2px 0;"><strong>NIP / NPK</strong></td>
+                    <td style="border:none; padding:2px 0;">:</td>
+                    <td style="border:none; padding:2px 0;"><?= htmlspecialchars($supervisi['nip_guru'] ?: '-') ?></td>
+                    <td style="border:none; padding:2px 0;"><strong>Nilai / Predikat</strong></td>
+                    <td style="border:none; padding:2px 0;">:</td>
+                    <td style="border:none; padding:2px 0;"><strong><?= $nilai ?> (<?= $grade ?>)</strong></td>
+                </tr>
+                <tr>
+                    <td style="border:none; padding:2px 0;"><strong>Supervisor</strong></td>
+                    <td style="border:none; padding:2px 0;">:</td>
+                    <td style="border:none; padding:2px 0;"><?= htmlspecialchars($supervisi['nama_supervisor'] ?? $supervisor['nama'] ?? 'Supervisor') ?></td>
+                    <td style="border:none; padding:2px 0;"><strong>Status Pelaksanaan</strong></td>
+                    <td style="border:none; padding:2px 0;">:</td>
+                    <td style="border:none; padding:2px 0;"><span style="color:#16a34a; font-weight:bold;">Terencana & Terjadwal</span></td>
+                </tr>
+            </table>
+
+            <table class="rtl-table">
+                <thead>
+                    <tr>
+                        <th style="width:35px;">No</th>
+                        <th style="width:200px; text-align:left;">Aspek yang Perlu Ditingkatkan</th>
+                        <th style="text-align:left;">Bentuk & Rencana Program Tindak Lanjut</th>
+                        <th style="width:130px;">Target Waktu</th>
+                        <th style="width:110px;">Status Realisasi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $no_rtl = 1;
+                    foreach($rtl_items as $rtl): 
+                    ?>
+                    <tr>
+                        <td align="center" style="font-weight:bold;"><?= $no_rtl++ ?></td>
+                        <td><strong><?= htmlspecialchars($rtl['aspek']) ?></strong></td>
+                        <td style="line-height:1.45;">
+                            <?= $rtl['program'] ?>
+                            <?php if(!empty($rtl['realisasi'])): ?>
+                            <div style="margin-top:5px; font-size:8.5pt; color:#475569; font-style:italic;">
+                                &bull; Realisasi: <?= htmlspecialchars($rtl['realisasi']) ?>
+                            </div>
+                            <?php endif; ?>
+                        </td>
+                        <td align="center" style="font-size:9.5pt;"><?= htmlspecialchars($rtl['waktu']) ?></td>
+                        <td align="center"><span style="font-weight:bold; font-size:9pt;"><?= htmlspecialchars($rtl['status']) ?></span></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <!-- TANDA TANGAN DOKUMEN RTL (HALAMAN 2) -->
+            <table class="signatures" style="margin-top: 35px;">
+                <tr>
+                    <td>
+                        <div>Mengetahui,</div>
+                        <div>Guru yang Disupervisi</div>
+                        <div style="height: 65px;"></div>
+                        <div style="font-weight: bold; text-decoration: underline;"><?= htmlspecialchars($supervisi['nama_guru'] ?? '-') ?></div>
+                        <?php if(!empty($supervisi['nip_guru']) && $supervisi['nip_guru'] !== '-'): ?>
+                        <div style="font-size: 9pt;">NIP. <?= htmlspecialchars($supervisi['nip_guru']) ?></div>
                         <?php endif; ?>
                     </td>
-                    <td align="center" style="font-size:9.5pt;"><?= htmlspecialchars($rtl['waktu']) ?></td>
-                    <td align="center"><span style="font-weight:bold; font-size:9pt;"><?= htmlspecialchars($rtl['status']) ?></span></td>
+                    <td>
+                        <div><?= htmlspecialchars($institusi['kabupaten'] ?? $institusi['kota'] ?? 'Lampung Barat') ?>, <?= tgl_indo($supervisi['tanggal']) ?></div>
+                        <div>Supervisor</div>
+                        <div style="height: 65px;"></div>
+                        <div style="font-weight: bold; text-decoration: underline;"><?= htmlspecialchars($supervisi['nama_supervisor'] ?? $supervisor['nama'] ?? 'Supervisor') ?></div>
+                        <?php if(!empty($supervisi['nip_supervisor']) && $supervisi['nip_supervisor'] !== '-'): ?>
+                        <div style="font-size: 9pt;">NIP. <?= htmlspecialchars($supervisi['nip_supervisor']) ?></div>
+                        <?php endif; ?>
+                    </td>
                 </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-
-        <!-- TANDA TANGAN (BEBAS DARI NIP DASH) -->
-        <table class="signatures">
-            <tr>
-                <td>
-                    <div>Mengetahui,</div>
-                    <div>Guru yang Disupervisi</div>
-                    <div style="height: 65px;"></div>
-                    <div style="font-weight: bold; text-decoration: underline;"><?= htmlspecialchars($supervisi['nama_guru'] ?? '-') ?></div>
-                    <?php if(!empty($supervisi['nip_guru']) && $supervisi['nip_guru'] !== '-'): ?>
-                    <div style="font-size: 9pt;">NIP. <?= htmlspecialchars($supervisi['nip_guru']) ?></div>
-                    <?php endif; ?>
-                </td>
-                <td>
-                    <div><?= htmlspecialchars($institusi['kabupaten'] ?? $institusi['kota'] ?? 'Lampung Barat') ?>, <?= tgl_indo($supervisi['tanggal']) ?></div>
-                    <div>Supervisor</div>
-                    <div style="height: 65px;"></div>
-                    <div style="font-weight: bold; text-decoration: underline;"><?= htmlspecialchars($supervisi['nama_supervisor'] ?? $supervisor['nama'] ?? 'Supervisor') ?></div>
-                    <?php if(!empty($supervisi['nip_supervisor']) && $supervisi['nip_supervisor'] !== '-'): ?>
-                    <div style="font-size: 9pt;">NIP. <?= htmlspecialchars($supervisi['nip_supervisor']) ?></div>
-                    <?php endif; ?>
-                </td>
-            </tr>
-        </table>
+            </table>
+        </div>
         
         <!-- AI RECOMMENDATION SECTION -->
         <div style="page-break-before: always; margin-top: 20px; border: 1px dashed #64748b; border-radius: 8px; padding: 22px; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">

@@ -71,22 +71,44 @@
             <div style="background:white; border-radius:16px; padding:1.5rem; border:1px solid #f1f5f9; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                     <form method="GET" action="/admin/absen_guru_v2/rekap-bulanan" id="formRekapBulanan" style="display:flex; gap:10px; align-items: center; flex-wrap: wrap; width: 100%;">
+                        <?php
+                        $prev_b_num = (int)$bulan - 1;
+                        $prev_y_num = (int)$tahun;
+                        if ($prev_b_num < 1) { $prev_b_num = 12; $prev_y_num--; }
+                        $prev_b_str = sprintf('%02d', $prev_b_num);
+
+                        $next_b_num = (int)$bulan + 1;
+                        $next_y_num = (int)$tahun;
+                        if ($next_b_num > 12) { $next_b_num = 1; $next_y_num++; }
+                        $next_b_str = sprintf('%02d', $next_b_num);
+                        ?>
+
+                        <!-- Tombol Geser Bulan Sebelumnya -->
+                        <a href="?bulan=<?= $prev_b_str ?>&tahun=<?= $prev_y_num ?>&jabatan=<?= urlencode($jabatan_filter ?? '') ?>&guru=<?= urlencode($guru_filter ?? '') ?>" style="width:34px; height:34px; border:1px solid #cbd5e1; border-radius:8px; background:white; display:inline-flex; align-items:center; justify-content:center; color:#475569; text-decoration:none;" title="Geser ke Bulan Sebelumnya">
+                            <i data-lucide="chevron-left" style="width:16px; height:16px;"></i>
+                        </a>
+
                         <div style="display:flex; align-items:center; gap:6px;">
                             <i data-lucide="calendar" style="width:16px; height:16px; color:#64748b;"></i>
                             <span style="color:#64748b; font-size:0.83rem; font-weight:600;">Bulan:</span>
                         </div>
-                        <select name="bulan" id="selBulan" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; outline:none; font-size:0.85rem; font-weight:600;">
+                        <select name="bulan" id="selBulan" onchange="this.form.submit()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; outline:none; font-size:0.85rem; font-weight:600; cursor:pointer;">
                             <?php foreach($bulans as $num => $nb): ?>
                                 <option value="<?php echo $num; ?>" <?php echo $bulan == $num ? 'selected' : ''; ?>><?php echo $nb; ?></option>
                             <?php endforeach; ?>
                         </select>
 
-                        <span style="color:#64748b; font-size:0.83rem; margin-left: 6px; font-weight:600;">Tahun:</span>
-                        <select name="tahun" id="selTahun" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; outline:none; font-size:0.85rem; font-weight:600;">
+                        <span style="color:#64748b; font-size:0.83rem; margin-left: 2px; font-weight:600;">Tahun:</span>
+                        <select name="tahun" id="selTahun" onchange="this.form.submit()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; outline:none; font-size:0.85rem; font-weight:600; cursor:pointer;">
                             <?php for($y=date('Y'); $y>=2024; $y--): ?>
                                 <option value="<?php echo $y; ?>" <?php echo $tahun == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
                             <?php endfor; ?>
                         </select>
+
+                        <!-- Tombol Geser Bulan Berikutnya -->
+                        <a href="?bulan=<?= $next_b_str ?>&tahun=<?= $next_y_num ?>&jabatan=<?= urlencode($jabatan_filter ?? '') ?>&guru=<?= urlencode($guru_filter ?? '') ?>" style="width:34px; height:34px; border:1px solid #cbd5e1; border-radius:8px; background:white; display:inline-flex; align-items:center; justify-content:center; color:#475569; text-decoration:none;" title="Geser ke Bulan Berikutnya">
+                            <i data-lucide="chevron-right" style="width:16px; height:16px;"></i>
+                        </a>
                         
                         <span style="color:#64748b; font-size:0.83rem; margin-left: 6px; font-weight:600;">Jabatan:</span>
                         <select name="jabatan" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; outline:none; font-size:0.85rem; min-width: 140px; font-weight:600;">
@@ -126,9 +148,19 @@
                                 <i data-lucide="user-x" style="width:14px; height:14px;"></i> Auto Alpa Kosong
                             </button>
 
-                            <!-- Tombol Generate 1 Bulan Penuh -->
-                            <button type="button" onclick="openModalGenerateBulan()" style="padding:8px 16px; background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:0.83rem; box-shadow:0 3px 8px rgba(99,102,241,0.25); transition:0.2s;" title="Generate kehadiran otomatis 1 bulan penuh untuk seluruh guru">
-                                <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Generate Hadir 1 Bulan
+                            <!-- Tombol Hadirkan 1 Bulan Khusus Guru Sertifikasi -->
+                            <button type="button" onclick="generateBulanDirect('sertifikasi', 'Khusus Semua Guru Sertifikasi')" style="padding:8px 14px; background:linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; font-size:0.83rem; box-shadow:0 2px 6px rgba(245,158,11,0.25); transition:0.2s;" title="Generate Kehadiran 1 Bulan Penuh untuk Guru Sertifikasi Saja">
+                                <i data-lucide="award" style="width:14px; height:14px;"></i> 1 Bulan Sertifikasi
+                            </button>
+
+                            <!-- Tombol Hadirkan 1 Bulan Semua Guru Penuh -->
+                            <button type="button" onclick="generateBulanDirect('semua', 'Semua Dewan Guru Madrasah')" style="padding:8px 14px; background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; font-size:0.83rem; box-shadow:0 2px 6px rgba(59,130,246,0.25); transition:0.2s;" title="Generate Kehadiran 1 Bulan Penuh untuk Semua Dewan Guru">
+                                <i data-lucide="users" style="width:14px; height:14px;"></i> 1 Bulan Semua Guru
+                            </button>
+
+                            <!-- Tombol Modal Generate 1 Bulan (Opsi Lengkap) -->
+                            <button type="button" onclick="openModalGenerateBulan()" style="padding:8px 14px; background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; font-size:0.83rem; box-shadow:0 2px 6px rgba(139,92,246,0.25); transition:0.2s;" title="Pilihan mode kombinasi, jam, atau opsi alpa 1 bulan">
+                                <i data-lucide="calendar-days" style="width:14px; height:14px;"></i> Opsi Bulan
                             </button>
                         </div>
                     </form>
@@ -321,6 +353,31 @@
 
     function closeModalGenerateBulan() {
         document.getElementById('modalGenBulan').style.display = 'none';
+    }
+
+    function generateBulanDirect(mode, modeLabel) {
+        const b = document.getElementById('selBulan').value;
+        const t = document.getElementById('selTahun').value;
+        const bulanText = document.getElementById('selBulan').options[document.getElementById('selBulan').selectedIndex].text;
+        
+        const pesan = `Konfirmasi Generate Kehadiran 1 Bulan Penuh (${bulanText} ${t}):\n\n` +
+                      `Target: ${modeLabel}\n` +
+                      `Standar Waktu: Masuk 07:00-07:30 (acak), Pulang 13:15-13:30 (acak)\n` +
+                      `Hari Minggu dan Kalender Libur otomatis dilewati.\n\n` +
+                      `Lanjutkan proses otomatisasi kehadiran bulanan?`;
+                      
+        if (confirm(pesan)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/admin/absen_guru_v2/generate-bulan';
+            
+            const inB = document.createElement('input'); inB.type = 'hidden'; inB.name = 'bulan'; inB.value = b; form.appendChild(inB);
+            const inY = document.createElement('input'); inY.type = 'hidden'; inY.name = 'tahun'; inY.value = t; form.appendChild(inY);
+            const inM = document.createElement('input'); inM.type = 'hidden'; inM.name = 'mode'; inM.value = mode; form.appendChild(inM);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
     }
 
     function confirmAutoAlpaBulan() {

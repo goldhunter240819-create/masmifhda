@@ -157,53 +157,88 @@
                 
                 <!-- Action Controls Toolbar -->
                 <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:1.5rem; padding-bottom:1.25rem; border-bottom:1px solid #f1f5f9;">
-                    <!-- Filter Date Form -->
-                    <form method="GET" action="/admin/absen_guru_v2/rekap-harian" style="display:flex; align-items:center; gap:8px;">
-                        <div style="position:relative; display:flex; align-items:center;">
-                            <input type="date" name="tanggal" value="<?php echo htmlspecialchars($tanggal); ?>" style="padding:9px 14px; border:1.5px solid #cbd5e1; border-radius:10px; outline:none; font-family:inherit; font-size:0.88rem; font-weight:600; color:#1e293b;">
-                        </div>
-                        <button type="submit" style="padding:9px 18px; background:#0ea5e9; color:white; border:none; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
-                            <i data-lucide="filter" style="width:14px; height:14px;"></i> Filter
-                        </button>
-                    </form>
+                    <?php
+                    $prev_tanggal = date('Y-m-d', strtotime($tanggal . ' -1 day'));
+                    $next_tanggal = date('Y-m-d', strtotime($tanggal . ' +1 day'));
+                    $today_tanggal = date('Y-m-d');
+                    ?>
+                    <!-- Filter Date Form dengan Tombol Geser Tanggal -->
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <!-- Tombol Geser Mundur (Kemarin) -->
+                        <a href="/admin/absen_guru_v2/rekap-harian?tanggal=<?= $prev_tanggal ?>" style="width:38px; height:38px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#475569; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; transition:0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);" title="Geser ke Kemarin (<?= date('d/m/Y', strtotime($prev_tanggal)) ?>)">
+                            <i data-lucide="chevron-left" style="width:18px; height:18px;"></i>
+                        </a>
+
+                        <form method="GET" action="/admin/absen_guru_v2/rekap-harian" style="display:flex; align-items:center; gap:6px; margin:0;">
+                            <div style="position:relative; display:flex; align-items:center;">
+                                <input type="date" name="tanggal" value="<?php echo htmlspecialchars($tanggal); ?>" onchange="this.form.submit()" style="padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:10px; outline:none; font-family:inherit; font-size:0.88rem; font-weight:600; color:#1e293b; cursor:pointer;">
+                            </div>
+                            <button type="submit" style="padding:9px 16px; background:#0ea5e9; color:white; border:none; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;">
+                                <i data-lucide="filter" style="width:14px; height:14px;"></i> Filter
+                            </button>
+                        </form>
+
+                        <!-- Tombol Geser Maju (Besok) -->
+                        <a href="/admin/absen_guru_v2/rekap-harian?tanggal=<?= $next_tanggal ?>" style="width:38px; height:38px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#475569; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; transition:0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);" title="Geser ke Besok (<?= date('d/m/Y', strtotime($next_tanggal)) ?>)">
+                            <i data-lucide="chevron-right" style="width:18px; height:18px;"></i>
+                        </a>
+
+                        <?php if ($tanggal !== $today_tanggal): ?>
+                        <a href="/admin/absen_guru_v2/rekap-harian?tanggal=<?= $today_tanggal ?>" style="padding:7px 12px; border-radius:10px; border:1px solid #bfdbfe; background:#eff6ff; color:#2563eb; font-size:0.78rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Kembali ke Tanggal Hari Ini">
+                            Hari Ini
+                        </a>
+                        <?php endif; ?>
+                    </div>
 
                     <!-- Fast Attendance Generation Buttons -->
                     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
-                        <!-- Tombol 1: Hadirkan Guru Sertifikasi -->
+                        <!-- Tombol Harian 1: Hadirkan Guru Sertifikasi -->
                         <form method="POST" action="/admin/absen_guru_v2/hadirkan-sertifikasi" onsubmit="return confirmAction(event, 'sertifikasi', 'Hadirkan Semua Guru Sertifikasi (Hadir Setiap Hari)? Waktu masuk akan diacak antara 07:00-07:30 dan pulang 13:15-13:30.')">
                             <input type="hidden" name="tanggal" value="<?php echo htmlspecialchars($tanggal); ?>">
-                            <button type="submit" class="btn-hadirkan-sertif" style="padding:9px 16px; background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 3px 8px rgba(245,158,11,0.25); transition:0.2s;">
-                                <i data-lucide="award" style="width:15px; height:15px;"></i> Hadirkan Semua Guru Sertifikasi
+                            <button type="submit" class="btn-hadirkan-sertif" style="padding:9px 13px; background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(245,158,11,0.25); transition:0.2s;" title="Hadirkan semua guru sertifikasi hari ini">
+                                <i data-lucide="award" style="width:15px; height:15px;"></i> Guru Sertifikasi
                             </button>
                         </form>
 
-                        <!-- Tombol 2: Hadirkan Guru Ada Jam -->
+                        <!-- Tombol Harian 2: Hadirkan Guru Ada Jam -->
                         <form method="POST" action="/admin/absen_guru_v2/hadirkan-jam" onsubmit="return confirmAction(event, 'jam', 'Hadirkan Guru Yang Ada Jam Hari Ini (<?= htmlspecialchars($hari) ?>)? Waktu masuk akan diacak antara 07:00-07:30 dan pulang 13:15-13:30.')">
                             <input type="hidden" name="tanggal" value="<?php echo htmlspecialchars($tanggal); ?>">
-                            <button type="submit" class="btn-hadirkan-jam" style="padding:9px 16px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 3px 8px rgba(16,185,129,0.25); transition:0.2s;">
-                                <i data-lucide="calendar-check" style="width:15px; height:15px;"></i> Hadirkan Guru Ada Jam (<?= htmlspecialchars($hari) ?>)
+                            <button type="submit" class="btn-hadirkan-jam" style="padding:9px 13px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(16,185,129,0.25); transition:0.2s;" title="Hadirkan guru yang ada jam hari ini">
+                                <i data-lucide="calendar-check" style="width:15px; height:15px;"></i> Guru Ada Jam (<?= htmlspecialchars($hari) ?>)
                             </button>
                         </form>
 
-                        <!-- Tombol 3: Hadirkan Semua (Sertif + Jam) -->
+                        <!-- Tombol Harian 3: Hadirkan Semua Otomatis -->
                         <form method="POST" action="/admin/absen_guru_v2/hadirkan-semua" onsubmit="return confirmAction(event, 'semua', 'Hadirkan Semua Guru (Sertifikasi + Yang Ada Jam Hari Ini)? Waktu masuk akan diacak antara 07:00-07:30 dan pulang 13:15-13:30.')">
                             <input type="hidden" name="tanggal" value="<?php echo htmlspecialchars($tanggal); ?>">
-                            <button type="submit" class="btn-hadirkan-all" style="padding:9px 16px; background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 3px 8px rgba(59,130,246,0.25); transition:0.2s;">
-                                <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Hadirkan Semua Otomatis
+                            <button type="submit" class="btn-hadirkan-all" style="padding:9px 13px; background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(59,130,246,0.25); transition:0.2s;" title="Hadirkan semua otomatis (Sertif + Ada Jam)">
+                                <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Semua Otomatis
                             </button>
                         </form>
 
-                        <!-- Tombol 4: Auto Alpa yang Kosong Hari Ini (Hanya yang Terjadwal) -->
+                        <!-- Tombol Harian 4: Auto Alpa yang Kosong -->
                         <form method="POST" action="/admin/absen_guru_v2/auto-alpa" onsubmit="return confirmAction(event, 'alpa', 'Tandai status ALPA untuk guru yang terjadwal hadir hari ini (Sertifikasi & Ada Jam) tetapi belum absen?\n\n*Catatan: Guru yang TIDAK ADA JAM mengajar di hari ini TETAP TIDAK DIALPA.')">
                             <input type="hidden" name="tanggal" value="<?php echo htmlspecialchars($tanggal); ?>">
-                            <button type="submit" style="padding:9px 15px; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 3px 8px rgba(239,68,68,0.25); transition:0.2s;" title="Tandai Alpa otomatis untuk guru yang terjadwal hadir tapi belum absen hari ini">
-                                <i data-lucide="user-x" style="width:15px; height:15px;"></i> Auto Alpa Yang Kosong
+                            <button type="submit" style="padding:9px 13px; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(239,68,68,0.25); transition:0.2s;" title="Tandai Alpa otomatis untuk guru yang terjadwal hadir tapi belum absen hari ini">
+                                <i data-lucide="user-x" style="width:15px; height:15px;"></i> Auto Alpa
                             </button>
                         </form>
 
-                        <!-- Tombol 5: Generate Hadir 1 Bulan Penuh dengan Pilihan Mode -->
-                        <button type="button" onclick="openModalGenerateBulan('<?= date('m', strtotime($tanggal)) ?>', '<?= date('Y', strtotime($tanggal)) ?>')" style="padding:9px 16px; background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 3px 8px rgba(139,92,246,0.25); transition:0.2s;" title="Pilih mode generate kehadiran untuk 1 bulan penuh">
-                            <i data-lucide="calendar-days" style="width:15px; height:15px;"></i> Generate 1 Bulan (<?= date('M Y', strtotime($tanggal)) ?>)
+                        <div style="height:24px; width:1px; background:#cbd5e1; margin:0 3px;"></div>
+
+                        <!-- Tombol Bulanan: Hadirkan 1 Bulan Khusus Sertifikasi -->
+                        <button type="button" onclick="generateBulanDirect('sertifikasi', 'Khusus Semua Guru Sertifikasi')" style="padding:9px 14px; background:linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(245,158,11,0.25); transition:0.2s;" title="Generate 1 Bulan Penuh untuk Guru Sertifikasi Saja">
+                            <i data-lucide="award" style="width:15px; height:15px;"></i> 1 Bulan Sertifikasi
+                        </button>
+
+                        <!-- Tombol Bulanan: Hadirkan 1 Bulan Semua Guru Penuh -->
+                        <button type="button" onclick="generateBulanDirect('semua', 'Semua Dewan Guru Madrasah')" style="padding:9px 14px; background:linear-gradient(135deg, #6366f1 0%, #4338ca 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(99,102,241,0.25); transition:0.2s;" title="Generate 1 Bulan Penuh untuk Semua Dewan Guru">
+                            <i data-lucide="users" style="width:15px; height:15px;"></i> 1 Bulan Semua Guru
+                        </button>
+
+                        <!-- Tombol Bulanan: Opsi Modal Generate 1 Bulan -->
+                        <button type="button" onclick="openModalGenerateBulan('<?= date('m', strtotime($tanggal)) ?>', '<?= date('Y', strtotime($tanggal)) ?>')" style="padding:9px 14px; background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(139,92,246,0.25); transition:0.2s;" title="Pilihan mode kombinasi, jam, atau opsi alpa 1 bulan">
+                            <i data-lucide="calendar-days" style="width:15px; height:15px;"></i> Opsi Bulan (<?= date('M Y', strtotime($tanggal)) ?>)
                         </button>
                     </div>
                 </div>
@@ -438,5 +473,30 @@
 
     function closeModalGenerateBulan() {
         document.getElementById('modalGenBulan').style.display = 'none';
+    }
+
+    function generateBulanDirect(mode, modeLabel) {
+        var b = '<?= date('m', strtotime($tanggal)) ?>';
+        var y = '<?= date('Y', strtotime($tanggal)) ?>';
+        var namaBulan = '<?= date('M Y', strtotime($tanggal)) ?>';
+        
+        var msg = 'Konfirmasi Generate Kehadiran 1 Bulan Penuh (' + namaBulan + '):\n\n' +
+                  'Target: ' + modeLabel + '\n' +
+                  'Standar Waktu: Masuk 07:00-07:30 (acak), Pulang 13:15-13:30 (acak)\n' +
+                  'Hari Minggu dan Kalender Libur otomatis dilewati.\n\n' +
+                  'Lanjutkan proses otomatisasi kehadiran?';
+                  
+        if (confirm(msg)) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/admin/absen_guru_v2/generate-bulan';
+            
+            var inB = document.createElement('input'); inB.type = 'hidden'; inB.name = 'bulan'; inB.value = b; form.appendChild(inB);
+            var inY = document.createElement('input'); inY.type = 'hidden'; inY.name = 'tahun'; inY.value = y; form.appendChild(inY);
+            var inM = document.createElement('input'); inM.type = 'hidden'; inM.name = 'mode'; inM.value = mode; form.appendChild(inM);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
     }
 </script>

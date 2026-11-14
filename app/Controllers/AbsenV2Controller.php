@@ -555,8 +555,15 @@ class AbsenV2Controller {
             exit;
         }
 
-        $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
-        $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
+        if (isset($_GET['bulan']) && isset($_GET['tahun']) && !empty($_GET['bulan']) && !empty($_GET['tahun'])) {
+            $b = intval($_GET['bulan']);
+            $y = intval($_GET['tahun']);
+            $start_date = sprintf('%04d-%02d-01', $y, $b);
+            $end_date = date('Y-m-t', strtotime($start_date));
+        } else {
+            $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
+            $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
+        }
         $kelas_id = isset($_GET['kelas_id']) ? $_GET['kelas_id'] : '';
 
         $active_year = \App\Core\AcademicYear::current();
