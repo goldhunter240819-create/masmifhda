@@ -313,6 +313,10 @@
                     $stmtJ->execute([$guruDetail['id']]);
                     $jadwalHariGuru = array_map('ucfirst', array_map('strtolower', $stmtJ->fetchAll(\PDO::FETCH_COLUMN)));
                 } catch (\Exception $e) {}
+
+                $firstDate = sprintf('%04d-%02d-01', $tahun, $bulan);
+                $lastDate = sprintf('%04d-%02d-%02d', $tahun, $bulan, $daysInMonth);
+                $holidayMap = \App\Controllers\AbsenGuruV2Controller::getKalenderHolidaysMap($dbSiakad, $firstDate, $lastDate);
                 
                 $totHadir = 0;
                 $totTerlambat = 0;
@@ -331,9 +335,15 @@
                         continue; // Skip hari Minggu agar ringkas 1 halaman penuh
                     }
                     
+                    $isHoliday = isset($holidayMap[$tglStr]);
                     $isHadir = isset($absenData[$tglStr]);
                     
-                    if ($isHadir) {
+                    if ($isHoliday) {
+                        $st = 'Libur';
+                        $masuk = '-';
+                        $pulang = '-';
+                        $ket = $holidayMap[$tglStr]['label'] ?? 'Hari Libur / Agenda Madrasah';
+                    } elseif ($isHadir) {
                         $row = $absenData[$tglStr];
                         $st = $row['status'] ?: 'Hadir';
                         
@@ -366,7 +376,7 @@
                         }
                     }
                     ?>
-                    <tr>
+                    <tr style="<?php echo $isHoliday ? 'background-color: #fee2e2;' : ''; ?>">
                         <td class="text-center"><?php echo $rowNo++; ?></td>
                         <td class="text-center"><?php echo $tglDisplay; ?></td>
                         <td><?php echo $namaHari; ?></td>
@@ -383,6 +393,8 @@
                                 <strong style="color: #7e22ce;">Izin</strong>
                             <?php elseif ($st === 'Alpa'): ?>
                                 <strong style="color: #b91c1c;">Alpa</strong>
+                            <?php elseif ($st === 'Libur'): ?>
+                                <strong style="color: #dc2626;">Libur</strong>
                             <?php else: ?>
                                 <span style="color: #94a3b8;"><?php echo htmlspecialchars($st); ?></span>
                             <?php endif; ?>

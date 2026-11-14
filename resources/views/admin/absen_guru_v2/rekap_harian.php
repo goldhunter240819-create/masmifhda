@@ -92,6 +92,13 @@
                             <strong>Auto-Alpa Berhasil Diproses!</strong> Sebanyak <strong><?= intval($_GET['count'] ?? 0) ?> guru</strong> yang memiliki jadwal hadir tetapi tidak ada absensi telah ditandai sebagai <strong>ALPA</strong>. (Guru yang tidak ada jam mengajar tetap aman).
                         </div>
                     </div>
+                <?php elseif ($_GET['msg'] === 'libur'): ?>
+                    <div style="background: #fff1f2; border: 1px solid #fecdd3; border-left: 5px solid #e11d48; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px;">
+                        <i data-lucide="calendar-x" style="width: 22px; height: 22px; color: #e11d48; flex-shrink: 0;"></i>
+                        <div style="font-size: 0.88rem; color: #9f1239; font-weight: 600;">
+                            <strong>Hari Libur / Agenda Madrasah:</strong> Tanggal <strong><?= htmlspecialchars(date('d/m/Y', strtotime($tanggal))) ?></strong> tercatat sebagai <strong><?= htmlspecialchars($_GET['libur_nama'] ?? 'Hari Libur Kalender') ?></strong>. Presensi dan Alpa tidak diberlakukan.
+                        </div>
+                    </div>
                 <?php elseif ($_GET['msg'] === 'minggu_libur'): ?>
                     <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid #f59e0b; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px;">
                         <i data-lucide="alert-triangle" style="width: 22px; height: 22px; color: #d97706; flex-shrink: 0;"></i>

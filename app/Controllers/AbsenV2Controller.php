@@ -180,8 +180,8 @@ class AbsenV2Controller {
             
             $today = date('Y-m-d');
             
-            // Cek Kalender Akademik (Libur & Pulang Awal)
-            $cekAgenda = $db_siakad->query("SELECT tipe, keterangan, jam_mulai_kosong FROM kalender_akademik WHERE tanggal_mulai <= '$today' AND tanggal_selesai >= '$today' AND (tipe = 'libur' OR tipe = 'pulang_awal') LIMIT 1")->fetch();
+            // Cek Kalender Pendidikan (Libur & Pulang Awal)
+            $cekAgenda = $db_siakad->query("SELECT jenis as tipe, keterangan, jam_pulang as jam_mulai_kosong FROM kalender_pendidikan WHERE (COALESCE(NULLIF(tanggal_selesai, ''), tanggal_mulai) >= '$today') AND tanggal_mulai <= '$today' AND (jenis = 'libur' OR jenis = 'pulang_awal') LIMIT 1")->fetch();
             if ($cekAgenda && $cekAgenda['tipe'] == 'libur') {
                 $msg = 'Hari ini Libur: ' . $cekAgenda['keterangan'] . '. Tidak perlu scan absensi.';
                 file_put_contents(__DIR__ . '/../../scanner_debug.log', "[" . date('Y-m-d H:i:s') . "] Failed: " . $msg . "\n", FILE_APPEND);
@@ -433,9 +433,9 @@ class AbsenV2Controller {
 
             $today = date('Y-m-d');
             
-            // Cek Kalender Akademik (Libur)
+            // Cek Kalender Pendidikan (Libur)
             $db_siakad = Database::connect('siakad');
-            $cekLibur = $db_siakad->query("SELECT tipe, keterangan FROM kalender_akademik WHERE tanggal_mulai <= '$today' AND tanggal_selesai >= '$today' AND tipe = 'libur' LIMIT 1")->fetch();
+            $cekLibur = $db_siakad->query("SELECT jenis as tipe, keterangan FROM kalender_pendidikan WHERE (COALESCE(NULLIF(tanggal_selesai, ''), tanggal_mulai) >= '$today') AND tanggal_mulai <= '$today' AND jenis = 'libur' LIMIT 1")->fetch();
             if ($cekLibur) {
                 $msg = 'Hari ini Libur: ' . $cekLibur['keterangan'] . '. Tidak perlu scan absensi sholat.';
                 echo json_encode(['success' => false, 'message' => $msg]);
@@ -592,29 +592,25 @@ class AbsenV2Controller {
                      
         $siswaList = $db_core->query($sqlSiswa)->fetchAll();
 
-        // Get holidays from kalender_akademik
-        $stmtLibur = $db_siakad->query("SELECT tanggal_mulai, tanggal_selesai FROM kalender_akademik WHERE tipe = 'libur'");
-        $liburList = $stmtLibur->fetchAll();
-        $libur_dates = [];
-        foreach($liburList as $l) {
-            $t = strtotime($l['tanggal_mulai']);
-            $e = strtotime($l['tanggal_selesai']);
-            if (!$e) $e = $t;
-            while($t <= $e) {
-                $libur_dates[] = date('Y-m-d', $t);
-                $t = strtotime('+1 day', $t);
-            }
-        }
+        // Peta hari libur dan hari Minggu dari kalender_pendidikan
+        $holidayMap = self::getKalenderHolidaysMap($db_siakad, $start_date, $end_date);
 
-        // Generate date range
+        // Bersihkan data absensi siswa yang sempat tercatat di hari Minggu atau libur pasti
+        try {
+            $db_siakad->exec("DELETE FROM absensi_siswa WHERE DAYOFWEEK(tanggal) = 1");
+            $liburPasti = array_keys(array_filter($holidayMap, function($h) { return $h['type'] === 'libur'; }));
+            if (!empty($liburPasti)) {
+                $inLib = "'" . implode("','", $liburPasti) . "'";
+                $db_siakad->exec("DELETE FROM absensi_siswa WHERE tanggal IN ($inLib)");
+            }
+        } catch (\Throwable $e) {}
+
+        // Generate date range LENGKAP dari awal sampai akhir bulan (1 s/d 31) agar naskah cetak utuh
         $dates_range = [];
         $current = strtotime($start_date);
         $end = strtotime($end_date);
         while ($current <= $end) {
-            $dt_str = date('Y-m-d', $current);
-            if (date('w', $current) != 0 && !in_array($dt_str, $libur_dates)) { // Skip Sunday & Holidays
-                $dates_range[] = $dt_str;
-            }
+            $dates_range[] = date('Y-m-d', $current);
             $current = strtotime('+1 day', $current);
         }
 
@@ -628,18 +624,26 @@ class AbsenV2Controller {
 
             $absen_harian = [];
             foreach ($dates_range as $dt) {
-                // Hari sekolah aktif yang sudah lewat/hari ini jika tidak ada absen -> Alpa ('A')
-                $absen_harian[$dt] = ($dt <= $today) ? 'Alpa' : '-';
+                if (isset($holidayMap[$dt])) {
+                    $absen_harian[$dt] = 'Libur';
+                } else {
+                    // Hari sekolah aktif yang sudah lewat/hari ini jika tidak ada absen -> Alpa ('A')
+                    $absen_harian[$dt] = ($dt <= $today) ? 'Alpa' : '-';
+                }
             }
             foreach ($detail_rows as $row) {
-                if (isset($absen_harian[$row['tanggal']])) {
-                    $absen_harian[$row['tanggal']] = $row['status'];
+                $tgl = $row['tanggal'];
+                if (!isset($holidayMap[$tgl]) && isset($absen_harian[$tgl])) {
+                    $absen_harian[$tgl] = $row['status'];
                 }
             }
 
-            // Hitung total rekapitulasi agar selaras dengan tabel harian (termasuk Alpa otomatis)
+            // Hitung total rekapitulasi: HANYA HARI EFEKTIF SEKOLAH (Minggu & Libur tidak dihitung)
             $r = ['Hadir'=>0, 'Sakit'=>0, 'Izin'=>0, 'Alpa'=>0, 'Terlambat'=>0, 'Bolos'=>0];
             foreach ($dates_range as $dt) {
+                if (isset($holidayMap[$dt])) {
+                    continue; // Skip hari libur & hari minggu
+                }
                 $st = $absen_harian[$dt];
                 if (isset($r[$st])) {
                     $r[$st]++;
@@ -1098,6 +1102,80 @@ class AbsenV2Controller {
         include __DIR__ . '/../../resources/views/siakad/layout.php';
     }
 
+    public static function getKalenderHolidaysMap($db_siakad, $startDate, $endDate) {
+        $holidayMap = [];
+
+        // 1. Ambil dari kalender_pendidikan (aula_siakad_db)
+        try {
+            $stmt = $db_siakad->query("SELECT tanggal_mulai, tanggal_selesai, keterangan, jenis 
+                FROM kalender_pendidikan 
+                WHERE (COALESCE(NULLIF(tanggal_selesai, ''), tanggal_mulai) >= '$startDate')
+                  AND tanggal_mulai <= '$endDate'
+                ORDER BY tanggal_mulai ASC");
+            if ($stmt) {
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                foreach ($rows as $r) {
+                    $cur = strtotime($r['tanggal_mulai']);
+                    $end = (!empty($r['tanggal_selesai']) && $r['tanggal_selesai'] !== '0000-00-00') ? strtotime($r['tanggal_selesai']) : $cur;
+                    if ($end < $cur) { $end = $cur; }
+
+                    $isHoliday = ($r['jenis'] === 'libur' 
+                        || $r['jenis'] === 'kegiatan_bebas_jurnal'
+                        || stripos($r['keterangan'], 'libur') !== false 
+                        || stripos($r['keterangan'], 'cuti') !== false
+                        || stripos($r['keterangan'], 'hari raya') !== false
+                        || stripos($r['keterangan'], 'peringatan') !== false
+                        || stripos($r['keterangan'], 'kegiatan') !== false
+                        || stripos($r['keterangan'], 'hut') !== false);
+
+                    if ($isHoliday) {
+                        $label = trim(strtoupper($r['keterangan']));
+                        $safety = 0;
+                        while ($cur <= $end && $safety++ < 90) {
+                            $dStr = date('Y-m-d', $cur);
+                            if ($dStr >= $startDate && $dStr <= $endDate) {
+                                if (!isset($holidayMap[$dStr]) || $r['jenis'] === 'libur') {
+                                    $holidayMap[$dStr] = [
+                                        'type' => 'libur',
+                                        'label' => $label ?: 'HARI LIBUR'
+                                    ];
+                                }
+                            }
+                            $cur = strtotime('+1 day', $cur);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        // 2. Set HARI MINGGU & pastikan 17 Agustus otomatis ada jika di bulan Agustus
+        $cur = strtotime($startDate);
+        $end = strtotime($endDate);
+        while ($cur <= $end) {
+            $dStr = date('Y-m-d', $cur);
+            $w = date('w', $cur);
+            $m_d = date('m-d', $cur);
+
+            if ($m_d === '08-17' && !isset($holidayMap[$dStr])) {
+                $holidayMap[$dStr] = [
+                    'type' => 'libur',
+                    'label' => 'HUT KEMERDEKAAN RI'
+                ];
+            }
+
+            if ($w == 0) {
+                $existing = $holidayMap[$dStr]['label'] ?? '';
+                $holidayMap[$dStr] = [
+                    'type' => 'minggu',
+                    'label' => 'HARI MINGGU' . (!empty($existing) && $existing !== 'HARI MINGGU' ? " ({$existing})" : '')
+                ];
+            }
+            $cur = strtotime('+1 day', $cur);
+        }
+
+        return $holidayMap;
+    }
+
     public static function autoGenerateAlpaSiswa($start_date, $end_date) {
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
@@ -1115,6 +1193,7 @@ class AbsenV2Controller {
         
         if (empty($siswa_aktif)) return;
         
+        $holidayMap = self::getKalenderHolidaysMap($db_siakad, $start_date, $end_date);
         $today_obj = new \DateTime(date('Y-m-d'));
         
         foreach ($period as $date) {
@@ -1122,8 +1201,8 @@ class AbsenV2Controller {
             
             if ($date > $today_obj) continue;
             
-            // Skip hari Minggu (0)
-            if ($date->format('w') == 0) continue;
+            // Skip hari Minggu (0) & hari libur kalender
+            if ($date->format('w') == 0 || isset($holidayMap[$dt_str])) continue;
             
             // Ambil id siswa yang sudah ada absennya di tanggal ini
             $stmt_absen = $db_siakad->prepare("SELECT siswa_id FROM absensi_siswa WHERE tanggal = ?");

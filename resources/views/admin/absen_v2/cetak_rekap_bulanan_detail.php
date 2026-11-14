@@ -283,6 +283,32 @@ $periode_label = 'Bulan ' . ($nama_bulan_arr[$curr_m] ?? date('F', strtotime($st
         }
         .text-center { text-align: center; }
 
+        /* Kolom Vertikal Hari Minggu & Hari Libur Kalender */
+        .col-holiday-merged {
+            background-color: #fee2e2 !important;
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding: 2px 1px !important;
+            width: 20px !important;
+            max-width: 25px !important;
+            border: 1px solid #334155 !important;
+            overflow: hidden;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .vertical-holiday-text {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            white-space: nowrap;
+            display: inline-block;
+            letter-spacing: 1.5px;
+            font-size: 7.5pt;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
         @media print {
             body { 
                 background: white; 
@@ -306,6 +332,13 @@ $periode_label = 'Bulan ' . ($nama_bulan_arr[$curr_m] ?? date('F', strtotime($st
     </style>
 </head>
 <body>
+
+<?php
+if (!isset($holidayMap)) {
+    $dbSiakad = \App\Core\Database::connect('siakad');
+    $holidayMap = \App\Controllers\AbsenV2Controller::getKalenderHolidaysMap($dbSiakad, $start_date, $end_date);
+}
+?>
 
 <!-- TOOLBAR FILTER LANGSUNG (NO PRINT) -->
 <div class="no-print print-toolbar">
@@ -403,8 +436,12 @@ $periode_label = 'Bulan ' . ($nama_bulan_arr[$curr_m] ?? date('F', strtotime($st
                 <th width="6%">NIS</th>
                 <th width="14%">Nama Siswa</th>
                 <th width="4.5%">Kelas</th>
-                <?php foreach($dates_range as $dt): ?>
-                    <th width="2%"><?php echo date('d', strtotime($dt)); ?></th>
+                <?php foreach($dates_range as $dt): 
+                    $isHol = isset($holidayMap[$dt]);
+                ?>
+                    <th width="2%" style="<?php echo $isHol ? 'background-color:#fee2e2 !important; color:#dc2626;' : ''; ?>">
+                        <?php echo date('d', strtotime($dt)); ?>
+                    </th>
                 <?php endforeach; ?>
                 <th width="3%" class="text-center">Hadir</th>
                 <th width="3%" class="text-center">Sakit</th>
@@ -422,14 +459,31 @@ $periode_label = 'Bulan ' . ($nama_bulan_arr[$curr_m] ?? date('F', strtotime($st
                 </td>
             </tr>
             <?php else: ?>
-            <?php $no=1; foreach($rekap as $row): ?>
+            <?php 
+            $totalSiswa = count($rekap);
+            $no = 1; 
+            foreach($rekap as $row): 
+            ?>
             <tr>
-                <td class="text-center"><?php echo $no++; ?></td>
+                <td class="text-center"><?php echo $no; ?></td>
                 <td><?php echo htmlspecialchars($row['nis']); ?></td>
                 <td style="font-weight: 600;"><?php echo htmlspecialchars($row['nama']); ?></td>
                 <td class="text-center"><?php echo htmlspecialchars($row['nama_kelas']); ?></td>
                 <?php foreach($dates_range as $dt): 
-                    $status_dt = $row['harian'][$dt];
+                    $isHol = isset($holidayMap[$dt]);
+                    if ($isHol) {
+                        if ($no === 1) {
+                            $hLabel = $holidayMap[$dt]['label'] ?? 'HARI MINGGU';
+                            ?>
+                            <td rowspan="<?php echo $totalSiswa; ?>" class="col-holiday-merged">
+                                <div class="vertical-holiday-text"><?php echo htmlspecialchars($hLabel); ?></div>
+                            </td>
+                            <?php
+                        }
+                        continue; // Untuk siswa ke-2 dst, cell dicover rowspan
+                    }
+
+                    $status_dt = $row['harian'][$dt] ?? '';
                     $label = '-';
                     $color_style = 'color: #94a3b8;';
                     if ($status_dt == 'Hadir') {
@@ -461,7 +515,7 @@ $periode_label = 'Bulan ' . ($nama_bulan_arr[$curr_m] ?? date('F', strtotime($st
                 <td class="text-center" style="font-weight: 700; color: #7f1d1d;"><?php echo $row['rekap']['Bolos']; ?></td>
                 <td class="text-center" style="font-weight: 600;"><?php echo $row['rekap']['Terlambat']; ?></td>
             </tr>
-            <?php endforeach; ?>
+            <?php $no++; endforeach; ?>
             <?php endif; ?>
         </tbody>
     </table>

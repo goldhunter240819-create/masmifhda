@@ -270,21 +270,88 @@ class AbsenGuruV2Controller {
         return $jadwal;
     }
 
-    public static function getKalenderLiburDates($db_siakad) {
-        $liburDates = [];
+    public static function getKalenderHolidaysMap($db_siakad, $startDate, $endDate) {
+        $holidayMap = [];
+
+        // 1. Ambil dari kalender_pendidikan (aula_siakad_db)
         try {
-            $stmtLibur = $db_siakad->query("SELECT tanggal_mulai, tanggal_selesai FROM kalender_pendidikan WHERE jenis = 'libur'");
-            if ($stmtLibur) {
-                while ($lb = $stmtLibur->fetch(\PDO::FETCH_ASSOC)) {
-                    $cur = strtotime($lb['tanggal_mulai']);
-                    $end = strtotime($lb['tanggal_selesai']);
-                    while ($cur <= $end) {
-                        $liburDates[date('Y-m-d', $cur)] = true;
-                        $cur = strtotime('+1 day', $cur);
+            $stmt = $db_siakad->query("SELECT tanggal_mulai, tanggal_selesai, keterangan, jenis 
+                FROM kalender_pendidikan 
+                WHERE (COALESCE(NULLIF(tanggal_selesai, ''), tanggal_mulai) >= '$startDate')
+                  AND tanggal_mulai <= '$endDate'
+                ORDER BY tanggal_mulai ASC");
+            if ($stmt) {
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                foreach ($rows as $r) {
+                    $cur = strtotime($r['tanggal_mulai']);
+                    $end = (!empty($r['tanggal_selesai']) && $r['tanggal_selesai'] !== '0000-00-00') ? strtotime($r['tanggal_selesai']) : $cur;
+                    if ($end < $cur) { $end = $cur; }
+
+                    $isHoliday = ($r['jenis'] === 'libur' 
+                        || $r['jenis'] === 'kegiatan_bebas_jurnal'
+                        || stripos($r['keterangan'], 'libur') !== false 
+                        || stripos($r['keterangan'], 'cuti') !== false
+                        || stripos($r['keterangan'], 'hari raya') !== false
+                        || stripos($r['keterangan'], 'peringatan') !== false
+                        || stripos($r['keterangan'], 'kegiatan') !== false
+                        || stripos($r['keterangan'], 'hut') !== false);
+
+                    if ($isHoliday) {
+                        $label = trim(strtoupper($r['keterangan']));
+                        $safety = 0;
+                        while ($cur <= $end && $safety++ < 90) {
+                            $dStr = date('Y-m-d', $cur);
+                            if ($dStr >= $startDate && $dStr <= $endDate) {
+                                if (!isset($holidayMap[$dStr]) || $r['jenis'] === 'libur') {
+                                    $holidayMap[$dStr] = [
+                                        'type' => 'libur',
+                                        'label' => $label ?: 'HARI LIBUR'
+                                    ];
+                                }
+                            }
+                            $cur = strtotime('+1 day', $cur);
+                        }
                     }
                 }
             }
-        } catch (\Exception $eLibur) {}
+        } catch (\Throwable $e) {}
+
+        // 2. Set HARI MINGGU & pastikan 17 Agustus otomatis ada jika di bulan Agustus
+        $cur = strtotime($startDate);
+        $end = strtotime($endDate);
+        while ($cur <= $end) {
+            $dStr = date('Y-m-d', $cur);
+            $w = date('w', $cur);
+            $m_d = date('m-d', $cur);
+
+            if ($m_d === '08-17' && !isset($holidayMap[$dStr])) {
+                $holidayMap[$dStr] = [
+                    'type' => 'libur',
+                    'label' => 'HUT KEMERDEKAAN RI'
+                ];
+            }
+
+            if ($w == 0) {
+                $existing = $holidayMap[$dStr]['label'] ?? '';
+                $holidayMap[$dStr] = [
+                    'type' => 'minggu',
+                    'label' => 'HARI MINGGU' . (!empty($existing) && $existing !== 'HARI MINGGU' ? " ({$existing})" : '')
+                ];
+            }
+            $cur = strtotime('+1 day', $cur);
+        }
+
+        return $holidayMap;
+    }
+
+    public static function getKalenderLiburDates($db_siakad, $startDate = null, $endDate = null) {
+        if (!$startDate) $startDate = date('Y-01-01');
+        if (!$endDate) $endDate = date('Y-12-31');
+        $map = self::getKalenderHolidaysMap($db_siakad, $startDate, $endDate);
+        $liburDates = [];
+        foreach ($map as $d => $info) {
+            $liburDates[$d] = true;
+        }
         return $liburDates;
     }
 
@@ -351,6 +418,22 @@ class AbsenGuruV2Controller {
         $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
 
+        // Cek jika mode tanggal tunggal dan tanggal tersebut adalah hari libur/Minggu
+        if (!empty($tanggal)) {
+            $holMap = self::getKalenderHolidaysMap($db_siakad, $tanggal, $tanggal);
+            if (isset($holMap[$tanggal])) {
+                $lbl = $holMap[$tanggal]['label'];
+                $msg = "Tanggal " . date('d/m/Y', strtotime($tanggal)) . " adalah {$lbl}. Tidak ada Alpa di hari libur/kegiatan.";
+                if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => $msg]);
+                    exit;
+                }
+                redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=libur&libur_nama=" . urlencode($lbl));
+                exit;
+            }
+        }
+
         // Cari semua guru yang berstatus sertifikasi secara dinamis
         $stmt = $db_core->query("
             SELECT id, nama, nip, status_kepegawaian, nrg, no_sertifikat 
@@ -403,6 +486,22 @@ class AbsenGuruV2Controller {
         // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
         $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
+
+        // Cek jika mode tanggal tunggal dan tanggal tersebut adalah hari libur/Minggu
+        if (!empty($tanggal)) {
+            $holMap = self::getKalenderHolidaysMap($db_siakad, $tanggal, $tanggal);
+            if (isset($holMap[$tanggal])) {
+                $lbl = $holMap[$tanggal]['label'];
+                $msg = "Tanggal " . date('d/m/Y', strtotime($tanggal)) . " adalah {$lbl}. Tidak ada Alpa di hari libur/kegiatan.";
+                if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => $msg]);
+                    exit;
+                }
+                redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=libur&libur_nama=" . urlencode($lbl));
+                exit;
+            }
+        }
 
         $dayNum = date('w', strtotime($tanggal));
         $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
@@ -479,6 +578,22 @@ class AbsenGuruV2Controller {
         // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
         $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
+
+        // Cek jika mode tanggal tunggal dan tanggal tersebut adalah hari libur/Minggu
+        if (!empty($tanggal)) {
+            $holMap = self::getKalenderHolidaysMap($db_siakad, $tanggal, $tanggal);
+            if (isset($holMap[$tanggal])) {
+                $lbl = $holMap[$tanggal]['label'];
+                $msg = "Tanggal " . date('d/m/Y', strtotime($tanggal)) . " adalah {$lbl}. Tidak ada Alpa di hari libur/kegiatan.";
+                if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => $msg]);
+                    exit;
+                }
+                redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=libur&libur_nama=" . urlencode($lbl));
+                exit;
+            }
+        }
 
         $dayNum = date('w', strtotime($tanggal));
         $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
@@ -570,18 +685,13 @@ class AbsenGuruV2Controller {
         $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
 
-        // 1. Ambil ID guru sertifikasi
-        $sertifIds = self::getSertifikasiGuruIds($db_core);
-
-        // 2. Ambil semua ID dewan guru madrasah
-        $allGuru = $db_core->query("SELECT id FROM guru")->fetchAll(\PDO::FETCH_COLUMN);
-        $allGuruIds = array_map('intval', $allGuru);
-
         // 3. Ambil pemetaan jadwal guru per hari & libur
         $jadwalPerHari = self::getJadwalPerHari($db_siakad);
-        $liburDates = self::getKalenderLiburDates($db_siakad);
-
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, intval($bulan), intval($tahun));
+        $firstDate = sprintf('%04d-%02d-01', $tahun, $bulan);
+        $lastDate = sprintf('%04d-%02d-%02d', $tahun, $bulan, $daysInMonth);
+        $holidayMap = self::getKalenderHolidaysMap($db_siakad, $firstDate, $lastDate);
+
         $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
         $today = date('Y-m-d');
 
@@ -606,7 +716,7 @@ class AbsenGuruV2Controller {
                 $hari = $hariMap[$dayNum] ?? '';
 
                 // Skip hari Minggu (Libur KBM) & Libur Kalender
-                if ($hari === 'Minggu' || isset($liburDates[$tanggal])) {
+                if ($hari === 'Minggu' || isset($holidayMap[$tanggal])) {
                     continue;
                 }
 
@@ -711,6 +821,22 @@ class AbsenGuruV2Controller {
         // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
         $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
+
+        // Cek jika mode tanggal tunggal dan tanggal tersebut adalah hari libur/Minggu
+        if (!empty($tanggal)) {
+            $holMap = self::getKalenderHolidaysMap($db_siakad, $tanggal, $tanggal);
+            if (isset($holMap[$tanggal])) {
+                $lbl = $holMap[$tanggal]['label'];
+                $msg = "Tanggal " . date('d/m/Y', strtotime($tanggal)) . " adalah {$lbl}. Tidak ada Alpa di hari libur/kegiatan.";
+                if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => $msg]);
+                    exit;
+                }
+                redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=libur&libur_nama=" . urlencode($lbl));
+                exit;
+            }
+        }
 
         $sertifIds = self::getSertifikasiGuruIds($db_core);
         $jadwalPerHari = self::getJadwalPerHari($db_siakad);
@@ -899,6 +1025,10 @@ class AbsenGuruV2Controller {
 
         // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
         $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
+        // Bersihkan juga absensi di hari Minggu jika sempat ter-generate
+        try {
+            $db_siakad->exec("DELETE FROM absensi_guru WHERE DAYOFWEEK(tanggal) = 1");
+        } catch (\Throwable $e) {}
 
         $where = ["1=1"];
         $params = [];
@@ -920,6 +1050,19 @@ class AbsenGuruV2Controller {
         $allGuru = $db_core->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll();
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, (int)$bulan, (int)$tahun);
+        $firstDate = sprintf('%04d-%02d-01', $tahun, $bulan);
+        $lastDate = sprintf('%04d-%02d-%02d', $tahun, $bulan, $daysInMonth);
+        $holidayMap = self::getKalenderHolidaysMap($db_siakad, $firstDate, $lastDate);
+
+        // Hapus juga data absensi pada tanggal-tanggal libur pasti
+        try {
+            $liburPasti = array_keys(array_filter($holidayMap, function($h) { return $h['type'] === 'libur'; }));
+            if (!empty($liburPasti)) {
+                $inLib = "'" . implode("','", $liburPasti) . "'";
+                $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal IN ($inLib)");
+            }
+        } catch (\Throwable $e) {}
+
         $dates_range = [];
         for ($d = 1; $d <= $daysInMonth; $d++) {
             $dates_range[] = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
@@ -928,7 +1071,6 @@ class AbsenGuruV2Controller {
         $sertifIds = self::getSertifikasiGuruIds($db_core);
         $sertifMap = array_flip($sertifIds);
         $jadwalPerHari = self::getJadwalPerHari($db_siakad);
-        $liburDates = self::getKalenderLiburDates($db_siakad);
         $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
         $today = date('Y-m-d');
 
@@ -942,11 +1084,14 @@ class AbsenGuruV2Controller {
             $isSertif = isset($sertifMap[$g['id']]);
 
             foreach ($dates_range as $dt) {
+                // JANGAN HITUNG HADIR ATAU ALPA PADA HARI MINGGU ATAU HARI LIBUR
+                if (isset($holidayMap[$dt])) {
+                    continue;
+                }
+
                 $st = $harianMap[$dt] ?? null;
                 $dayOfWeek = date('w', strtotime($dt));
                 $namaHari = $hariMap[$dayOfWeek] ?? '';
-                $isSun = ($dayOfWeek == 0);
-                $isLibur = isset($liburDates[$dt]);
 
                 if ($st) {
                     if ($st === 'Dinas Luar') $r['Izin']++;
@@ -954,7 +1099,7 @@ class AbsenGuruV2Controller {
                     else $r['Hadir']++;
                 } else {
                     // Jika kosong dan tanggal hari kerja yang sudah berjalan (<= today)
-                    if (!$isSun && !$isLibur && $dt <= $today) {
+                    if ($dt <= $today) {
                         $hasJam = in_array($g['id'], $jadwalPerHari[$namaHari] ?? []);
                         // Auto-Alpa jika guru sertifikasi (wajib tiap hari) ATAU guru ada jam mengajar di hari ini
                         if ($isSertif || $hasJam) {

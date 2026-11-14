@@ -144,6 +144,31 @@
         .lbl-off { color: #cbd5e1; }
         .lbl-sun { background-color: #fef2f2 !important; color: #ef4444; -webkit-print-color-adjust: exact; }
 
+        /* Kolom Vertikal Hari Minggu & Hari Libur Kalender */
+        .col-holiday-merged {
+            background-color: #fee2e2 !important;
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding: 2px 1px !important;
+            width: 18px !important;
+            max-width: 22px !important;
+            border: 1px solid #000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .vertical-holiday-text {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            white-space: nowrap;
+            display: inline-block;
+            letter-spacing: 1.5px;
+            font-size: 7pt;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
         .legend-box {
             display: flex;
             justify-content: space-between;
@@ -184,6 +209,13 @@
     $lastDayNum = cal_days_in_month(CAL_GREGORIAN, $curr_b_num, $curr_y_num);
     $nama_bulan_teks = $bulans[$bulan] ?? date('F', mktime(0,0,0,$curr_b_num,1));
     $tgl_cetak_akhir_bulan = "{$lastDayNum} {$nama_bulan_teks} {$curr_y_num}";
+
+    if (!isset($holidayMap)) {
+        $dbSiakad = \App\Core\Database::connect('siakad');
+        $firstDate = sprintf('%04d-%02d-01', $curr_y_num, $curr_b_num);
+        $lastDate = sprintf('%04d-%02d-%02d', $curr_y_num, $curr_b_num, $lastDayNum);
+        $holidayMap = \App\Controllers\AbsenGuruV2Controller::getKalenderHolidaysMap($dbSiakad, $firstDate, $lastDate);
+    }
     ?>
 
     <!-- TOOLBAR FILTER LANGSUNG (NO-PRINT) -->
@@ -291,10 +323,9 @@
                 </tr>
                 <tr>
                     <?php foreach($dates_range as $dt): 
-                        $dayOfWeek = date('w', strtotime($dt));
-                        $isSun = ($dayOfWeek == 0);
+                        $isHol = isset($holidayMap[$dt]);
                     ?>
-                        <th style="width: 18px; <?php echo $isSun ? 'background:#fee2e2 !important; color:#dc2626;' : ''; ?>">
+                        <th style="width: 18px; <?php echo $isHol ? 'background:#fee2e2 !important; color:#dc2626;' : ''; ?>">
                             <?php echo date('j', strtotime($dt)); ?>
                         </th>
                     <?php endforeach; ?>
@@ -314,27 +345,37 @@
                     </td>
                 </tr>
                 <?php else: ?>
-                    <?php $no = 1; foreach($matrixGuru as $mg): 
+                    <?php 
+                    $totalGuru = count($matrixGuru);
+                    $no = 1; 
+                    foreach($matrixGuru as $mg): 
                         $rk = $mg['rekap'];
                         $totKehadiran = $rk['Hadir'] + $rk['Terlambat'] + $rk['Sakit'] + $rk['Izin'] + $rk['Alpa'];
                     ?>
                     <tr>
-                        <td><?php echo $no++; ?></td>
+                        <td><?php echo $no; ?></td>
                         <td class="col-nama"><?php echo htmlspecialchars($mg['nama']); ?></td>
                         <td class="col-jabatan"><?php echo htmlspecialchars($mg['jabatan'] ?? 'Guru'); ?></td>
                         
                         <?php foreach($dates_range as $dt): 
-                            $dayOfWeek = date('w', strtotime($dt));
-                            $isSun = ($dayOfWeek == 0);
+                            $isHol = isset($holidayMap[$dt]);
+                            if ($isHol) {
+                                if ($no === 1) {
+                                    $hLabel = $holidayMap[$dt]['label'] ?? 'HARI MINGGU';
+                                    ?>
+                                    <td rowspan="<?php echo $totalGuru; ?>" class="col-holiday-merged">
+                                        <div class="vertical-holiday-text"><?php echo htmlspecialchars($hLabel); ?></div>
+                                    </td>
+                                    <?php
+                                }
+                                continue; // Untuk baris guru ke-2 dst, cell dicover rowspan
+                            }
+
                             $st = $mg['harian'][$dt] ?? '';
-                            
                             $label = '-';
                             $class = 'lbl-off';
                             
-                            if ($isSun) {
-                                $label = 'M';
-                                $class = 'lbl-sun';
-                            } elseif ($st === 'Hadir') {
+                            if ($st === 'Hadir') {
                                 $label = 'H';
                                 $class = 'lbl-h';
                             } elseif ($st === 'Terlambat') {
@@ -351,7 +392,7 @@
                                 $class = 'lbl-a';
                             }
                         ?>
-                            <td class="<?php echo $class; ?>" style="<?php echo $isSun ? 'background:#fef2f2;' : ''; ?>">
+                            <td class="<?php echo $class; ?>">
                                 <?php echo $label; ?>
                             </td>
                         <?php endforeach; ?>
@@ -363,7 +404,7 @@
                         <td style="font-weight: bold; color: #b91c1c;"><?php echo $rk['Alpa']; ?></td>
                         <td style="font-weight: 800; background: #f8fafc;"><?php echo $totKehadiran; ?></td>
                     </tr>
-                    <?php endforeach; ?>
+                    <?php $no++; endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
