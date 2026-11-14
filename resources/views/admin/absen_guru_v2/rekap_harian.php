@@ -185,6 +185,15 @@
                                 <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Hadirkan Semua Otomatis
                             </button>
                         </form>
+
+                        <!-- Tombol 4: Generate Hadir 1 Bulan Penuh -->
+                        <form method="POST" action="/admin/absen_guru_v2/generate-bulan" onsubmit="return confirmAction(event, 'bulan', 'Generate seluruh kehadiran otomatis untuk 1 BULAN PENUH (Bulan <?= date('F Y', strtotime($tanggal)) ?>)? Guru sertifikasi hadir tiap hari kerja, guru non-sertifikasi hadir saat ada jam mengajar.')">
+                            <input type="hidden" name="bulan" value="<?= date('m', strtotime($tanggal)) ?>">
+                            <input type="hidden" name="tahun" value="<?= date('Y', strtotime($tanggal)) ?>">
+                            <button type="submit" class="btn-hadirkan-bulan" style="padding:9px 16px; background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 3px 8px rgba(139,92,246,0.25); transition:0.2s;" title="Sekali klik untuk meng-generate kehadiran seluruh guru selama 1 bulan penuh">
+                                <i data-lucide="calendar-days" style="width:15px; height:15px;"></i> Generate 1 Bulan (<?= date('M Y', strtotime($tanggal)) ?>)
+                            </button>
+                        </form>
                     </div>
                 </div>
 

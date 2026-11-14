@@ -88,16 +88,34 @@
     <div class="page-container">
         <?php
             $dbCore = \App\Core\Database::connect('core');
-            $kop = $dbCore->query("SELECT * FROM pengaturan_kop_surat LIMIT 1")->fetch();
-            $logoSrc = ($kop && $kop['logo']) ? '/assets/images/' . $kop['logo'] : '/assets/images/logo.png';
+            $kop = null;
+            try {
+                $kop = $dbCore->query("SELECT * FROM institusi LIMIT 1")->fetch();
+            } catch (\Exception $e) {}
+            if (!$kop) {
+                try {
+                    $kop = $dbCore->query("SELECT * FROM pengaturan_kop_surat LIMIT 1")->fetch();
+                } catch (\Exception $e) {}
+            }
+
+            $logoSrc = ($kop && !empty($kop['logo'])) ? '/uploads/' . $kop['logo'] : '/assets/images/logo.png';
+            $namaYayasan = $kop['nama_yayasan'] ?? 'YAYASAN PONDOK PESANTREN MIFTAHUL HUDA MATHLA\'UL ANWAR';
+            $namaMadrasah = $kop['nama'] ?? ($kop['nama_madrasah'] ?? 'MA MIFTAHUL HUDA MATHLA\'UL ANWAR');
+            $alamatJalan = $kop['alamat'] ?? ($kop['alamat_jalan'] ?? 'Jl. Tirtomoyo No. 083, Margorahayu');
+            $telepon = $kop['telepon'] ?? '081938240819';
+            $email = $kop['email'] ?? 'masmiftahulhuda083@gmail.com';
+
+            $kamad = $dbCore->query("SELECT nama, nip FROM guru WHERE is_kamad = 1 OR jabatan LIKE '%Kepala%' LIMIT 1")->fetch();
+            $kamadNama = $kamad['nama'] ?? 'AHMAD RIFA\'I, M.Pd';
+            $kamadNip = $kamad['nip'] ?? '-';
         ?>
         <div class="header-kop">
             <img src="<?php echo $logoSrc; ?>" alt="Logo" onerror="this.src='/logo.png'; this.onerror=function(){this.style.display='none'};">
             <div class="header-text">
-                <h3 style="font-size: <?php echo $kop['font_yayasan'] ?? 16; ?>pt;"><?php echo htmlspecialchars($kop['nama_yayasan'] ?? 'YAYASAN PONDOK PESANTREN MIFTAHUL HUDA'); ?></h3>
-                <h2 style="font-size: <?php echo $kop['font_madrasah'] ?? 24; ?>pt;"><?php echo htmlspecialchars($kop['nama_madrasah'] ?? 'MADRASAH ALIYAH SUNAN AMPEL'); ?></h2>
-                <p><?php echo nl2br(htmlspecialchars($kop['alamat_jalan'] ?? 'Jl. Tirtomoyo, No. 083, Margorahayu')); ?></p>
-                <p>Telp: <?php echo htmlspecialchars($kop['telepon'] ?? '081938240819'); ?> | Email: <?php echo htmlspecialchars($kop['email'] ?? 'masmiftahulhuda083@gmail.com'); ?></p>
+                <h3 style="font-size: <?php echo $kop['font_yayasan'] ?? 12; ?>pt;"><?php echo htmlspecialchars($namaYayasan); ?></h3>
+                <h2 style="font-size: <?php echo $kop['font_madrasah'] ?? 15; ?>pt;"><?php echo htmlspecialchars($namaMadrasah); ?></h2>
+                <p><?php echo nl2br(htmlspecialchars($alamatJalan)); ?></p>
+                <p>Telp: <?php echo htmlspecialchars($telepon); ?> | Email: <?php echo htmlspecialchars($email); ?></p>
             </div>
         </div>
 
@@ -152,13 +170,14 @@
             </tbody>
         </table>
         
-        <table style="width: 100%; margin-top: 30px;">
+        <table style="width: 100%; margin-top: 30px; font-size: 9.5pt;">
             <tr>
-                <td style="width: 60%;"></td>
-                <td style="width: 40%; text-align: center;">
+                <td style="width: 65%;"></td>
+                <td style="width: 35%; text-align: center; line-height: 1.4;">
                     Mengetahui,<br>
-                    Kepala Madrasah<br><br><br><br><br>
-                    <b>(.............................................)</b>
+                    Kepala Madrasah<br><br><br><br>
+                    <strong><u><?php echo htmlspecialchars($kamadNama); ?></u></strong><br>
+                    NIP: <?php echo htmlspecialchars($kamadNip); ?>
                 </td>
             </tr>
         </table>

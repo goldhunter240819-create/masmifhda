@@ -209,7 +209,12 @@ class AbsenGuruV2Controller {
         return sprintf('%02d:%02d:%02d', $h, $m, $s);
     }
 
+    private static $columnsEnsured = false;
+
     public static function ensureAbsensiGuruColumns($db_siakad) {
+        if (self::$columnsEnsured) return;
+        self::$columnsEnsured = true;
+
         $db_siakad->exec("CREATE TABLE IF NOT EXISTS absensi_guru (
             id INT AUTO_INCREMENT PRIMARY KEY,
             guru_id INT NOT NULL,
@@ -482,6 +487,121 @@ class AbsenGuruV2Controller {
         exit;
     }
 
+    public static function generateBulan() {
+        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
+            redirect('/login');
+            exit;
+        }
+
+        $bulan = sprintf('%02d', intval($_REQUEST['bulan'] ?? date('m')));
+        $tahun = intval($_REQUEST['tahun'] ?? date('Y'));
+
+        $db_core = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+        self::ensureAbsensiGuruColumns($db_siakad);
+
+        // 1. Ambil semua guru sertifikasi secara dinamis
+        $stmtSertif = $db_core->query("
+            SELECT id, nama, nip, status_kepegawaian, nrg, no_sertifikat 
+            FROM guru 
+            WHERE LOWER(TRIM(status_kepegawaian)) LIKE '%sertifikasi%'
+               OR (nrg IS NOT NULL AND TRIM(nrg) != '' AND nrg != '-')
+               OR (no_sertifikat IS NOT NULL AND TRIM(no_sertifikat) != '' AND no_sertifikat != '-')
+               OR (no_peserta_sertifikasi IS NOT NULL AND TRIM(no_peserta_sertifikasi) != '' AND no_peserta_sertifikasi != '-')
+        ");
+        $guruSertif = $stmtSertif ? $stmtSertif->fetchAll(\PDO::FETCH_ASSOC) : [];
+        $sertifIds = array_column($guruSertif, 'id');
+
+        // 2. Ambil pemetaan jadwal guru per hari
+        $jadwalPerHari = [];
+        $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        foreach ($hariList as $h) {
+            $stmtJam = $db_siakad->prepare("SELECT DISTINCT guru_id FROM jadwal_pelajaran WHERE LOWER(hari) = LOWER(?)");
+            $stmtJam->execute([$h]);
+            $rawIds = $stmtJam->fetchAll(\PDO::FETCH_COLUMN);
+            $jadwalPerHari[$h] = array_filter(array_map('intval', $rawIds), function($id) { return $id > 0; });
+        }
+
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, intval($bulan), intval($tahun));
+        $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+
+        $totalHadirGenerated = 0;
+        $totalHariAktif = 0;
+
+        $db_siakad->beginTransaction();
+        try {
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $tanggal = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+                $dayNum = date('w', strtotime($tanggal));
+                $hari = $hariMap[$dayNum] ?? '';
+
+                // Skip hari Minggu (Libur KBM)
+                if ($hari === 'Minggu') {
+                    continue;
+                }
+
+                // Cek kalender pendidikan / akademik jika ada libur resmi
+                try {
+                    $cekLibur = $db_siakad->query("SELECT id FROM kalender_pendidikan WHERE tanggal_mulai <= '$tanggal' AND tanggal_selesai >= '$tanggal' AND jenis = 'libur' LIMIT 1")->fetch();
+                    if ($cekLibur) {
+                        continue;
+                    }
+                } catch (\Exception $eLibur) {}
+
+                $totalHariAktif++;
+
+                // Guru berjadwal di hari tersebut
+                $guruJamHariIni = $jadwalPerHari[$hari] ?? [];
+
+                // Gabungkan guru sertifikasi (tiap hari) + guru ada jam hari tersebut
+                $targetGuruIds = array_values(array_unique(array_merge($sertifIds, $guruJamHariIni)));
+
+                foreach ($targetGuruIds as $gid) {
+                    self::saveOrUpdateKehadiran($db_siakad, $tanggal, $gid, 'Hadir');
+                    $totalHadirGenerated++;
+                }
+            }
+            if ($db_siakad->inTransaction()) {
+                $db_siakad->commit();
+            }
+        } catch (\Exception $e) {
+            if ($db_siakad->inTransaction()) {
+                $db_siakad->rollBack();
+            }
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Gagal generate: ' . $e->getMessage()]);
+                exit;
+            }
+            redirect("/admin/absen_guru_v2/rekap-bulanan?bulan={$bulan}&tahun={$tahun}&msg=error&err=" . urlencode($e->getMessage()));
+            exit;
+        }
+
+        $bulans = ['01'=>'Januari', '02'=>'Februari', '03'=>'Maret', '04'=>'April', '05'=>'Mei', '06'=>'Juni', '07'=>'Juli', '08'=>'Agustus', '09'=>'September', '10'=>'Oktober', '11'=>'November', '12'=>'Desember'];
+        $namaBulan = $bulans[$bulan] ?? $bulan;
+
+        if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => "Berhasil men-generate absensi 1 bulan penuh ($namaBulan $tahun) sebanyak $totalHadirGenerated data kehadiran ($totalHariAktif hari aktif).",
+                'bulan' => $bulan,
+                'tahun' => $tahun,
+                'total_hadir' => $totalHadirGenerated,
+                'hari_aktif' => $totalHariAktif
+            ]);
+            exit;
+        }
+
+        redirect("/admin/absen_guru_v2/rekap-bulanan?bulan={$bulan}&tahun={$tahun}&msg=generate_success&total={$totalHadirGenerated}&hari={$totalHariAktif}");
+        exit;
+    }
+
     public static function rekapHarian() {
         if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
             redirect('/login');
@@ -626,26 +746,61 @@ class AbsenGuruV2Controller {
         $initial = substr($_SESSION['nama'], 0, 1);
         $nama = $_SESSION['nama'];
         
+        $bulans = ['01'=>'Januari', '02'=>'Februari', '03'=>'Maret', '04'=>'April', '05'=>'Mei', '06'=>'Juni', '07'=>'Juli', '08'=>'Agustus', '09'=>'September', '10'=>'Oktober', '11'=>'November', '12'=>'Desember'];
+
+        // 1. Cetak Ringkas Laporan Bulanan (Portrait)
         if (isset($_GET['cetak']) && $_GET['cetak'] == 1) {
             include __DIR__ . '/../../resources/views/admin/absen_guru_v2/cetak_rekap_bulanan.php';
             exit;
         }
         
-        if (isset($_GET['cetak_detail']) && $_GET['cetak_detail'] == 1) {
-            // Khusus cetak detail guru
-            $guru_id = $_GET['guru_id'] ?? 0;
-            $stmtGuru = $db_core->prepare("SELECT id, nama, nip, npk, jabatan FROM guru WHERE id = ?");
+        // 2. Cetak Detail 1 Guru (Individual Portrait)
+        if (isset($_GET['cetak_detail']) && $_GET['cetak_detail'] == 1 && !empty($_GET['guru_id'])) {
+            $guru_id = intval($_GET['guru_id']);
+            $stmtGuru = $db_core->prepare("SELECT id, nama, nip, npk, jabatan, status_kepegawaian, nrg, no_sertifikat FROM guru WHERE id = ?");
             $stmtGuru->execute([$guru_id]);
             $guruDetail = $stmtGuru->fetch();
             
             if ($guruDetail) {
-                $stmtDetail = $db_siakad->prepare("SELECT tanggal, waktu_masuk, waktu_keluar, status, keterangan FROM absensi_guru WHERE guru_id = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ? ORDER BY tanggal ASC");
+                $stmtDetail = $db_siakad->prepare("SELECT tanggal, waktu_masuk, waktu_keluar, jam_masuk, jam_pulang, status, keterangan FROM absensi_guru WHERE guru_id = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ? ORDER BY tanggal ASC");
                 $stmtDetail->execute([$guru_id, $bulan, $tahun]);
                 $detailAbsen = $stmtDetail->fetchAll();
                 
                 include __DIR__ . '/../../resources/views/admin/absen_guru_v2/cetak_rekap_bulanan_detail.php';
                 exit;
             }
+        }
+
+        // 3. Cetak Detail 1 Bulan Global Matriks Tanggal 1 s.d. 31 (Landscape kayak Siswa)
+        if ((isset($_GET['cetak_global']) && $_GET['cetak_global'] == 1) || (isset($_GET['cetak_detail']) && $_GET['cetak_detail'] == 1 && empty($_GET['guru_id']))) {
+            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, (int)$bulan, (int)$tahun);
+            $dates_range = [];
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $dates_range[] = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+            }
+
+            $matrixGuru = [];
+            foreach ($guruList as $g) {
+                $stmtDetail = $db_siakad->prepare("SELECT tanggal, status FROM absensi_guru WHERE guru_id = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ?");
+                $stmtDetail->execute([$g['id'], $bulan, $tahun]);
+                $harianMap = $stmtDetail->fetchAll(\PDO::FETCH_KEY_PAIR); // tanggal => status
+                
+                $r = ['Hadir' => 0, 'Terlambat' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+                foreach ($dates_range as $dt) {
+                    $st = $harianMap[$dt] ?? null;
+                    if ($st) {
+                        if ($st === 'Dinas Luar') $r['Izin']++;
+                        elseif (isset($r[$st])) $r[$st]++;
+                        else $r['Hadir']++;
+                    }
+                }
+                $g['harian'] = $harianMap;
+                $g['rekap'] = $r;
+                $matrixGuru[] = $g;
+            }
+
+            include __DIR__ . '/../../resources/views/admin/absen_guru_v2/cetak_rekap_bulanan_global.php';
+            exit;
         }
 
         ob_start();

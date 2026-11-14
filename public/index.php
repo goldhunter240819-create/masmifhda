@@ -1334,6 +1334,8 @@ $router->add('POST', '/admin/absen_guru_v2/hadirkan-semua', [\App\Controllers\Ab
 $router->add('GET', '/admin/absen_guru_v2/hadirkan-semua', [\App\Controllers\AbsenGuruV2Controller::class, 'hadirkanSemuaOtomatis']);
 $router->add('GET', '/admin/absen_guru_v2/rekap-bulanan', [\App\Controllers\AbsenGuruV2Controller::class, 'rekapBulanan']);
 $router->add('GET', '/admin/absen_guru_v2/rekap_bulanan', [\App\Controllers\AbsenGuruV2Controller::class, 'rekapBulanan']);
+$router->add('POST', '/admin/absen_guru_v2/generate-bulan', [\App\Controllers\AbsenGuruV2Controller::class, 'generateBulan']);
+$router->add('GET', '/admin/absen_guru_v2/generate-bulan', [\App\Controllers\AbsenGuruV2Controller::class, 'generateBulan']);
 $router->add('GET', '/admin/absen_guru_v2/ketidakhadiran', [\App\Controllers\AbsenGuruV2Controller::class, 'ketidakhadiran']);
 $router->add('GET', '/admin/absen_guru_v2/input-manual', [\App\Controllers\AbsenGuruV2Controller::class, 'inputManual']);
 $router->add('POST', '/admin/absen_guru_v2/save-input-manual', [\App\Controllers\AbsenGuruV2Controller::class, 'saveInputManual']);
