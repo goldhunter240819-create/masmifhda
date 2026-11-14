@@ -167,10 +167,78 @@
 </head>
 <body>
 
-    <div class="print-toolbar no-print">
-        <button class="btn-print" onclick="window.print()">
-            <i data-lucide="printer" style="width: 15px; height: 15px;"></i> Cetak Laporan (A4 Landscape)
-        </button>
+    <?php
+    $curr_b_num = intval($bulan);
+    $curr_y_num = intval($tahun);
+
+    $prev_b_num = $curr_b_num - 1;
+    $prev_y_num = $curr_y_num;
+    if ($prev_b_num < 1) { $prev_b_num = 12; $prev_y_num--; }
+    $prev_b_str = sprintf('%02d', $prev_b_num);
+
+    $next_b_num = $curr_b_num + 1;
+    $next_y_num = $curr_y_num;
+    if ($next_b_num > 12) { $next_b_num = 1; $next_y_num++; }
+    $next_b_str = sprintf('%02d', $next_b_num);
+
+    $lastDayNum = cal_days_in_month(CAL_GREGORIAN, $curr_b_num, $curr_y_num);
+    $nama_bulan_teks = $bulans[$bulan] ?? date('F', mktime(0,0,0,$curr_b_num,1));
+    $tgl_cetak_akhir_bulan = "{$lastDayNum} {$nama_bulan_teks} {$curr_y_num}";
+    ?>
+
+    <!-- TOOLBAR FILTER LANGSUNG (NO-PRINT) -->
+    <div class="print-toolbar no-print" style="display:flex; justify-content:space-between; align-items:center; padding:10px 1.5rem; flex-wrap:wrap; gap:10px; background:#ffffff; border-bottom:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:sticky; top:0; z-index:100;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <!-- Navigasi Cepat Bulan Sebelumnya -->
+            <a href="?bulan=<?php echo $prev_b_str; ?>&tahun=<?php echo $prev_y_num; ?>&jabatan=<?php echo urlencode($jabatan_filter ?? ''); ?>&guru=<?php echo urlencode($guru_filter ?? ''); ?>&cetak_global=1" style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; cursor:pointer;" title="Pindah ke Bulan Sebelumnya">
+                &larr; <?php echo $bulans[$prev_b_str] ?? 'Bulan Lalu'; ?>
+            </a>
+
+            <!-- Form Filter Dropdown Bulan Langsung -->
+            <form method="GET" action="" style="display:flex; align-items:center; gap:8px; margin:0; background:#f1f5f9; padding:4px 10px; border-radius:8px; border:1px solid #cbd5e1;">
+                <input type="hidden" name="cetak_global" value="1">
+                
+                <label style="font-size:11px; font-weight:700; color:#475569;">Bulan:</label>
+                <select name="bulan" onchange="this.form.submit()" style="padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white; font-size:11px; font-weight:600; cursor:pointer;">
+                    <?php foreach($bulans as $num => $nb): ?>
+                        <option value="<?php echo $num; ?>" <?php echo $bulan == $num ? 'selected' : ''; ?>><?php echo $nb; ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <label style="font-size:11px; font-weight:700; color:#475569;">Tahun:</label>
+                <select name="tahun" onchange="this.form.submit()" style="padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white; font-size:11px; font-weight:600; cursor:pointer;">
+                    <?php for($y=date('Y'); $y>=2024; $y--): ?>
+                        <option value="<?php echo $y; ?>" <?php echo $tahun == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
+                    <?php endfor; ?>
+                </select>
+
+                <label style="font-size:11px; font-weight:700; color:#475569;">Jabatan:</label>
+                <select name="jabatan" onchange="this.form.submit()" style="padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white; font-size:11px; font-weight:600; cursor:pointer;">
+                    <option value="">Semua Jabatan</option>
+                    <?php foreach($jabatanList ?? [] as $jab): ?>
+                        <option value="<?php echo htmlspecialchars($jab); ?>" <?php echo (isset($jabatan_filter) && $jabatan_filter == $jab) ? 'selected' : ''; ?>><?php echo htmlspecialchars($jab); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <button type="submit" style="background:#0284c7; color:white; border:none; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
+                    Terapkan
+                </button>
+            </form>
+
+            <!-- Navigasi Cepat Bulan Berikutnya -->
+            <a href="?bulan=<?php echo $next_b_str; ?>&tahun=<?php echo $next_y_num; ?>&jabatan=<?php echo urlencode($jabatan_filter ?? ''); ?>&guru=<?php echo urlencode($guru_filter ?? ''); ?>&cetak_global=1" style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; cursor:pointer;" title="Pindah ke Bulan Berikutnya">
+                <?php echo $bulans[$next_b_str] ?? 'Bulan Depan'; ?> &rarr;
+            </a>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn-print" onclick="window.print()" style="background:#10b981; color:white; padding:7px 16px; border:none; border-radius:6px; font-weight:700; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 4px rgba(16,185,129,0.25);">
+                <i data-lucide="printer" style="width:15px; height:15px;"></i> Cetak Laporan (A4 Landscape)
+            </button>
+            <a href="<?php echo base_url('admin/absen_guru_v2/rekap-bulanan') . '?bulan=' . urlencode($bulan) . '&tahun=' . urlencode($tahun); ?>" style="background:#64748b; color:white; padding:7px 14px; border-radius:6px; font-weight:700; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                Kembali ke SI-AKAD
+            </a>
+        </div>
     </div>
 
     <div class="page-container">
@@ -215,10 +283,9 @@
         <table class="matrix-table">
             <thead>
                 <tr>
-                    <th rowspan="2" style="width: 20px;">No</th>
-                    <th rowspan="2" style="width: 85px;">NIP / NPK</th>
-                    <th rowspan="2" style="width: 150px;">Nama Guru</th>
-                    <th rowspan="2" style="width: 75px;">Jabatan</th>
+                    <th rowspan="2" style="width: 24px;">No</th>
+                    <th rowspan="2" style="width: 175px;">Nama Guru</th>
+                    <th rowspan="2" style="width: 85px;">Jabatan</th>
                     <th colspan="<?php echo count($dates_range); ?>">Tanggal Pelaksanaan (Bulan <?php echo $bulans[$bulan] ?? $bulan; ?>)</th>
                     <th colspan="6" style="width: 120px;">Rekapitulasi</th>
                 </tr>
@@ -242,7 +309,7 @@
             <tbody>
                 <?php if (empty($matrixGuru)): ?>
                 <tr>
-                    <td colspan="<?php echo 10 + count($dates_range); ?>" style="padding: 20px; text-align: center; color: #94a3b8;">
+                    <td colspan="<?php echo 9 + count($dates_range); ?>" style="padding: 20px; text-align: center; color: #94a3b8;">
                         Data guru atau absensi belum tersedia untuk periode bulan ini.
                     </td>
                 </tr>
@@ -253,7 +320,6 @@
                     ?>
                     <tr>
                         <td><?php echo $no++; ?></td>
-                        <td class="col-nip"><?php echo htmlspecialchars($mg['nip'] ?: ($mg['npk'] ?: '-')); ?></td>
                         <td class="col-nama"><?php echo htmlspecialchars($mg['nama']); ?></td>
                         <td class="col-jabatan"><?php echo htmlspecialchars($mg['jabatan'] ?? 'Guru'); ?></td>
                         
@@ -323,6 +389,7 @@
             <tr>
                 <td style="width: 70%;"></td>
                 <td style="width: 30%; text-align: center; line-height: 1.4;">
+                    Way Tenong, <?php echo $tgl_cetak_akhir_bulan; ?><br>
                     Mengetahui,<br>
                     Kepala Madrasah<br><br><br><br>
                     <strong><u><?php echo htmlspecialchars($kamadNama); ?></u></strong><br>

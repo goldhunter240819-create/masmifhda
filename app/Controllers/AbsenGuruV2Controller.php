@@ -346,6 +346,9 @@ class AbsenGuruV2Controller {
         $tanggal = $_REQUEST['tanggal'] ?? date('Y-m-d');
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
+
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
 
         // Cari semua guru yang berstatus sertifikasi secara dinamis
@@ -396,6 +399,9 @@ class AbsenGuruV2Controller {
         $tanggal = $_REQUEST['tanggal'] ?? date('Y-m-d');
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
+
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
 
         $dayNum = date('w', strtotime($tanggal));
@@ -469,6 +475,9 @@ class AbsenGuruV2Controller {
         $tanggal = $_REQUEST['tanggal'] ?? date('Y-m-d');
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
+
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
 
         $dayNum = date('w', strtotime($tanggal));
@@ -556,6 +565,9 @@ class AbsenGuruV2Controller {
 
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
+
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
 
         // 1. Ambil ID guru sertifikasi
@@ -577,10 +589,19 @@ class AbsenGuruV2Controller {
         $totalAlpaGenerated = 0;
         $totalHariAktif = 0;
 
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) jika ada yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
+
         $db_siakad->beginTransaction();
         try {
             for ($d = 1; $d <= $daysInMonth; $d++) {
                 $tanggal = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+
+                // JANGAN GENERATE TANGGAL YANG BELUM DILEWATI (Masa Depan)
+                if ($tanggal > $today) {
+                    continue;
+                }
+
                 $dayNum = date('w', strtotime($tanggal));
                 $hari = $hariMap[$dayNum] ?? '';
 
@@ -686,6 +707,9 @@ class AbsenGuruV2Controller {
 
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
+
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
         self::ensureAbsensiGuruColumns($db_siakad);
 
         $sertifIds = self::getSertifikasiGuruIds($db_core);
@@ -782,6 +806,9 @@ class AbsenGuruV2Controller {
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
 
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
+
         self::ensureAbsensiGuruColumns($db_siakad);
 
         $core_db = 'aula_db';
@@ -869,6 +896,9 @@ class AbsenGuruV2Controller {
 
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
+
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
 
         $where = ["1=1"];
         $params = [];
@@ -1066,6 +1096,9 @@ class AbsenGuruV2Controller {
         
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
+
+        // Otomatis bersihkan data absensi di masa depan (> hari ini) yang terlanjur ter-generate
+        $db_siakad->exec("DELETE FROM absensi_guru WHERE tanggal > CURDATE()");
 
         $sql = "SELECT a.*, g.nama, g.nip 
                 FROM absensi_guru a 

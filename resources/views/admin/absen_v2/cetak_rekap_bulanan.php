@@ -403,7 +403,12 @@ $periode_label = 'Bulan ' . ($nama_bulan_arr[$curr_m] ?? date('F', strtotime($st
 
     <div style="margin-top: 30px; display: flex; justify-content: flex-end;">
         <div style="text-align: center; width: 220px; font-size: 11px;">
-            <p style="margin: 0;">Way Tenong, <?php echo date('d') . ' ' . [1=>'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][(int)date('m')] . ' ' . date('Y'); ?></p>
+            <?php
+            $lastDayNum = date('t', strtotime($start_date));
+            $namaBulanAkhir = $nama_bulan_arr[$curr_m] ?? '';
+            $tglCetakAkhirBulan = "{$lastDayNum} {$namaBulanAkhir} {$curr_y}";
+            ?>
+            <p style="margin: 0;">Way Tenong, <?php echo $tglCetakAkhirBulan; ?></p>
             <p style="margin: 4px 0 60px 0;">Kepala Madrasah,</p>
             <p style="margin: 0; font-weight: bold; text-decoration: underline;">AHMAD RIFA'I, M.Pd</p>
             <p style="margin: 2px 0 0 0;">NIP. -</p>
