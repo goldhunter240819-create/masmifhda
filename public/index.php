@@ -1325,7 +1325,15 @@ $router->add('GET', '/absen_guru_v2/scanner', [\App\Controllers\AbsenGuruV2Contr
 $router->add('POST', '/api/absen_guru_v2/scan', [\App\Controllers\AbsenGuruV2Controller::class, 'processScan']);
 
 $router->add('GET', '/admin/absen_guru_v2/rekap-harian', [\App\Controllers\AbsenGuruV2Controller::class, 'rekapHarian']);
+$router->add('GET', '/admin/absen_guru_v2/rekap_harian', [\App\Controllers\AbsenGuruV2Controller::class, 'rekapHarian']);
+$router->add('POST', '/admin/absen_guru_v2/hadirkan-sertifikasi', [\App\Controllers\AbsenGuruV2Controller::class, 'hadirkanSertifikasi']);
+$router->add('GET', '/admin/absen_guru_v2/hadirkan-sertifikasi', [\App\Controllers\AbsenGuruV2Controller::class, 'hadirkanSertifikasi']);
+$router->add('POST', '/admin/absen_guru_v2/hadirkan-jam', [\App\Controllers\AbsenGuruV2Controller::class, 'hadirkanAdaJam']);
+$router->add('GET', '/admin/absen_guru_v2/hadirkan-jam', [\App\Controllers\AbsenGuruV2Controller::class, 'hadirkanAdaJam']);
+$router->add('POST', '/admin/absen_guru_v2/hadirkan-semua', [\App\Controllers\AbsenGuruV2Controller::class, 'hadirkanSemuaOtomatis']);
+$router->add('GET', '/admin/absen_guru_v2/hadirkan-semua', [\App\Controllers\AbsenGuruV2Controller::class, 'hadirkanSemuaOtomatis']);
 $router->add('GET', '/admin/absen_guru_v2/rekap-bulanan', [\App\Controllers\AbsenGuruV2Controller::class, 'rekapBulanan']);
+$router->add('GET', '/admin/absen_guru_v2/rekap_bulanan', [\App\Controllers\AbsenGuruV2Controller::class, 'rekapBulanan']);
 $router->add('GET', '/admin/absen_guru_v2/ketidakhadiran', [\App\Controllers\AbsenGuruV2Controller::class, 'ketidakhadiran']);
 $router->add('GET', '/admin/absen_guru_v2/input-manual', [\App\Controllers\AbsenGuruV2Controller::class, 'inputManual']);
 $router->add('POST', '/admin/absen_guru_v2/save-input-manual', [\App\Controllers\AbsenGuruV2Controller::class, 'saveInputManual']);

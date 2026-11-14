@@ -197,6 +197,291 @@ class AbsenGuruV2Controller {
         }
     }
 
+    public static function generateRandomTime($start_h, $start_m, $end_h, $end_m) {
+        $start_sec = ($start_h * 3600) + ($start_m * 60);
+        $end_sec   = ($end_h * 3600) + ($end_m * 60);
+        $rand_sec  = mt_rand($start_sec, $end_sec);
+        
+        $h = floor($rand_sec / 3600);
+        $m = floor(($rand_sec % 3600) / 60);
+        $s = $rand_sec % 60;
+        
+        return sprintf('%02d:%02d:%02d', $h, $m, $s);
+    }
+
+    public static function ensureAbsensiGuruColumns($db_siakad) {
+        $db_siakad->exec("CREATE TABLE IF NOT EXISTS absensi_guru (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            guru_id INT NOT NULL,
+            tanggal DATE NOT NULL,
+            waktu_masuk TIME NULL,
+            waktu_keluar TIME NULL,
+            jam_masuk TIME NULL,
+            jam_pulang TIME NULL,
+            status VARCHAR(50) DEFAULT 'Hadir',
+            keterangan TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_tanggal_guru (tanggal, guru_id)
+        )");
+
+        try {
+            $cols = $db_siakad->query("SHOW COLUMNS FROM absensi_guru")->fetchAll(\PDO::FETCH_COLUMN);
+            if (!in_array('waktu_masuk', $cols)) {
+                $db_siakad->exec("ALTER TABLE absensi_guru ADD COLUMN waktu_masuk TIME NULL AFTER status");
+            }
+            if (!in_array('waktu_keluar', $cols)) {
+                $db_siakad->exec("ALTER TABLE absensi_guru ADD COLUMN waktu_keluar TIME NULL AFTER waktu_masuk");
+            }
+            if (!in_array('jam_masuk', $cols)) {
+                $db_siakad->exec("ALTER TABLE absensi_guru ADD COLUMN jam_masuk TIME NULL AFTER waktu_keluar");
+            }
+            if (!in_array('jam_pulang', $cols)) {
+                $db_siakad->exec("ALTER TABLE absensi_guru ADD COLUMN jam_pulang TIME NULL AFTER jam_masuk");
+            }
+        } catch (\Exception $e) {}
+    }
+
+    public static function saveOrUpdateKehadiran($db_siakad, $tanggal, $guru_id, $status = 'Hadir') {
+        self::ensureAbsensiGuruColumns($db_siakad);
+        
+        // Waktu masuk antara jam 07.00 sampai 07.30
+        $waktu_masuk = self::generateRandomTime(7, 0, 7, 30);
+        // Waktu pulang antara jam 13.15 sampai 13.30
+        $waktu_pulang = self::generateRandomTime(13, 15, 13, 30);
+        $created_at = $tanggal . ' ' . $waktu_masuk;
+
+        $stmtCek = $db_siakad->prepare("SELECT id FROM absensi_guru WHERE tanggal = ? AND guru_id = ?");
+        $stmtCek->execute([$tanggal, $guru_id]);
+        $existing = $stmtCek->fetch();
+
+        if ($existing) {
+            $stmtUp = $db_siakad->prepare("UPDATE absensi_guru 
+                SET status = ?, 
+                    waktu_masuk = ?, waktu_keluar = ?, 
+                    jam_masuk = ?, jam_pulang = ?, 
+                    created_at = ? 
+                WHERE id = ?");
+            $stmtUp->execute([$status, $waktu_masuk, $waktu_pulang, $waktu_masuk, $waktu_pulang, $created_at, $existing['id']]);
+        } else {
+            $stmtIn = $db_siakad->prepare("INSERT INTO absensi_guru 
+                (tanggal, guru_id, status, waktu_masuk, waktu_keluar, jam_masuk, jam_pulang, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmtIn->execute([$tanggal, $guru_id, $status, $waktu_masuk, $waktu_pulang, $waktu_masuk, $waktu_pulang, $created_at]);
+        }
+
+        return [
+            'guru_id' => $guru_id,
+            'waktu_masuk' => $waktu_masuk,
+            'waktu_pulang' => $waktu_pulang
+        ];
+    }
+
+    public static function hadirkanSertifikasi() {
+        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
+            redirect('/login');
+            exit;
+        }
+
+        $tanggal = $_REQUEST['tanggal'] ?? date('Y-m-d');
+        $db_core = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+        self::ensureAbsensiGuruColumns($db_siakad);
+
+        // Cari semua guru yang berstatus sertifikasi secara dinamis
+        $stmt = $db_core->query("
+            SELECT id, nama, nip, status_kepegawaian, nrg, no_sertifikat 
+            FROM guru 
+            WHERE LOWER(TRIM(status_kepegawaian)) LIKE '%sertifikasi%'
+               OR (nrg IS NOT NULL AND TRIM(nrg) != '' AND nrg != '-')
+               OR (no_sertifikat IS NOT NULL AND TRIM(no_sertifikat) != '' AND no_sertifikat != '-')
+               OR (no_peserta_sertifikasi IS NOT NULL AND TRIM(no_peserta_sertifikasi) != '' AND no_peserta_sertifikasi != '-')
+        ");
+        $gurus = $stmt ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : [];
+
+        $processed = [];
+        foreach ($gurus as $g) {
+            $res = self::saveOrUpdateKehadiran($db_siakad, $tanggal, $g['id'], 'Hadir');
+            $res['nama'] = $g['nama'];
+            $processed[] = $res;
+        }
+
+        $count = count($processed);
+        if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => "Berhasil menghadirkan {$count} guru sertifikasi pada tanggal {$tanggal}.",
+                'count' => $count,
+                'data' => $processed
+            ]);
+            exit;
+        }
+
+        redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=sertifikasi_success&count={$count}");
+        exit;
+    }
+
+    public static function hadirkanAdaJam() {
+        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
+            redirect('/login');
+            exit;
+        }
+
+        $tanggal = $_REQUEST['tanggal'] ?? date('Y-m-d');
+        $db_core = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+        self::ensureAbsensiGuruColumns($db_siakad);
+
+        $dayNum = date('w', strtotime($tanggal));
+        $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+        $hari = $hariMap[$dayNum] ?? '';
+
+        if ($hari === 'Minggu') {
+            $msg = "Hari ini adalah hari Minggu (Libur KBM). Tidak ada jadwal mengajar reguler.";
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $msg]);
+                exit;
+            }
+            redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=minggu_libur");
+            exit;
+        }
+
+        $stmtJam = $db_siakad->prepare("SELECT DISTINCT guru_id FROM jadwal_pelajaran WHERE LOWER(hari) = LOWER(?)");
+        $stmtJam->execute([$hari]);
+        $rawIds = $stmtJam->fetchAll(\PDO::FETCH_COLUMN);
+        $guruIds = array_filter(array_map('intval', $rawIds), function($id) { return $id > 0; });
+
+        if (empty($guruIds)) {
+            $msg = "Tidak ditemukan guru yang memiliki jadwal mengajar pada hari {$hari}.";
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $msg]);
+                exit;
+            }
+            redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=no_schedule");
+            exit;
+        }
+
+        $in = implode(',', $guruIds);
+        $gurus = $db_core->query("SELECT id, nama FROM guru WHERE id IN ($in)")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $processed = [];
+        foreach ($gurus as $g) {
+            $res = self::saveOrUpdateKehadiran($db_siakad, $tanggal, $g['id'], 'Hadir');
+            $res['nama'] = $g['nama'];
+            $processed[] = $res;
+        }
+
+        $count = count($processed);
+        if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => "Berhasil menghadirkan {$count} guru yang memiliki jadwal jam mengajar pada hari {$hari} ({$tanggal}).",
+                'count' => $count,
+                'data' => $processed
+            ]);
+            exit;
+        }
+
+        redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=jam_success&count={$count}&hari={$hari}");
+        exit;
+    }
+
+    public static function hadirkanSemuaOtomatis() {
+        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
+            redirect('/login');
+            exit;
+        }
+
+        $tanggal = $_REQUEST['tanggal'] ?? date('Y-m-d');
+        $db_core = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+        self::ensureAbsensiGuruColumns($db_siakad);
+
+        $dayNum = date('w', strtotime($tanggal));
+        $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+        $hari = $hariMap[$dayNum] ?? '';
+
+        // 1. Ambil guru sertifikasi (hadir setiap hari aktif)
+        $stmtSertif = $db_core->query("
+            SELECT id, nama, nip, status_kepegawaian, nrg, no_sertifikat 
+            FROM guru 
+            WHERE LOWER(TRIM(status_kepegawaian)) LIKE '%sertifikasi%'
+               OR (nrg IS NOT NULL AND TRIM(nrg) != '' AND nrg != '-')
+               OR (no_sertifikat IS NOT NULL AND TRIM(no_sertifikat) != '' AND no_sertifikat != '-')
+               OR (no_peserta_sertifikasi IS NOT NULL AND TRIM(no_peserta_sertifikasi) != '' AND no_peserta_sertifikasi != '-')
+        ");
+        $guruSertif = $stmtSertif ? $stmtSertif->fetchAll(\PDO::FETCH_ASSOC) : [];
+        $sertifIds = array_column($guruSertif, 'id');
+
+        // 2. Ambil guru yang ada jam di hari $hari
+        $guruJamIds = [];
+        if ($hari !== 'Minggu') {
+            $stmtJam = $db_siakad->prepare("SELECT DISTINCT guru_id FROM jadwal_pelajaran WHERE LOWER(hari) = LOWER(?)");
+            $stmtJam->execute([$hari]);
+            $rawIds = $stmtJam->fetchAll(\PDO::FETCH_COLUMN);
+            $guruJamIds = array_filter(array_map('intval', $rawIds), function($id) { return $id > 0; });
+        }
+
+        // Gabungkan kedua kelompok guru
+        $targetIds = array_values(array_unique(array_merge($sertifIds, $guruJamIds)));
+
+        if (empty($targetIds)) {
+            $msg = "Tidak ada guru sertifikasi atau guru berjadwal yang ditemukan.";
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $msg]);
+                exit;
+            }
+            redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=no_target");
+            exit;
+        }
+
+        $in = implode(',', $targetIds);
+        $gurus = $db_core->query("SELECT id, nama FROM guru WHERE id IN ($in)")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $processed = [];
+        foreach ($gurus as $g) {
+            $res = self::saveOrUpdateKehadiran($db_siakad, $tanggal, $g['id'], 'Hadir');
+            $res['nama'] = $g['nama'];
+            $res['is_sertif'] = in_array($g['id'], $sertifIds);
+            $res['has_jam'] = in_array($g['id'], $guruJamIds);
+            $processed[] = $res;
+        }
+
+        $count = count($processed);
+        if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => "Berhasil menghadirkan {$count} guru (Semua Sertifikasi + Guru Ada Jam Hari {$hari}) pada tanggal {$tanggal}.",
+                'count' => $count,
+                'data' => $processed
+            ]);
+            exit;
+        }
+
+        redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tanggal}&msg=all_success&count={$count}&hari={$hari}");
+        exit;
+    }
+
     public static function rekapHarian() {
         if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
             redirect('/login');
@@ -208,27 +493,69 @@ class AbsenGuruV2Controller {
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
 
-        // Ensure table exists
-        $db_siakad->exec("CREATE TABLE IF NOT EXISTS absensi_guru (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            guru_id INT NOT NULL,
-            tanggal DATE NOT NULL,
-            waktu_masuk TIME NULL,
-            waktu_keluar TIME NULL,
-            status VARCHAR(50) DEFAULT 'Hadir',
-            keterangan TEXT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )");
+        self::ensureAbsensiGuruColumns($db_siakad);
 
-        $sql = "SELECT a.*, g.nama, g.nip 
+        $core_db = 'aula_db';
+        try {
+            $config = require __DIR__ . '/../../config/database.php';
+            $core_db = $config['core']['db_name'] ?? 'aula_db';
+        } catch (\Exception $e) {}
+
+        $dayNum = date('w', strtotime($tanggal));
+        $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+        $hari = $hariMap[$dayNum] ?? '';
+
+        // Guru Sertifikasi (Hadir Tiap Hari)
+        $stmtSertif = $db_core->query("
+            SELECT id, nama, nip, status_kepegawaian, nrg, no_sertifikat 
+            FROM guru 
+            WHERE LOWER(TRIM(status_kepegawaian)) LIKE '%sertifikasi%'
+               OR (nrg IS NOT NULL AND TRIM(nrg) != '' AND nrg != '-')
+               OR (no_sertifikat IS NOT NULL AND TRIM(no_sertifikat) != '' AND no_sertifikat != '-')
+               OR (no_peserta_sertifikasi IS NOT NULL AND TRIM(no_peserta_sertifikasi) != '' AND no_peserta_sertifikasi != '-')
+            ORDER BY nama ASC
+        ");
+        $guruSertifList = $stmtSertif ? $stmtSertif->fetchAll(\PDO::FETCH_ASSOC) : [];
+        $guruSertifIds = array_column($guruSertifList, 'id');
+
+        // Guru Ada Jam pada hari $hari
+        $guruJamIds = [];
+        if ($hari !== 'Minggu') {
+            $stmtJam = $db_siakad->prepare("SELECT DISTINCT guru_id FROM jadwal_pelajaran WHERE LOWER(hari) = LOWER(?)");
+            $stmtJam->execute([$hari]);
+            $rawIds = $stmtJam->fetchAll(\PDO::FETCH_COLUMN);
+            $guruJamIds = array_filter(array_map('intval', $rawIds), function($id) { return $id > 0; });
+        }
+
+        $sql = "SELECT a.*, g.nama, g.nip, g.status_kepegawaian, g.nrg, g.no_sertifikat, g.jabatan 
                 FROM absensi_guru a 
-                JOIN aula_db.guru g ON a.guru_id = g.id 
+                LEFT JOIN {$core_db}.guru g ON a.guru_id = g.id 
                 WHERE a.tanggal = :tanggal 
                 ORDER BY g.nama ASC";
         
         $stmt = $db_siakad->prepare($sql);
         $stmt->execute([':tanggal' => $tanggal]);
         $absensi = $stmt->fetchAll();
+
+        // Rekap ringkas stats
+        $stats = [
+            'total_guru' => count($db_core->query("SELECT id FROM guru")->fetchAll()),
+            'sertifikasi' => count($guruSertifIds),
+            'ada_jam' => count($guruJamIds),
+            'hadir' => 0,
+            'terlambat' => 0,
+            'izin' => 0,
+            'sakit' => 0,
+            'alpa' => 0,
+        ];
+        foreach ($absensi as $ab) {
+            $st = $ab['status'] ?? 'Hadir';
+            if ($st === 'Hadir') $stats['hadir']++;
+            elseif ($st === 'Terlambat') $stats['terlambat']++;
+            elseif (in_array($st, ['Izin', 'Dinas Luar'])) $stats['izin']++;
+            elseif ($st === 'Sakit') $stats['sakit']++;
+            else $stats['alpa']++;
+        }
 
         $title = "Rekap Harian Absensi Guru";
         $initial = substr($_SESSION['nama'], 0, 1);
