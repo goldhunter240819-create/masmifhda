@@ -23,6 +23,15 @@
                     <a href="/kurikulum/supervisi/laporan-hasil" class="e-btn" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); color: #fff; text-decoration: none;" title="Buka Dokumen Laporan Hasil Supervisi Bab I - IV">
                         <i data-lucide="file-bar-chart-2"></i> Laporan Hasil
                     </a>
+                    <a href="/kurikulum/supervisi/tindak-lanjut" class="e-btn" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); color: #fff; text-decoration: none;" title="Buka Rencana Tindak Lanjut (RTL) Pasca Supervisi">
+                        <i data-lucide="arrow-right-circle"></i> Tindak Lanjut (RTL)
+                    </a>
+                    <a href="/kurikulum/supervisi/administrasi/cetak-jadwal" target="_blank" class="e-btn" style="background: #059669; border: 1px solid rgba(255,255,255,0.5); color: #fff; text-decoration: none; font-weight:700; box-shadow:0 4px 12px rgba(5,150,105,0.35);" title="Cetak Jadwal Pelaksanaan Supervisi Administrasi (1 Lembar Naskah)">
+                        <i data-lucide="calendar"></i> Cetak Jadwal
+                    </a>
+                    <a href="/kurikulum/supervisi/administrasi/cetak-semua" target="_blank" class="e-btn" style="background: #0284c7; border: 1px solid rgba(255,255,255,0.5); color: #fff; text-decoration: none; font-weight:700; box-shadow:0 4px 12px rgba(2,132,199,0.35);" title="Cetak Seluruh Lembar Instrumen Supervisi Administrasi Sekaligus">
+                        <i data-lucide="printer"></i> Cetak Semua
+                    </a>
                     <button class="e-btn e-btn-primary" onclick="openNew()">
                         <i data-lucide="plus-circle"></i> Jadwalkan Supervisi
                     </button>
@@ -31,9 +40,17 @@
         </div>
         
         <div class="z-panel" style="margin-top: 1.5rem;">
-            <div class="z-panel-head">
+            <div class="z-panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div class="z-panel-title">
                     <i data-lucide="list"></i> Daftar Supervisi Administrasi
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <a href="/kurikulum/supervisi/administrasi/cetak-jadwal" target="_blank" class="e-btn e-btn-outline" style="font-size: 0.82rem; padding: 0.35rem 0.85rem; display: inline-flex; align-items: center; gap: 6px; color:#059669; border-color:#059669; background:rgba(5,150,105,0.06); text-decoration:none; font-weight:700;" title="Cetak Jadwal Supervisi (1 Lembar)">
+                        <i data-lucide="calendar" style="width:15px;height:15px;"></i> Cetak Jadwal (1 Lembar)
+                    </a>
+                    <a href="/kurikulum/supervisi/administrasi/cetak-semua" target="_blank" class="e-btn e-btn-outline" style="font-size: 0.82rem; padding: 0.35rem 0.85rem; display: inline-flex; align-items: center; gap: 6px; color:#0284c7; border-color:#0284c7; background:rgba(2,132,199,0.06); text-decoration:none; font-weight:700;" title="Cetak Seluruh Lembar Instrumen Supervisi Sekaligus">
+                        <i data-lucide="printer" style="width:15px;height:15px;"></i> Cetak Semua Lembar Supervisi
+                    </a>
                 </div>
             </div>
             <div style="padding: 0; overflow-x: auto;">

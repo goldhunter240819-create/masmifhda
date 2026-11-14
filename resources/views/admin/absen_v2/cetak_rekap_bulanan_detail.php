@@ -64,27 +64,66 @@
             <td><?php echo htmlspecialchars($row['nama_kelas']); ?></td>
             <?php foreach($dates_range as $dt): 
                 $status_dt = $row['harian'][$dt];
-                $label = '';
-                if ($status_dt == 'Hadir') $label = 'H';
-                elseif ($status_dt == 'Sakit') $label = 'S';
-                elseif ($status_dt == 'Izin') $label = 'I';
-                elseif ($status_dt == 'Alpa') $label = 'A';
-                elseif ($status_dt == 'Bolos') $label = 'B';
-                elseif ($status_dt == 'Terlambat') $label = 'T';
+                $label = '-';
+                $color_style = 'color: #94a3b8;';
+                if ($status_dt == 'Hadir') {
+                    $label = 'H';
+                    $color_style = 'color: #16a34a; font-weight: bold;';
+                } elseif ($status_dt == 'Sakit') {
+                    $label = 'S';
+                    $color_style = 'color: #ca8a04; font-weight: bold;';
+                } elseif ($status_dt == 'Izin') {
+                    $label = 'I';
+                    $color_style = 'color: #2563eb; font-weight: bold;';
+                } elseif ($status_dt == 'Alpa') {
+                    $label = 'A';
+                    $color_style = 'color: #dc2626; font-weight: bold;';
+                } elseif ($status_dt == 'Bolos') {
+                    $label = 'B';
+                    $color_style = 'color: #7f1d1d; font-weight: bold;';
+                } elseif ($status_dt == 'Terlambat') {
+                    $label = 'T';
+                    $color_style = 'color: #ea580c; font-weight: bold;';
+                }
             ?>
-                <td class="text-center" style="<?php echo $label == 'A' ? 'color: red;' : ($label == 'B' ? 'color: darkred; font-weight: bold;' : ''); ?>"><?php echo $label; ?></td>
+                <td class="text-center" style="<?php echo $color_style; ?>"><?php echo $label; ?></td>
             <?php endforeach; ?>
-            <td class="text-center"><?php echo $row['rekap']['Hadir']; ?></td>
-            <td class="text-center"><?php echo $row['rekap']['Sakit']; ?></td>
-            <td class="text-center"><?php echo $row['rekap']['Izin']; ?></td>
-            <td class="text-center"><?php echo $row['rekap']['Alpa']; ?></td>
-            <td class="text-center"><?php echo $row['rekap']['Bolos']; ?></td>
-            <td class="text-center"><?php echo $row['rekap']['Terlambat']; ?></td>
+            <td class="text-center" style="font-weight: 600;"><?php echo $row['rekap']['Hadir']; ?></td>
+            <td class="text-center" style="font-weight: 600;"><?php echo $row['rekap']['Sakit']; ?></td>
+            <td class="text-center" style="font-weight: 600;"><?php echo $row['rekap']['Izin']; ?></td>
+            <td class="text-center" style="font-weight: 700; color: #dc2626;"><?php echo $row['rekap']['Alpa']; ?></td>
+            <td class="text-center" style="font-weight: 700; color: #7f1d1d;"><?php echo $row['rekap']['Bolos']; ?></td>
+            <td class="text-center" style="font-weight: 600;"><?php echo $row['rekap']['Terlambat']; ?></td>
         </tr>
         <?php endforeach; ?>
         <?php endif; ?>
     </tbody>
 </table>
+
+<div style="margin-top: 15px; font-size: 9px; color: #475569; display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <strong>Keterangan:</strong> 
+        <span style="color: #16a34a; font-weight: bold;">H</span> = Hadir | 
+        <span style="color: #ca8a04; font-weight: bold;">S</span> = Sakit | 
+        <span style="color: #2563eb; font-weight: bold;">I</span> = Izin | 
+        <span style="color: #dc2626; font-weight: bold;">A</span> = Alpa (Tidak Hadir) | 
+        <span style="color: #7f1d1d; font-weight: bold;">B</span> = Bolos | 
+        <span style="color: #ea580c; font-weight: bold;">T</span> = Terlambat | 
+        <span style="color: #94a3b8;">-</span> = Hari Belum Lewat / Libur
+    </div>
+    <div style="text-align: right; font-style: italic;">
+        Dicetak pada: <?php echo date('d-m-Y H:i:s'); ?> WIB | Sistem SI-AKAD MASMIFHDA
+    </div>
+</div>
+
+<div style="margin-top: 30px; display: flex; justify-content: flex-end;">
+    <div style="text-align: center; width: 220px; font-size: 10px;">
+        <p style="margin: 0;">Way Tenong, <?php echo date('d') . ' ' . [1=>'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][(int)date('m')] . ' ' . date('Y'); ?></p>
+        <p style="margin: 4px 0 60px 0;">Kepala Madrasah,</p>
+        <p style="margin: 0; font-weight: bold; text-decoration: underline;">AHMAD RIFA'I, M.Pd</p>
+        <p style="margin: 2px 0 0 0;">NIP. -</p>
+    </div>
+</div>
 
 </body>
 </html>

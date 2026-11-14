@@ -52,6 +52,13 @@
                         <strong>Alhamdulillah Berhasil!</strong> Seluruh absensi guru untuk bulan <strong><?php echo $namaBulan; ?> <?php echo $tahun; ?></strong> berhasil di-generate secara otomatis sebanyak <strong><?php echo intval($_GET['total'] ?? 0); ?> data kehadiran</strong> (<?php echo intval($_GET['hari'] ?? 0); ?> hari aktif KBM).
                     </div>
                 </div>
+            <?php elseif (isset($_GET['msg']) && $_GET['msg'] === 'auto_alpa_success'): ?>
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 5px solid #ef4444; border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
+                    <i data-lucide="alert-octagon" style="width: 24px; height: 24px; color: #dc2626; flex-shrink: 0;"></i>
+                    <div style="font-size: 0.9rem; color: #991b1b; font-weight: 600;">
+                        <strong>Auto-Alpa Berhasil!</strong> Sebanyak <strong><?php echo intval($_GET['count'] ?? 0); ?> status ALPA</strong> berhasil ditandai di database untuk guru yang terjadwal hadir tetapi kosong pada bulan <?php echo $namaBulan; ?> <?php echo $tahun; ?>. (Guru yang tidak ada jam mengajar tetap aman).
+                    </div>
+                </div>
             <?php elseif (isset($_GET['msg']) && $_GET['msg'] === 'error'): ?>
                 <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 5px solid #ef4444; border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px;">
                     <i data-lucide="alert-circle" style="width: 24px; height: 24px; color: #dc2626; flex-shrink: 0;"></i>
@@ -114,8 +121,13 @@
                                 <i data-lucide="calendar-days" style="width:14px; height:14px;"></i> Cetak Detail Global (1-31)
                             </button>
 
+                            <!-- Tombol Auto Alpa Yang Kosong Bulan Ini -->
+                            <button type="button" onclick="confirmAutoAlpaBulan()" style="padding:8px 14px; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; font-size:0.83rem; box-shadow:0 2px 6px rgba(239,68,68,0.25); transition:0.2s;" title="Tandai Alpa otomatis di database untuk guru yang terjadwal hadir tetapi kosong">
+                                <i data-lucide="user-x" style="width:14px; height:14px;"></i> Auto Alpa Kosong
+                            </button>
+
                             <!-- Tombol Generate 1 Bulan Penuh -->
-                            <button type="button" onclick="confirmGenerateBulan()" style="padding:8px 16px; background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:0.83rem; box-shadow:0 3px 8px rgba(99,102,241,0.25); transition:0.2s;" title="Generate kehadiran otomatis 1 bulan penuh untuk seluruh guru">
+                            <button type="button" onclick="openModalGenerateBulan()" style="padding:8px 16px; background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:0.83rem; box-shadow:0 3px 8px rgba(99,102,241,0.25); transition:0.2s;" title="Generate kehadiran otomatis 1 bulan penuh untuk seluruh guru">
                                 <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Generate Hadir 1 Bulan
                             </button>
                         </div>
@@ -193,11 +205,104 @@
     </div>
 </div>
 
-<!-- Hidden Form for Generate 1 Bulan -->
-<form id="formGenerateBulan" method="POST" action="/admin/absen_guru_v2/generate-bulan" style="display:none;">
-    <input type="hidden" name="bulan" id="genBulan" value="<?php echo htmlspecialchars($bulan); ?>">
-    <input type="hidden" name="tahun" id="genTahun" value="<?php echo htmlspecialchars($tahun); ?>">
+<!-- Form Auto Alpa Bulan Ini -->
+<form id="formAutoAlpaBulan" method="POST" action="/admin/absen_guru_v2/auto-alpa" style="display:none;">
+    <input type="hidden" name="bulan" id="alpaBulan" value="<?php echo htmlspecialchars($bulan); ?>">
+    <input type="hidden" name="tahun" id="alpaTahun" value="<?php echo htmlspecialchars($tahun); ?>">
 </form>
+
+<!-- Modal Generate 1 Bulan Penuh -->
+<div id="modalGenBulan" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:15px;">
+    <div style="background:white; border-radius:18px; width:100%; max-width:540px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2); overflow:hidden; animation:zoomIn 0.2s ease;">
+        <div style="padding:18px 24px; background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:white; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center;">
+                    <i data-lucide="sparkles" style="width:20px; height:20px;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size:1.1rem; font-weight:800;">Generate Hadir 1 Bulan Penuh</h3>
+                    <p style="margin:0; font-size:0.78rem; opacity:0.9;">Otomatisasi kehadiran guru bulanan madrasah</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeModalGenerateBulan()" style="background:none; border:none; color:white; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
+        </div>
+
+        <form method="POST" action="/admin/absen_guru_v2/generate-bulan" style="padding:22px 24px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.78rem; font-weight:700; color:#475569; margin-bottom:5px;">Bulan Target</label>
+                    <select name="bulan" id="modalBulan" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:10px; font-weight:600; font-size:0.88rem; outline:none;">
+                        <?php foreach($bulans as $num => $nb): ?>
+                            <option value="<?php echo $num; ?>" <?php echo $bulan == $num ? 'selected' : ''; ?>><?php echo $nb; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.78rem; font-weight:700; color:#475569; margin-bottom:5px;">Tahun</label>
+                    <select name="tahun" id="modalTahun" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:10px; font-weight:600; font-size:0.88rem; outline:none;">
+                        <?php for($y=date('Y'); $y>=2024; $y--): ?>
+                            <option value="<?php echo $y; ?>" <?php echo $tahun == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:0.78rem; font-weight:700; color:#475569; margin-bottom:8px;">Pilih Mode Generate Kehadiran:</label>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1.5px solid #6366f1; background:#f5f3ff; border-radius:10px; cursor:pointer;">
+                        <input type="radio" name="mode" value="kombinasi" checked style="margin-top:3px; accent-color:#6366f1;">
+                        <div>
+                            <div style="font-weight:700; font-size:0.88rem; color:#4338ca;">⚡ Kombinasi Otomatis (Rekomendasi Madrasah)</div>
+                            <div style="font-size:0.75rem; color:#6b7280; line-height:1.35;">Guru sertifikasi hadir setiap hari kerja (Senin-Sabtu), guru non-sertifikasi hadir saat ada jam mengajar.</div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1.5px solid #e2e8f0; background:#ffffff; border-radius:10px; cursor:pointer;">
+                        <input type="radio" name="mode" value="sertifikasi" style="margin-top:3px; accent-color:#f59e0b;">
+                        <div>
+                            <div style="font-weight:700; font-size:0.88rem; color:#b45309;">🏆 Khusus Semua Guru Sertifikasi</div>
+                            <div style="font-size:0.75rem; color:#6b7280; line-height:1.35;">Hanya guru bersertifikasi yang dihadirkan setiap hari kerja sebulan penuh. Guru lain tidak disentuh.</div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1.5px solid #e2e8f0; background:#ffffff; border-radius:10px; cursor:pointer;">
+                        <input type="radio" name="mode" value="jam" style="margin-top:3px; accent-color:#10b981;">
+                        <div>
+                            <div style="font-weight:700; font-size:0.88rem; color:#065f46;">📅 Guru Sesuai Jam Mengajar</div>
+                            <div style="font-size:0.75rem; color:#6b7280; line-height:1.35;">Guru dihadirkan HANYA pada hari di mana mereka memiliki jadwal jam mengajar di hari tersebut.</div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1.5px solid #e2e8f0; background:#ffffff; border-radius:10px; cursor:pointer;">
+                        <input type="radio" name="mode" value="semua" style="margin-top:3px; accent-color:#0ea5e9;">
+                        <div>
+                            <div style="font-weight:700; font-size:0.88rem; color:#0369a1;">👥 Semua Guru Madrasah (Penuh)</div>
+                            <div style="font-size:0.75rem; color:#6b7280; line-height:1.35;">Seluruh guru madrasah dihadirkan setiap hari kerja aktif (Senin-Sabtu) sebulan penuh.</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; margin-bottom:18px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.8rem; font-weight:700; color:#334155;">
+                    <input type="checkbox" name="isi_alpa" value="1" style="accent-color:#ef4444; width:16px; height:16px;">
+                    <span>Tandai ALPA untuk guru yang terjadwal tapi kosong pada tanggal yang sudah lewat</span>
+                </label>
+                <div style="font-size:0.73rem; color:#64748b; margin-left:24px; margin-top:2px;">
+                    *Guru yang TIDAK ADA JAM mengajar tetap aman (tidak dialpakan).
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeModalGenerateBulan()" style="padding:9px 16px; background:#f1f5f9; color:#475569; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer;">Batal</button>
+                <button type="submit" style="padding:9px 20px; background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.83rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(99,102,241,0.3);">
+                    <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Proses Generate
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
     lucide.createIcons();
@@ -205,24 +310,36 @@
         document.getElementById('zSidebar').classList.toggle('active');
     }
 
-    function confirmGenerateBulan() {
+    function openModalGenerateBulan() {
+        const b = document.getElementById('selBulan').value;
+        const t = document.getElementById('selTahun').value;
+        document.getElementById('modalBulan').value = b;
+        document.getElementById('modalTahun').value = t;
+        document.getElementById('modalGenBulan').style.display = 'flex';
+        lucide.createIcons();
+    }
+
+    function closeModalGenerateBulan() {
+        document.getElementById('modalGenBulan').style.display = 'none';
+    }
+
+    function confirmAutoAlpaBulan() {
         const b = document.getElementById('selBulan').value;
         const t = document.getElementById('selTahun').value;
         const bulanText = document.getElementById('selBulan').options[document.getElementById('selBulan').selectedIndex].text;
         
-        const pesan = `Generate kehadiran otomatis 1 BULAN PENUH untuk ${bulanText} ${t}?\n\n` +
-                      `Aturan Otomatis:\n` +
-                      `• Guru Sertifikasi: Otomatis Hadir SETIAP HARI KERJA (Senin - Sabtu)\n` +
-                      `• Guru Non-Sertifikasi: Otomatis Hadir jika ADA JAM MENGAJAR di hari tersebut\n` +
-                      `• Hari Minggu & Libur Nasional dilewati (skip)\n` +
-                      `• Jam Masuk: 07.00 - 07.30 (Acak)\n` +
-                      `• Jam Pulang: 13.15 - 13.30 (Acak)\n\n` +
-                      `Lanjutkan generate?`;
+        const pesan = `Tandai status ALPA resmi di database untuk guru yang terjadwal hadir tetapi kosong pada bulan ${bulanText} ${t}?\n\n` +
+                      `Aturan Auto-Alpa:\n` +
+                      `• Guru Sertifikasi: Wajib hadir setiap hari kerja (Senin - Sabtu)\n` +
+                      `• Guru Non-Sertifikasi: Wajib hadir saat ADA JAM MENGAJAR di hari tersebut\n` +
+                      `• Guru yang TIDAK ADA JAM MENGAJAR TETAP AMAN (TIDAK DIALPAKAN)\n` +
+                      `• Hanya berlaku untuk tanggal yang sudah lewat / hari ini\n\n` +
+                      `Lanjutkan proses Auto-Alpa?`;
 
         if (confirm(pesan)) {
-            document.getElementById('genBulan').value = b;
-            document.getElementById('genTahun').value = t;
-            document.getElementById('formGenerateBulan').submit();
+            document.getElementById('alpaBulan').value = b;
+            document.getElementById('alpaTahun').value = t;
+            document.getElementById('formAutoAlpaBulan').submit();
         }
     }
 </script>

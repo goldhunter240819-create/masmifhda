@@ -309,7 +309,7 @@
                 <span class="lbl-t">T = Terlambat</span>
                 <span class="lbl-s">S = Sakit</span>
                 <span class="lbl-i">I = Izin / Dinas Luar</span>
-                <span class="lbl-a">A = Alpa</span>
+                <span class="lbl-a">A = Alpa (Jadwal Kosong)</span>
                 <span style="color:#ef4444;">M = Hari Minggu</span>
                 <span class="lbl-off">- = Libur / Tidak Ada Jam</span>
             </div>

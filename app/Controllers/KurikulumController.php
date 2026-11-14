@@ -1152,6 +1152,77 @@ class KurikulumController {
         require_once __DIR__ . '/../../resources/views/kurikulum/supervisi_cetak.php';
     }
 
+    public function cetakSemuaSupervisiAdministrasi() {
+        $db = \App\Core\Database::connect('core');
+
+        $daftar_supervisi = $db->query("
+            SELECT sa.*, 
+                   COALESCE(sa.pegawai_id, sa.guru_id) as pegawai_id,
+                   COALESCE(sa.supervisor_id, sa.penilai_id) as supervisor_id,
+                   COALESCE(sa.tanggal, sa.tanggal_supervisi) as tanggal,
+                   COALESCE(sa.nilai, sa.nilai_akhir, 0) as nilai,
+                   COALESCE(g.nama, 'Pegawai') as nama_guru, 
+                   COALESCE(g.nama, 'Pegawai') as nama_pegawai, 
+                   COALESCE(g.nip, '-') as nip_guru, 
+                   COALESCE(sp.nama, sa.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor 
+            FROM kurikulum_supervisi_administrasi sa 
+            LEFT JOIN guru g ON COALESCE(sa.pegawai_id, sa.guru_id) = g.id 
+            LEFT JOIN guru sp ON COALESCE(sa.supervisor_id, sa.penilai_id) = sp.id 
+            ORDER BY COALESCE(sa.tanggal, sa.tanggal_supervisi) DESC, sa.id DESC
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $instrumen = $db->query("SELECT * FROM kurikulum_instrumen_supervisi WHERE tipe_supervisi = 'Administrasi' ORDER BY CAST(kode AS UNSIGNED) ASC, id ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC) ?: [];
+        
+        $all_hasil_raw = $db->query("SELECT supervisi_id, instrumen_id, skor FROM kurikulum_supervisi_hasil WHERE tipe_supervisi = 'Administrasi'")->fetchAll(\PDO::FETCH_ASSOC);
+        $all_hasil = [];
+        foreach ($all_hasil_raw as $hr) {
+            $all_hasil[$hr['supervisi_id']][$hr['instrumen_id']] = $hr['skor'];
+        }
+
+        $legalitas = self::getSupervisiLegalitas($db);
+        extract($legalitas);
+
+        $tipe = 'Administrasi';
+        require_once __DIR__ . '/../../resources/views/kurikulum/supervisi_cetak_semua.php';
+    }
+
+    public function cetakJadwalSupervisiAdministrasi() {
+        $db = \App\Core\Database::connect('core');
+
+        $daftar_supervisi = $db->query("
+            SELECT sa.*, 
+                   COALESCE(sa.tanggal, sa.tanggal_supervisi) as tanggal,
+                   COALESCE(g.nama, 'Pegawai') as nama_guru, 
+                   COALESCE(g.nip, '-') as nip_guru, 
+                   COALESCE(sp.nama, sa.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nip, '-') as nip_supervisor,
+                   COALESCE(sa.keterangan, 'Verifikasi Dokumen & Administrasi Pembelajaran') as nama_mapel,
+                   '-' as nama_kelas
+            FROM kurikulum_supervisi_administrasi sa 
+            LEFT JOIN guru g ON COALESCE(sa.pegawai_id, sa.guru_id) = g.id 
+            LEFT JOIN guru sp ON COALESCE(sa.supervisor_id, sa.penilai_id) = sp.id 
+            ORDER BY COALESCE(sa.tanggal, sa.tanggal_supervisi) ASC, sa.id ASC
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC) ?: [];
+        $legalitas = self::getSupervisiLegalitas($db);
+        extract($legalitas);
+
+        $ta_aktif = '2026/2027';
+        try {
+            $ta_aktif_db = $db->query("SELECT name FROM tahun_ajaran WHERE is_active = 1 LIMIT 1")->fetchColumn();
+            if ($ta_aktif_db) $ta_aktif = $ta_aktif_db;
+        } catch (\Throwable $e) {}
+        
+        $tahun_ajaran = $ta_aktif;
+        $semester = 'Ganjil';
+        $tipe = 'Administrasi';
+
+        require_once __DIR__ . '/../../resources/views/kurikulum/supervisi_jadwal_cetak.php';
+    }
+
     public function rilisSupervisiAdministrasi() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!isset($_POST['id']) || !isset($_POST['is_released'])) {

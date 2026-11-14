@@ -1336,6 +1336,8 @@ $router->add('GET', '/admin/absen_guru_v2/rekap-bulanan', [\App\Controllers\Abse
 $router->add('GET', '/admin/absen_guru_v2/rekap_bulanan', [\App\Controllers\AbsenGuruV2Controller::class, 'rekapBulanan']);
 $router->add('POST', '/admin/absen_guru_v2/generate-bulan', [\App\Controllers\AbsenGuruV2Controller::class, 'generateBulan']);
 $router->add('GET', '/admin/absen_guru_v2/generate-bulan', [\App\Controllers\AbsenGuruV2Controller::class, 'generateBulan']);
+$router->add('POST', '/admin/absen_guru_v2/auto-alpa', [\App\Controllers\AbsenGuruV2Controller::class, 'autoAlpaKosong']);
+$router->add('GET', '/admin/absen_guru_v2/auto-alpa', [\App\Controllers\AbsenGuruV2Controller::class, 'autoAlpaKosong']);
 $router->add('GET', '/admin/absen_guru_v2/ketidakhadiran', [\App\Controllers\AbsenGuruV2Controller::class, 'ketidakhadiran']);
 $router->add('GET', '/admin/absen_guru_v2/input-manual', [\App\Controllers\AbsenGuruV2Controller::class, 'inputManual']);
 $router->add('POST', '/admin/absen_guru_v2/save-input-manual', [\App\Controllers\AbsenGuruV2Controller::class, 'saveInputManual']);
@@ -2470,6 +2472,8 @@ $router->add('POST', '/kurikulum/supervisi/administrasi/rilis-hasil', [\App\Cont
 $router->add('GET', '/kurikulum/supervisi/administrasi/evaluasi', [\App\Controllers\KurikulumController::class, 'evaluasiSupervisiAdministrasiForm']);
 $router->add('POST', '/kurikulum/supervisi/administrasi/evaluasi', [\App\Controllers\KurikulumController::class, 'storeEvaluasiSupervisiAdministrasi']);
 $router->add('GET', '/kurikulum/supervisi/administrasi/cetak', [\App\Controllers\KurikulumController::class, 'cetakSupervisiAdministrasi']);
+$router->add('GET', '/kurikulum/supervisi/administrasi/cetak-semua', [\App\Controllers\KurikulumController::class, 'cetakSemuaSupervisiAdministrasi']);
+$router->add('GET', '/kurikulum/supervisi/administrasi/cetak-jadwal', [\App\Controllers\KurikulumController::class, 'cetakJadwalSupervisiAdministrasi']);
 $router->add('GET', '/kurikulum/supervisi/kelas', [\App\Controllers\KurikulumController::class, 'supervisiKelas']);
 $router->add('POST', '/kurikulum/supervisi/kelas', [\App\Controllers\KurikulumController::class, 'storeSupervisiKelas']);
 $router->add('POST', '/kurikulum/supervisi/kelas/update', [\App\Controllers\KurikulumController::class, 'updateSupervisiKelas']);

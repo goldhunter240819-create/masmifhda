@@ -246,14 +246,63 @@ class AbsenGuruV2Controller {
         } catch (\Exception $e) {}
     }
 
-    public static function saveOrUpdateKehadiran($db_siakad, $tanggal, $guru_id, $status = 'Hadir') {
+    public static function getSertifikasiGuruIds($db_core) {
+        $stmt = $db_core->query("
+            SELECT id FROM guru 
+            WHERE LOWER(TRIM(status_kepegawaian)) LIKE '%sertifikasi%'
+               OR (nrg IS NOT NULL AND TRIM(nrg) != '' AND nrg != '-')
+               OR (no_sertifikat IS NOT NULL AND TRIM(no_sertifikat) != '' AND no_sertifikat != '-')
+               OR (no_peserta_sertifikasi IS NOT NULL AND TRIM(no_peserta_sertifikasi) != '' AND no_peserta_sertifikasi != '-')
+        ");
+        $raw = $stmt ? $stmt->fetchAll(\PDO::FETCH_COLUMN) : [];
+        return array_map('intval', $raw);
+    }
+
+    public static function getJadwalPerHari($db_siakad) {
+        $jadwal = [];
+        $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        foreach ($hariList as $h) {
+            $stmtJam = $db_siakad->prepare("SELECT DISTINCT guru_id FROM jadwal_pelajaran WHERE LOWER(hari) = LOWER(?)");
+            $stmtJam->execute([$h]);
+            $rawIds = $stmtJam->fetchAll(\PDO::FETCH_COLUMN);
+            $jadwal[$h] = array_filter(array_map('intval', $rawIds), function($id) { return $id > 0; });
+        }
+        return $jadwal;
+    }
+
+    public static function getKalenderLiburDates($db_siakad) {
+        $liburDates = [];
+        try {
+            $stmtLibur = $db_siakad->query("SELECT tanggal_mulai, tanggal_selesai FROM kalender_pendidikan WHERE jenis = 'libur'");
+            if ($stmtLibur) {
+                while ($lb = $stmtLibur->fetch(\PDO::FETCH_ASSOC)) {
+                    $cur = strtotime($lb['tanggal_mulai']);
+                    $end = strtotime($lb['tanggal_selesai']);
+                    while ($cur <= $end) {
+                        $liburDates[date('Y-m-d', $cur)] = true;
+                        $cur = strtotime('+1 day', $cur);
+                    }
+                }
+            }
+        } catch (\Exception $eLibur) {}
+        return $liburDates;
+    }
+
+    public static function saveOrUpdateKehadiran($db_siakad, $tanggal, $guru_id, $status = 'Hadir', $keterangan = null) {
         self::ensureAbsensiGuruColumns($db_siakad);
         
-        // Waktu masuk antara jam 07.00 sampai 07.30
-        $waktu_masuk = self::generateRandomTime(7, 0, 7, 30);
-        // Waktu pulang antara jam 13.15 sampai 13.30
-        $waktu_pulang = self::generateRandomTime(13, 15, 13, 30);
-        $created_at = $tanggal . ' ' . $waktu_masuk;
+        if ($status === 'Alpa') {
+            $waktu_masuk = null;
+            $waktu_pulang = null;
+            $created_at = $tanggal . ' 07:00:00';
+            if (!$keterangan) $keterangan = 'Alpa (Tanpa Keterangan)';
+        } else {
+            // Waktu masuk antara jam 07.00 sampai 07.30
+            $waktu_masuk = self::generateRandomTime(7, 0, 7, 30);
+            // Waktu pulang antara jam 13.15 sampai 13.30
+            $waktu_pulang = self::generateRandomTime(13, 15, 13, 30);
+            $created_at = $tanggal . ' ' . $waktu_masuk;
+        }
 
         $stmtCek = $db_siakad->prepare("SELECT id FROM absensi_guru WHERE tanggal = ? AND guru_id = ?");
         $stmtCek->execute([$tanggal, $guru_id]);
@@ -264,18 +313,20 @@ class AbsenGuruV2Controller {
                 SET status = ?, 
                     waktu_masuk = ?, waktu_keluar = ?, 
                     jam_masuk = ?, jam_pulang = ?, 
+                    keterangan = COALESCE(?, keterangan),
                     created_at = ? 
                 WHERE id = ?");
-            $stmtUp->execute([$status, $waktu_masuk, $waktu_pulang, $waktu_masuk, $waktu_pulang, $created_at, $existing['id']]);
+            $stmtUp->execute([$status, $waktu_masuk, $waktu_pulang, $waktu_masuk, $waktu_pulang, $keterangan, $created_at, $existing['id']]);
         } else {
             $stmtIn = $db_siakad->prepare("INSERT INTO absensi_guru 
-                (tanggal, guru_id, status, waktu_masuk, waktu_keluar, jam_masuk, jam_pulang, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmtIn->execute([$tanggal, $guru_id, $status, $waktu_masuk, $waktu_pulang, $waktu_masuk, $waktu_pulang, $created_at]);
+                (tanggal, guru_id, status, waktu_masuk, waktu_keluar, jam_masuk, jam_pulang, keterangan, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmtIn->execute([$tanggal, $guru_id, $status, $waktu_masuk, $waktu_pulang, $waktu_masuk, $waktu_pulang, $keterangan, $created_at]);
         }
 
         return [
             'guru_id' => $guru_id,
+            'status' => $status,
             'waktu_masuk' => $waktu_masuk,
             'waktu_pulang' => $waktu_pulang
         ];
@@ -500,37 +551,30 @@ class AbsenGuruV2Controller {
 
         $bulan = sprintf('%02d', intval($_REQUEST['bulan'] ?? date('m')));
         $tahun = intval($_REQUEST['tahun'] ?? date('Y'));
+        $mode = $_REQUEST['mode'] ?? 'kombinasi'; // 'kombinasi', 'sertifikasi', 'jam', 'semua'
+        $isiAlpa = !empty($_REQUEST['isi_alpa']) ? true : false;
 
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
         self::ensureAbsensiGuruColumns($db_siakad);
 
-        // 1. Ambil semua guru sertifikasi secara dinamis
-        $stmtSertif = $db_core->query("
-            SELECT id, nama, nip, status_kepegawaian, nrg, no_sertifikat 
-            FROM guru 
-            WHERE LOWER(TRIM(status_kepegawaian)) LIKE '%sertifikasi%'
-               OR (nrg IS NOT NULL AND TRIM(nrg) != '' AND nrg != '-')
-               OR (no_sertifikat IS NOT NULL AND TRIM(no_sertifikat) != '' AND no_sertifikat != '-')
-               OR (no_peserta_sertifikasi IS NOT NULL AND TRIM(no_peserta_sertifikasi) != '' AND no_peserta_sertifikasi != '-')
-        ");
-        $guruSertif = $stmtSertif ? $stmtSertif->fetchAll(\PDO::FETCH_ASSOC) : [];
-        $sertifIds = array_column($guruSertif, 'id');
+        // 1. Ambil ID guru sertifikasi
+        $sertifIds = self::getSertifikasiGuruIds($db_core);
 
-        // 2. Ambil pemetaan jadwal guru per hari
-        $jadwalPerHari = [];
-        $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        foreach ($hariList as $h) {
-            $stmtJam = $db_siakad->prepare("SELECT DISTINCT guru_id FROM jadwal_pelajaran WHERE LOWER(hari) = LOWER(?)");
-            $stmtJam->execute([$h]);
-            $rawIds = $stmtJam->fetchAll(\PDO::FETCH_COLUMN);
-            $jadwalPerHari[$h] = array_filter(array_map('intval', $rawIds), function($id) { return $id > 0; });
-        }
+        // 2. Ambil semua ID dewan guru madrasah
+        $allGuru = $db_core->query("SELECT id FROM guru")->fetchAll(\PDO::FETCH_COLUMN);
+        $allGuruIds = array_map('intval', $allGuru);
+
+        // 3. Ambil pemetaan jadwal guru per hari & libur
+        $jadwalPerHari = self::getJadwalPerHari($db_siakad);
+        $liburDates = self::getKalenderLiburDates($db_siakad);
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, intval($bulan), intval($tahun));
         $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+        $today = date('Y-m-d');
 
         $totalHadirGenerated = 0;
+        $totalAlpaGenerated = 0;
         $totalHariAktif = 0;
 
         $db_siakad->beginTransaction();
@@ -540,30 +584,38 @@ class AbsenGuruV2Controller {
                 $dayNum = date('w', strtotime($tanggal));
                 $hari = $hariMap[$dayNum] ?? '';
 
-                // Skip hari Minggu (Libur KBM)
-                if ($hari === 'Minggu') {
+                // Skip hari Minggu (Libur KBM) & Libur Kalender
+                if ($hari === 'Minggu' || isset($liburDates[$tanggal])) {
                     continue;
                 }
 
-                // Cek kalender pendidikan / akademik jika ada libur resmi
-                try {
-                    $cekLibur = $db_siakad->query("SELECT id FROM kalender_pendidikan WHERE tanggal_mulai <= '$tanggal' AND tanggal_selesai >= '$tanggal' AND jenis = 'libur' LIMIT 1")->fetch();
-                    if ($cekLibur) {
-                        continue;
-                    }
-                } catch (\Exception $eLibur) {}
-
                 $totalHariAktif++;
-
-                // Guru berjadwal di hari tersebut
                 $guruJamHariIni = $jadwalPerHari[$hari] ?? [];
 
-                // Gabungkan guru sertifikasi (tiap hari) + guru ada jam hari tersebut
-                $targetGuruIds = array_values(array_unique(array_merge($sertifIds, $guruJamHariIni)));
+                // Tentukan target guru yang dihadirkan sesuai mode yang dipilih
+                if ($mode === 'sertifikasi') {
+                    $targetGuruIds = $sertifIds;
+                } elseif ($mode === 'jam') {
+                    $targetGuruIds = $guruJamHariIni;
+                } elseif ($mode === 'semua') {
+                    $targetGuruIds = $allGuruIds;
+                } else { // kombinasi (default)
+                    $targetGuruIds = array_values(array_unique(array_merge($sertifIds, $guruJamHariIni)));
+                }
 
                 foreach ($targetGuruIds as $gid) {
                     self::saveOrUpdateKehadiran($db_siakad, $tanggal, $gid, 'Hadir');
                     $totalHadirGenerated++;
+                }
+
+                // Jika opsi isi_alpa dicentang: guru yang terjadwal tapi tidak dihadirkan, ditandai Alpa
+                if ($isiAlpa && $tanggal <= $today) {
+                    $guruJadwalHariIni = array_values(array_unique(array_merge($sertifIds, $guruJamHariIni)));
+                    $guruKosong = array_diff($guruJadwalHariIni, $targetGuruIds);
+                    foreach ($guruKosong as $gid) {
+                        self::saveOrUpdateKehadiran($db_siakad, $tanggal, $gid, 'Alpa', 'Alpa Otomatis (Tanpa Keterangan)');
+                        $totalAlpaGenerated++;
+                    }
                 }
             }
             if ($db_siakad->inTransaction()) {
@@ -585,20 +637,137 @@ class AbsenGuruV2Controller {
         $bulans = ['01'=>'Januari', '02'=>'Februari', '03'=>'Maret', '04'=>'April', '05'=>'Mei', '06'=>'Juni', '07'=>'Juli', '08'=>'Agustus', '09'=>'September', '10'=>'Oktober', '11'=>'November', '12'=>'Desember'];
         $namaBulan = $bulans[$bulan] ?? $bulan;
 
+        $modeNames = [
+            'sertifikasi' => 'Khusus Semua Guru Sertifikasi',
+            'jam' => 'Khusus Guru Sesuai Jam Mengajar',
+            'semua' => 'Semua Dewan Guru Madrasah',
+            'kombinasi' => 'Kombinasi (Sertifikasi Tiap Hari + Non-Sertif Ada Jam)'
+        ];
+        $namaMode = $modeNames[$mode] ?? 'Kombinasi Otomatis';
+
+        $msgText = "Berhasil men-generate absensi 1 bulan ($namaBulan $tahun) mode [$namaMode]: $totalHadirGenerated data kehadiran ($totalHariAktif hari aktif).";
+        if ($totalAlpaGenerated > 0) {
+            $msgText .= " Serta $totalAlpaGenerated status Alpa untuk guru berjadwal yang kosong.";
+        }
+
         if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
-                'message' => "Berhasil men-generate absensi 1 bulan penuh ($namaBulan $tahun) sebanyak $totalHadirGenerated data kehadiran ($totalHariAktif hari aktif).",
+                'message' => $msgText,
                 'bulan' => $bulan,
                 'tahun' => $tahun,
+                'mode' => $mode,
                 'total_hadir' => $totalHadirGenerated,
+                'total_alpa' => $totalAlpaGenerated,
                 'hari_aktif' => $totalHariAktif
             ]);
             exit;
         }
 
-        redirect("/admin/absen_guru_v2/rekap-bulanan?bulan={$bulan}&tahun={$tahun}&msg=generate_success&total={$totalHadirGenerated}&hari={$totalHariAktif}");
+        redirect("/admin/absen_guru_v2/rekap-bulanan?bulan={$bulan}&tahun={$tahun}&msg=generate_success&total={$totalHadirGenerated}&hari={$totalHariAktif}&mode=" . urlencode($mode));
+        exit;
+    }
+
+    public static function autoAlpaKosong() {
+        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
+            redirect('/login');
+            exit;
+        }
+
+        $tanggal = $_REQUEST['tanggal'] ?? null;
+        $bulan = isset($_REQUEST['bulan']) ? sprintf('%02d', intval($_REQUEST['bulan'])) : null;
+        $tahun = isset($_REQUEST['tahun']) ? intval($_REQUEST['tahun']) : null;
+
+        $db_core = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+        self::ensureAbsensiGuruColumns($db_siakad);
+
+        $sertifIds = self::getSertifikasiGuruIds($db_core);
+        $jadwalPerHari = self::getJadwalPerHari($db_siakad);
+        $liburDates = self::getKalenderLiburDates($db_siakad);
+        $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+
+        $targetDates = [];
+        $today = date('Y-m-d');
+        if (!empty($tanggal)) {
+            $targetDates[] = $tanggal;
+        } elseif (!empty($bulan) && !empty($tahun)) {
+            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, intval($bulan), intval($tahun));
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $tgl = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+                if ($tgl <= $today) {
+                    $targetDates[] = $tgl;
+                }
+            }
+        } else {
+            $targetDates[] = $today;
+        }
+
+        $totalAlpa = 0;
+        $db_siakad->beginTransaction();
+        try {
+            foreach ($targetDates as $tgl) {
+                $dayNum = date('w', strtotime($tgl));
+                $hari = $hariMap[$dayNum] ?? '';
+                if ($hari === 'Minggu' || isset($liburDates[$tgl])) {
+                    continue; // Skip libur
+                }
+
+                $guruJam = $jadwalPerHari[$hari] ?? [];
+                // Guru yang seharusnya hadir pada tanggal ini:
+                // 1. Guru Sertifikasi (wajib hadir setiap hari kerja)
+                // 2. Guru yang punya jam mengajar di hari ini
+                $wajibHadirIds = array_values(array_unique(array_merge($sertifIds, $guruJam)));
+
+                // Ambil guru yang SUDAH absen di tanggal ini
+                $stmtExisting = $db_siakad->prepare("SELECT guru_id FROM absensi_guru WHERE tanggal = ?");
+                $stmtExisting->execute([$tgl]);
+                $alreadyAbsenIds = array_map('intval', $stmtExisting->fetchAll(\PDO::FETCH_COLUMN));
+
+                // Cari guru yang wajib hadir tapi KOSONG (belum ada record absen)
+                $kosongIds = array_diff($wajibHadirIds, $alreadyAbsenIds);
+
+                foreach ($kosongIds as $gid) {
+                    self::saveOrUpdateKehadiran($db_siakad, $tgl, $gid, 'Alpa', 'Alpa Otomatis (Tanpa Keterangan)');
+                    $totalAlpa++;
+                }
+            }
+
+            if ($db_siakad->inTransaction()) {
+                $db_siakad->commit();
+            }
+        } catch (\Exception $e) {
+            if ($db_siakad->inTransaction()) {
+                $db_siakad->rollBack();
+            }
+            if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Gagal auto-alpa: ' . $e->getMessage()]);
+                exit;
+            }
+            redirect("/admin/absen_guru_v2/rekap-harian?msg=error&err=" . urlencode($e->getMessage()));
+            exit;
+        }
+
+        $msg = "Berhasil menandai {$totalAlpa} status ALPA otomatis untuk guru yang terjadwal hadir tetapi belum ada absensi.";
+        if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => $msg, 'total_alpa' => $totalAlpa]);
+            exit;
+        }
+
+        if (!empty($bulan)) {
+            redirect("/admin/absen_guru_v2/rekap-bulanan?bulan={$bulan}&tahun={$tahun}&msg=auto_alpa_success&count={$totalAlpa}");
+        } else {
+            $tglRedirect = !empty($tanggal) ? $tanggal : date('Y-m-d');
+            redirect("/admin/absen_guru_v2/rekap-harian?tanggal={$tglRedirect}&msg=auto_alpa_success&count={$totalAlpa}");
+        }
         exit;
     }
 
@@ -720,25 +889,55 @@ class AbsenGuruV2Controller {
         $jabatanList = $db_core->query("SELECT DISTINCT jabatan FROM guru WHERE jabatan IS NOT NULL AND jabatan != '' ORDER BY jabatan ASC")->fetchAll(\PDO::FETCH_COLUMN);
         $allGuru = $db_core->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll();
 
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, (int)$bulan, (int)$tahun);
+        $dates_range = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dates_range[] = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+        }
+
+        $sertifIds = self::getSertifikasiGuruIds($db_core);
+        $sertifMap = array_flip($sertifIds);
+        $jadwalPerHari = self::getJadwalPerHari($db_siakad);
+        $liburDates = self::getKalenderLiburDates($db_siakad);
+        $hariMap = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+        $today = date('Y-m-d');
+
         $rekap = [];
         foreach ($guruList as $g) {
-            $stmt = $db_siakad->prepare("SELECT status, COUNT(*) as total FROM absensi_guru WHERE guru_id = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ? GROUP BY status");
-            $stmt->execute([$g['id'], $bulan, $tahun]);
-            $res = $stmt->fetchAll();
+            $stmtDetail = $db_siakad->prepare("SELECT tanggal, status FROM absensi_guru WHERE guru_id = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ?");
+            $stmtDetail->execute([$g['id'], $bulan, $tahun]);
+            $harianMap = $stmtDetail->fetchAll(\PDO::FETCH_KEY_PAIR); // tanggal => status
             
-            $r = ['Hadir'=>0, 'Sakit'=>0, 'Izin'=>0, 'Alpa'=>0, 'Terlambat'=>0];
-            foreach ($res as $row) {
-                if ($row['status'] == 'Dinas Luar') {
-                    $r['Izin'] += $row['total'];
+            $r = ['Hadir' => 0, 'Terlambat' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
+            $isSertif = isset($sertifMap[$g['id']]);
+
+            foreach ($dates_range as $dt) {
+                $st = $harianMap[$dt] ?? null;
+                $dayOfWeek = date('w', strtotime($dt));
+                $namaHari = $hariMap[$dayOfWeek] ?? '';
+                $isSun = ($dayOfWeek == 0);
+                $isLibur = isset($liburDates[$dt]);
+
+                if ($st) {
+                    if ($st === 'Dinas Luar') $r['Izin']++;
+                    elseif (isset($r[$st])) $r[$st]++;
+                    else $r['Hadir']++;
                 } else {
-                    if (isset($r[$row['status']])) {
-                        $r[$row['status']] += $row['total'];
-                    } else {
-                        $r[$row['status']] = $row['total'];
+                    // Jika kosong dan tanggal hari kerja yang sudah berjalan (<= today)
+                    if (!$isSun && !$isLibur && $dt <= $today) {
+                        $hasJam = in_array($g['id'], $jadwalPerHari[$namaHari] ?? []);
+                        // Auto-Alpa jika guru sertifikasi (wajib tiap hari) ATAU guru ada jam mengajar di hari ini
+                        if ($isSertif || $hasJam) {
+                            $r['Alpa']++;
+                            $harianMap[$dt] = 'Alpa'; // Tampilkan 'A' di matriks harian
+                        }
                     }
                 }
             }
+
+            $g['harian'] = $harianMap;
             $g['rekap'] = $r;
+            $g['is_sertif'] = $isSertif;
             $rekap[] = $g;
         }
 
@@ -773,32 +972,7 @@ class AbsenGuruV2Controller {
 
         // 3. Cetak Detail 1 Bulan Global Matriks Tanggal 1 s.d. 31 (Landscape kayak Siswa)
         if ((isset($_GET['cetak_global']) && $_GET['cetak_global'] == 1) || (isset($_GET['cetak_detail']) && $_GET['cetak_detail'] == 1 && empty($_GET['guru_id']))) {
-            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, (int)$bulan, (int)$tahun);
-            $dates_range = [];
-            for ($d = 1; $d <= $daysInMonth; $d++) {
-                $dates_range[] = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
-            }
-
-            $matrixGuru = [];
-            foreach ($guruList as $g) {
-                $stmtDetail = $db_siakad->prepare("SELECT tanggal, status FROM absensi_guru WHERE guru_id = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ?");
-                $stmtDetail->execute([$g['id'], $bulan, $tahun]);
-                $harianMap = $stmtDetail->fetchAll(\PDO::FETCH_KEY_PAIR); // tanggal => status
-                
-                $r = ['Hadir' => 0, 'Terlambat' => 0, 'Sakit' => 0, 'Izin' => 0, 'Alpa' => 0];
-                foreach ($dates_range as $dt) {
-                    $st = $harianMap[$dt] ?? null;
-                    if ($st) {
-                        if ($st === 'Dinas Luar') $r['Izin']++;
-                        elseif (isset($r[$st])) $r[$st]++;
-                        else $r['Hadir']++;
-                    }
-                }
-                $g['harian'] = $harianMap;
-                $g['rekap'] = $r;
-                $matrixGuru[] = $g;
-            }
-
+            $matrixGuru = $rekap;
             include __DIR__ . '/../../resources/views/admin/absen_guru_v2/cetak_rekap_bulanan_global.php';
             exit;
         }

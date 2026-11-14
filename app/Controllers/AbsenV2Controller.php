@@ -612,31 +612,33 @@ class AbsenV2Controller {
         }
 
         // Get recap per siswa
+        $today = date('Y-m-d');
         $rekap = [];
         foreach ($siswaList as $s) {
-            $stmt = $db_siakad->prepare("SELECT status, COUNT(*) as total FROM absensi_siswa WHERE siswa_id = ? AND tanggal >= ? AND tanggal <= ? GROUP BY status");
-            $stmt->execute([$s['id'], $start_date, $end_date]);
-            $res = $stmt->fetchAll();
-            
-            $r = ['Hadir'=>0, 'Sakit'=>0, 'Izin'=>0, 'Alpa'=>0, 'Terlambat'=>0, 'Bolos'=>0];
-            foreach ($res as $row) {
-                $r[$row['status']] = $row['total'];
-            }
-            $s['rekap'] = $r;
-
             $stmt_detail = $db_siakad->prepare("SELECT tanggal, status FROM absensi_siswa WHERE siswa_id = ? AND tanggal >= ? AND tanggal <= ?");
             $stmt_detail->execute([$s['id'], $start_date, $end_date]);
             $detail_rows = $stmt_detail->fetchAll();
 
             $absen_harian = [];
             foreach ($dates_range as $dt) {
-                $absen_harian[$dt] = '-';
+                // Hari sekolah aktif yang sudah lewat/hari ini jika tidak ada absen -> Alpa ('A')
+                $absen_harian[$dt] = ($dt <= $today) ? 'Alpa' : '-';
             }
             foreach ($detail_rows as $row) {
                 if (isset($absen_harian[$row['tanggal']])) {
                     $absen_harian[$row['tanggal']] = $row['status'];
                 }
             }
+
+            // Hitung total rekapitulasi agar selaras dengan tabel harian (termasuk Alpa otomatis)
+            $r = ['Hadir'=>0, 'Sakit'=>0, 'Izin'=>0, 'Alpa'=>0, 'Terlambat'=>0, 'Bolos'=>0];
+            foreach ($dates_range as $dt) {
+                $st = $absen_harian[$dt];
+                if (isset($r[$st])) {
+                    $r[$st]++;
+                }
+            }
+            $s['rekap'] = $r;
             $s['harian'] = $absen_harian;
             
             // Get class name

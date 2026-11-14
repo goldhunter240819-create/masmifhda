@@ -244,6 +244,16 @@
 
                 $haris = ['Sunday'=>'Minggu', 'Monday'=>'Senin', 'Tuesday'=>'Selasa', 'Wednesday'=>'Rabu', 'Thursday'=>'Kamis', 'Friday'=>'Jumat', 'Saturday'=>'Sabtu'];
                 $daysInMonth = cal_days_in_month(CAL_GREGORIAN, (int)$bulan, (int)$tahun);
+                $today = date('Y-m-d');
+
+                $isSertif = (!empty($guruDetail['nrg']) || stripos($guruDetail['status_kepegawaian'] ?? '', 'sertifikasi') !== false || !empty($guruDetail['no_sertifikat']));
+                $dbSiakad = \App\Core\Database::connect('siakad');
+                $jadwalHariGuru = [];
+                try {
+                    $stmtJ = $dbSiakad->prepare("SELECT DISTINCT hari FROM jadwal_pelajaran WHERE guru_id = ?");
+                    $stmtJ->execute([$guruDetail['id']]);
+                    $jadwalHariGuru = array_map('ucfirst', array_map('strtolower', $stmtJ->fetchAll(\PDO::FETCH_COLUMN)));
+                } catch (\Exception $e) {}
                 
                 $totHadir = 0;
                 $totTerlambat = 0;
@@ -278,10 +288,23 @@
                         elseif (in_array($st, ['Izin', 'Dinas Luar'])) $totIzin++;
                         elseif ($st === 'Alpa') $totAlpa++;
                     } else {
-                        $st = 'Tidak Ada Jam';
                         $masuk = '-';
                         $pulang = '-';
-                        $ket = '-';
+                        $hasJam = in_array($namaHari, $jadwalHariGuru);
+
+                        if ($tglStr <= $today) {
+                            if ($isSertif || $hasJam) {
+                                $st = 'Alpa';
+                                $totAlpa++;
+                                $ket = 'Tanpa Keterangan (Alpa)';
+                            } else {
+                                $st = 'Tidak Ada Jam';
+                                $ket = 'Libur Jadwal / Lepas Piket';
+                            }
+                        } else {
+                            $st = 'Belum Berjalan';
+                            $ket = '-';
+                        }
                     }
                     ?>
                     <tr>
