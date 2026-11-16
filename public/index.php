@@ -758,16 +758,6 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
                 <div class="mod-arrow"><i data-lucide="arrow-up-right" style="width:15px;height:15px; color:#cbd5e1;"></i></div>
             </div>
 
-            <!-- Bank Soal -->
-            <div class="mod-card theme-rose d10" onclick="location.href='<?php echo base_url('bank_soal'); ?>'">
-                <span class="mod-badge badge-new" style="background: #e0f2fe; color: #0284c7; border: 1px solid #7dd3fc;">Live</span>
-                <div class="mod-icon-wrap icon-rose" style="background:#fff1f2; color:#e11d48;"><i data-lucide="database"></i></div>
-                <div class="mod-body">
-                    <p class="mod-title">Bank Soal</p>
-                    <p class="mod-desc">Manajemen repositori soal terpusat untuk guru.</p>
-                </div>
-                <div class="mod-arrow"><i data-lucide="arrow-up-right" style="width:15px;height:15px; color:#cbd5e1;"></i></div>
-            </div>
 
             <!-- CBT Online -->
             <div class="mod-card theme-indigo d11" onclick="location.href='<?php echo base_url('cbt'); ?>'">
@@ -2418,6 +2408,11 @@ $router->add('POST', '/guru/pkkm/bukti-attach-website', [\App\Controllers\Portal
 // CBT ONLINE MODULE
 $router->add('GET', '/cbt', [\App\Controllers\CbtController::class, 'dashboard']);
 $router->add('GET', '/cbt/dashboard', [\App\Controllers\CbtController::class, 'dashboard']);
+$router->add('GET', '/cbt/topik', [\App\Controllers\CbtController::class, 'topik']);
+$router->add('POST', '/cbt/topik/save', [\App\Controllers\CbtController::class, 'saveTopik']);
+$router->add('POST', '/cbt/topik/delete', [\App\Controllers\CbtController::class, 'deleteTopik']);
+$router->add('POST', '/cbt/topik/dates/save', [\App\Controllers\CbtController::class, 'saveTopikDates']);
+$router->add('GET', '/cbt/bank_soal', function() { redirect('/bank_soal'); exit; });
 $router->add('GET', '/cbt/jadwal', [\App\Controllers\CbtController::class, 'jadwal']);
 $router->add('POST', '/cbt/jadwal/save', [\App\Controllers\CbtController::class, 'saveJadwal']);
 $router->add('POST', '/cbt/jadwal/toggle-status', [\App\Controllers\CbtController::class, 'toggleStatusJadwal']);

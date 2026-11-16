@@ -49,6 +49,12 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 <span>Dashboard</span>
             </a>
 
+            <!-- Topik Ujian (SAS, STS, Ujian Madrasah, dll) -->
+            <a href="<?php echo base_url('cbt/topik'); ?>" class="z-nav-item <?php echo $active_menu === 'topik' ? 'active' : ''; ?>">
+                <i data-lucide="layers"></i>
+                <span>Topik Ujian</span>
+            </a>
+
             <!-- Jadwal Ujian -->
             <a href="<?php echo base_url('cbt/jadwal'); ?>" class="z-nav-item <?php echo $active_menu === 'jadwal' ? 'active' : ''; ?>">
                 <i data-lucide="calendar"></i>
@@ -59,6 +65,12 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             <a href="<?php echo base_url('cbt/ujian'); ?>" class="z-nav-item <?php echo ($active_menu === 'ujian' || $active_menu === 'soal') ? 'active' : ''; ?>">
                 <i data-lucide="file-question"></i>
                 <span>Kelola Ujian & Soal</span>
+            </a>
+
+            <!-- Bank Soal -->
+            <a href="<?php echo base_url('bank_soal'); ?>" class="z-nav-item <?php echo $active_menu === 'bank_soal' ? 'active' : ''; ?>">
+                <i data-lucide="database"></i>
+                <span>Bank Soal</span>
             </a>
 
             <!-- Token Ujian -->
@@ -80,12 +92,6 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             </a>
 
             <div class="z-nav-label" style="margin-top: 1rem;">Integrasi</div>
-
-            <!-- Bank Soal Shortcut -->
-            <a href="<?php echo base_url('bank_soal'); ?>" class="z-nav-item">
-                <i data-lucide="database"></i>
-                <span>Bank Soal Pusat</span>
-            </a>
 
             <!-- Portal Utama -->
             <a href="<?php echo base_url('portal'); ?>" class="z-nav-item">
