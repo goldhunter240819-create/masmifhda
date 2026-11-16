@@ -419,6 +419,16 @@ $active_menu = "bank_soal";
             </div>
 
             <!-- Tabel Daftar Paket Mapel & Kelas -->
+            <?php
+            $uniqueClasses = [];
+            foreach ($paketList as $p) {
+                $cName = trim($p['kelas_nama'] ?? '');
+                if ($cName && !in_array($cName, $uniqueClasses)) {
+                    $uniqueClasses[] = $cName;
+                }
+            }
+            sort($uniqueClasses);
+            ?>
             <div class="z-card" style="padding: 0; border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
                 <div style="padding: 1.25rem 1.75rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
@@ -427,11 +437,37 @@ $active_menu = "bank_soal";
                             Daftar Mata Pelajaran & Status Kunci Soal
                         </h3>
                         <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
-                            Soal yang sudah <strong>Terkunci</strong> tidak dapat diedit lagi oleh guru di aplikasi mobile (APK) maupun web portal.
+                            Paket soal tersusun per kelas sesuai guru pengampu riil di SIAKAD. Soal yang berstatus <strong>Terkunci</strong> tidak dapat diedit lagi oleh guru.
                         </div>
                     </div>
                     <div style="font-size: 0.8rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 4px 12px; border-radius: 20px;">
-                        Total: <?php echo count($paketList); ?> Paket Mapel
+                        Total: <span id="totalVisibleCount"><?php echo count($paketList); ?></span> / <?php echo count($paketList); ?> Paket Mapel
+                    </div>
+                </div>
+
+                <!-- Filter Bar: Tab Kelas & Live Search -->
+                <div style="padding: 0.85rem 1.75rem; background: #ffffff; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <!-- Filter Kelas Tabs -->
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;" id="kelasFilterTabs">
+                        <span style="font-size: 0.78rem; font-weight: 800; color: #64748b; margin-right: 4px; display: flex; align-items: center; gap: 4px;">
+                            <i data-lucide="filter" style="width: 14px; height: 14px;"></i> Filter Kelas:
+                        </span>
+                        <button type="button" class="btn-filter-kelas active" data-filter="all" onclick="setKelasFilter('all', this)" style="padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; border: 1.5px solid #0ea5e9; background: #0ea5e9; color: #ffffff; cursor: pointer; transition: all 0.2s;">
+                            Semua (<?php echo count($paketList); ?>)
+                        </button>
+                        <?php foreach ($uniqueClasses as $uc): 
+                            $countKls = count(array_filter($paketList, fn($p) => trim($p['kelas_nama']) === $uc));
+                        ?>
+                        <button type="button" class="btn-filter-kelas" data-filter="<?php echo htmlspecialchars($uc); ?>" onclick="setKelasFilter('<?php echo htmlspecialchars($uc); ?>', this)" style="padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s;">
+                            <?php echo htmlspecialchars($uc); ?> (<?php echo $countKls; ?>)
+                        </button>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Live Search Input -->
+                    <div style="position: relative; min-width: 240px; flex: 1; max-width: 300px;">
+                        <i data-lucide="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: #94a3b8;"></i>
+                        <input type="text" id="searchMapelSoal" onkeyup="filterBankSoalTable()" placeholder="Cari mapel atau nama guru..." style="width: 100%; padding: 6px 12px 6px 32px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.8rem; outline: none; transition: border-color 0.2s;">
                     </div>
                 </div>
 
@@ -440,21 +476,21 @@ $active_menu = "bank_soal";
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">No</th>
-                                <th>Mata Pelajaran & Guru</th>
-                                <th style="width: 130px;">Kelas Sasaran</th>
+                                <th>Mata Pelajaran & Guru Pengampu</th>
+                                <th style="width: 140px;">Kelas Sasaran</th>
                                 <th style="width: 110px; text-align: center;">Total Soal</th>
                                 <th>Rincian Jenis Soal</th>
                                 <th style="width: 160px; text-align: center;">Status Kunci</th>
                                 <th style="width: 220px; text-align: right;">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="bankSoalTableBody">
                             <?php if (empty($paketList)): ?>
                             <tr>
                                 <td colspan="7" style="padding: 4rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 10px; color: #cbd5e1;"></i>
                                     <div style="font-size: 1rem; font-weight: 800; color: #475569;">Belum ada paket mapel di topik ini</div>
-                                    <div style="font-size: 0.82rem; margin-top: 4px;">Gunakan tombol <strong>"Muat Mapel Pengampu"</strong> di atas atau tambah manual untuk memuat daftar mata pelajaran beserta guru pengampunya.</div>
+                                    <div style="font-size: 0.82rem; margin-top: 4px;">Gunakan tombol <strong>"Muat Mapel Pengampu"</strong> di atas untuk otomatis menyusun paket soal per kelas dari data mengajar madrasah.</div>
                                 </td>
                             </tr>
                             <?php else: ?>
@@ -462,9 +498,24 @@ $active_menu = "bank_soal";
                                     $isLocked = !empty($pk['is_locked']);
                                     $bd = $pk['breakdown'] ?? [];
                                     $tot = $pk['total_soal'] ?? 0;
+                                    $kls = trim($pk['kelas_nama'] ?? '');
+                                    
+                                    // Warna Badge per Kelas
+                                    $klsBg = '#e0e7ff';
+                                    $klsCol = '#4338ca';
+                                    $klsBorder = '#c7d2fe';
+                                    if (strpos($kls, 'X E') !== false || $kls === 'X') {
+                                        $klsBg = '#eff6ff'; $klsCol = '#1d4ed8'; $klsBorder = '#bfdbfe';
+                                    } elseif (strpos($kls, 'XI F') !== false || $kls === 'XI') {
+                                        $klsBg = '#ecfdf5'; $klsCol = '#047857'; $klsBorder = '#a7f3d0';
+                                    } elseif (strpos($kls, 'XII F.1') !== false) {
+                                        $klsBg = '#f5f3ff'; $klsCol = '#6d28d9'; $klsBorder = '#ddd6fe';
+                                    } elseif (strpos($kls, 'XII F.2') !== false) {
+                                        $klsBg = '#fffbeb'; $klsCol = '#b45309'; $klsBorder = '#fde68a';
+                                    }
                                 ?>
-                                <tr>
-                                    <td style="text-align: center; color: #94a3b8; font-weight: 700;"><?php echo $no++; ?></td>
+                                <tr class="row-paket-mapel" data-kelas="<?php echo htmlspecialchars($kls); ?>" data-search="<?php echo htmlspecialchars(strtolower(($pk['mapel_nama'] ?? '') . ' ' . ($pk['guru_nama'] ?? '') . ' ' . $kls)); ?>">
+                                    <td class="row-number-cell" style="text-align: center; color: #94a3b8; font-weight: 700;"><?php echo $no++; ?></td>
                                     <td>
                                         <div style="font-weight: 900; color: #0f172a; font-size: 0.95rem;">
                                             <?php echo htmlspecialchars($pk['mapel_nama']); ?>
@@ -477,8 +528,9 @@ $active_menu = "bank_soal";
                                         </div>
                                     </td>
                                     <td>
-                                        <span style="font-size: 0.78rem; font-weight: 800; background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 8px;">
-                                            <?php echo htmlspecialchars($pk['kelas_nama'] ?: 'Semua Kelas'); ?>
+                                        <span style="font-size: 0.8rem; font-weight: 800; background: <?php echo $klsBg; ?>; color: <?php echo $klsCol; ?>; border: 1px solid <?php echo $klsBorder; ?>; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;">
+                                            <i data-lucide="graduation-cap" style="width: 13px; height: 13px;"></i>
+                                            <?php echo htmlspecialchars($kls ?: 'X E.1'); ?>
                                         </span>
                                     </td>
                                     <td style="text-align: center;">
@@ -591,6 +643,13 @@ $active_menu = "bank_soal";
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
+                                <tr id="rowEmptyFilter" style="display: none;">
+                                    <td colspan="7" style="padding: 3.5rem 1.5rem; text-align: center; color: #94a3b8;">
+                                        <i data-lucide="search-x" style="width: 36px; height: 36px; margin-bottom: 8px; color: #cbd5e1;"></i>
+                                        <div style="font-size: 0.95rem; font-weight: 800; color: #475569;">Tidak ada mata pelajaran yang cocok</div>
+                                        <div style="font-size: 0.8rem; margin-top: 4px;">Coba pilih filter kelas lain atau hapus kata kunci pencarian.</div>
+                                    </td>
+                                </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -637,7 +696,7 @@ $active_menu = "bank_soal";
                 <div>
                     <label class="label-sm" style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px;">Kelas Sasaran <span style="color:#ef4444;">*</span></label>
                     <select name="kelas_nama" class="z-input" required style="width: 100%;">
-                        <option value="Semua Kelas">Semua Kelas</option>
+                        <option value="">-- Pilih Kelas Sasaran --</option>
                         <?php foreach($kelasList as $k): ?>
                             <option value="<?php echo htmlspecialchars($k['nama_kelas']); ?>">
                                 <?php echo htmlspecialchars($k['nama_kelas']); ?>
@@ -739,6 +798,52 @@ $active_menu = "bank_soal";
 
 <script>
     lucide.createIcons();
+
+    let currentKelasFilter = 'all';
+
+    function setKelasFilter(kelas, btn) {
+        currentKelasFilter = kelas;
+        document.querySelectorAll('.btn-filter-kelas').forEach(b => {
+            b.style.background = '#f8fafc';
+            b.style.color = '#334155';
+            b.style.borderColor = '#cbd5e1';
+            b.classList.remove('active');
+        });
+        btn.style.background = '#0ea5e9';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#0ea5e9';
+        btn.classList.add('active');
+        filterBankSoalTable();
+    }
+
+    function filterBankSoalTable() {
+        const q = (document.getElementById('searchMapelSoal')?.value || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('.row-paket-mapel');
+        let visibleCount = 0;
+
+        rows.forEach(r => {
+            const rKelas = (r.getAttribute('data-kelas') || '').trim();
+            const rSearch = (r.getAttribute('data-search') || '').trim();
+
+            const matchKelas = (currentKelasFilter === 'all') || (rKelas === currentKelasFilter);
+            const matchSearch = (!q) || rSearch.includes(q);
+
+            if (matchKelas && matchSearch) {
+                r.style.display = '';
+                visibleCount++;
+            } else {
+                r.style.display = 'none';
+            }
+        });
+
+        const countSpan = document.getElementById('totalVisibleCount');
+        if (countSpan) countSpan.textContent = visibleCount;
+
+        const emptyRow = document.getElementById('rowEmptyFilter');
+        if (emptyRow) {
+            emptyRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+        }
+    }
 
     function openModalTambahPaket() {
         document.getElementById('modalTambahPaket').classList.add('open');

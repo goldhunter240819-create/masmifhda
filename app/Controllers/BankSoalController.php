@@ -196,7 +196,10 @@ class BankSoalController {
                 mapel_nama LIKE '%SBdP%' OR 
                 mapel_nama LIKE '%Al Qur\'an Hadits%' OR 
                 mapel_nama LIKE '%Pendidikan Kewarganegaraan%' OR 
-                mapel_nama = 'Sejarah Kebudayaan Islam'
+                mapel_nama = 'Sejarah Kebudayaan Islam' OR
+                kelas_nama = 'Semua Kelas' OR
+                kelas_nama IS NULL OR
+                kelas_nama = ''
             ");
 
             // 2. Hapus butir soal yang mapelnya data MI lama
@@ -211,7 +214,10 @@ class BankSoalController {
                 mapel_nama LIKE '%SBdP%' OR 
                 mapel_nama LIKE '%Al Qur\'an Hadits%' OR 
                 mapel_nama LIKE '%Pendidikan Kewarganegaraan%' OR 
-                mapel_nama = 'Sejarah Kebudayaan Islam'
+                mapel_nama = 'Sejarah Kebudayaan Islam' OR
+                kelas_nama = 'Semua Kelas' OR
+                kelas_nama IS NULL OR
+                kelas_nama = ''
             ");
 
             // 3. Hapus orphaned butir soal yang paket_id nya sudah tidak ada di bs_paket
@@ -296,12 +302,21 @@ class BankSoalController {
                 }
 
                 // Ambil daftar paket mapel untuk topik ini
-                $stmtP = $this->db->prepare("SELECT * FROM bs_paket WHERE topik_id = ? ORDER BY mapel_nama ASC, kelas_nama ASC");
+                $stmtP = $this->db->prepare("SELECT * FROM bs_paket WHERE topik_id = ? ORDER BY kelas_nama ASC, mapel_nama ASC");
                 $stmtP->execute([$topikId]);
                 $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
-                // JIKA BELUM ADA PAKET MAPEL / KURANG DARI 19 MAPEL RESMI, OTOMATIS LANGSUNG MUNCULKAN!
-                if (count($paketList) < 19) {
+                // Cek apakah masih ada 'Semua Kelas'
+                $hasSemuaKelas = false;
+                foreach ($paketList as $p) {
+                    if ($p['kelas_nama'] === 'Semua Kelas' || empty($p['kelas_nama'])) {
+                        $hasSemuaKelas = true;
+                        break;
+                    }
+                }
+
+                // JIKA BELUM ADA PAKET MAPEL / MASIH ADA 'Semua Kelas', OTOMATIS LANGSUNG SINKRONKAN PER KELAS DARI MENGAJAR!
+                if (empty($paketList) || $hasSemuaKelas) {
                     $this->syncFromPengampu($topikId, true);
                     $stmtP->execute([$topikId]);
                     $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
@@ -366,7 +381,7 @@ class BankSoalController {
             $id = !empty($_POST['id']) ? (int)$_POST['id'] : 0;
             $topik_id = (int)($_POST['topik_id'] ?? 0);
             $mapel_nama = trim($_POST['mapel_nama'] ?? '');
-            $kelas_nama = trim($_POST['kelas_nama'] ?? 'Semua Kelas');
+            $kelas_nama = trim($_POST['kelas_nama'] ?? 'X E.1');
             $guru_nama = trim($_POST['guru_nama'] ?? '');
             $kkm = !empty($_POST['kkm']) ? (int)$_POST['kkm'] : 75;
             $durasi_menit = !empty($_POST['durasi_menit']) ? (int)$_POST['durasi_menit'] : 90;
@@ -485,8 +500,8 @@ class BankSoalController {
     }
 
     /**
-     * Otomatis ambil & buat paket mapel berdasarkan 19 Mapel Resmi MAS Miftahul Huda & Guru Pengampunya
-     * Langsung muncul tanpa perlu menunggu jadwal ujian CBT selesai disetting
+     * Otomatis ambil & buat paket mapel berdasarkan penugasan mengajar per kelas dari tabel mengajar
+     * Setiap kelas memiliki paket soalnya masing-masing sesuai guru pengampu riilnya
      */
     public function syncFromPengampu($topikId = null, $isInternal = false) {
         $topikId = $topikId ?: (isset($_POST['topik_id']) ? (int)$_POST['topik_id'] : (isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0));
@@ -498,31 +513,101 @@ class BankSoalController {
             return 0;
         }
 
-        // 1. Bersihkan sisa data MI terlebih dahulu
+        // 1. Bersihkan sisa data MI dan paket legacy 'Semua Kelas'
         self::cleanMILeftovers($this->db);
         if ($this->db_core !== $this->db) {
             self::cleanMILeftovers($this->db_core);
         }
 
-        // 2. Gunakan 19 Mapel Resmi MAS Miftahul Huda beserta Pengampu MAS
-        $masMapel = self::getOfficialMasMapelList();
-        $inserted = 0;
+        // Hapus paket legacy yang kelas sasaran masih 'Semua Kelas'
+        $this->db->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '')")->execute([$topikId]);
+        if ($this->db_core !== $this->db) {
+            $this->db_core->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '')")->execute([$topikId]);
+        }
 
-        $stmtCheck = $this->db->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ?");
+        // 2. Ambil penugasan mengajar riil per kelas dari tabel mengajar
+        $assignments = [];
+        try {
+            $activeYear = \App\Core\AcademicYear::current();
+            $thn_id = $activeYear['id'] ?? 2;
+            $smt = $activeYear['semester'] ?? 1;
+
+            $sql = "
+                SELECT DISTINCT mp.nama_mapel, k.nama_kelas, m.guru_id, COALESCE(g.nama, g_siakad.nama_lengkap) as guru_nama
+                FROM mengajar m
+                JOIN kelas k ON m.kelas_id = k.id
+                JOIN mapel mp ON m.mapel_id = mp.id
+                LEFT JOIN aula_db.guru g ON m.guru_id = g.id
+                LEFT JOIN guru g_siakad ON m.guru_id = g_siakad.id
+                WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
+                  AND (m.tahun_ajaran_id = :thn_id OR m.tahun_ajaran_id IS NULL)
+                  AND (m.semester = :smt OR m.semester IS NULL OR m.semester = 0)
+                  AND mp.nama_mapel NOT IN ('Upacara', 'Senam', 'Pramuka', 'Sholat Dhuha', 'Juz Amma - Asmaul Husna', 'BTQ', 'IPAS', 'SBdP', 'Baca Tulis Qur\'an', 'Ilmu Pengetahuan Alam Sosial', 'Seni Budaya dan Prakarya')
+                ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
+            ";
+            $stmtM = $this->db->prepare($sql);
+            $stmtM->execute([':thn_id' => $thn_id, ':smt' => $smt]);
+            $assignments = $stmtM->fetchAll(PDO::FETCH_ASSOC);
+
+            // Jika kosong dengan filter TA/Semester, ambil tanpa filter TA/Semester
+            if (empty($assignments)) {
+                $sqlFallback = "
+                    SELECT DISTINCT mp.nama_mapel, k.nama_kelas, m.guru_id, COALESCE(g.nama, g_siakad.nama_lengkap) as guru_nama
+                    FROM mengajar m
+                    JOIN kelas k ON m.kelas_id = k.id
+                    JOIN mapel mp ON m.mapel_id = mp.id
+                    LEFT JOIN aula_db.guru g ON m.guru_id = g.id
+                    LEFT JOIN guru g_siakad ON m.guru_id = g_siakad.id
+                    WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
+                      AND mp.nama_mapel NOT IN ('Upacara', 'Senam', 'Pramuka', 'Sholat Dhuha', 'Juz Amma - Asmaul Husna', 'BTQ', 'IPAS', 'SBdP', 'Baca Tulis Qur\'an', 'Ilmu Pengetahuan Alam Sosial', 'Seni Budaya dan Prakarya')
+                    ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
+                ";
+                $assignments = $this->db->query($sqlFallback)->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Exception $e) {}
+
+        // Fallback jika tabel mengajar kosong
+        if (empty($assignments)) {
+            $masMapel = self::getOfficialMasMapelList();
+            $kelasList = ['X E.1', 'XI F.1', 'XII F.1', 'XII F.2'];
+            foreach ($masMapel as $mName => $info) {
+                foreach ($kelasList as $kls) {
+                    $assignments[] = [
+                        'nama_mapel' => $mName,
+                        'nama_kelas' => $kls,
+                        'guru_id' => $info['guru_id'],
+                        'guru_nama' => $info['guru_nama']
+                    ];
+                }
+            }
+        }
+
+        $inserted = 0;
+        $stmtCheck = $this->db->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ? AND kelas_nama = ?");
         $stmtIns = $this->db->prepare("
             INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_id, guru_nama, kkm, durasi_menit, is_locked) 
-            VALUES (?, ?, 'Semua Kelas', ?, ?, 75, 90, 0)
+            VALUES (?, ?, ?, ?, ?, 75, 90, 0)
         ");
         $stmtUpd = $this->db->prepare("UPDATE bs_paket SET guru_id = ?, guru_nama = ? WHERE id = ?");
 
-        foreach ($masMapel as $mName => $info) {
-            $stmtCheck->execute([$topikId, $mName]);
+        foreach ($assignments as $asg) {
+            $mName = trim($asg['nama_mapel']);
+            $kName = trim($asg['nama_kelas']);
+            $gId = (int)$asg['guru_id'];
+            $gName = trim($asg['guru_nama'] ?? '');
+
+            if ($mName === 'Aqidah Akhlak') $mName = 'Akidah Akhlak';
+            if ($mName === 'Al-Qur\'an Hadist') $mName = 'Al-Qur\'an Hadits';
+            if ($mName === 'Penjaskes') $mName = 'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)';
+            if ($mName === 'PPKn') $mName = 'Pendidikan Pancasila & Kewarganegaraan (PPKn)';
+
+            $stmtCheck->execute([$topikId, $mName, $kName]);
             $existingId = $stmtCheck->fetchColumn();
             if (!$existingId) {
-                $stmtIns->execute([$topikId, $mName, $info['guru_id'], $info['guru_nama']]);
+                $stmtIns->execute([$topikId, $mName, $kName, $gId, $gName]);
                 $inserted++;
             } else {
-                $stmtUpd->execute([$info['guru_id'], $info['guru_nama'], $existingId]);
+                $stmtUpd->execute([$gId, $gName, $existingId]);
             }
         }
 
@@ -581,15 +666,15 @@ class BankSoalController {
                 $topikId = $tp ? (int)$tp['id'] : 1;
             }
 
-            // 1. Cek atau Buat Paket Matematika
+            // 1. Cek atau Buat Paket Matematika (Default Kelas X E.1)
             $stmtP = $this->db->prepare("SELECT id, kelas_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama = 'Matematika' ORDER BY id ASC LIMIT 1");
             $stmtP->execute([$topikId]);
             $pktRow = $stmtP->fetch(PDO::FETCH_ASSOC);
             $paketId = $pktRow ? (int)$pktRow['id'] : 0;
-            $kelasNamaTarget = $pktRow ? ($pktRow['kelas_nama'] ?: 'Semua Kelas') : 'Semua Kelas';
+            $kelasNamaTarget = $pktRow ? ($pktRow['kelas_nama'] ?: 'X E.1') : 'X E.1';
 
             if (!$paketId) {
-                $stmtInsP = $this->db->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, 'Matematika', 'Semua Kelas', 'M AZIZ SULAIMAN, S.Pd', 75, 90, 0)");
+                $stmtInsP = $this->db->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, 'Matematika', 'X E.1', 'SAWALUDIN, S.Pd', 75, 90, 0)");
                 $stmtInsP->execute([$topikId]);
                 $paketId = $this->db->lastInsertId();
             }
