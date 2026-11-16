@@ -70,7 +70,7 @@ $isLocked = !empty($paketInfo['is_locked']);
         include __DIR__ . '/../siakad/_siakad_header.php'; 
         ?>
 
-        <div class="z-content" style="padding: 1.5rem 2rem 3rem;">
+        <div class="z-content" style="padding: 0 0 3rem 0;">
 
             <!-- Alerts -->
             <?php if(isset($_GET['msg'])): ?>

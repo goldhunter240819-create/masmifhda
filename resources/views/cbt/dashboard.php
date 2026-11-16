@@ -239,7 +239,7 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
     <div class="z-main">
         <?php include __DIR__ . '/header.php'; ?>
 
-        <div class="z-scroll" style="padding: 1.5rem 2rem 3rem;">
+        <div class="z-scroll" style="padding: 0 0 3rem 0;">
             
             <!-- Welcome Hero -->
             <div class="welcome-hero">

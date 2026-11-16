@@ -8,7 +8,7 @@ $active_menu = 'hasil';
     <div class="z-main">
         <?php include __DIR__ . '/header.php'; ?>
 
-        <div class="z-scroll" style="padding: 1.5rem 2rem 3rem;">
+        <div class="z-scroll" style="padding: 0 0 3rem 0;">
 
             <!-- Elite Page Header -->
             <div class="elite-page-header">
