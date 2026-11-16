@@ -137,6 +137,13 @@ class BankSoalController {
                 $stmtP->execute([$topikId]);
                 $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
+                // JIKA BELUM ADA PAKET MAPEL, OTOMATIS LANGSUNG MUNCULKAN MAPEL YANG ADA PENGAMPUNYA!
+                if (empty($paketList)) {
+                    $this->syncFromPengampu($topikId);
+                    $stmtP->execute([$topikId]);
+                    $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+                }
+
                 // Hitung detail butir soal & breakdown per jenis soal
                 foreach ($paketList as &$pk) {
                     $pId = (int)$pk['id'];
@@ -277,6 +284,165 @@ class BankSoalController {
     }
 
     /**
+     * Dapatkan kamus nama guru lengkap dari core dan siakad
+     */
+    public function getGuruDictionary() {
+        $dict = [];
+        try {
+            $gCore = $this->db_core->query("SELECT id, nama FROM guru")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($gCore as $g) {
+                if (!empty($g['nama'])) $dict[(int)$g['id']] = $g['nama'];
+            }
+        } catch (\Exception $e) {}
+
+        try {
+            $gSiakad = $this->db->query("SELECT id, nama_lengkap FROM guru")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($gSiakad as $g) {
+                if (!empty($g['nama_lengkap']) && empty($dict[(int)$g['id']])) {
+                    $dict[(int)$g['id']] = $g['nama_lengkap'];
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // Fallback nama guru madrasah MAS Miftahul Huda
+        $fallbacks = [
+            4 => 'PUTRI NUR ANISA MEI, S.Pd',
+            6 => 'M. Aziz Sulaiman, S.Pd',
+            7 => 'SITI AISAH, S.Pd.I',
+            8 => 'Zuli Astutik, S.Pd.I',
+            9 => 'Siti Aisah, S.Pd.I',
+            10 => 'Marlena, S.Pd.I',
+            11 => 'Siti Roqaiyah, S.Pd.I',
+            12 => 'Lilis Dwi Wati, S.Pd.I',
+            13 => "Siti Mar'atus Sholehah, S.Pd",
+            14 => 'M AZIZ SULAIMAN, S.Pd',
+            15 => 'Samsul Arifin, M.Pd',
+            16 => 'Siti Roqaiyah, S.Pd.I',
+            17 => 'Didi Hartono, S.Pd.I',
+            18 => 'Okta Kusuma W, S.Pd',
+            37 => 'DIDI HARTONO, S.Pd.I',
+            38 => 'M. Wahidin, S.Pd',
+            39 => 'Drs. Hamim Hasyim',
+            40 => 'SAIPUDIN AZIZ, S.Pd',
+            41 => 'INDAH YUNITASARI, S.Pd',
+            42 => 'M. Wahidin, S.Pd',
+            43 => 'SYAIFUL BAHRI, S.Pd',
+            44 => 'SAWALUDIN, S.Pd',
+            45 => 'ERWANSAH, S.Pd',
+            46 => 'ENDANG KURNIASIH, S.E.',
+            47 => 'JULAINI, S.Pd',
+            48 => 'SHOBIRIN'
+        ];
+        foreach ($fallbacks as $fid => $fname) {
+            if (empty($dict[$fid])) {
+                $dict[$fid] = $fname;
+            }
+        }
+        return $dict;
+    }
+
+    /**
+     * Otomatis ambil & buat paket mapel berdasarkan Guru Pengampu
+     * Langsung muncul tanpa perlu menunggu jadwal ujian CBT selesai disetting
+     */
+    public function syncFromPengampu($topikId = null) {
+        $topikId = $topikId ?: (isset($_POST['topik_id']) ? (int)$_POST['topik_id'] : (isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0));
+        if ($topikId <= 0) {
+            if (isset($_POST['topik_id']) || isset($_GET['topik_id'])) {
+                redirect('/bank_soal');
+                exit;
+            }
+            return 0;
+        }
+
+        $guruDict = $this->getGuruDictionary();
+
+        // 1. Ambil dari tabel mengajar & jadwal_pelajaran yang memiliki guru_id
+        $assigned = [];
+        try {
+            $sql = "
+                SELECT DISTINCT m.mapel_id, mp.nama_mapel, m.guru_id
+                FROM (
+                    SELECT mapel_id, guru_id FROM mengajar WHERE guru_id IS NOT NULL AND guru_id > 0
+                    UNION
+                    SELECT mata_pelajaran_id as mapel_id, guru_id FROM jadwal_pelajaran WHERE guru_id IS NOT NULL AND guru_id > 0
+                ) m
+                JOIN mapel mp ON m.mapel_id = mp.id
+                WHERE mp.kategori NOT IN ('Pembiasaan/Tambahan', 'Ekstrakurikuler')
+                ORDER BY mp.nama_mapel ASC
+            ";
+            $assigned = $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        // 2. Pemetaan standar guru pengampu madrasah MAS Miftahul Huda
+        $standardPengampu = [
+            'Al-Qur\'an Hadits' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
+            'Akidah Akhlak' => ['guru_id' => 10, 'guru_nama' => 'Marlena, S.Pd.I'],
+            'Fikih' => ['guru_id' => 7, 'guru_nama' => 'SITI AISAH, S.Pd.I'],
+            'Sejarah Kebudayaan Islam' => ['guru_id' => 48, 'guru_nama' => 'SHOBIRIN'],
+            'Bahasa Arab' => ['guru_id' => 37, 'guru_nama' => 'DIDI HARTONO, S.Pd.I'],
+            'Bahasa Indonesia' => ['guru_id' => 41, 'guru_nama' => 'INDAH YUNITASARI, S.Pd'],
+            'Matematika' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
+            'Ilmu Pengetahuan Alam Sosial' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
+            'Pendidikan Kewarganegaraan' => ['guru_id' => 44, 'guru_nama' => 'SAWALUDIN, S.Pd'],
+            'Seni Budaya dan Prakarya' => ['guru_id' => 47, 'guru_nama' => 'JULAINI, S.Pd'],
+            'Pendidikan Jasmani, Olahraga, dan Kesehatan' => ['guru_id' => 40, 'guru_nama' => 'SAIPUDIN AZIZ, S.Pd'],
+            'Bahasa Inggris' => ['guru_id' => 42, 'guru_nama' => 'M. Wahidin, S.Pd'],
+            'Informatika' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
+            'Sejarah Umum' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
+            'Sosiologi' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
+            'Geografi' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
+            'Ekonomi' => ['guru_id' => 46, 'guru_nama' => 'ENDANG KURNIASIH, S.E.'],
+            'Fisika' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
+            'Biologi' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
+            'Kimia' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
+            'Baca Tulis Qur\'an' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
+        ];
+
+        $mapelsToInsert = [];
+        foreach ($assigned as $row) {
+            $mName = trim($row['nama_mapel']);
+            $gId = (int)$row['guru_id'];
+            $gName = $guruDict[$gId] ?? ($standardPengampu[$mName]['guru_nama'] ?? "Guru #{$gId}");
+            if (!isset($mapelsToInsert[$mName])) {
+                $mapelsToInsert[$mName] = [
+                    'guru_id' => $gId,
+                    'guru_nama' => $gName
+                ];
+            }
+        }
+
+        // Tambahkan mapel standar jika belum tercakup
+        foreach ($standardPengampu as $defName => $defInfo) {
+            if (!isset($mapelsToInsert[$defName])) {
+                $mapelsToInsert[$defName] = $defInfo;
+            }
+        }
+
+        $inserted = 0;
+        $stmtCheck = $this->db->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ?");
+        $stmtIns = $this->db->prepare("
+            INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_id, guru_nama, kkm, durasi_menit, is_locked) 
+            VALUES (?, ?, 'Semua Kelas', ?, ?, 75, 90, 0)
+        ");
+
+        foreach ($mapelsToInsert as $mName => $info) {
+            $stmtCheck->execute([$topikId, $mName]);
+            if (!$stmtCheck->fetchColumn()) {
+                $stmtIns->execute([$topikId, $mName, $info['guru_id'], $info['guru_nama']]);
+                $inserted++;
+            }
+        }
+
+        if (isset($_POST['topik_id']) || isset($_GET['topik_id'])) {
+            redirect("/bank_soal?topik_id={$topikId}&msg=synced_pengampu&count={$inserted}");
+            exit;
+        }
+
+        return $inserted;
+    }
+
+    /**
      * Sinkronkan Paket Mapel dari Jadwal Ujian CBT yang sudah dibuat di /cbt/jadwal
      */
     public function syncFromJadwal() {
@@ -323,13 +489,15 @@ class BankSoalController {
                 $topikId = $tp ? (int)$tp['id'] : 1;
             }
 
-            // 1. Cek atau Buat Paket Matematika Kelas XE.1
-            $stmtP = $this->db->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = 'Matematika' AND kelas_nama = 'XE.1'");
+            // 1. Cek atau Buat Paket Matematika
+            $stmtP = $this->db->prepare("SELECT id, kelas_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama = 'Matematika' ORDER BY id ASC LIMIT 1");
             $stmtP->execute([$topikId]);
-            $paketId = $stmtP->fetchColumn();
+            $pktRow = $stmtP->fetch(PDO::FETCH_ASSOC);
+            $paketId = $pktRow ? (int)$pktRow['id'] : 0;
+            $kelasNamaTarget = $pktRow ? ($pktRow['kelas_nama'] ?: 'Semua Kelas') : 'Semua Kelas';
 
             if (!$paketId) {
-                $stmtInsP = $this->db->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, 'Matematika', 'XE.1', 'Samsul Arifin, M.Pd', 75, 90, 0)");
+                $stmtInsP = $this->db->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, 'Matematika', 'Semua Kelas', 'M AZIZ SULAIMAN, S.Pd', 75, 90, 0)");
                 $stmtInsP->execute([$topikId]);
                 $paketId = $this->db->lastInsertId();
             }
@@ -348,7 +516,7 @@ class BankSoalController {
 
             $stmtSoal = $this->db->prepare("
                 INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan)
-                VALUES (?, ?, 'Matematika', 'XE.1', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, 'Matematika', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             for ($i = 1; $i <= 40; $i++) {
@@ -356,7 +524,7 @@ class BankSoalController {
                 $pertanyaan = "Soal No. {$i}: " . $ref[0];
                 $konten = json_encode(['kunci' => $ref[6], 'opsi' => ['A' => $ref[1], 'B' => $ref[2], 'C' => $ref[3], 'D' => $ref[4], 'E' => $ref[5]]]);
                 $stmtSoal->execute([
-                    $topikId, $paketId, $i, 'sec_pg', ($i % 3 === 0 ? 'Sukar' : ($i % 2 === 0 ? 'Sedang' : 'Mudah')), 2.00,
+                    $topikId, $paketId, $kelasNamaTarget, $i, 'sec_pg', ($i % 3 === 0 ? 'Sukar' : ($i % 2 === 0 ? 'Sedang' : 'Mudah')), 2.00,
                     $pertanyaan, $ref[1], $ref[2], $ref[3], $ref[4], $ref[5], $ref[6], $konten
                 ]);
             }
@@ -420,7 +588,7 @@ class BankSoalController {
                 $pgk = $samplePGK[$j];
                 $konten = json_encode(['opsi' => $pgk[1], 'kunci_array' => $pgk[2]]);
                 $stmtSoal->execute([
-                    $topikId, $paketId, $noUrut, 'sec_pgk', 'Sukar', 3.00,
+                    $topikId, $paketId, $kelasNamaTarget, $noUrut, 'sec_pgk', 'Sukar', 3.00,
                     "Soal No. {$noUrut} (PG Kompleks): " . $pgk[0],
                     $pgk[1][0]['teks'], $pgk[1][1]['teks'], $pgk[1][2]['teks'], $pgk[1][3]['teks'] ?? null, null,
                     $pgk[2], $konten
@@ -441,7 +609,7 @@ class BankSoalController {
                 $ess = $sampleEssay[$k];
                 $konten = json_encode(['rubrik' => $ess[1]]);
                 $stmtSoal->execute([
-                    $topikId, $paketId, $noUrut, 'sec_essay', 'Sedang', 5.00,
+                    $topikId, $paketId, $kelasNamaTarget, $noUrut, 'sec_essay', 'Sedang', 5.00,
                     "Soal No. {$noUrut} (Essay): " . $ess[0],
                     null, null, null, null, null,
                     $ess[1], $konten

@@ -11,6 +11,7 @@ $active_menu = "bank_soal";
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>?v=<?php echo time(); ?>">
     <link href="<?php echo base_url('public/assets/css/zamrud.css'); ?>" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .stats-grid-bs {
             display: grid;
@@ -387,10 +388,17 @@ $active_menu = "bank_soal";
                         <i data-lucide="plus-circle"></i> Tambah Paket Mapel
                     </button>
 
+                    <form method="POST" action="<?php echo base_url('bank_soal/paket/sync-pengampu'); ?>" style="display: inline;">
+                        <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
+                        <button type="submit" class="btn btn-outline" style="border-color: #0284c7; color: #0284c7; background: #f0f9ff; font-weight: 800;" title="Otomatis muat daftar mapel madrasah beserta guru pengampunya tanpa perlu nunggu jadwal CBT">
+                            <i data-lucide="users" style="width: 15px; height: 15px; color: #0284c7;"></i> Muat Mapel Pengampu
+                        </button>
+                    </form>
+
                     <form method="POST" action="<?php echo base_url('bank_soal/paket/sync-jadwal'); ?>" style="display: inline;">
                         <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
                         <button type="submit" class="btn btn-outline" style="border-color: #cbd5e1; color: #1e293b; font-weight: 700;" title="Otomatis buatkan paket mapel dari jadwal CBT yang sudah disetting">
-                            <i data-lucide="refresh-cw" style="width: 15px; height: 15px; color: #0ea5e9;"></i> Ambil dari Jadwal CBT
+                            <i data-lucide="calendar" style="width: 15px; height: 15px; color: #64748b;"></i> Ambil dari Jadwal CBT
                         </button>
                     </form>
 
@@ -446,7 +454,7 @@ $active_menu = "bank_soal";
                                 <td colspan="7" style="padding: 4rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 10px; color: #cbd5e1;"></i>
                                     <div style="font-size: 1rem; font-weight: 800; color: #475569;">Belum ada paket mapel di topik ini</div>
-                                    <div style="font-size: 0.82rem; margin-top: 4px;">Klik <strong>"Tambah Paket Mapel"</strong> di atas atau gunakan tombol <strong>"Ambil dari Jadwal CBT"</strong> untuk membuat otomatis.</div>
+                                    <div style="font-size: 0.82rem; margin-top: 4px;">Gunakan tombol <strong>"Muat Mapel Pengampu"</strong> di atas atau tambah manual untuk memuat daftar mata pelajaran beserta guru pengampunya.</div>
                                 </td>
                             </tr>
                             <?php else: ?>
@@ -461,9 +469,11 @@ $active_menu = "bank_soal";
                                         <div style="font-weight: 900; color: #0f172a; font-size: 0.95rem;">
                                             <?php echo htmlspecialchars($pk['mapel_nama']); ?>
                                         </div>
-                                        <div style="font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                                            <i data-lucide="user" style="width: 12px; height: 12px; color: #0ea5e9;"></i>
-                                            <?php echo htmlspecialchars($pk['guru_nama'] ?: 'Guru Pengampu Belum Diset'); ?>
+                                        <div style="font-size: 0.75rem; color: #475569; display: flex; align-items: center; gap: 4px; margin-top: 3px;">
+                                            <span style="display: inline-flex; align-items: center; gap: 5px; background: #f8fafc; padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #334155; border: 1px solid #e2e8f0;">
+                                                <i data-lucide="user-check" style="width: 12px; height: 12px; color: #059669;"></i>
+                                                <span>Pengampu: <strong><?php echo htmlspecialchars($pk['guru_nama'] ?: 'Belum Ada Pengampu'); ?></strong></span>
+                                            </span>
                                         </div>
                                     </td>
                                     <td>
@@ -749,6 +759,57 @@ $active_menu = "bank_soal";
             form.submit();
         }
     }
+
+    // Tangani parameter notifikasi
+    (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const msg = urlParams.get('msg');
+        if (msg && typeof Swal !== 'undefined') {
+            if (msg === 'synced_pengampu') {
+                const count = urlParams.get('count') || '0';
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Mapel & Pengampu Dimuat!',
+                    text: 'Berhasil memuat ' + count + ' mata pelajaran beserta guru pengampunya.',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            } else if (msg === 'synced') {
+                const count = urlParams.get('count') || '0';
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Sinkronisasi Jadwal Berhasil!',
+                    text: 'Berhasil mengimpor ' + count + ' paket mapel dari jadwal CBT.',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            } else if (msg === 'dummy_created') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Contoh Dummy Matematika Berhasil Dibuat!',
+                    text: '50 butir soal (40 PG, 5 PG Kompleks, 5 Essay) berhasil digenerate.',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            } else if (msg === 'locked') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Paket Soal Terkunci!',
+                    text: 'Paket soal berhasil dikunci. Guru tidak dapat mengedit butir soal lagi.',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            } else if (msg === 'unlocked') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Kunci Dibuka!',
+                    text: 'Paket soal telah dibuka kunci. Guru dapat mengedit butir soal kembali.',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            }
+        }
+    })();
 </script>
 </body>
 </html>
