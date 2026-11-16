@@ -17,6 +17,7 @@ if (function_exists('opcache_reset')) {
 }
 
 // Check live mengajar
+require_once __DIR__ . '/app/Core/Database.php';
 try {
     $db = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
     $mRows = $db->query("
