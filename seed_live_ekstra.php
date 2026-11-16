@@ -1,16 +1,26 @@
 <?php
 /**
- * Runner Seed Data Dummy Ekstrakurikuler ROHIS di Server Live
+ * Runner Seed Data Dummy Ekstrakurikuler di Server Live
  */
 header('Content-Type: text/plain');
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-echo "=== MENJALANKAN SEEDER EKSTRAKURIKULER ROHIS DI SERVER ===\n";
+echo "=== MENJALANKAN SEEDER SELURUH EKSTRAKURIKULER DI SERVER LIVE ===\n\n";
 
 try {
-    require_once __DIR__ . '/scripts/seed_ekstra_dummy.php';
-    echo "\nSUKSES! Data dummy ROHIS berhasil dimasukkan ke database server live!\n";
+    // 1. Eksekusi ROHIS jika ada
+    if (file_exists(__DIR__ . '/scripts/seed_ekstra_dummy.php')) {
+        require_once __DIR__ . '/scripts/seed_ekstra_dummy.php';
+    }
+
+    // 2. Eksekusi seluruh cabang ekstrakurikuler lainnya
+    if (file_exists(__DIR__ . '/scripts/seed_all_ekstra_dummy.php')) {
+        require_once __DIR__ . '/scripts/seed_all_ekstra_dummy.php';
+    }
+
+    echo "\nSUKSES! Seluruh data dummy ekstrakurikuler berhasil dimasukkan ke database server live!\n";
 } catch (\Throwable $e) {
     echo "\nERROR: " . $e->getMessage() . "\n";
+    echo $e->getTraceAsString() . "\n";
 }
