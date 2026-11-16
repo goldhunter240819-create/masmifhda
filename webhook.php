@@ -16,43 +16,15 @@ if (function_exists('opcache_reset')) {
     @opcache_reset();
 }
 
-// Check live active mengajar
+// 3.5 Bersihkan data orphan bs_paket jika ada
 require_once __DIR__ . '/app/Core/Database.php';
 try {
     $db = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
-    
-    // Check difference between active mengajar and bs_paket for topik 3
-    $sasPaket = $db->query("SELECT mapel_nama, kelas_nama, guru_nama FROM bs_paket WHERE topik_id = 3")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "\nSAS PAKET (ID 3) count: " . count($sasPaket) . "\n";
-    
-    // Check which active mengajar is not in sasPaket
-    $mRows = $db->query("
-        SELECT DISTINCT mp.nama_mapel, k.nama_kelas, COALESCE(g.nama, g_siakad.nama_lengkap) as guru_nama
-        FROM mengajar m
-        JOIN kelas k ON m.kelas_id = k.id
-        JOIN mapel mp ON m.mapel_id = mp.id
-        LEFT JOIN aula_db.guru g ON m.guru_id = g.id
-        LEFT JOIN guru g_siakad ON m.guru_id = g_siakad.id
-        WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
-          AND (m.tahun_ajaran_id = 2 OR m.tahun_ajaran_id IS NULL)
-          AND (m.semester = 1 OR m.semester IS NULL OR m.semester = 0)
-          AND mp.nama_mapel NOT IN ('Upacara', 'Senam', 'Pramuka', 'Sholat Dhuha', 'Juz Amma - Asmaul Husna', 'BTQ', 'IPAS', 'SBdP', 'Baca Tulis Qur\'an', 'Ilmu Pengetahuan Alam Sosial', 'Seni Budaya dan Prakarya')
-        ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
-    ")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "ACTIVE MENGAJAR DISTINCT (TA 2, Sem 1): " . count($mRows) . "\n";
-    
-    // Clean up orphan bs_paket whose topik_id is not in bs_topik
-    $deletedOrphans = $db->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
-    $output .= "CLEANED ORPHAN BS_PAKET: " . $deletedOrphans . " rows deleted\n";
-    
-    $mapelInBs = $db->query("SELECT DISTINCT mapel_nama, count(*) as cnt FROM bs_paket WHERE topik_id = 3 GROUP BY mapel_nama ORDER BY mapel_nama")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "\nDISTINCT MAPEL IN BS_PAKET (Topik 3): " . json_encode($mapelInBs) . "\n";
-
-
-
-} catch (\Exception $e) {
-    $output .= "\nError querying bs_paket: " . $e->getMessage() . "\n";
-}
+    $del = $db->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
+    if ($del > 0) {
+        $output .= "\nCleaned $del orphan bs_paket rows.\n";
+    }
+} catch (\Exception $e) {}
 
 
 

@@ -15,72 +15,101 @@ $active_menu = "bank_soal";
     <style>
         .stats-grid-bs {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
             gap: 1.25rem;
             margin-bottom: 2rem;
         }
         .stat-card-bs {
             background: #ffffff;
-            border-radius: 16px;
+            border-radius: 18px;
             padding: 1.25rem 1.5rem;
             display: flex;
             align-items: center;
             gap: 1.25rem;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.03);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
         }
         .stat-card-bs:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+            border-color: #cbd5e1;
         }
         .stat-icon-bs {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
         }
-        .stat-icon-bs.blue { background: #e0f2fe; color: #0284c7; }
-        .stat-icon-bs.green { background: #dcfce7; color: #16a34a; }
-        .stat-icon-bs.purple { background: #f3e8ff; color: #9333ea; }
-        .stat-icon-bs.amber { background: #fef3c7; color: #d97706; }
-        .stat-val-bs { font-size: 1.7rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
-        .stat-label-bs { font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-icon-bs.blue { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7; }
+        .stat-icon-bs.green { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #15803d; }
+        .stat-icon-bs.purple { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); color: #7e22ce; }
+        .stat-icon-bs.amber { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; }
+        .stat-val-bs { font-size: 1.8rem; font-weight: 900; color: #0f172a; line-height: 1.15; letter-spacing: -0.5px; }
+        .stat-label-bs { font-size: 0.74rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+        .stat-sub-bs { font-size: 0.7rem; color: #94a3b8; font-weight: 600; margin-top: 2px; }
 
         /* Topik Cards Grid */
         .topik-grid-bs {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
         .topik-card-bs {
             background: #ffffff;
-            border-radius: 18px;
+            border-radius: 20px;
             border: 1.5px solid #e2e8f0;
-            padding: 1.5rem;
+            padding: 1.6rem 1.5rem 1.4rem;
             box-shadow: 0 6px 20px rgba(0,0,0,0.03);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: all 0.25s ease;
+            min-height: 310px;
+            transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
+        .topik-card-bs::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #cbd5e1;
+            transition: all 0.25s;
+        }
+        .topik-card-bs.theme-sas::before { background: linear-gradient(90deg, #10b981, #059669); }
+        .topik-card-bs.theme-sts::before { background: linear-gradient(90deg, #3b82f6, #0284c7); }
+        .topik-card-bs.theme-um::before { background: linear-gradient(90deg, #a855f7, #7e22ce); }
+        .topik-card-bs.theme-to::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
         .topik-card-bs:hover {
-            transform: translateY(-4px);
-            border-color: #0ea5e9;
-            box-shadow: 0 12px 30px rgba(14, 165, 233, 0.12);
+            transform: translateY(-5px);
+            box-shadow: 0 16px 35px rgba(14, 165, 233, 0.12);
+            border-color: #93c5fd;
         }
         .topik-card-bs.active-topik {
-            border-color: #0ea5e9;
-            background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+            border-color: #38bdf8;
+            background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 70%);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.08);
         }
+        .topik-card-bs.active-topik::before {
+            height: 5px;
+            background: linear-gradient(90deg, #0ea5e9, #10b981);
+        }
+
         .topik-badge-jenis {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
             padding: 4px 10px;
             border-radius: 8px;
             font-size: 0.72rem;
@@ -88,10 +117,158 @@ $active_menu = "bank_soal";
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .badge-sas { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-        .badge-sts { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-        .badge-um { background: #fdf4ff; color: #c026d3; border: 1px solid #f5d0fe; }
-        .badge-to { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .badge-sas { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        .badge-sts { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .badge-um { background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; }
+        .badge-to { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+
+        .badge-status-topik {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .badge-status-topik.aktif {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+        .badge-status-topik.selesai {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        .badge-status-topik.terjadwal {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+        .pulsing-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #16a34a;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
+            animation: pulse-dot 1.8s infinite;
+        }
+        @keyframes pulse-dot {
+            0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+
+        .topik-card-title {
+            margin: 0 0 8px 0;
+            font-size: 1.12rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.35;
+            min-height: 2.85rem;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .topik-date-box {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.8rem;
+            color: #475569;
+            font-weight: 600;
+            margin-bottom: 14px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+        }
+
+        .topik-stat-box {
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 10px 12px;
+            margin-bottom: 1.25rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .topik-stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .topik-stat-num {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .topik-stat-lbl {
+            font-size: 0.68rem;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+        }
+
+        .btn-open-topik {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 11px 16px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            background: #f1f5f9;
+            color: #334155;
+            border: 1.5px solid #cbd5e1;
+        }
+        .btn-open-topik:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .btn-open-topik.btn-active-topik {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+        }
+        .btn-open-topik.btn-active-topik:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-reset-topik {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: #fef2f2;
+            color: #ef4444;
+            border: 1px solid #fee2e2;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-reset-topik:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
 
         /* Detail Pills Jenis Soal */
         .pill-jenis {
@@ -204,34 +381,38 @@ $active_menu = "bank_soal";
                 </div>
             </div>
 
-            <!-- Stats Real (Bukan Hardcoded!) -->
+            <!-- Stats Real (Sinkron 100% Real Time) -->
             <div class="stats-grid-bs">
                 <div class="stat-card-bs">
-                    <div class="stat-icon-bs blue"><i data-lucide="layers"></i></div>
+                    <div class="stat-icon-bs blue"><i data-lucide="layers" style="width: 24px; height: 24px;"></i></div>
                     <div>
                         <div class="stat-val-bs"><?php echo $totalTopik; ?></div>
                         <div class="stat-label-bs">Total Topik Ujian</div>
+                        <div class="stat-sub-bs">Periode Ujian CBT</div>
                     </div>
                 </div>
                 <div class="stat-card-bs">
-                    <div class="stat-icon-bs green"><i data-lucide="book-open"></i></div>
+                    <div class="stat-icon-bs green"><i data-lucide="book-open" style="width: 24px; height: 24px;"></i></div>
                     <div>
                         <div class="stat-val-bs"><?php echo $totalPaket; ?></div>
                         <div class="stat-label-bs">Paket Mapel Terdaftar</div>
+                        <div class="stat-sub-bs">Tersusun Per Kelas</div>
                     </div>
                 </div>
                 <div class="stat-card-bs">
-                    <div class="stat-icon-bs purple"><i data-lucide="file-question"></i></div>
+                    <div class="stat-icon-bs purple"><i data-lucide="file-question" style="width: 24px; height: 24px;"></i></div>
                     <div>
                         <div class="stat-val-bs"><?php echo $totalSoal; ?></div>
                         <div class="stat-label-bs">Total Butir Soal</div>
+                        <div class="stat-sub-bs">PG, PGK &amp; Essay</div>
                     </div>
                 </div>
                 <div class="stat-card-bs">
-                    <div class="stat-icon-bs amber"><i data-lucide="lock"></i></div>
+                    <div class="stat-icon-bs amber"><i data-lucide="lock" style="width: 24px; height: 24px;"></i></div>
                     <div>
                         <div class="stat-val-bs"><?php echo $totalLocked; ?></div>
                         <div class="stat-label-bs">Paket Soal Terkunci</div>
+                        <div class="stat-sub-bs">Dari <?php echo $totalPaket; ?> Paket Mapel</div>
                     </div>
                 </div>
             </div>
@@ -244,13 +425,14 @@ $active_menu = "bank_soal";
                         Pilih Topik Ujian
                     </h2>
                     <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                        Klik pada kartu topik untuk melihat daftar mapel, rincian jenis butir soal, dan mengelola bank soal.
+                        Klik pada kartu topik untuk melihat daftar mapel, rincian jenis butir soal, dan kelola butir soal.
                     </div>
                 </div>
 
                 <!-- Tombol Kosongkan / Reset Global -->
-                <button type="button" onclick="confirmResetAll()" style="background: none; border: none; color: #ef4444; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Kosongkan / Reset Semua Soal
+                <button type="button" onclick="confirmResetAll()" class="btn-reset-topik" title="Kosongkan seluruh paket dan butir soal di semua topik">
+                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                    <span>Kosongkan / Reset Semua Soal</span>
                 </button>
             </div>
 
@@ -269,66 +451,89 @@ $active_menu = "bank_soal";
                     <?php foreach($allTopikList as $tp): 
                         $jenis = strtoupper($tp['jenis'] ?: 'SAS');
                         $bClass = 'badge-sas';
-                        if ($jenis === 'STS' || $jenis === 'PTS') $bClass = 'badge-sts';
-                        elseif ($jenis === 'UM') $bClass = 'badge-um';
-                        elseif ($jenis === 'TRY OUT' || $jenis === 'TO') $bClass = 'badge-to';
+                        $themeClass = 'theme-sas';
+                        if ($jenis === 'STS' || $jenis === 'PTS') {
+                            $bClass = 'badge-sts';
+                            $themeClass = 'theme-sts';
+                        } elseif ($jenis === 'UM') {
+                            $bClass = 'badge-um';
+                            $themeClass = 'theme-um';
+                        } elseif ($jenis === 'TRY OUT' || $jenis === 'TO') {
+                            $bClass = 'badge-to';
+                            $themeClass = 'theme-to';
+                        }
 
                         $st = $tp['status'] ?: 'Terjadwal';
-                        $stBg = ($st === 'Aktif') ? '#dcfce7' : (($st === 'Selesai') ? '#f1f5f9' : '#e0f2fe');
-                        $stCol = ($st === 'Aktif') ? '#15803d' : (($st === 'Selesai') ? '#64748b' : '#0369a1');
-
                         $tMulai = !empty($tp['tgl_mulai']) ? date('d M Y', strtotime($tp['tgl_mulai'])) : null;
                         $tSelesai = !empty($tp['tgl_selesai']) ? date('d M Y', strtotime($tp['tgl_selesai'])) : null;
                     ?>
-                    <div class="topik-card-bs <?php echo ($st === 'Aktif') ? 'active-topik' : ''; ?>">
+                    <div class="topik-card-bs <?php echo $themeClass; ?> <?php echo ($st === 'Aktif') ? 'active-topik' : ''; ?>">
                         <div>
                             <!-- Header Card: Jenis & Status -->
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                 <span class="topik-badge-jenis <?php echo $bClass; ?>">
+                                    <i data-lucide="bookmark" style="width: 12px; height: 12px;"></i>
                                     <?php echo htmlspecialchars($jenis); ?> &bull; <?php echo htmlspecialchars($tp['semester'] ?? 'Ganjil'); ?>
                                 </span>
-                                <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 9px; border-radius: 20px; background: <?php echo $stBg; ?>; color: <?php echo $stCol; ?>;">
-                                    <?php echo htmlspecialchars($st); ?>
-                                </span>
+                                <?php if ($st === 'Aktif'): ?>
+                                    <span class="badge-status-topik aktif">
+                                        <span class="pulsing-dot"></span> Aktif
+                                    </span>
+                                <?php elseif ($st === 'Selesai'): ?>
+                                    <span class="badge-status-topik selesai">
+                                        <i data-lucide="check" style="width: 12px; height: 12px;"></i> Selesai
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge-status-topik terjadwal">
+                                        <i data-lucide="clock" style="width: 12px; height: 12px;"></i> Terjadwal
+                                    </span>
+                                <?php endif; ?>
                             </div>
 
-                            <!-- Title Topik -->
-                            <h3 style="margin: 0 0 8px 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; line-height: 1.35;">
+                            <!-- Title Topik (Uniform Height) -->
+                            <h3 class="topik-card-title">
                                 <?php echo htmlspecialchars($tp['nama_topik']); ?>
                             </h3>
 
                             <!-- Tanggal Pelaksanaan -->
-                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #475569; font-weight: 600; margin-bottom: 14px;">
-                                <i data-lucide="calendar" style="width: 14px; height: 14px; color: #0ea5e9;"></i>
+                            <div class="topik-date-box">
+                                <i data-lucide="calendar" style="width: 14px; height: 14px; color: #0ea5e9; flex-shrink: 0;"></i>
                                 <?php if ($tMulai): ?>
                                     <span><?php echo $tMulai; ?> <?php echo $tSelesai ? 's/d ' . $tSelesai : ''; ?></span>
                                 <?php else: ?>
-                                    <span style="color: #94a3b8; font-style: italic;">Tanggal belum diset</span>
+                                    <span style="color: #94a3b8; font-style: italic;">Periode belum diset</span>
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Stat Summary Card -->
-                            <div style="background: #f8fafc; border-radius: 12px; padding: 10px 14px; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0;">
-                                <div>
-                                    <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;"><?php echo $tp['jml_paket']; ?></div>
-                                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Paket Mapel</div>
+                            <!-- Stat Summary Card (Uniform Grid) -->
+                            <div class="topik-stat-box">
+                                <div class="topik-stat-item">
+                                    <div class="topik-stat-num" style="color: #0f172a;"><?php echo $tp['jml_paket']; ?></div>
+                                    <div class="topik-stat-lbl">Paket Mapel</div>
                                 </div>
-                                <div style="text-align: center;">
-                                    <div style="font-size: 1.1rem; font-weight: 800; color: #0284c7;"><?php echo $tp['jml_soal']; ?></div>
-                                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Soal</div>
+                                <div class="topik-stat-item" style="border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">
+                                    <div class="topik-stat-num" style="color: #0284c7;"><?php echo $tp['jml_soal']; ?></div>
+                                    <div class="topik-stat-lbl">Total Soal</div>
                                 </div>
-                                <div style="text-align: right;">
-                                    <div style="font-size: 1.1rem; font-weight: 800; color: <?php echo ($tp['jml_locked'] > 0) ? '#d97706' : '#16a34a'; ?>;">
-                                        <?php echo $tp['jml_locked']; ?> / <?php echo $tp['jml_paket']; ?>
+                                <div class="topik-stat-item">
+                                    <div class="topik-stat-num" style="font-size: 0.95rem;">
+                                        <?php if ($tp['jml_locked'] > 0): ?>
+                                            <span style="color: #d97706;"><?php echo $tp['jml_locked']; ?> Kunci</span>
+                                        <?php elseif ($tp['jml_paket'] > 0): ?>
+                                            <span style="color: #16a34a;">0 Kunci</span>
+                                        <?php else: ?>
+                                            <span style="color: #94a3b8;">-</span>
+                                        <?php endif; ?>
                                     </div>
-                                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Terkunci</div>
+                                    <div class="topik-stat-lbl">Status Kunci</div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Tombol Buka Bank Soal Topik -->
-                        <a href="?topik_id=<?php echo $tp['id']; ?>" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 800; font-size: 0.88rem; background: linear-gradient(135deg, #0ea5e9, #0284c7); border: none; padding: 10px 16px; border-radius: 10px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);">
-                            <i data-lucide="folder-open"></i> Buka Bank Soal Topik &rarr;
+                        <a href="?topik_id=<?php echo $tp['id']; ?>" class="btn-open-topik <?php echo ($st === 'Aktif') ? 'btn-active-topik' : ''; ?>">
+                            <span>Buka Bank Soal Topik</span>
+                            <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
                         </a>
                     </div>
                     <?php endforeach; ?>

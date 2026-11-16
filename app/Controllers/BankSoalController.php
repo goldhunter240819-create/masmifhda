@@ -375,11 +375,19 @@ class BankSoalController {
         }
         unset($tp);
 
-        // Hitung statistik global real
+        // Otomatis bersihkan orphan bs_paket jika ada topik lama/terhapus
+        try {
+            $this->db->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
+            if ($this->db_core !== $this->db) {
+                $this->db_core->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
+            }
+        } catch (\Exception $e) {}
+
+        // Hitung statistik global real (sinkron 100% dengan topik yang ada)
         $totalTopik = count($allTopikList);
-        $totalPaket = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket")->fetchColumn();
-        $totalSoal = (int)$this->db->query("SELECT COUNT(*) FROM bs_soal")->fetchColumn();
-        $totalLocked = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE is_locked = 1")->fetchColumn();
+        $totalPaket = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id IN (SELECT id FROM bs_topik)")->fetchColumn();
+        $totalSoal = (int)$this->db->query("SELECT COUNT(*) FROM bs_soal WHERE topik_id IN (SELECT id FROM bs_topik)")->fetchColumn();
+        $totalLocked = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id IN (SELECT id FROM bs_topik) AND is_locked = 1")->fetchColumn();
 
         $selectedTopik = null;
         $paketList = [];
