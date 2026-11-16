@@ -142,7 +142,10 @@
                     </button>
                 </form>
 
-                <div style="display:flex;gap:10px;">
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <a href="<?php echo base_url('admin/absen_v2/ekstra/seed-dummy'); ?>" onclick="return confirm('Generate data dummy ROHIS (10 pertemuan & 30 siswa) sekarang?');" style="background:#fef3c7;color:#b45309;text-decoration:none;padding:8px 14px;border-radius:10px;font-weight:800;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;border:1px solid #fde68a;">
+                        <i data-lucide="sparkles" style="width:16px;"></i> + Dummy ROHIS (10 Ptm)
+                    </a>
                     <a href="<?php echo base_url('admin/absen_v2/ekstra/rekap?ekstra=' . urlencode($selected_ekstra)); ?>" style="background:#f1f5f9;color:#334155;text-decoration:none;padding:8px 16px;border-radius:10px;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;">
                         <i data-lucide="file-spreadsheet" style="width:16px;color:#0284c7;"></i> Rekap Presensi
                     </a>

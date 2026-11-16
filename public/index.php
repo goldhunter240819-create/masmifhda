@@ -1331,6 +1331,7 @@ $router->add('POST', '/admin/absen_v2/ekstra/delete-cabang', [\App\Controllers\A
 $router->add('POST', '/admin/absen_v2/ekstra/add-anggota', [\App\Controllers\AbsenEkstraV2Controller::class, 'addAnggota']);
 $router->add('POST', '/admin/absen_v2/ekstra/delete-anggota', [\App\Controllers\AbsenEkstraV2Controller::class, 'deleteAnggota']);
 $router->add('GET', '/api/absen_v2/ekstra/siswa-by-kelas', [\App\Controllers\AbsenEkstraV2Controller::class, 'apiGetSiswaByKelas']);
+$router->add('GET', '/admin/absen_v2/ekstra/seed-dummy', [\App\Controllers\AbsenEkstraV2Controller::class, 'seedDummy']);
 
 // --- Absen Guru V2 Module ---
 $router->add('GET', '/admin/absen_guru_v2', [\App\Controllers\AbsenGuruV2Controller::class, 'dashboard']);

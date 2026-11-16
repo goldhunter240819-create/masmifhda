@@ -49,6 +49,14 @@
 
         <div class="z-scroll" style="padding: 1.5rem 2rem;">
 
+            <!-- Alerts -->
+            <?php if (isset($_GET['msg']) && $_GET['msg'] === 'seed_success'): ?>
+            <div style="background:#dcfce7;border:1px solid #86efac;border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:10px;color:#15803d;font-weight:700;">
+                <i data-lucide="check-circle" style="width:20px;"></i>
+                Alhamdulillah! Data dummy ekstrakurikuler ROHIS (30 siswa, 10 pertemuan latihan lengkap) berhasil dibuat di server!
+            </div>
+            <?php endif; ?>
+
             <!-- Header Filter & Actions -->
             <div style="background:white;border-radius:16px;padding:1.25rem 1.5rem;border:1px solid #f1f5f9;margin-bottom:1.5rem;box-shadow:0 4px 15px rgba(0,0,0,0.02);">
                 <form method="GET" action="<?php echo base_url('admin/absen_v2/ekstra/rekap'); ?>" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:15px;">
@@ -94,7 +102,10 @@
                         </button>
                     </div>
 
-                    <div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <a href="<?php echo base_url('admin/absen_v2/ekstra/seed-dummy'); ?>" onclick="return confirm('Generate data dummy ROHIS (10 pertemuan & 30 siswa) sekarang?');" style="background:#fef3c7;color:#b45309;text-decoration:none;padding:9px 16px;border-radius:10px;font-weight:800;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;border:1px solid #fde68a;">
+                            <i data-lucide="sparkles" style="width:16px;"></i> + Data Dummy ROHIS (10 Ptm)
+                        </a>
                         <a href="<?php echo base_url('admin/absen_v2/ekstra/cetak-rekap?ekstra=' . urlencode($selected_ekstra) . '&semester=' . urlencode($semester) . '&tahun_ajaran=' . urlencode($tahun_ajaran) . '&bulan=' . urlencode($bulan)); ?>" target="_blank" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:white;text-decoration:none;padding:9px 20px;border-radius:10px;font-weight:800;font-size:0.85rem;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(16,185,129,0.3);">
                             <i data-lucide="printer" style="width:16px;"></i> Cetak Dokumen (A4 Landscape)
                         </a>

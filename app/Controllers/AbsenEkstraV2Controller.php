@@ -845,4 +845,109 @@ class AbsenEkstraV2Controller {
         echo json_encode(['success' => true, 'data' => $siswaList]);
         exit;
     }
+
+    /**
+     * Seed Data Dummy ROHIS (10 Pertemuan & 30 Siswa)
+     */
+    public static function seedDummy() {
+        self::checkAuth();
+        self::ensureSchema();
+
+        $db_core = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+        list($active_year_name, $active_semester) = self::getActiveYearAndSemester();
+
+        $nama_ekstra = 'ROHIS (Kerohanian Islam)';
+
+        // 1. Cek / Buat ekstra_program
+        $stmtCek = $db_siakad->prepare("SELECT id FROM ekstra_program WHERE nama_ekstra = ?");
+        $stmtCek->execute([$nama_ekstra]);
+        $progId = $stmtCek->fetchColumn();
+
+        $guru_id = 0;
+        $guru = $db_core->query("SELECT id FROM guru WHERE nama LIKE '%AISAH%' OR nama LIKE '%DIDI%' LIMIT 1")->fetch();
+        if ($guru) {
+            $guru_id = $guru['id'];
+        } else {
+            $guru_id = $db_core->query("SELECT id FROM guru LIMIT 1")->fetchColumn() ?: 1;
+        }
+
+        if (!$progId) {
+            $stmtIns = $db_siakad->prepare("INSERT INTO ekstra_program 
+                (nama_ekstra, guru_id, tahun_ajaran, semester, jadwal_hari, jadwal_waktu, target_pencapaian, status) 
+                VALUES (?, ?, ?, ?, 'Jumat', '13.30 - 15.00 WIB', ?, 'Aktif')");
+            $stmtIns->execute([
+                $nama_ekstra,
+                $guru_id,
+                $active_year_name,
+                $active_semester,
+                'Membentuk generasi muslim yang berakhlakul karimah, berwawasan keislaman luas, terampil berdakwah, serta aktif dalam kegiatan keagamaan madrasah.'
+            ]);
+        }
+
+        // 2. Daftarkan 30 siswa aktif
+        $sqlSiswa = "SELECT s.id 
+                     FROM siswa s 
+                     LEFT JOIN riwayat_kelas_siswa rks ON s.id = rks.siswa_id 
+                         AND rks.tahun_ajaran_id IN (SELECT id FROM tahun_ajaran WHERE name = '$active_year_name')
+                     WHERE s.status = 'Aktif' 
+                     LIMIT 30";
+        $siswaList = $db_core->query($sqlSiswa)->fetchAll(\PDO::FETCH_COLUMN);
+
+        $stmtInsAnggota = $db_siakad->prepare("INSERT INTO ekstra_anggota (nama_ekstra, siswa_id, tahun_ajaran, status) VALUES (?, ?, ?, 'Aktif')");
+        foreach ($siswaList as $sid) {
+            $stmtCekA = $db_siakad->prepare("SELECT id FROM ekstra_anggota WHERE nama_ekstra = ? AND siswa_id = ?");
+            $stmtCekA->execute([$nama_ekstra, $sid]);
+            if (!$stmtCekA->fetch()) {
+                $stmtInsAnggota->execute([$nama_ekstra, $sid, $active_year_name]);
+            }
+        }
+
+        $anggotaIds = $db_siakad->query("SELECT siswa_id FROM ekstra_anggota WHERE nama_ekstra = ".$db_siakad->quote($nama_ekstra))->fetchAll(\PDO::FETCH_COLUMN);
+
+        // 3. Buat 10 Pertemuan & Presensi
+        $daftarPertemuan = [
+            [1, '2026-08-07', '13:30', '15:00', 'Orientasi dan Pengenalan Program Kerja ROHIS Tahun Pelajaran 2026/2027'],
+            [2, '2026-08-14', '13:30', '15:00', 'Tahsin Al-Qur\'an: Makharijul Huruf dan Sifatul Huruf (Surat Al-Fatihah)'],
+            [3, '2026-08-21', '13:30', '15:00', 'Kajian Aqidah & Akhlak: Karakter Pemuda Muslim Tangguh di Era Digital'],
+            [4, '2026-08-28', '13:30', '15:00', 'Fiqih Praktis: Tata Cara Wudhu Sempurna & Sholat Khusyuk Sesuai Sunnah'],
+            [5, '2026-09-04', '13:30', '15:00', 'Pelatihan Da\'i Muda: Teknik Public Speaking dan Menyusun Naskah Kultum'],
+            [6, '2026-09-11', '13:30', '15:00', 'Kajian Sirah Nabawiyah: Keteladanan Sahabat Remaja di Masa Perjuangan Dakwah'],
+            [7, '2026-09-18', '13:30', '15:00', 'Hafalan dan Tadabbur Makna Hadits Pilihan Arba\'in An-Nawawiyah'],
+            [8, '2026-10-02', '13:30', '15:00', 'Manajemen Organisasi Dakwah Sekolah & Pembentukan Jiwa Kepemimpinan Islami'],
+            [9, '2026-10-09', '13:30', '15:00', 'Aksi Sosial ROHIS: Kebersihan Masjid Madrasah & Santunan Kasih Peduli Lingkungan'],
+            [10, '2026-10-16', '13:30', '15:00', 'Muhasabah Triwulan, Evaluasi Keaktifan Anggota, dan Rencana Kegiatan Mendatang'],
+        ];
+
+        $stmtCekJ = $db_siakad->prepare("SELECT id FROM ekstra_jurnal WHERE nama_ekstra = ? AND tanggal = ?");
+        $stmtInsJ = $db_siakad->prepare("INSERT INTO ekstra_jurnal 
+            (nama_ekstra, tahun_ajaran, semester, tanggal, materi, guru_id, pertemuan_ke, jam_mulai, jam_selesai) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmtInsAbs = $db_siakad->prepare("INSERT INTO ekstra_absen (jurnal_id, siswa_id, status, status_kehadiran, catatan) VALUES (?, ?, ?, ?, ?)");
+
+        foreach ($daftarPertemuan as $dp) {
+            list($ptm, $tgl, $jMulai, $jSelesai, $mat) = $dp;
+            $stmtCekJ->execute([$nama_ekstra, $tgl]);
+            $jid = $stmtCekJ->fetchColumn();
+            if (!$jid) {
+                $stmtInsJ->execute([$nama_ekstra, $active_year_name, $active_semester, $tgl, $mat, $guru_id, $ptm, $jMulai, $jSelesai]);
+                $jid = $db_siakad->lastInsertId();
+            } else {
+                $db_siakad->exec("DELETE FROM ekstra_absen WHERE jurnal_id = " . intval($jid));
+            }
+
+            foreach ($anggotaIds as $sid) {
+                $seed = ($sid * 17 + $ptm * 31) % 100;
+                $st = 'H'; $stText = 'Hadir'; $cat = '';
+                if ($seed >= 95) { $st = 'A'; $stText = 'Alpa'; $cat = 'Tanpa Keterangan'; }
+                elseif ($seed >= 90) { $st = 'I'; $stText = 'Izin'; $cat = 'Izin Keperluan Keluarga'; }
+                elseif ($seed >= 85) { $st = 'S'; $stText = 'Sakit'; $cat = 'Sakit Demam'; }
+
+                $stmtInsAbs->execute([$jid, $sid, $st, $stText, $cat]);
+            }
+        }
+
+        redirect("/admin/absen_v2/ekstra/rekap?ekstra=" . urlencode($nama_ekstra) . "&msg=seed_success");
+        exit;
+    }
 }
