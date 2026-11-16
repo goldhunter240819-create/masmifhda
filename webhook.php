@@ -16,26 +16,27 @@ if (function_exists('opcache_reset')) {
     @opcache_reset();
 }
 
-// Check live mengajar
+// Check live active mengajar
 require_once __DIR__ . '/app/Core/Database.php';
 try {
     $db = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
     $mRows = $db->query("
-        SELECT m.id, m.kelas_id, k.nama_kelas, m.mapel_id, mp.nama_mapel, m.guru_id, g.nama as guru_nama, m.tahun_ajaran_id, m.semester
+        SELECT m.id, m.kelas_id, k.nama_kelas, m.mapel_id, mp.nama_mapel, m.guru_id, g.nama as guru_nama
         FROM mengajar m
-        LEFT JOIN kelas k ON m.kelas_id = k.id
-        LEFT JOIN mapel mp ON m.mapel_id = mp.id
+        JOIN kelas k ON m.kelas_id = k.id
+        JOIN mapel mp ON m.mapel_id = mp.id
         LEFT JOIN aula_db.guru g ON m.guru_id = g.id
-        WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
-        ORDER BY k.nama_kelas ASC, mp.nama_mapel ASC
+        WHERE m.tahun_ajaran_id = 2 AND m.semester = 1 AND m.guru_id IS NOT NULL AND m.guru_id > 0
+        ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "\nLIVE MENGAJAR ASSIGNMENTS Count: " . count($mRows) . "\n";
+    $output .= "\nACTIVE MENGAJAR (TA 2, Sem 1) Count: " . count($mRows) . "\n";
     foreach ($mRows as $m) {
-        $output .= "Kelas: {$m['nama_kelas']} (ID {$m['kelas_id']}) | Mapel: {$m['nama_mapel']} (ID {$m['mapel_id']}) | Guru: {$m['guru_nama']} (ID {$m['guru_id']}) | TA: {$m['tahun_ajaran_id']} | Sem: {$m['semester']}\n";
+        $output .= "Mapel: {$m['nama_mapel']} | Kelas: {$m['nama_kelas']} | Guru: {$m['guru_nama']} (ID {$m['guru_id']})\n";
     }
 } catch (\Exception $e) {
     $output .= "\nError querying mengajar: " . $e->getMessage() . "\n";
 }
+
 
 
 // 4. Catat riwayat ke log
