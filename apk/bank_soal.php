@@ -208,7 +208,7 @@ foreach ($topikList as $tp) {
             </div>
         <?php else: ?>
             <?php foreach ($topikData as $idx => $tp): 
-                $isOpen = ($idx === 0 || $tp['status'] === 'Aktif');
+                $isOpen = false;
                 $myPkts = $tp['my_paket'] ?? [];
             ?>
                 <div class="card-topik-bs">

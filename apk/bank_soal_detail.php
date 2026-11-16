@@ -143,15 +143,31 @@ include 'header.php';
         font-weight: 700;
     }
     .modal-soal-hp {
-        position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65);
-        backdrop-filter: blur(4px); z-index: 9999; display: none;
-        align-items: flex-end; justify-content: center;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 100000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 16px;
+        box-sizing: border-box;
     }
     .modal-soal-hp.open { display: flex; }
     .modal-content-hp {
-        background: #ffffff; width: 100%; max-height: 90vh;
-        border-radius: 20px 20px 0 0; padding: 20px;
-        box-shadow: 0 -10px 30px rgba(0,0,0,0.15); overflow-y: auto;
+        background: #ffffff;
+        width: 100%;
+        max-width: 540px;
+        max-height: 85vh;
+        border-radius: 20px;
+        padding: 22px 20px 24px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        overflow-y: auto;
+        position: relative;
+        margin: auto;
+        box-sizing: border-box;
     }
 </style>
 
@@ -312,18 +328,21 @@ include 'header.php';
 <!-- Modal Form Tambah / Edit Soal dari HP -->
 <div id="modalFormSoal" class="modal-soal-hp" onclick="if(event.target===this) closeModalSoal()">
     <div class="modal-content-hp">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-            <h3 id="modalTitle" style="margin: 0; font-size: 1.05rem; font-weight: 900; color: #0f172a;">Tambah Butir Soal</h3>
-            <button type="button" onclick="closeModalSoal()" style="background: none; border: none; font-size: 1.3rem; color: #94a3b8; cursor: pointer;">&times;</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;">
+            <div>
+                <h3 id="modalTitle" style="margin: 0; font-size: 1.05rem; font-weight: 900; color: #0f172a;">Tambah Butir Soal</h3>
+                <span style="font-size: 0.72rem; color: #64748b;">Kelola teks soal, opsi pilihan, dan kunci jawaban</span>
+            </div>
+            <button type="button" onclick="closeModalSoal()" style="width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; border: none; font-size: 1.2rem; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;">&times;</button>
         </div>
 
         <form method="POST">
             <input type="hidden" name="action" value="save">
             <input type="hidden" name="soal_id" id="form_soal_id" value="0">
 
-            <div style="margin-bottom: 10px;">
-                <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: #334155;">Tipe / Bentuk Soal</label>
-                <select name="tipe_soal" id="form_tipe_soal" onchange="handleTipeChange(this.value)" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 5px; color: #334155;">Tipe / Bentuk Soal</label>
+                <select name="tipe_soal" id="form_tipe_soal" onchange="handleTipeChange(this.value)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 700; background: #fff;">
                     <option value="sec_pg">Pilihan Ganda (PG)</option>
                     <option value="sec_pgk">PG Kompleks (Multi-Jawaban)</option>
                     <option value="sec_essay">Essay / Uraian</option>
@@ -331,40 +350,40 @@ include 'header.php';
                 </select>
             </div>
 
-            <div style="margin-bottom: 10px;">
-                <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: #334155;">Pertanyaan Soal <span style="color:#ef4444;">*</span></label>
-                <textarea name="pertanyaan" id="form_pertanyaan" rows="4" required placeholder="Tuliskan teks pertanyaan soal..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; resize: vertical;"></textarea>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 5px; color: #334155;">Pertanyaan Soal <span style="color:#ef4444;">*</span></label>
+                <textarea name="pertanyaan" id="form_pertanyaan" rows="4" required placeholder="Tuliskan teks pertanyaan soal..." style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; resize: vertical; box-sizing: border-box;"></textarea>
             </div>
 
             <div id="section_opsi_pg">
                 <div style="margin-bottom: 6px;">
-                    <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Pilihan Opsi Jawaban:</label>
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">Pilihan Opsi Jawaban:</label>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
-                    <input type="text" name="opsi_a" id="form_opsi_a" placeholder="Opsi A" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
-                    <input type="text" name="opsi_b" id="form_opsi_b" placeholder="Opsi B" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
-                    <input type="text" name="opsi_c" id="form_opsi_c" placeholder="Opsi C" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
-                    <input type="text" name="opsi_d" id="form_opsi_d" placeholder="Opsi D" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
-                    <input type="text" name="opsi_e" id="form_opsi_e" placeholder="Opsi E" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
-                <div>
-                    <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: #334155;">Kunci Jawaban <span style="color:#ef4444;">*</span></label>
-                    <input type="text" name="kunci_jawaban" id="form_kunci" required placeholder="Contoh: A atau A,B,C" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 800; text-transform: uppercase;">
-                </div>
-                <div>
-                    <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: #334155;">Skor Bobot</label>
-                    <input type="number" step="0.5" name="skor_maksimal" id="form_skor" value="2.0" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
+                <div style="display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px;">
+                    <input type="text" name="opsi_a" id="form_opsi_a" placeholder="Opsi A" style="padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; box-sizing: border-box;">
+                    <input type="text" name="opsi_b" id="form_opsi_b" placeholder="Opsi B" style="padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; box-sizing: border-box;">
+                    <input type="text" name="opsi_c" id="form_opsi_c" placeholder="Opsi C" style="padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; box-sizing: border-box;">
+                    <input type="text" name="opsi_d" id="form_opsi_d" placeholder="Opsi D" style="padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; box-sizing: border-box;">
+                    <input type="text" name="opsi_e" id="form_opsi_e" placeholder="Opsi E" style="padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; box-sizing: border-box;">
                 </div>
             </div>
 
-            <div style="display: flex; gap: 8px;">
-                <button type="button" onclick="closeModalSoal()" style="flex: 1; padding: 11px 0; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
+                <div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 5px; color: #334155;">Kunci Jawaban <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="kunci_jawaban" id="form_kunci" required placeholder="Contoh: A atau A,B,C" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 5px; color: #334155;">Skor Bobot</label>
+                    <input type="number" step="0.5" name="skor_maksimal" id="form_skor" value="2.0" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 700; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; padding-top: 10px;">
+                <button type="button" onclick="closeModalSoal()" style="flex: 1; padding: 12px 0; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.88rem; cursor: pointer;">
                     Batal
                 </button>
-                <button type="submit" style="flex: 2; padding: 11px 0; border-radius: 10px; border: none; background: #0ea5e9; color: white; font-weight: 800; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
+                <button type="submit" style="flex: 2; padding: 12px 0; border-radius: 12px; border: none; background: #0284c7; color: white; font-weight: 800; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
                     <i class="fa-solid fa-check"></i> Simpan Butir Soal
                 </button>
             </div>

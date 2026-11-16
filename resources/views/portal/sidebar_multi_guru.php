@@ -6,12 +6,16 @@ $isBerkasActive = (strpos($uri, 'berkas-ujian') !== false || strpos($uri, 'templ
 
 $myTasks = [];
 $isBendahara = false;
+$myApps = [];
 if(isset($_SESSION['user_id'])) {
     try {
         $db_core_tugas = \App\Core\Database::connect('core');
         $active_year_sidebar = \App\Core\AcademicYear::current();
         $active_year_sidebar_name = $active_year_sidebar ? $active_year_sidebar['name'] : '2025/2026';
         $myTasks = $db_core_tugas->query("SELECT tugas FROM guru_tugas WHERE guru_id = (SELECT id FROM guru WHERE user_id = ".$_SESSION['user_id'].") AND tahun_ajaran = '$active_year_sidebar_name'")->fetchAll(\PDO::FETCH_COLUMN);
+        
+        $resApps = $db_core_tugas->query("SELECT app_code FROM app_admins WHERE user_id = " . (int)$_SESSION['user_id'])->fetchAll(\PDO::FETCH_COLUMN);
+        if ($resApps) $myApps = $resApps;
         
         $guru_profile = $db_core_tugas->query("SELECT id, status_kepegawaian FROM guru WHERE user_id = ".$_SESSION['user_id'])->fetch();
         $status_kepegawaian = $guru_profile ? $guru_profile['status_kepegawaian'] : 'Honorer';
@@ -183,7 +187,7 @@ if(isset($_SESSION['user_id'])) {
                     <a href="<?php echo base_url('guru/evaluasi'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'evaluasi') !== false) ? 'active' : ''; ?>">Evaluasi</a>
                     <a href="<?php echo base_url('guru/hasil-ujian'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'hasil-ujian') !== false) ? 'active' : ''; ?>">Hasil Ujian</a>
                     <a href="<?php echo base_url('guru/analisis-soal'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'analisis-soal') !== false) ? 'active' : ''; ?>">Analisis Soal</a>
-                    <?php if(in_array('cbt', $myApps)): ?>
+                    <?php if(!empty($myApps) && in_array('cbt', $myApps)): ?>
                         <a href="<?php echo base_url('exam'); ?>" class="z-nav-subnav-item" style="color:#0ea5e9; font-weight:bold;"><i data-lucide="settings" style="width:12px;height:12px;vertical-align:-2px;"></i> Panel Admin CBT</a>
                     <?php endif; ?>
                 </div>
