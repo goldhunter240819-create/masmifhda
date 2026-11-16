@@ -2420,12 +2420,13 @@ $router->add('POST', '/cbt/jadwal/delete', [\App\Controllers\CbtController::clas
 $router->add('POST', '/cbt/jadwal/grid/save', [\App\Controllers\CbtController::class, 'saveGridJadwal']);
 $router->add('POST', '/cbt/jadwal/grid/delete', [\App\Controllers\CbtController::class, 'deleteGridJadwal']);
 $router->add('POST', '/cbt/jadwal/kelas/save-bulk', [\App\Controllers\CbtController::class, 'saveBulkKelasJadwal']);
+$router->add('POST', '/cbt/jadwal/global/save', [\App\Controllers\CbtController::class, 'saveGlobalJadwal']);
 $router->add('POST', '/cbt/jadwal/slot/save', [\App\Controllers\CbtController::class, 'saveJamSlot']);
 $router->add('POST', '/cbt/jadwal/slot/delete', [\App\Controllers\CbtController::class, 'deleteJamSlot']);
 $router->add('POST', '/cbt/jadwal/slot/reset', [\App\Controllers\CbtController::class, 'resetJamSlot']);
 $router->add('POST', '/cbt/jadwal/topik/save', [\App\Controllers\CbtController::class, 'saveTopikJadwal']);
-$router->add('GET', '/cbt/ujian', [\App\Controllers\CbtController::class, 'ujian']);
-$router->add('GET', '/cbt/ujian/tambah', [\App\Controllers\CbtController::class, 'ujian']);
+$router->add('GET', '/cbt/ujian', function() { redirect('/cbt/jadwal'); exit; });
+$router->add('GET', '/cbt/ujian/tambah', function() { redirect('/cbt/jadwal'); exit; });
 $router->add('POST', '/cbt/ujian/save', [\App\Controllers\CbtController::class, 'saveUjian']);
 $router->add('POST', '/cbt/ujian/sync-peserta', [\App\Controllers\CbtController::class, 'syncPesertaAction']);
 $router->add('GET', '/cbt/kerjakan', [\App\Controllers\CbtController::class, 'kerjakan']);

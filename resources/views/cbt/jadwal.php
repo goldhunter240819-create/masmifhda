@@ -199,6 +199,10 @@ $currentView = $_GET['view'] ?? 'grid';
                     <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                         <i data-lucide="calendar" style="width: 20px; height: 20px; color: #22c55e;"></i> Periode tanggal pelaksanaan ujian berhasil diperbarui!
                     </div>
+                <?php elseif($_GET['msg'] === 'global_saved'): ?>
+                    <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                        <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Jadwal ujian serentak berhasil diterapkan ke seluruh kelas terpilih!
+                    </div>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -212,6 +216,10 @@ $currentView = $_GET['view'] ?? 'grid';
                         <p>Matriks jadwal pelaksanaan ujian CBT terpadu per kelas, sesi jam, dan hari pelaksanaan disesuaikan dengan topik ujian aktif.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <!-- Tombol Atur Jadwal Serentak (Global Semua Kelas) -->
+                        <button type="button" onclick="openAturGlobalModal()" class="e-btn" style="background: linear-gradient(135deg, #4f46e5, #6366f1); color: #ffffff; font-weight: 800; border: none; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);">
+                            <i data-lucide="globe"></i> Atur Jadwal Serentak (Semua Kelas)
+                        </button>
                         <!-- Tombol Kelola Topik -->
                         <a href="<?php echo base_url('cbt/topik'); ?>" class="e-btn" style="background:#ffffff; color:#0f172a; font-weight:700; border:1px solid #cbd5e1; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
                             <i data-lucide="layers" style="color: #0ea5e9;"></i> Menu Topik Ujian
@@ -667,12 +675,12 @@ $currentView = $_GET['view'] ?? 'grid';
         <form method="POST" action="<?php echo base_url('cbt/jadwal/grid/save'); ?>">
             <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
             <div style="margin-bottom: 1rem;">
-                <label class="label-sm">Pilih Paket Ujian <span style="color:#ef4444;">*</span></label>
-                <select name="ujian_id" id="grid_ujian_id" class="input-sm" required>
-                    <option value="">-- Pilih Paket Ujian --</option>
-                    <?php foreach($ujianList as $uj): ?>
-                        <option value="<?php echo $uj['id']; ?>">
-                            <?php echo htmlspecialchars($uj['nama_ujian'] . ' (' . $uj['mapel_nama'] . ')'); ?>
+                <label class="label-sm">Mata Pelajaran <span style="color:#ef4444;">*</span></label>
+                <select name="mapel_nama" id="grid_mapel_nama" class="input-sm" required>
+                    <option value="">-- Pilih Mata Pelajaran --</option>
+                    <?php foreach($mapelList as $mp): ?>
+                        <option value="<?php echo htmlspecialchars($mp['nama_mapel']); ?>">
+                            <?php echo htmlspecialchars($mp['nama_mapel']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -773,7 +781,7 @@ $currentView = $_GET['view'] ?? 'grid';
             <input type="hidden" name="kelas_id" id="atur_bulk_kelas_id" value="">
 
             <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem;">
-                Tentukan paket ujian dan guru pengawas untuk masing-masing slot waktu kelas ini. Pilih <em>-- Kosongkan Slot Ini --</em> jika pada jam tersebut tidak ada ujian.
+                Tentukan mata pelajaran dan guru pengawas untuk masing-masing slot waktu kelas ini. Pengawas diambil langsung dari data guru. Pilih <em>-- Kosongkan Slot Ini --</em> jika pada jam tersebut tidak ada ujian.
             </p>
 
             <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;">
@@ -782,8 +790,8 @@ $currentView = $_GET['view'] ?? 'grid';
                         <tr>
                             <th style="padding: 10px 12px; text-align: left; width: 90px;">Hari</th>
                             <th style="padding: 10px 12px; text-align: left; width: 110px;">Slot Waktu</th>
-                            <th style="padding: 10px 12px; text-align: left;">Paket Ujian</th>
-                            <th style="padding: 10px 12px; text-align: left; width: 200px;">Guru Pengawas</th>
+                            <th style="padding: 10px 12px; text-align: left;">Mata Pelajaran</th>
+                            <th style="padding: 10px 12px; text-align: left; width: 220px;">Guru Pengawas</th>
                         </tr>
                     </thead>
                     <tbody id="aturKelasTbody">
@@ -979,14 +987,166 @@ $currentView = $_GET['view'] ?? 'grid';
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL 7: ATUR JADWAL SERENTAK GLOBAL SELURUH KELAS              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="modalAturGlobal" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('open')">
+    <div style="background: #ffffff; width: 94%; max-width: 900px; border-radius: 20px; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18); border: 1px solid #e2e8f0; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="globe" style="width: 24px; height: 24px; color: #4f46e5;"></i>
+                    Atur Jadwal Ujian Serentak (Global Semua Kelas)
+                </h3>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">
+                    Atur mata pelajaran per sesi hari sekali saja untuk diterapkan serentak ke semua kelas pada Topik: <strong><?php echo htmlspecialchars($selectedTopik['nama_topik'] ?? 'SAS'); ?></strong>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('modalAturGlobal').classList.remove('open')" style="background: none; border: none; cursor: pointer; color: #94a3b8;">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="<?php echo base_url('cbt/jadwal/global/save'); ?>">
+            <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
+
+            <!-- Pilihan Target Kelas -->
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 0.8rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">
+                        📌 Terapkan Jadwal Ke Kelas Sasaran:
+                    </span>
+                    <label style="font-size: 0.78rem; font-weight: 700; color: #4f46e5; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="checkAllGlobalClasses" checked onchange="toggleAllGlobalClasses(this)">
+                        Pilih Semua Kelas
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <?php foreach($kelasList as $k): ?>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1.5px solid #cbd5e1; padding: 6px 14px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; color: #1e293b; cursor: pointer;">
+                        <input type="checkbox" name="target_kelas[]" value="<?php echo htmlspecialchars($k['nama_kelas']); ?>" class="global-class-checkbox" checked>
+                        <?php echo htmlspecialchars($k['nama_kelas']); ?>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Tabel Penyusunan Mapel Serentak -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-bottom: 1.5rem;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                    <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                        <tr>
+                            <th style="padding: 10px 14px; text-align: left; width: 100px;">Hari</th>
+                            <th style="padding: 10px 14px; text-align: left; width: 130px;">Slot Waktu</th>
+                            <th style="padding: 10px 14px; text-align: left;">Mata Pelajaran (Diuji Serentak)</th>
+                            <th style="padding: 10px 14px; text-align: left; width: 220px;">Guru Pengawas (Opsional)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $globalRowIdx = 0;
+                        foreach($hari_list as $h): 
+                            foreach($slotList as $slot):
+                                if (!empty($slot['is_istirahat'])) continue;
+                                $jamStr = substr($slot['jam_mulai'], 0, 5) . ' - ' . substr($slot['jam_selesai'], 0, 5);
+
+                                // Cari apakah ada mapel yang sudah tersimpan di slot ini
+                                $existingMapel = '';
+                                $existingPengawas = '';
+                                if (!empty($jadwal_master[$h][$jamStr])) {
+                                    foreach ($jadwal_master[$h][$jamStr] as $cData) {
+                                        if (!empty($cData['mapel_nama'])) {
+                                            $existingMapel = $cData['mapel_nama'];
+                                            $existingPengawas = $cData['pengawas'] ?? '';
+                                            break;
+                                        }
+                                    }
+                                }
+                        ?>
+                        <tr style="border-bottom: 1px solid #f1f5f9; background: <?php echo ($globalRowIdx % 2 === 0) ? '#ffffff' : '#fafafa'; ?>;">
+                            <td style="padding: 9px 14px; font-weight: 800; color: #0f172a;">
+                                <input type="hidden" name="schedules[<?php echo $globalRowIdx; ?>][hari]" value="<?php echo $h; ?>">
+                                <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-size: 0.76rem;">
+                                    <?php echo $h; ?>
+                                </span>
+                            </td>
+                            <td style="padding: 9px 14px; font-family: monospace; font-weight: 700; color: #0ea5e9;">
+                                <input type="hidden" name="schedules[<?php echo $globalRowIdx; ?>][jam_slot]" value="<?php echo $jamStr; ?>">
+                                <?php echo $jamStr; ?>
+                                <div style="font-size: 0.65rem; color: #94a3b8; font-family: sans-serif;"><?php echo htmlspecialchars($slot['label_sesi']); ?></div>
+                            </td>
+                            <td style="padding: 9px 14px;">
+                                <select name="schedules[<?php echo $globalRowIdx; ?>][mapel_nama]" class="input-sm" style="width: 100%; font-size: 0.82rem; font-weight: 700;">
+                                    <option value="">-- Tidak Ada Ujian / Kosongkan --</option>
+                                    <?php foreach($mapelList as $mp): 
+                                        $selMapel = (strcasecmp($existingMapel, $mp['nama_mapel']) === 0) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?php echo htmlspecialchars($mp['nama_mapel']); ?>" <?php echo $selMapel; ?>>
+                                            <?php echo htmlspecialchars($mp['nama_mapel']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                            <td style="padding: 9px 14px;">
+                                <select name="schedules[<?php echo $globalRowIdx; ?>][pengawas]" class="input-sm" style="width: 100%; font-size: 0.8rem;">
+                                    <option value="">-- Pengawas Per Kelas --</option>
+                                    <?php foreach($guruList as $g): 
+                                        $selG = (strcasecmp($existingPengawas, $g['nama']) === 0) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?php echo htmlspecialchars($g['nama']); ?>" <?php echo $selG; ?>>
+                                            <?php echo htmlspecialchars($g['nama']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <?php 
+                                $globalRowIdx++;
+                            endforeach;
+                        endforeach; 
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="font-size: 0.75rem; color: #64748b;">
+                    💡 Tips: Seluruh kelas yang dicentang di atas akan otomatis menguji mata pelajaran yang sama pada jam tersebut.
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="document.getElementById('modalAturGlobal').classList.remove('open')" class="e-btn e-btn-dark">
+                        Batal
+                    </button>
+                    <button type="submit" class="e-btn e-btn-primary" style="background: linear-gradient(135deg, #4f46e5, #6366f1); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);">
+                        <i data-lucide="check-check" style="width: 16px; height: 16px;"></i> Terapkan Jadwal Serentak
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     // Data global untuk JS
     const JADWAL_MASTER = <?php echo json_encode($jadwal_master); ?>;
+    const MAPEL_LIST = <?php echo json_encode($mapelList ?? []); ?>;
+    const KELAS_LIST = <?php echo json_encode($kelasList ?? []); ?>;
     const UJIAN_LIST = <?php echo json_encode($ujianList); ?>;
     const SLOT_LIST = <?php echo json_encode($slotList); ?>;
     const HARI_LIST = <?php echo json_encode($hari_list); ?>;
     const GURU_LIST = <?php echo json_encode($guruList); ?>;
     const HARI_TANGGAL_MAP = <?php echo json_encode($hari_tanggal_map ?? []); ?>;
+
+    // ─── Modal Global: Atur Jadwal Serentak ───
+    function openAturGlobalModal() {
+        document.getElementById('modalAturGlobal').classList.add('open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function toggleAllGlobalClasses(master) {
+        const checkboxes = document.querySelectorAll('.global-class-checkbox');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+    }
 
     // ─── Modal Topik: Atur Tanggal Topik ───
     function openModalAturTanggalTopik(data) {
@@ -1044,6 +1204,9 @@ $currentView = $_GET['view'] ?? 'grid';
         document.getElementById('grid_jam_slot').value = jamSlot;
         document.getElementById('grid_kelas_nama').value = kelasNama;
         document.getElementById('grid_kelas_id').value = kelasId;
+        if (document.getElementById('grid_mapel_nama')) {
+            document.getElementById('grid_mapel_nama').value = '';
+        }
         document.getElementById('grid_pengawas').value = '';
         if (HARI_TANGGAL_MAP && HARI_TANGGAL_MAP[hari] && document.getElementById('grid_tanggal')) {
             document.getElementById('grid_tanggal').value = HARI_TANGGAL_MAP[hari].date || '';
@@ -1077,16 +1240,17 @@ $currentView = $_GET['view'] ?? 'grid';
                 const currentExam = (JADWAL_MASTER[hari] && JADWAL_MASTER[hari][jamStr] && JADWAL_MASTER[hari][jamStr][kelasNama]) 
                                     ? JADWAL_MASTER[hari][jamStr][kelasNama] : null;
 
-                const selectedUjianId = currentExam ? currentExam.ujian_id : 0;
+                const currentMapel = currentExam ? (currentExam.mapel_nama || '') : '';
                 const currentPengawas = currentExam ? (currentExam.pengawas || '') : '';
 
-                let optionsUjian = '<option value="0">-- Kosongkan Slot Ini --</option>';
-                UJIAN_LIST.forEach(uj => {
-                    const sel = (parseInt(uj.id) === parseInt(selectedUjianId)) ? 'selected' : '';
-                    optionsUjian += `<option value="${uj.id}" ${sel}>${uj.nama_ujian} (${uj.mapel_nama})</option>`;
+                // Dropdown Mata Pelajaran
+                let optionsMapel = '<option value="">-- Kosongkan Slot Ini --</option>';
+                MAPEL_LIST.forEach(m => {
+                    const sel = (currentMapel && currentMapel.trim().toLowerCase() === m.nama_mapel.trim().toLowerCase()) ? 'selected' : '';
+                    optionsMapel += `<option value="${m.nama_mapel}" ${sel}>${m.nama_mapel}</option>`;
                 });
 
-                // Dropdown Guru Pengawas
+                // Dropdown Guru Pengawas (dari data guru real)
                 let optionsPengawas = '<option value="">-- Pilih Guru Pengawas --</option>';
                 let pengawasMatched = false;
                 GURU_LIST.forEach(g => {
@@ -1110,8 +1274,8 @@ $currentView = $_GET['view'] ?? 'grid';
                         <input type="hidden" name="schedules[${rowIdx}][jam_slot]" value="${jamStr}">
                     </td>
                     <td style="padding:8px 12px;">
-                        <select name="schedules[${rowIdx}][ujian_id]" class="input-sm" style="width:100%; font-size:0.8rem;">
-                            ${optionsUjian}
+                        <select name="schedules[${rowIdx}][mapel_nama]" class="input-sm" style="width:100%; font-size:0.8rem; font-weight:700;">
+                            ${optionsMapel}
                         </select>
                     </td>
                     <td style="padding:8px 12px;">
@@ -1132,11 +1296,11 @@ $currentView = $_GET['view'] ?? 'grid';
     // ─── Modal 4: Detail Slot ───
     function openDetailModal(data) {
         document.getElementById('detailMapel').innerText = data.mapel_nama || '-';
-        document.getElementById('detailNamaUjian').innerText = data.nama_ujian || '-';
-        document.getElementById('detailKode').innerText = 'Kode: ' + (data.kode_ujian || '-');
+        document.getElementById('detailNamaUjian').innerText = data.nama_ujian || data.mapel_nama || '-';
+        document.getElementById('detailKode').innerText = (data.kode_ujian && data.kode_ujian !== '-') ? ('Kode: ' + data.kode_ujian) : ('Mata Pelajaran: ' + (data.mapel_nama || '-'));
         document.getElementById('detailKelas').innerText = data.kelas_nama || '-';
         document.getElementById('detailWaktu').innerText = (data.hari || '') + ', ' + (data.jam_slot || '');
-        document.getElementById('detailPengawas').innerText = data.pengawas || '-';
+        document.getElementById('detailPengawas').innerText = data.pengawas || 'Pengawas Ruang';
         document.getElementById('detailRuang').innerText = data.ruang || '-';
         document.getElementById('detailDeleteId').value = data.id || '';
 

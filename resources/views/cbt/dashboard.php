@@ -195,8 +195,8 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
                         <a href="<?php echo base_url('cbt/jadwal'); ?>" class="hero-btn primary">
                             <i data-lucide="calendar" style="width: 16px; height: 16px;"></i> Jadwal Ujian
                         </a>
-                        <a href="<?php echo base_url('cbt/ujian/tambah'); ?>" class="hero-btn secondary">
-                            <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Buat Ujian Baru
+                        <a href="<?php echo base_url('cbt/topik'); ?>" class="hero-btn secondary">
+                            <i data-lucide="layers" style="width: 16px; height: 16px;"></i> Topik Ujian
                         </a>
                         <a href="<?php echo base_url('cbt/token'); ?>" class="hero-btn secondary">
                             <i data-lucide="key" style="width: 16px; height: 16px;"></i> Token Aktif: <?php echo htmlspecialchars($tokenAktif['token'] ?? 'OFF'); ?>
@@ -426,13 +426,13 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
                     </div>
                 </a>
 
-                <a href="<?php echo base_url('cbt/ujian/tambah'); ?>" class="card" style="padding: 1.25rem; text-decoration: none; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: 0.2s;">
+                <a href="<?php echo base_url('cbt/topik'); ?>" class="card" style="padding: 1.25rem; text-decoration: none; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: 0.2s;">
                     <div style="width: 44px; height: 44px; border-radius: 12px; background: #fdf4ff; color: #c026d3; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="plus-circle"></i>
+                        <i data-lucide="layers"></i>
                     </div>
                     <div>
-                        <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Tambah Ujian</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Buat paket & soal</div>
+                        <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Topik Ujian</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">SAS, STS, UM, Try Out</div>
                     </div>
                 </a>
 

@@ -127,7 +127,19 @@ class CbtController {
             } catch (\Exception $e) {}
 
             try {
+                $db->exec("ALTER TABLE cbt_jadwal_grid MODIFY COLUMN ujian_id INT DEFAULT NULL");
+            } catch (\Exception $e) {}
+
+            try {
+                $db->exec("ALTER TABLE cbt_jadwal_grid ADD COLUMN mapel_nama VARCHAR(150) DEFAULT NULL AFTER ujian_id");
+            } catch (\Exception $e) {}
+
+            try {
                 $db->exec("ALTER TABLE cbt_ujian ADD COLUMN topik_id INT DEFAULT NULL AFTER id");
+            } catch (\Exception $e) {}
+
+            try {
+                $db->exec("UPDATE bs_topik SET status = 'Arsip' WHERE jenis IN ('PAS', 'PTS') AND (tgl_mulai IS NULL OR tgl_mulai = '')");
             } catch (\Exception $e) {}
 
             // 7. Tabel Topik Ujian (bs_topik)
@@ -200,13 +212,21 @@ class CbtController {
     }
 
     /**
-     * Dapatkan daftar Mata Pelajaran Real dari tabel mata_pelajaran di database siakad
+     * Dapatkan daftar Mata Pelajaran Real dari tabel mata_pelajaran di database siakad / core
      */
-    public static function getRealMapelList($db_siakad) {
-        try {
-            $list = $db_siakad->query("SELECT id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
-            if (!empty($list)) return $list;
-        } catch (\Exception $e) {}
+    public static function getRealMapelList($db_siakad = null, $db_core = null) {
+        if ($db_siakad) {
+            try {
+                $list = $db_siakad->query("SELECT id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($list)) return $list;
+            } catch (\Exception $e) {}
+        }
+        if ($db_core) {
+            try {
+                $list = $db_core->query("SELECT id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($list)) return $list;
+            } catch (\Exception $e) {}
+        }
 
         // Fallback daftar mapel standar madrasah jika tabel kosong
         return [
@@ -224,7 +244,12 @@ class CbtController {
             ['id' => 12, 'nama_mapel' => 'Ekonomi'],
             ['id' => 13, 'nama_mapel' => 'Sosiologi'],
             ['id' => 14, 'nama_mapel' => 'Geografi'],
-            ['id' => 15, 'nama_mapel' => 'Informatika']
+            ['id' => 15, 'nama_mapel' => 'Informatika'],
+            ['id' => 16, 'nama_mapel' => 'Pendidikan Pancasila / PKn'],
+            ['id' => 17, 'nama_mapel' => 'PJOK'],
+            ['id' => 18, 'nama_mapel' => 'Seni Budaya'],
+            ['id' => 19, 'nama_mapel' => 'Prakarya dan Kewirausahaan'],
+            ['id' => 20, 'nama_mapel' => 'Aswaja / Ke-NU-an / MA']
         ];
     }
 
@@ -377,33 +402,54 @@ class CbtController {
         self::ensureTables($db);
 
         // 1. Ambil daftar topik dari Bank Soal (bs_topik)
-        $topikList = [];
+        $allTopikList = [];
         if ($db_siakad) {
             try {
-                $topikList = $db_siakad->query("SELECT * FROM bs_topik ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+                $allTopikList = $db_siakad->query("SELECT * FROM bs_topik ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
             } catch (\Exception $e) {}
         }
-        if (empty($topikList)) {
+        if (empty($allTopikList)) {
             try {
-                $topikList = $db->query("SELECT * FROM bs_topik ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+                $allTopikList = $db->query("SELECT * FROM bs_topik ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
             } catch (\Exception $e) {}
         }
 
-        // Tentukan topik aktif
-        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
-        if ($selectedTopikId === 0 && !empty($topikList)) {
-            $selectedTopikId = (int)$topikList[0]['id'];
-        }
+        // Sembunyikan topik yang sudah 'Selesai' atau 'Arsip' dari pilihan dropdown jadwal
+        $topikList = array_values(array_filter($allTopikList, function($tp) {
+            $st = strtolower(trim($tp['status'] ?? ''));
+            return $st !== 'selesai' && $st !== 'arsip';
+        }));
 
+        // Tentukan topik aktif: utamakan topik yang berstatus 'Aktif'
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
         $selectedTopik = null;
-        foreach ($topikList as $tp) {
-            if ((int)$tp['id'] === $selectedTopikId) {
-                $selectedTopik = $tp;
-                break;
+
+        if ($selectedTopikId > 0) {
+            foreach ($allTopikList as $tp) {
+                if ((int)$tp['id'] === $selectedTopikId) {
+                    $selectedTopik = $tp;
+                    break;
+                }
             }
         }
+
+        // Jika topik belum dipilih atau topik yang diminta sudah selesai, pilih yang berstatus 'Aktif'
+        if (!$selectedTopik || strtolower(trim($selectedTopik['status'] ?? '')) === 'selesai') {
+            foreach ($topikList as $tp) {
+                if (strtolower(trim($tp['status'] ?? '')) === 'aktif') {
+                    $selectedTopik = $tp;
+                    $selectedTopikId = (int)$tp['id'];
+                    break;
+                }
+            }
+        }
+
+        // Jika tetap belum ada topik aktif, gunakan item pertama dari topikList
         if (!$selectedTopik && !empty($topikList)) {
             $selectedTopik = $topikList[0];
+            $selectedTopikId = (int)$selectedTopik['id'];
+        } elseif (!$selectedTopik && !empty($allTopikList)) {
+            $selectedTopik = $allTopikList[0];
             $selectedTopikId = (int)$selectedTopik['id'];
         }
 
@@ -435,6 +481,9 @@ class CbtController {
 
         // Ambil daftar kelas real
         $kelasList = self::getRealKelasList($db, $db_siakad);
+
+        // Ambil daftar mapel real madrasah
+        $mapelList = self::getRealMapelList($db_siakad, $db);
 
         // Ambil daftar custom jam slot
         $slotList = $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC, jam_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -479,13 +528,18 @@ class CbtController {
             ];
         }
 
-        // Ambil grid jadwal tersimpan untuk topik aktif
+        // Ambil grid jadwal tersimpan untuk topik aktif (mendukung mapel langsung tanpa ujian_id)
         $gridRows = [];
         if ($selectedTopikId > 0) {
             $stmtG = $db->prepare("
-                SELECT g.*, u.nama_ujian, u.kode_ujian, u.mapel_nama, u.durasi_menit, u.status as ujian_status 
+                SELECT g.*, 
+                       COALESCE(NULLIF(g.mapel_nama, ''), u.mapel_nama, 'Mata Pelajaran') AS mapel_nama,
+                       COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
+                       COALESCE(u.kode_ujian, '-') AS kode_ujian,
+                       COALESCE(u.durasi_menit, 90) AS durasi_menit,
+                       COALESCE(u.status, 'Aktif') as ujian_status 
                 FROM cbt_jadwal_grid g
-                JOIN cbt_ujian u ON g.ujian_id = u.id
+                LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
                 WHERE g.topik_id = ?
                 ORDER BY g.id ASC
             ");
@@ -495,9 +549,14 @@ class CbtController {
             // Fallback legacy rows jika topik_id belum diset
             if (empty($gridRows) && !empty($topikList) && (int)$topikList[0]['id'] === $selectedTopikId) {
                 $stmtLegacy = $db->query("
-                    SELECT g.*, u.nama_ujian, u.kode_ujian, u.mapel_nama, u.durasi_menit, u.status as ujian_status 
+                    SELECT g.*, 
+                           COALESCE(NULLIF(g.mapel_nama, ''), u.mapel_nama, 'Mata Pelajaran') AS mapel_nama,
+                           COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
+                           COALESCE(u.kode_ujian, '-') AS kode_ujian,
+                           COALESCE(u.durasi_menit, 90) AS durasi_menit,
+                           COALESCE(u.status, 'Aktif') as ujian_status 
                     FROM cbt_jadwal_grid g
-                    JOIN cbt_ujian u ON g.ujian_id = u.id
+                    LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
                     WHERE g.topik_id IS NULL OR g.topik_id = 0
                     ORDER BY g.id ASC
                 ");
@@ -507,9 +566,14 @@ class CbtController {
             }
         } else {
             $gridRows = $db->query("
-                SELECT g.*, u.nama_ujian, u.kode_ujian, u.mapel_nama, u.durasi_menit, u.status as ujian_status 
+                SELECT g.*, 
+                       COALESCE(NULLIF(g.mapel_nama, ''), u.mapel_nama, 'Mata Pelajaran') AS mapel_nama,
+                       COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
+                       COALESCE(u.kode_ujian, '-') AS kode_ujian,
+                       COALESCE(u.durasi_menit, 90) AS durasi_menit,
+                       COALESCE(u.status, 'Aktif') as ujian_status 
                 FROM cbt_jadwal_grid g
-                JOIN cbt_ujian u ON g.ujian_id = u.id
+                LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
                 ORDER BY g.id ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
         }
@@ -608,7 +672,8 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $topik_id = !empty($_POST['topik_id']) ? (int)$_POST['topik_id'] : null;
-            $ujian_id = (int)($_POST['ujian_id'] ?? 0);
+            $mapel_nama = trim($_POST['mapel_nama'] ?? '');
+            $ujian_id = !empty($_POST['ujian_id']) ? (int)$_POST['ujian_id'] : null;
             $hari = trim($_POST['hari'] ?? 'Senin');
             $jam_slot = trim($_POST['jam_slot'] ?? '');
             $kelas_id = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
@@ -617,7 +682,14 @@ class CbtController {
             $ruang = trim($_POST['ruang'] ?? '');
             $tanggal = !empty($_POST['tanggal']) ? $_POST['tanggal'] : null;
 
-            if ($ujian_id > 0 && !empty($jam_slot) && !empty($kelas_nama)) {
+            if (empty($mapel_nama) && $ujian_id) {
+                try {
+                    $uRow = $db->query("SELECT mapel_nama FROM cbt_ujian WHERE id = " . (int)$ujian_id)->fetch(PDO::FETCH_ASSOC);
+                    $mapel_nama = $uRow['mapel_nama'] ?? '';
+                } catch (\Exception $e) {}
+            }
+
+            if ((!empty($mapel_nama) || !empty($ujian_id)) && !empty($jam_slot) && !empty($kelas_nama)) {
                 $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
                 $params = [$hari, $jam_slot, $kelas_nama];
                 if ($topik_id) {
@@ -629,14 +701,16 @@ class CbtController {
                 $existingId = $stmtCheck->fetchColumn();
 
                 if ($existingId) {
-                    $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ? WHERE id = ?");
-                    $stmtUp->execute([$topik_id, $ujian_id, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
+                    $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, mapel_nama = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ? WHERE id = ?");
+                    $stmtUp->execute([$topik_id, $ujian_id, $mapel_nama, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
                 } else {
-                    $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmtIns->execute([$topik_id, $ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
+                    $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmtIns->execute([$topik_id, $ujian_id, $mapel_nama, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
                 }
 
-                $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
+                if ($ujian_id) {
+                    $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
+                }
             }
             redirect('/cbt/jadwal?topik_id=' . ($topik_id ?: '') . '&msg=saved');
             exit;
@@ -739,6 +813,7 @@ class CbtController {
 
     /**
      * Atur Jadwal Ujian Bulk untuk Satu Kelas (Tombol [ATUR])
+     * Mengatur Mata Pelajaran & Guru Pengawas per slot untuk kelas tertentu
      */
     public static function saveBulkKelasJadwal() {
         $ctx = self::getAuthContext();
@@ -755,12 +830,21 @@ class CbtController {
                 foreach ($schedules as $sc) {
                     $hari = trim($sc['hari'] ?? '');
                     $jam_slot = trim($sc['jam_slot'] ?? '');
-                    $ujian_id = (int)($sc['ujian_id'] ?? 0);
+                    $mapel_nama = trim($sc['mapel_nama'] ?? '');
+                    $ujian_id = !empty($sc['ujian_id']) ? (int)$sc['ujian_id'] : null;
                     $pengawas = trim($sc['pengawas'] ?? '');
                     $ruang = trim($sc['ruang'] ?? '');
+                    $tanggal = !empty($sc['tanggal']) ? $sc['tanggal'] : null;
 
                     if (!empty($hari) && !empty($jam_slot)) {
-                        if ($ujian_id > 0) {
+                        if (!empty($mapel_nama) || !empty($ujian_id)) {
+                            if (empty($mapel_nama) && $ujian_id) {
+                                try {
+                                    $uRow = $db->query("SELECT mapel_nama FROM cbt_ujian WHERE id = " . (int)$ujian_id)->fetch(PDO::FETCH_ASSOC);
+                                    $mapel_nama = $uRow['mapel_nama'] ?? '';
+                                } catch (\Exception $e) {}
+                            }
+
                             $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
                             $params = [$hari, $jam_slot, $kelas_nama];
                             if ($topik_id) {
@@ -772,13 +856,16 @@ class CbtController {
                             $existingId = $stmtCheck->fetchColumn();
 
                             if ($existingId) {
-                                $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, kelas_id = ?, pengawas = ?, ruang = ? WHERE id = ?");
-                                $stmtUp->execute([$topik_id, $ujian_id, $kelas_id, $pengawas, $ruang, $existingId]);
+                                $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, mapel_nama = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = COALESCE(?, tanggal) WHERE id = ?");
+                                $stmtUp->execute([$topik_id, $ujian_id, $mapel_nama, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
                             } else {
-                                $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                                $stmtIns->execute([$topik_id, $ujian_id, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang]);
+                                $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                                $stmtIns->execute([$topik_id, $ujian_id, $mapel_nama, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
                             }
-                            $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
+
+                            if ($ujian_id) {
+                                $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
+                            }
                         } else {
                             $delSql = "DELETE FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
                             $delParams = [$hari, $jam_slot, $kelas_nama];
@@ -793,6 +880,98 @@ class CbtController {
                 }
             }
             redirect('/cbt/jadwal?topik_id=' . ($topik_id ?: '') . '&msg=bulk_saved');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Atur Jadwal Serentak (Global Semua Kelas)
+     * Mengatur mata pelajaran pada sesi hari tertentu untuk seluruh kelas secara sekaligus
+     */
+    public static function saveGlobalJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $topik_id = !empty($_POST['topik_id']) ? (int)$_POST['topik_id'] : null;
+            $target_kelas = $_POST['target_kelas'] ?? []; // array of nama_kelas
+            $schedules = $_POST['schedules'] ?? []; // array of [hari, jam_slot, mapel_nama, pengawas]
+
+            $allKelas = self::getRealKelasList($db, $db_siakad);
+            $kelasMap = [];
+            foreach ($allKelas as $k) {
+                $kelasMap[$k['nama_kelas']] = $k['id'];
+            }
+
+            if (!empty($target_kelas) && is_array($target_kelas) && !empty($schedules) && is_array($schedules)) {
+                // Ambil pemetaan tanggal dari topik_id jika ada
+                $hariTanggal = [];
+                if ($topik_id) {
+                    $tp = $db->query("SELECT tgl_mulai FROM bs_topik WHERE id = " . (int)$topik_id)->fetch(PDO::FETCH_ASSOC);
+                    if (!empty($tp['tgl_mulai'])) {
+                        $sDate = new \DateTime($tp['tgl_mulai']);
+                        $sIdx = (int)$sDate->format('N');
+                        $mon = clone $sDate;
+                        if ($sIdx > 1) $mon->modify('-' . ($sIdx - 1) . ' days');
+                        $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                        foreach ($days as $idx => $d) {
+                            $dD = clone $mon;
+                            $dD->modify("+{$idx} days");
+                            $hariTanggal[$d] = $dD->format('Y-m-d');
+                        }
+                    }
+                }
+
+                foreach ($target_kelas as $kNama) {
+                    $kNama = trim($kNama);
+                    if (empty($kNama)) continue;
+                    $kId = $kelasMap[$kNama] ?? null;
+
+                    foreach ($schedules as $sc) {
+                        $hari = trim($sc['hari'] ?? '');
+                        $jam_slot = trim($sc['jam_slot'] ?? '');
+                        $mapel_nama = trim($sc['mapel_nama'] ?? '');
+                        $pengawas = trim($sc['pengawas'] ?? '');
+                        $tgl = $hariTanggal[$hari] ?? null;
+
+                        if (empty($hari) || empty($jam_slot)) continue;
+
+                        if (!empty($mapel_nama)) {
+                            // Cek apakah slot sudah ada untuk kelas ini
+                            $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
+                            $params = [$hari, $jam_slot, $kNama];
+                            if ($topik_id) {
+                                $checkSql .= " AND (topik_id = ? OR topik_id IS NULL)";
+                                $params[] = $topik_id;
+                            }
+                            $stmtCheck = $db->prepare($checkSql);
+                            $stmtCheck->execute($params);
+                            $existingId = $stmtCheck->fetchColumn();
+
+                            if ($existingId) {
+                                $sqlUp = "UPDATE cbt_jadwal_grid SET topik_id = ?, mapel_nama = ?, kelas_id = ?, tanggal = COALESCE(?, tanggal)";
+                                $upParams = [$topik_id, $mapel_nama, $kId, $tgl];
+                                if (!empty($pengawas)) {
+                                    $sqlUp .= ", pengawas = ?";
+                                    $upParams[] = $pengawas;
+                                }
+                                $sqlUp .= " WHERE id = ?";
+                                $upParams[] = $existingId;
+                                $stmtUp = $db->prepare($sqlUp);
+                                $stmtUp->execute($upParams);
+                            } else {
+                                $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, mapel_nama, hari, jam_slot, kelas_id, kelas_nama, pengawas, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                $stmtIns->execute([$topik_id, $mapel_nama, $hari, $jam_slot, $kId, $kNama, $pengawas, $tgl]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            redirect('/cbt/jadwal?topik_id=' . ($topik_id ?: '') . '&msg=global_saved');
             exit;
         }
         redirect('/cbt/jadwal');

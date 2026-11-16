@@ -61,11 +61,6 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 <span>Jadwal Ujian</span>
             </a>
 
-            <!-- Kelola Ujian & Soal -->
-            <a href="<?php echo base_url('cbt/ujian'); ?>" class="z-nav-item <?php echo ($active_menu === 'ujian' || $active_menu === 'soal') ? 'active' : ''; ?>">
-                <i data-lucide="file-question"></i>
-                <span>Kelola Ujian & Soal</span>
-            </a>
 
             <!-- Bank Soal -->
             <a href="<?php echo base_url('bank_soal'); ?>" class="z-nav-item <?php echo $active_menu === 'bank_soal' ? 'active' : ''; ?>">
