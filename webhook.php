@@ -45,21 +45,9 @@ try {
     $deletedOrphans = $db->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
     $output .= "CLEANED ORPHAN BS_PAKET: " . $deletedOrphans . " rows deleted\n";
     
-    // Find which rows in mRows are not in sasPaket
-    $diff = [];
-    foreach ($mRows as $mr) {
-        $found = false;
-        foreach ($sasPaket as $sp) {
-            if ($sp['mapel_nama'] === $mr['nama_mapel'] && $sp['kelas_nama'] === $mr['nama_kelas']) {
-                $found = true;
-                break;
-            }
-        }
-        if (!$found) {
-            $diff[] = $mr;
-        }
-    }
-    $output .= "DIFF ROWS (" . count($diff) . "): " . json_encode($diff) . "\n";
+    $mapelInBs = $db->query("SELECT DISTINCT mapel_nama, count(*) as cnt FROM bs_paket WHERE topik_id = 3 GROUP BY mapel_nama ORDER BY mapel_nama")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nDISTINCT MAPEL IN BS_PAKET (Topik 3): " . json_encode($mapelInBs) . "\n";
+
 
 
 } catch (\Exception $e) {
