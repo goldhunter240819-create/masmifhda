@@ -419,6 +419,15 @@
                                 <div style="font-size:0.8rem; color:#64748b;">Daftar siswa dan guru yang tidak hadir (Sakit/Izin/Alpa).</div>
                             </div>
                         </a>
+                        <a href="<?php echo base_url('admin/absen_v2/ekstra'); ?>" style="display:flex; align-items:center; gap:15px; padding:15px; border-radius:12px; border:1px solid #f1f5f9; text-decoration:none; color:#1e293b; transition:0.2s;">
+                            <div style="width:40px;height:40px;border-radius:10px;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="award"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:800; font-size:0.95rem;">Presensi Ekstrakurikuler</div>
+                                <div style="font-size:0.8rem; color:#64748b;">Kelola absensi & jurnal latihan kegiatan ekstrakurikuler siswa.</div>
+                            </div>
+                        </a>
                     </div>
                 </div>
 

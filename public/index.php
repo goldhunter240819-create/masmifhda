@@ -1319,6 +1319,19 @@ $router->add('GET', '/admin/absen_v2/ketidakhadiran', [\App\Controllers\AbsenV2C
 $router->add('GET', '/admin/absen_v2/pengaturan', [\App\Controllers\AbsenV2Controller::class, 'pengaturan']);
 $router->add('POST', '/admin/absen_v2/pengaturan/save', [\App\Controllers\AbsenV2Controller::class, 'savePengaturan']);
 
+// --- Absen Ekstrakurikuler V2 Module ---
+$router->add('GET', '/admin/absen_v2/ekstra', [\App\Controllers\AbsenEkstraV2Controller::class, 'presensi']);
+$router->add('POST', '/admin/absen_v2/ekstra/save-presensi', [\App\Controllers\AbsenEkstraV2Controller::class, 'savePresensi']);
+$router->add('POST', '/admin/absen_v2/ekstra/delete-presensi', [\App\Controllers\AbsenEkstraV2Controller::class, 'deletePresensi']);
+$router->add('GET', '/admin/absen_v2/ekstra/rekap', [\App\Controllers\AbsenEkstraV2Controller::class, 'rekap']);
+$router->add('GET', '/admin/absen_v2/ekstra/cetak-rekap', [\App\Controllers\AbsenEkstraV2Controller::class, 'cetakRekap']);
+$router->add('GET', '/admin/absen_v2/ekstra/anggota', [\App\Controllers\AbsenEkstraV2Controller::class, 'anggota']);
+$router->add('POST', '/admin/absen_v2/ekstra/save-cabang', [\App\Controllers\AbsenEkstraV2Controller::class, 'saveCabang']);
+$router->add('POST', '/admin/absen_v2/ekstra/delete-cabang', [\App\Controllers\AbsenEkstraV2Controller::class, 'deleteCabang']);
+$router->add('POST', '/admin/absen_v2/ekstra/add-anggota', [\App\Controllers\AbsenEkstraV2Controller::class, 'addAnggota']);
+$router->add('POST', '/admin/absen_v2/ekstra/delete-anggota', [\App\Controllers\AbsenEkstraV2Controller::class, 'deleteAnggota']);
+$router->add('GET', '/api/absen_v2/ekstra/siswa-by-kelas', [\App\Controllers\AbsenEkstraV2Controller::class, 'apiGetSiswaByKelas']);
+
 // --- Absen Guru V2 Module ---
 $router->add('GET', '/admin/absen_guru_v2', [\App\Controllers\AbsenGuruV2Controller::class, 'dashboard']);
 $router->add('GET', '/absen_guru_v2/scanner', [\App\Controllers\AbsenGuruV2Controller::class, 'scanner']);

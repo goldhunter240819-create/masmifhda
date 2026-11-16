@@ -1,15 +1,18 @@
 <?php
 $_s_uri = $_SERVER['REQUEST_URI'];
 
-function is_active($uri_fragment) {
-    $uri = $_SERVER['REQUEST_URI'] ?? '';
-    $uri = str_replace('_', '-', $uri);
-    $fragment = str_replace('_', '-', $uri_fragment);
-    return strpos($uri, $fragment) !== false;
+if (!function_exists('is_active')) {
+    function is_active($uri_fragment) {
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $uri = str_replace('_', '-', $uri);
+        $fragment = str_replace('_', '-', $uri_fragment);
+        return strpos($uri, $fragment) !== false;
+    }
 }
 
 $is_siswa_open = is_active('admin/absen-v2/rekap') || (is_active('admin/absen-v2/ketidakhadiran') && !is_active('guru'));
 $is_guru_open = is_active('admin/absen-guru-v2/rekap') || is_active('admin/absen-guru-v2/ketidakhadiran') || is_active('admin/absen-guru-v2/input-manual') || is_active('absen-guru-v2/scanner');
+$is_ekstra_open = is_active('admin/absen-v2/ekstra');
 $is_mesin_open = is_active('admin/absen-v2/pengaturan') || is_active('admin/absen-v2/akses-scanner');
 ?>
 
@@ -87,6 +90,30 @@ $is_mesin_open = is_active('admin/absen-v2/pengaturan') || is_active('admin/abse
                 
                 <a href="<?php echo base_url('admin/absen_guru_v2/input-manual'); ?>" class="z-nav-item <?php echo is_active('absen_guru_v2/input-manual') ? 'active' : ''; ?>">
                     <i data-lucide="clipboard-edit"></i> Input Manual Guru
+                </a>
+            </div>
+        </div>
+
+        <!-- Dropdown Ekstrakurikuler -->
+        <div class="z-nav-dropdown <?php echo $is_ekstra_open ? 'open' : ''; ?>">
+            <div class="z-nav-dropdown-toggle <?php echo $is_ekstra_open ? 'active' : ''; ?>" onclick="var p = this.parentElement; document.querySelectorAll('.z-nav-dropdown').forEach(function(d){ if(d !== p) d.classList.remove('open'); }); p.classList.toggle('open');">
+                <div class="dt-left">
+                    <i data-lucide="award"></i>
+                    Absensi Ekstra
+                </div>
+                <i data-lucide="chevron-down" class="dt-icon"></i>
+            </div>
+            <div class="z-nav-dropdown-menu">
+                <a href="<?php echo base_url('admin/absen_v2/ekstra'); ?>" class="z-nav-item <?php echo (is_active('admin/absen_v2/ekstra') && !is_active('rekap') && !is_active('anggota')) ? 'active' : ''; ?>">
+                    <i data-lucide="clipboard-pen"></i> Presensi Ekstra
+                </a>
+                
+                <a href="<?php echo base_url('admin/absen_v2/ekstra/rekap'); ?>" class="z-nav-item <?php echo is_active('admin/absen_v2/ekstra/rekap') ? 'active' : ''; ?>">
+                    <i data-lucide="file-spreadsheet"></i> Rekap Presensi
+                </a>
+                
+                <a href="<?php echo base_url('admin/absen_v2/ekstra/anggota'); ?>" class="z-nav-item <?php echo is_active('admin/absen_v2/ekstra/anggota') ? 'active' : ''; ?>">
+                    <i data-lucide="users"></i> Data Anggota & Cabang
                 </a>
             </div>
         </div>
