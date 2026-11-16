@@ -175,6 +175,12 @@ if ($role_id == 2) {
                             <div class="as">Rekap Kehadiran</div>
                         </a>
 
+                        <a href="<?php echo base_url('guru/bank-soal'); ?>" class="app-card featured" style="background: linear-gradient(135deg,#0284c7,#0369a1);">
+                            <div class="ai"><i data-lucide="layers"></i></div>
+                            <div class="an">Bank Soal Saya</div>
+                            <div class="as">Kelola Butir Soal & Kunci</div>
+                        </a>
+
                         <?php else: ?>
                         <a href="<?php echo base_url('siakad'); ?>" class="app-card featured" style="background: linear-gradient(135deg,#3b82f6,#2563eb);">
                             <div class="ai"><i data-lucide="graduation-cap"></i></div>
@@ -234,13 +240,7 @@ if ($role_id == 2) {
                             <div class="as" style="color:#94a3b8; font-size: 0.75rem;">Integrasi EMIS/RDM</div>
                             <div style="margin-top: 10px;"><span style="font-size: 0.6rem; background: #e2e8f0; color: #64748b; padding: 3px 8px; border-radius: 12px; font-weight: 800; letter-spacing: 0.5px;">COMING SOON</span></div>
                         </div>
-                        <!-- CBT Bank Soal -->
-                        <div class="app-card" style="background: linear-gradient(135deg,#f8fafc,#f1f5f9); border: 1px dashed #cbd5e1; cursor: not-allowed; text-align: center;">
-                            <div class="ai" style="background:#e2e8f0;color:#64748b; margin: 0 auto 8px auto;"><i data-lucide="laptop-2"></i></div>
-                            <div class="an" style="color:#475569;">CBT Bank Soal</div>
-                            <div class="as" style="color:#94a3b8; font-size: 0.75rem;">Ujian Terintegrasi</div>
-                            <div style="margin-top: 10px;"><span style="font-size: 0.6rem; background: #e2e8f0; color: #64748b; padding: 3px 8px; border-radius: 12px; font-weight: 800; letter-spacing: 0.5px;">COMING SOON</span></div>
-                        </div>
+
                     </div>
                 </div>
             </div>

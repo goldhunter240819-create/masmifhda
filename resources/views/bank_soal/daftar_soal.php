@@ -90,9 +90,18 @@ $isLocked = !empty($paketInfo['is_locked']);
             <?php endif; ?>
 
             <!-- Breadcrumb Navigation -->
+            <?php
+            $isGuruUser = isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 2;
+            $backUrl = $isGuruUser 
+                ? base_url('guru/bank-soal') 
+                : base_url('bank_soal?topik_id=' . ($topikInfo['id'] ?? 1));
+            $backLabel = $isGuruUser 
+                ? 'Kembali ke Bank Soal Saya' 
+                : 'Kembali ke Bank Soal Topik';
+            ?>
             <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem;">
-                <a href="<?php echo base_url('bank_soal?topik_id=' . ($topikInfo['id'] ?? 1)); ?>" style="color: #64748b; text-decoration: none; display: flex; align-items: center; gap: 5px;">
-                    <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i> Kembali ke Bank Soal Topik
+                <a href="<?php echo $backUrl; ?>" style="color: #64748b; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                    <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i> <?php echo $backLabel; ?>
                 </a>
                 <span style="color: #cbd5e1;">/</span>
                 <span style="color: #0f172a;"><?php echo htmlspecialchars($topikInfo['nama_topik'] ?? 'Topik Ujian'); ?></span>
@@ -158,8 +167,8 @@ $isLocked = !empty($paketInfo['is_locked']);
 
                 <!-- Actions Header -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    <!-- Tombol Kunci / Buka Kunci -->
-                    <?php if ($paketInfo): ?>
+                    <!-- Tombol Kunci / Buka Kunci (Hanya Admin / Kurikulum) -->
+                    <?php if ($paketInfo && !$isGuruUser): ?>
                     <form method="POST" action="<?php echo base_url('bank_soal/paket/toggle-lock'); ?>" style="display: inline;" onsubmit="return confirm('<?php echo $isLocked ? 'Buka kunci soal ini?' : 'Kunci soal ini agar guru tidak dapat mengedit lagi?'; ?>')">
                         <input type="hidden" name="paket_id" value="<?php echo $paketInfo['id']; ?>">
                         <input type="hidden" name="topik_id" value="<?php echo $topikInfo['id']; ?>">

@@ -142,19 +142,19 @@ include 'header.php';
                 <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 0.8rem;"></i>
             </a>
 
-            <a href="panduan_aplikasi.php" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0; text-decoration: none; color: var(--text-main); background: #f0fdf4;">
+            <a href="bank_soal.php" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0; text-decoration: none; color: var(--text-main); background: #f0f9ff;">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="background: #dcfce7; color: #16a34a; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fa-solid fa-file-pdf"></i>
+                    <div style="background: #e0f2fe; color: #0284c7; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-layer-group"></i>
                     </div>
                     <div>
-                        <div style="font-weight: 700; font-size: 0.95rem; color: #15803d;">Buku Panduan Aplikasi (PDF)</div>
-                        <div style="font-size: 0.75rem; color: #16a34a;">User Manual Book & Petunjuk Fitur</div>
+                        <div style="font-weight: 700; font-size: 0.95rem; color: #0369a1;">Bank Soal Saya</div>
+                        <div style="font-size: 0.75rem; color: #0284c7;">Kelola butir soal & kunci jawaban ujian</div>
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="background: #16a34a; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 999px;">UNDUH PDF</span>
-                    <i class="fa-solid fa-chevron-right" style="color: #86efac; font-size: 0.8rem;"></i>
+                    <span style="background: #0284c7; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 999px;">KELOLA</span>
+                    <i class="fa-solid fa-chevron-right" style="color: #38bdf8; font-size: 0.8rem;"></i>
                 </div>
             </a>
 

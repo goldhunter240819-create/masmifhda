@@ -41,6 +41,7 @@ try {
 // Akses default untuk semua guru
 $akses[] = 'absen_pribadi';
 $akses[] = 'nilai_harian';
+$akses[] = 'bank_soal';
 $akses[] = 'tugas_daring';
 $akses[] = 'perpus_digital';
 $akses[] = 'program_unggulan';
@@ -59,6 +60,7 @@ $apk_apps = [
     'Akademik & Pribadi' => [
         'absen_pribadi' => ['icon' => 'fa-calendar-check', 'name' => 'Rekap Absen', 'color' => '#4f46e5', 'bg' => '#e0e7ff', 'url' => 'absen_guru.php'],
         'nilai_harian' => ['icon' => 'fa-file-pen', 'name' => 'Nilai Harian', 'color' => '#d97706', 'bg' => '#fffbeb', 'url' => 'nilai_harian.php'],
+        'bank_soal' => ['icon' => 'fa-layer-group', 'name' => 'Bank Soal', 'color' => '#0284c7', 'bg' => '#e0f2fe', 'url' => 'bank_soal.php'],
         'tugas_daring' => ['icon' => 'fa-laptop-file', 'name' => 'Tugas Daring', 'color' => '#ef4444', 'bg' => '#fef2f2', 'url' => 'guru_tugas_mandiri.php'],
         'perpus_digital' => ['icon' => 'fa-book-open-reader', 'name' => 'E-Library', 'color' => '#3b82f6', 'bg' => '#eff6ff', 'url' => 'https://e-library.masmifhda.sch.id/'],
         'program_unggulan' => ['icon' => 'fa-award', 'name' => 'Prog. Unggulan', 'color' => '#059669', 'bg' => '#ecfdf5', 'url' => '/kurikulum/program-unggulan']
@@ -144,22 +146,6 @@ include 'header.php';
 
 <div class="main-content">
     <div class="data-card" style="margin-top: -2.5rem; z-index: 10;">
-        <!-- Banner Unduh Buku Panduan -->
-        <a href="panduan_aplikasi.php" style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border-radius: 14px; padding: 12px 16px; margin-bottom: 20px; text-decoration: none; box-shadow: 0 4px 12px rgba(2,132,199,0.25); transition: 0.2s;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 38px; height: 38px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
-                    <i class="fa-solid fa-file-pdf"></i>
-                </div>
-                <div>
-                    <div style="font-weight: 800; font-size: 0.92rem; line-height: 1.2;">Buku Panduan Aplikasi</div>
-                    <div style="font-size: 0.72rem; color: rgba(255,255,255,0.85); margin-top: 2px;">User Manual Resmi Penggunaan Seluruh Modul</div>
-                </div>
-            </div>
-            <span style="background: rgba(255,255,255,0.25); font-size: 0.72rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                Unduh PDF <i class="fa-solid fa-download" style="font-size: 0.7rem;"></i>
-            </span>
-        </a>
-
         <h3 class="section-title" style="margin-top: 0; margin-bottom: 15px;">Daftar Aplikasi</h3>
         
         <?php 

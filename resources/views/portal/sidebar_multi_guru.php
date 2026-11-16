@@ -154,6 +154,10 @@ if(isset($_SESSION['user_id'])) {
 
             <div class="z-nav-cat">Aplikasi</div>
 
+            <a href="<?php echo base_url('guru/bank-soal'); ?>" class="z-nav-item <?php echo (strpos($uri, 'guru/bank-soal') !== false || strpos($uri, 'guru/soal-saya') !== false || strpos($uri, 'bank_soal') !== false) ? 'active' : ''; ?>">
+                <i data-lucide="layers"></i> Bank Soal Saya
+            </a>
+
             <a href="<?php echo base_url('guru/nilai_harian'); ?>" class="z-nav-item <?php echo (strpos($uri, 'nilai_harian') !== false) ? 'active' : ''; ?>">
                 <i data-lucide="file-pen"></i> Nilai Harian
             </a>
@@ -175,7 +179,7 @@ if(isset($_SESSION['user_id'])) {
                     <i data-lucide="chevron-right" class="chev" style="width:14px;height:14px;"></i>
                 </div>
                 <div class="z-nav-subnav">
-                    <a href="<?php echo base_url('guru/soal-saya'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'soal-saya') !== false) ? 'active' : ''; ?>">Soal Saya</a>
+                    <a href="<?php echo base_url('guru/bank-soal'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'soal-saya') !== false || strpos($uri, 'guru/bank-soal') !== false) ? 'active' : ''; ?>">Soal Saya</a>
                     <a href="<?php echo base_url('guru/evaluasi'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'evaluasi') !== false) ? 'active' : ''; ?>">Evaluasi</a>
                     <a href="<?php echo base_url('guru/hasil-ujian'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'hasil-ujian') !== false) ? 'active' : ''; ?>">Hasil Ujian</a>
                     <a href="<?php echo base_url('guru/analisis-soal'); ?>" class="z-nav-subnav-item <?php echo (strpos($uri, 'analisis-soal') !== false) ? 'active' : ''; ?>">Analisis Soal</a>

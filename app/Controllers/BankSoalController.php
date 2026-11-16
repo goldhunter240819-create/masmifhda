@@ -253,6 +253,98 @@ class BankSoalController {
     }
 
     /**
+     * Dashboard Bank Soal Saya khusus untuk Guru Pengampu
+     * Menampilkan paket mapel dan kelas yang diampu guru yang sedang login
+     */
+    public function guruIndex() {
+        if (!isset($_SESSION['user_id'])) {
+            redirect('/login');
+            exit;
+        }
+
+        $userId = (int)$_SESSION['user_id'];
+        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+
+        // Ambil data guru dari user_id
+        $guru = $this->db_core->query("SELECT id, nama FROM guru WHERE user_id = {$userId} LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        $guruId = $guru ? (int)$guru['id'] : 0;
+        $guruNama = $guru ? trim($guru['nama']) : ($_SESSION['nama'] ?? '');
+
+        // 1. Ambil daftar Topik Ujian
+        $topikList = $this->db->query("SELECT * FROM bs_topik ORDER BY (status = 'Aktif') DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($topikList)) {
+            $topikList = [
+                ['id' => 1, 'nama_topik' => 'Sumatif Akhir Semester (SAS) Ganjil 2026/2027', 'jenis' => 'SAS', 'status' => 'Aktif']
+            ];
+        }
+
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : (int)$topikList[0]['id'];
+
+        // 2. Ambil paket yang diampu guru ini untuk topik yang dipilih
+        $stmtP = $this->db->prepare("
+            SELECT * FROM bs_paket 
+            WHERE topik_id = ? 
+              AND (guru_id = ? OR guru_nama = ? OR guru_nama LIKE ?)
+            ORDER BY kelas_nama ASC, mapel_nama ASC
+        ");
+        $stmtP->execute([$selectedTopikId, $guruId, $guruNama, '%' . $guruNama . '%']);
+        $myPackages = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+
+        // Jika masih kosong, coba sinkronkan dari mengajar jika ada
+        if (empty($myPackages) && $guruId > 0) {
+            try {
+                $stmtM = $this->db->prepare("
+                    SELECT DISTINCT mp.nama_mapel, k.nama_kelas 
+                    FROM mengajar m
+                    JOIN mapel mp ON m.mapel_id = mp.id
+                    JOIN kelas k ON m.kelas_id = k.id
+                    WHERE m.guru_id = ?
+                    ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
+                ");
+                $stmtM->execute([$guruId]);
+                $tList = $stmtM->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($tList)) {
+                    $stmtIns = $this->db->prepare("
+                        INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_id, guru_nama, kkm, durasi_menit, is_locked)
+                        VALUES (?, ?, ?, ?, ?, 75, 90, 0)
+                    ");
+                    foreach ($tList as $tm) {
+                        $stmtIns->execute([$selectedTopikId, $tm['nama_mapel'], $tm['nama_kelas'], $guruId, $guruNama]);
+                    }
+                    $stmtP->execute([$selectedTopikId, $guruId, $guruNama, '%' . $guruNama . '%']);
+                    $myPackages = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+                }
+            } catch (\Exception $e) {}
+        }
+
+        // Hitung total butir soal dan rincian per jenis soal
+        $totalMySoal = 0;
+        $totalMyLocked = 0;
+        foreach ($myPackages as &$pk) {
+            $pId = (int)$pk['id'];
+            $breakdown = [];
+            $tot = 0;
+            try {
+                $stmtB = $this->db->prepare("SELECT tipe_soal, COUNT(*) as jml FROM bs_soal WHERE paket_id = ? GROUP BY tipe_soal");
+                $stmtB->execute([$pId]);
+                foreach ($stmtB->fetchAll(PDO::FETCH_ASSOC) as $br) {
+                    $breakdown[$br['tipe_soal']] = (int)$br['jml'];
+                    $tot += (int)$br['jml'];
+                }
+            } catch (\Exception $e) {}
+            $pk['total_soal'] = $tot;
+            $pk['breakdown'] = $breakdown;
+            $totalMySoal += $tot;
+            if (!empty($pk['is_locked'])) {
+                $totalMyLocked++;
+            }
+        }
+        unset($pk);
+
+        include __DIR__ . '/../../resources/views/portal/guru/bank_soal_index.php';
+    }
+
+    /**
      * Dashboard Utama Bank Soal
      * Menampilkan Card Topik Ujian atau Detail Paket Mapel di dalam Topik yang dipilih
      */
@@ -260,6 +352,12 @@ class BankSoalController {
         if (!isset($_SESSION['user_id'])) {
             redirect('/login');
             exit;
+        }
+
+        // Jika Guru mengakses, arahkan ke Bank Soal Guru
+        if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 2) {
+            $this->guruIndex();
+            return;
         }
 
         $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
