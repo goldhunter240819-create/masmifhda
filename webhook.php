@@ -20,21 +20,18 @@ if (function_exists('opcache_reset')) {
 require_once __DIR__ . '/app/Core/Database.php';
 try {
     $db = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
-    $mRows = $db->query("
-        SELECT m.id, m.kelas_id, k.nama_kelas, m.mapel_id, mp.nama_mapel, m.guru_id, g.nama as guru_nama
-        FROM mengajar m
-        JOIN kelas k ON m.kelas_id = k.id
-        JOIN mapel mp ON m.mapel_id = mp.id
-        LEFT JOIN aula_db.guru g ON m.guru_id = g.id
-        WHERE m.tahun_ajaran_id = 2 AND m.semester = 1 AND m.guru_id IS NOT NULL AND m.guru_id > 0
-        ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
-    ")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "\nACTIVE MENGAJAR (TA 2, Sem 1) Count: " . count($mRows) . "\n";
-    foreach ($mRows as $m) {
-        $output .= "Mapel: {$m['nama_mapel']} | Kelas: {$m['nama_kelas']} | Guru: {$m['guru_nama']} (ID {$m['guru_id']})\n";
-    }
+    
+    // Check bs_topik and bs_paket
+    $topiks = $db->query("SELECT id, jenis, nama_topik, status FROM bs_topik")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nLIVE TOPIK: " . json_encode($topiks) . "\n";
+    
+    $groupPaket = $db->query("SELECT topik_id, COUNT(*) as cnt FROM bs_paket GROUP BY topik_id")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "LIVE BS_PAKET by topik_id: " . json_encode($groupPaket) . "\n";
+    
+    $orphans = $db->query("SELECT id, topik_id, mapel_nama, kelas_nama FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "LIVE ORPHANS (" . count($orphans) . "): " . json_encode($orphans) . "\n";
 } catch (\Exception $e) {
-    $output .= "\nError querying mengajar: " . $e->getMessage() . "\n";
+    $output .= "\nError querying bs_paket: " . $e->getMessage() . "\n";
 }
 
 
