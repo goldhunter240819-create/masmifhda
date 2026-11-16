@@ -16,15 +16,21 @@ if (function_exists('opcache_reset')) {
     @opcache_reset();
 }
 
-// 3.5 Bersihkan data orphan bs_paket jika ada
+// 3.5 Bersihkan & Migrasikan Bank Soal ke Basis Tingkat
 require_once __DIR__ . '/app/Core/Database.php';
+require_once __DIR__ . '/app/Controllers/BankSoalController.php';
 try {
     $db = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
-    $del = $db->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
-    if ($del > 0) {
-        $output .= "\nCleaned $del orphan bs_paket rows.\n";
+    \App\Controllers\BankSoalController::ensureTables($db);
+    $activeTopikIds = $db->query("SELECT id FROM bs_topik WHERE status = 'Aktif'")->fetchAll(PDO::FETCH_COLUMN);
+    $bsCtrl = new \App\Controllers\BankSoalController();
+    foreach ($activeTopikIds as $actId) {
+        $bsCtrl->syncFromPengampu((int)$actId, true);
     }
-} catch (\Exception $e) {}
+    $output .= "\nBank Soal synced to Tingkat successfully.\n";
+} catch (\Exception $e) {
+    $output .= "\nBank Soal migration: " . $e->getMessage() . "\n";
+}
 
 
 

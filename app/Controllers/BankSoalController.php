@@ -44,12 +44,13 @@ class BankSoalController {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )");
 
-            // 2. bs_paket (Paket Mapel & Kelas per Topik)
+            // 2. bs_paket (Paket Mapel & Tingkat per Topik)
             $db->exec("CREATE TABLE IF NOT EXISTS bs_paket (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 topik_id INT NOT NULL,
                 mapel_nama VARCHAR(150) NOT NULL,
-                kelas_nama VARCHAR(100) NOT NULL DEFAULT 'Semua Kelas',
+                kelas_nama VARCHAR(100) NOT NULL DEFAULT 'Kelas X',
+                kelas_sasaran VARCHAR(255) DEFAULT NULL,
                 guru_id INT DEFAULT NULL,
                 guru_nama VARCHAR(150) DEFAULT NULL,
                 kkm INT DEFAULT 75,
@@ -143,6 +144,9 @@ class BankSoalController {
             if (!in_array('durasi_menit', $colsPaket)) {
                 $db->exec("ALTER TABLE bs_paket ADD COLUMN durasi_menit INT DEFAULT 90");
             }
+            if (!in_array('kelas_sasaran', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN kelas_sasaran VARCHAR(255) DEFAULT NULL AFTER kelas_nama");
+            }
 
             // MIGRASI KOLOM BS_TOPIK
             $colsTopik = $db->query("DESCRIBE bs_topik")->fetchAll(PDO::FETCH_COLUMN);
@@ -226,6 +230,25 @@ class BankSoalController {
     }
 
     /**
+     * Konversi nama kelas / tingkat rombel menjadi label Tingkat Ujian resmi (Kelas X, Kelas XI, Kelas XII)
+     */
+    public static function determineTingkat($namaKelas, $tingkat = null) {
+        $nk = trim((string)$namaKelas);
+        $t = (int)$tingkat;
+
+        if ($t === 10 || stripos($nk, 'X ') === 0 || $nk === 'X' || stripos($nk, 'Kelas X') !== false || stripos($nk, '10') !== false) {
+            return 'Kelas X';
+        }
+        if ($t === 11 || stripos($nk, 'XI ') === 0 || $nk === 'XI' || stripos($nk, 'Kelas XI') !== false || stripos($nk, '11') !== false) {
+            return 'Kelas XI';
+        }
+        if ($t === 12 || stripos($nk, 'XII ') === 0 || $nk === 'XII' || stripos($nk, 'Kelas XII') !== false || stripos($nk, '12') !== false) {
+            return 'Kelas XII';
+        }
+        return !empty($nk) ? $nk : 'Kelas X';
+    }
+
+    /**
      * Standard resmi 19 Mata Pelajaran MAS Miftahul Huda beserta Guru Pengampu MAS
      */
     public static function getOfficialMasMapelList() {
@@ -280,6 +303,12 @@ class BankSoalController {
 
         $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : (int)$topikList[0]['id'];
 
+        // Cek apakah ada paket legacy rombel lama, jika ya sinkronkan ke Tingkat
+        $hasLegacy = (bool)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id = {$selectedTopikId} AND kelas_nama NOT IN ('Kelas X', 'Kelas XI', 'Kelas XII')")->fetchColumn();
+        if ($hasLegacy) {
+            $this->syncFromPengampu($selectedTopikId, true);
+        }
+
         // 2. Ambil paket yang diampu guru ini untuk topik yang dipilih
         $stmtP = $this->db->prepare("
             SELECT * FROM bs_paket 
@@ -291,30 +320,10 @@ class BankSoalController {
         $myPackages = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
         // Jika masih kosong, coba sinkronkan dari mengajar jika ada
-        if (empty($myPackages) && $guruId > 0) {
-            try {
-                $stmtM = $this->db->prepare("
-                    SELECT DISTINCT mp.nama_mapel, k.nama_kelas 
-                    FROM mengajar m
-                    JOIN mapel mp ON m.mapel_id = mp.id
-                    JOIN kelas k ON m.kelas_id = k.id
-                    WHERE m.guru_id = ?
-                    ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
-                ");
-                $stmtM->execute([$guruId]);
-                $tList = $stmtM->fetchAll(PDO::FETCH_ASSOC);
-                if (!empty($tList)) {
-                    $stmtIns = $this->db->prepare("
-                        INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_id, guru_nama, kkm, durasi_menit, is_locked)
-                        VALUES (?, ?, ?, ?, ?, 75, 90, 0)
-                    ");
-                    foreach ($tList as $tm) {
-                        $stmtIns->execute([$selectedTopikId, $tm['nama_mapel'], $tm['nama_kelas'], $guruId, $guruNama]);
-                    }
-                    $stmtP->execute([$selectedTopikId, $guruId, $guruNama, '%' . $guruNama . '%']);
-                    $myPackages = $stmtP->fetchAll(PDO::FETCH_ASSOC);
-                }
-            } catch (\Exception $e) {}
+        if (empty($myPackages)) {
+            $this->syncFromPengampu($selectedTopikId, true);
+            $stmtP->execute([$selectedTopikId, $guruId, $guruNama, '%' . $guruNama . '%']);
+            $myPackages = $stmtP->fetchAll(PDO::FETCH_ASSOC);
         }
 
         // Hitung total butir soal dan rincian per jenis soal
@@ -366,14 +375,11 @@ class BankSoalController {
         $stmtTopik = $this->db->query("SELECT * FROM bs_topik ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC");
         $allTopikList = $stmtTopik ? $stmtTopik->fetchAll(PDO::FETCH_ASSOC) : [];
 
-        // Hitung statistik untuk masing-masing topik
-        foreach ($allTopikList as &$tp) {
-            $tId = (int)$tp['id'];
-            $tp['jml_paket'] = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id = {$tId}")->fetchColumn();
-            $tp['jml_soal'] = (int)$this->db->query("SELECT COUNT(*) FROM bs_soal WHERE topik_id = {$tId}")->fetchColumn();
-            $tp['jml_locked'] = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id = {$tId} AND is_locked = 1")->fetchColumn();
+        // Pastikan sisa data MI dibersihkan seketika
+        self::cleanMILeftovers($this->db);
+        if ($this->db_core !== $this->db) {
+            self::cleanMILeftovers($this->db_core);
         }
-        unset($tp);
 
         // Otomatis bersihkan orphan bs_paket jika ada topik lama/terhapus
         try {
@@ -383,11 +389,20 @@ class BankSoalController {
             }
         } catch (\Exception $e) {}
 
-        // Hitung statistik global real (sinkron 100% dengan topik yang ada)
+        // Hitung statistik untuk masing-masing topik
+        foreach ($allTopikList as &$tp) {
+            $tId = (int)$tp['id'];
+            $tp['jml_paket'] = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id = {$tId}")->fetchColumn();
+            $tp['jml_soal'] = (int)$this->db->query("SELECT COUNT(*) FROM bs_soal WHERE topik_id = {$tId}")->fetchColumn();
+            $tp['jml_locked'] = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id = {$tId} AND is_locked = 1")->fetchColumn();
+        }
+        unset($tp);
+
+        // Hitung statistik global real (sinkron 100% dengan total dari topik yang ada)
         $totalTopik = count($allTopikList);
-        $totalPaket = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id IN (SELECT id FROM bs_topik)")->fetchColumn();
-        $totalSoal = (int)$this->db->query("SELECT COUNT(*) FROM bs_soal WHERE topik_id IN (SELECT id FROM bs_topik)")->fetchColumn();
-        $totalLocked = (int)$this->db->query("SELECT COUNT(*) FROM bs_paket WHERE topik_id IN (SELECT id FROM bs_topik) AND is_locked = 1")->fetchColumn();
+        $totalPaket = array_sum(array_column($allTopikList, 'jml_paket'));
+        $totalSoal = array_sum(array_column($allTopikList, 'jml_soal'));
+        $totalLocked = array_sum(array_column($allTopikList, 'jml_locked'));
 
         $selectedTopik = null;
         $paketList = [];
@@ -412,17 +427,17 @@ class BankSoalController {
                 $stmtP->execute([$topikId]);
                 $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
-                // Cek apakah masih ada 'Semua Kelas'
-                $hasSemuaKelas = false;
+                // Cek apakah masih ada paket rombel lama (bukan 'Kelas X', 'Kelas XI', 'Kelas XII')
+                $hasLegacyPaket = false;
                 foreach ($paketList as $p) {
-                    if ($p['kelas_nama'] === 'Semua Kelas' || empty($p['kelas_nama'])) {
-                        $hasSemuaKelas = true;
+                    if (!in_array($p['kelas_nama'], ['Kelas X', 'Kelas XI', 'Kelas XII'])) {
+                        $hasLegacyPaket = true;
                         break;
                     }
                 }
 
-                // JIKA BELUM ADA PAKET MAPEL / MASIH ADA 'Semua Kelas', OTOMATIS LANGSUNG SINKRONKAN PER KELAS DARI MENGAJAR!
-                if (empty($paketList) || $hasSemuaKelas) {
+                // JIKA BELUM ADA PAKET MAPEL / MASIH ADA PAKET ROMBEL LAMA, OTOMATIS LANGSUNG SINKRONKAN BERBASIS TINGKAT!
+                if (empty($paketList) || $hasLegacyPaket) {
                     $this->syncFromPengampu($topikId, true);
                     $stmtP->execute([$topikId]);
                     $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
@@ -487,18 +502,24 @@ class BankSoalController {
             $id = !empty($_POST['id']) ? (int)$_POST['id'] : 0;
             $topik_id = (int)($_POST['topik_id'] ?? 0);
             $mapel_nama = trim($_POST['mapel_nama'] ?? '');
-            $kelas_nama = trim($_POST['kelas_nama'] ?? 'X E.1');
+            $kelas_nama = trim($_POST['kelas_nama'] ?? 'Kelas X');
+            $kelas_sasaran = trim($_POST['kelas_sasaran'] ?? '');
+            if (empty($kelas_sasaran)) {
+                if ($kelas_nama === 'Kelas X') $kelas_sasaran = 'X E.1';
+                elseif ($kelas_nama === 'Kelas XI') $kelas_sasaran = 'XI F.1';
+                elseif ($kelas_nama === 'Kelas XII') $kelas_sasaran = 'XII F.1, XII F.2';
+            }
             $guru_nama = trim($_POST['guru_nama'] ?? '');
             $kkm = !empty($_POST['kkm']) ? (int)$_POST['kkm'] : 75;
             $durasi_menit = !empty($_POST['durasi_menit']) ? (int)$_POST['durasi_menit'] : 90;
 
             if ($topik_id > 0 && !empty($mapel_nama)) {
                 if ($id > 0) {
-                    $stmt = $this->db->prepare("UPDATE bs_paket SET mapel_nama = ?, kelas_nama = ?, guru_nama = ?, kkm = ?, durasi_menit = ? WHERE id = ?");
-                    $stmt->execute([$mapel_nama, $kelas_nama, $guru_nama, $kkm, $durasi_menit, $id]);
+                    $stmt = $this->db->prepare("UPDATE bs_paket SET mapel_nama = ?, kelas_nama = ?, kelas_sasaran = ?, guru_nama = ?, kkm = ?, durasi_menit = ? WHERE id = ?");
+                    $stmt->execute([$mapel_nama, $kelas_nama, $kelas_sasaran, $guru_nama, $kkm, $durasi_menit, $id]);
                 } else {
-                    $stmt = $this->db->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, ?, ?, ?, ?, 0)");
-                    $stmt->execute([$topik_id, $mapel_nama, $kelas_nama, $guru_nama, $kkm, $durasi_menit]);
+                    $stmt = $this->db->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, 0)");
+                    $stmt->execute([$topik_id, $mapel_nama, $kelas_nama, $kelas_sasaran, $guru_nama, $kkm, $durasi_menit]);
                 }
                 redirect("/bank_soal?topik_id={$topik_id}&msg=paket_saved");
                 exit;
@@ -675,15 +696,48 @@ class BankSoalController {
         // Fallback jika tabel mengajar kosong
         if (empty($assignments)) {
             $masMapel = self::getOfficialMasMapelList();
-            $kelasList = ['X E.1', 'XI F.1', 'XII F.1', 'XII F.2'];
+            $tingkatList = [
+                'Kelas X' => ['X E.1'],
+                'Kelas XI' => ['XI F.1'],
+                'Kelas XII' => ['XII F.1', 'XII F.2']
+            ];
             foreach ($masMapel as $mName => $info) {
-                foreach ($kelasList as $kls) {
-                    $assignments[] = [
-                        'nama_mapel' => $mName,
-                        'nama_kelas' => $kls,
+                foreach ($tingkatList as $tKls => $sasList) {
+                    $key = $mName . '||' . $tKls;
+                    $grouped[$key] = [
+                        'mapel_nama' => $mName,
+                        'kelas_nama' => $tKls,
+                        'sasaran_list' => $sasList,
                         'guru_id' => $info['guru_id'],
                         'guru_nama' => $info['guru_nama']
                     ];
+                }
+            }
+        } else {
+            // Group assignments by (Mapel + Tingkat)
+            foreach ($assignments as $asg) {
+                $mName = trim($asg['nama_mapel']);
+                if ($mName === 'Aqidah Akhlak') $mName = 'Akidah Akhlak';
+                if ($mName === 'Al-Qur\'an Hadist') $mName = 'Al-Qur\'an Hadits';
+                if ($mName === 'Penjaskes') $mName = 'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)';
+                if ($mName === 'PPKn') $mName = 'Pendidikan Pancasila & Kewarganegaraan (PPKn)';
+
+                $kName = trim($asg['nama_kelas']);
+                $tingkat = $asg['tingkat'] ?? null;
+                $tingkatLabel = self::determineTingkat($kName, $tingkat);
+
+                $key = $mName . '||' . $tingkatLabel;
+                if (!isset($grouped[$key])) {
+                    $grouped[$key] = [
+                        'mapel_nama' => $mName,
+                        'kelas_nama' => $tingkatLabel,
+                        'sasaran_list' => [],
+                        'guru_id' => (int)$asg['guru_id'],
+                        'guru_nama' => trim($asg['guru_nama'] ?? '')
+                    ];
+                }
+                if (!empty($kName) && !in_array($kName, $grouped[$key]['sasaran_list'])) {
+                    $grouped[$key]['sasaran_list'][] = $kName;
                 }
             }
         }
@@ -691,31 +745,40 @@ class BankSoalController {
         $inserted = 0;
         $stmtCheck = $this->db->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ? AND kelas_nama = ?");
         $stmtIns = $this->db->prepare("
-            INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_id, guru_nama, kkm, durasi_menit, is_locked) 
-            VALUES (?, ?, ?, ?, ?, 75, 90, 0)
+            INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_id, guru_nama, kkm, durasi_menit, is_locked) 
+            VALUES (?, ?, ?, ?, ?, ?, 75, 90, 0)
         ");
-        $stmtUpd = $this->db->prepare("UPDATE bs_paket SET guru_id = ?, guru_nama = ? WHERE id = ?");
+        $stmtUpd = $this->db->prepare("UPDATE bs_paket SET kelas_sasaran = ?, guru_id = ?, guru_nama = ? WHERE id = ?");
 
-        foreach ($assignments as $asg) {
-            $mName = trim($asg['nama_mapel']);
-            $kName = trim($asg['nama_kelas']);
-            $gId = (int)$asg['guru_id'];
-            $gName = trim($asg['guru_nama'] ?? '');
-
-            if ($mName === 'Aqidah Akhlak') $mName = 'Akidah Akhlak';
-            if ($mName === 'Al-Qur\'an Hadist') $mName = 'Al-Qur\'an Hadits';
-            if ($mName === 'Penjaskes') $mName = 'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)';
-            if ($mName === 'PPKn') $mName = 'Pendidikan Pancasila & Kewarganegaraan (PPKn)';
+        foreach ($grouped as $item) {
+            $mName = $item['mapel_nama'];
+            $kName = $item['kelas_nama'];
+            $sasaranStr = implode(', ', $item['sasaran_list']);
+            $gId = $item['guru_id'];
+            $gName = $item['guru_nama'];
 
             $stmtCheck->execute([$topikId, $mName, $kName]);
             $existingId = $stmtCheck->fetchColumn();
             if (!$existingId) {
-                $stmtIns->execute([$topikId, $mName, $kName, $gId, $gName]);
+                $stmtIns->execute([$topikId, $mName, $kName, $sasaranStr, $gId, $gName]);
                 $inserted++;
             } else {
-                $stmtUpd->execute([$gId, $gName, $existingId]);
+                $stmtUpd->execute([$sasaranStr, $gId, $gName, $existingId]);
             }
         }
+
+        // Pindahkan butir soal dari paket lama (rombel) ke paket Tingkat yang baru, lalu bersihkan paket rombel legacy
+        try {
+            $oldPakets = $this->db->query("SELECT id, mapel_nama, kelas_nama FROM bs_paket WHERE topik_id = {$topikId} AND kelas_nama NOT IN ('Kelas X', 'Kelas XI', 'Kelas XII')")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($oldPakets as $op) {
+                $tingkat = self::determineTingkat($op['kelas_nama']);
+                $findTingkatId = $this->db->query("SELECT id FROM bs_paket WHERE topik_id = {$topikId} AND mapel_nama = " . $this->db->quote($op['mapel_nama']) . " AND kelas_nama = " . $this->db->quote($tingkat))->fetchColumn();
+                if ($findTingkatId) {
+                    $this->db->exec("UPDATE bs_soal SET paket_id = {$findTingkatId}, kelas_nama = " . $this->db->quote($tingkat) . " WHERE paket_id = {$op['id']}");
+                }
+                $this->db->exec("DELETE FROM bs_paket WHERE id = {$op['id']}");
+            }
+        } catch (\Exception $e) {}
 
         if (!$isInternal && (isset($_POST['topik_id']) || isset($_GET['topik_id']))) {
             redirect("/bank_soal?topik_id={$topikId}&msg=synced_pengampu&count={$inserted}");
@@ -978,6 +1041,22 @@ class BankSoalController {
             $breakdown[$t] = ($breakdown[$t] ?? 0) + 1;
         }
 
+        // Ambil daftar paket sumber yang memiliki butir soal (untuk modal Salin Soal)
+        $sourcePaketList = [];
+        try {
+            $stmtSrc = $this->db->prepare("
+                SELECT p.id, p.mapel_nama, p.kelas_nama, p.kelas_sasaran, t.nama_topik, t.jenis as topik_jenis,
+                       (SELECT COUNT(*) FROM bs_soal WHERE paket_id = p.id) as jml_soal
+                FROM bs_paket p
+                JOIN bs_topik t ON p.topik_id = t.id
+                WHERE (SELECT COUNT(*) FROM bs_soal WHERE paket_id = p.id) > 0
+                  AND p.id != ?
+                ORDER BY (p.mapel_nama = ?) DESC, t.id DESC, p.kelas_nama ASC
+            ");
+            $stmtSrc->execute([$paketId, $mapelNama]);
+            $sourcePaketList = $stmtSrc->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
         $page_title = "Daftar Soal: " . ($mapelNama ?: 'Bank Soal');
         $active_page = "kelola_soal";
         include __DIR__ . '/../../resources/views/bank_soal/daftar_soal.php';
@@ -1165,6 +1244,89 @@ class BankSoalController {
             }
         }
         redirect('/bank_soal');
+    }
+
+    /**
+     * Salin butir soal dari paket sumber terpilih ke paket tujuan
+     */
+    public function copySoal() {
+        $targetPaketId = isset($_POST['target_paket_id']) ? (int)$_POST['target_paket_id'] : 0;
+        $sourcePaketId = isset($_POST['source_paket_id']) ? (int)$_POST['source_paket_id'] : 0;
+        $mode = $_POST['mode'] ?? 'append';
+
+        if ($targetPaketId <= 0 || $sourcePaketId <= 0 || $targetPaketId === $sourcePaketId) {
+            redirect("/bank_soal/daftar_soal?paket_id={$targetPaketId}&msg=error_invalid_copy");
+            exit;
+        }
+
+        // Cek target paket & apakah terkunci
+        $stmtT = $this->db->prepare("SELECT * FROM bs_paket WHERE id = ?");
+        $stmtT->execute([$targetPaketId]);
+        $targetPaket = $stmtT->fetch(PDO::FETCH_ASSOC);
+
+        if (!$targetPaket || !empty($targetPaket['is_locked'])) {
+            redirect("/bank_soal/daftar_soal?paket_id={$targetPaketId}&msg=error_locked");
+            exit;
+        }
+
+        // Ambil soal dari paket sumber
+        $stmtSrc = $this->db->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+        $stmtSrc->execute([$sourcePaketId]);
+        $sourceSoals = $stmtSrc->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($sourceSoals)) {
+            redirect("/bank_soal/daftar_soal?paket_id={$targetPaketId}&msg=error_source_empty");
+            exit;
+        }
+
+        if ($mode === 'overwrite') {
+            $this->db->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$targetPaketId]);
+            if ($this->db_core !== $this->db) {
+                $this->db_core->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$targetPaketId]);
+            }
+            $startNo = 0;
+        } else {
+            $startNo = (int)$this->db->query("SELECT MAX(nomor_urut) FROM bs_soal WHERE paket_id = {$targetPaketId}")->fetchColumn();
+        }
+
+        $stmtIns = $this->db->prepare("
+            INSERT INTO bs_soal (
+                topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, 
+                tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, 
+                opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan
+            ) VALUES (
+                ?, ?, ?, ?, ?, 
+                ?, ?, ?, ?, 
+                ?, ?, ?, ?, ?, ?, ?
+            )
+        ");
+
+        $copied = 0;
+        foreach ($sourceSoals as $s) {
+            $startNo++;
+            $stmtIns->execute([
+                $targetPaket['topik_id'],
+                $targetPaketId,
+                $targetPaket['mapel_nama'],
+                $targetPaket['kelas_nama'],
+                $startNo,
+                $s['tipe_soal'],
+                $s['tingkat_kesulitan'] ?? 'Sedang',
+                $s['skor_maksimal'] ?? 2.00,
+                $s['pertanyaan'],
+                $s['opsi_a'] ?? null,
+                $s['opsi_b'] ?? null,
+                $s['opsi_c'] ?? null,
+                $s['opsi_d'] ?? null,
+                $s['opsi_e'] ?? null,
+                $s['kunci_jawaban'] ?? null,
+                $s['konten_tambahan'] ?? null
+            ]);
+            $copied++;
+        }
+
+        redirect("/bank_soal/daftar_soal?paket_id={$targetPaketId}&msg=soal_copied&count={$copied}");
+        exit;
     }
 
     // --- Legacy Topic Actions (Kompatibilitas) ---

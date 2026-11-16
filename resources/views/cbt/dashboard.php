@@ -171,6 +171,66 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
             text-align: left;
         }
     }
+
+    .kpi-card-cbt {
+        background: #ffffff;
+        border-radius: 18px;
+        border: 1.5px solid #e2e8f0;
+        padding: 1.25rem 1.4rem;
+        display: flex;
+        align-items: center;
+        gap: 1.15rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .kpi-card-cbt:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+        border-color: #cbd5e1;
+    }
+    .quick-nav-card {
+        background: #ffffff;
+        padding: 1.15rem 1.25rem;
+        text-decoration: none;
+        border-radius: 18px;
+        border: 1.5px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .quick-nav-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+        border-color: #93c5fd;
+    }
+    .q-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .q-icon.indigo { background: #e0e7ff; color: #4338ca; }
+    .q-icon.fuchsia { background: #fdf4ff; color: #c026d3; }
+    .q-icon.amber { background: #fffbeb; color: #d97706; }
+    .q-icon.emerald { background: #ecfdf5; color: #059669; }
+    .q-icon.blue { background: #eff6ff; color: #2563eb; }
+    .q-title {
+        font-weight: 800;
+        color: #0f172a;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+    .q-sub {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-top: 2px;
+        white-space: nowrap;
+    }
 </style>
 
 <div class="siakad-container">
@@ -229,48 +289,59 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
             <!-- 4 Stat KPI Cards -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
                 <!-- Total Ujian -->
-                <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div class="kpi-card-cbt">
                     <div style="width: 52px; height: 52px; border-radius: 14px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i data-lucide="clipboard-list" style="width: 26px; height: 26px;"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.7rem; font-weight: 900; color: #0f172a; line-height: 1;"><?php echo $totalUjian; ?></div>
+                        <div style="font-size: 1.75rem; font-weight: 900; color: #0f172a; line-height: 1.1;"><?php echo $totalUjian; ?></div>
                         <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-top: 4px;">Paket Ujian Dibuat</div>
                     </div>
                 </div>
 
                 <!-- Total Soal -->
-                <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div class="kpi-card-cbt">
                     <div style="width: 52px; height: 52px; border-radius: 14px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i data-lucide="file-question" style="width: 26px; height: 26px;"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.7rem; font-weight: 900; color: #0f172a; line-height: 1;"><?php echo $totalSoal; ?></div>
+                        <div style="font-size: 1.75rem; font-weight: 900; color: #0f172a; line-height: 1.1;"><?php echo $totalSoal; ?></div>
                         <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-top: 4px;">Total Butir Soal</div>
                     </div>
                 </div>
 
                 <!-- Peserta Mengerjakan / Selesai -->
-                <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div class="kpi-card-cbt">
                     <div style="width: 52px; height: 52px; border-radius: 14px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i data-lucide="users" style="width: 26px; height: 26px;"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.7rem; font-weight: 900; color: #0f172a; line-height: 1;"><?php echo $totalPeserta; ?></div>
+                        <div style="font-size: 1.75rem; font-weight: 900; color: #0f172a; line-height: 1.1;"><?php echo $totalPeserta; ?></div>
                         <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-top: 4px;">Peserta Terdata</div>
                     </div>
                 </div>
 
                 <!-- Token Aktif -->
-                <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div class="kpi-card-cbt">
                     <div style="width: 52px; height: 52px; border-radius: 14px; background: #fffbeb; color: #d97706; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i data-lucide="key" style="width: 26px; height: 26px;"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.45rem; font-weight: 900; color: #b45309; line-height: 1; font-family: monospace; letter-spacing: 2px;">
-                            <?php echo htmlspecialchars($tokenAktif['token'] ?? 'TIDAK AKTIF'); ?>
-                        </div>
-                        <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-top: 4px;">Token Saat Ini</div>
+                        <?php if (!empty($tokenAktif['token'])): ?>
+                            <div style="font-size: 1.55rem; font-weight: 900; color: #d97706; line-height: 1.1; font-family: monospace; letter-spacing: 1.5px;">
+                                <?php echo htmlspecialchars($tokenAktif['token']); ?>
+                            </div>
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #16a34a; margin-top: 4px; display: flex; align-items: center; gap: 5px;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a; display: inline-block;"></span> Token Aktif
+                            </div>
+                        <?php else: ?>
+                            <div style="font-size: 1.55rem; font-weight: 900; color: #64748b; line-height: 1.1; letter-spacing: -0.5px;">
+                                Nonaktif
+                            </div>
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; margin-top: 4px;">
+                                Token Saat Ini
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -279,7 +350,7 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                 
                 <!-- Jadwal Ujian Aktif -->
-                <div class="card" style="border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden;">
+                <div class="card" style="border-radius: 18px; border: 1.5px solid #e2e8f0; overflow: hidden; background: #ffffff; min-height: 320px; display: flex; flex-direction: column;">
                     <div style="padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.95rem; color: #1e293b;">
                             <i data-lucide="calendar-check" style="width: 18px; height: 18px; color: #4f46e5;"></i>
@@ -289,12 +360,17 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
                             Kelola Jadwal <i data-lucide="arrow-right" style="width: 13px; height: 13px;"></i>
                         </a>
                     </div>
-                    <div style="padding: 0;">
+                    <div style="padding: 0; flex: 1; display: flex; flex-direction: column;">
                         <?php if (empty($ujianList)): ?>
-                            <div style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
-                                <i data-lucide="calendar-x" style="width: 40px; height: 40px; margin-bottom: 8px;"></i>
-                                <div style="font-size: 0.88rem; font-weight: 700; color: #475569;">Belum ada jadwal ujian aktif</div>
-                                <div style="font-size: 0.78rem;">Buat paket ujian baru dan jadwalkan sesi ujian.</div>
+                            <div style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8; margin: auto;">
+                                <div style="width: 54px; height: 54px; border-radius: 16px; background: #f1f5f9; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                                    <i data-lucide="calendar-x" style="width: 26px; height: 26px;"></i>
+                                </div>
+                                <div style="font-size: 0.92rem; font-weight: 800; color: #334155; margin-bottom: 4px;">Belum ada jadwal ujian aktif</div>
+                                <div style="font-size: 0.78rem; color: #64748b; max-width: 280px; margin: 0 auto 12px;">Buat paket ujian baru dan jadwalkan sesi ujian siswa.</div>
+                                <a href="<?php echo base_url('cbt/jadwal'); ?>" style="font-size: 0.76rem; font-weight: 700; background: #e0e7ff; color: #4338ca; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="plus" style="width: 13px; height: 13px;"></i> Buat Jadwal Ujian
+                                </a>
                             </div>
                         <?php else: ?>
                             <div class="z-table-wrap">
@@ -352,7 +428,7 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
                 </div>
 
                 <!-- Hasil Peserta Terbaru -->
-                <div class="card" style="border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden;">
+                <div class="card" style="border-radius: 18px; border: 1.5px solid #e2e8f0; overflow: hidden; background: #ffffff; min-height: 320px; display: flex; flex-direction: column;">
                     <div style="padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.95rem; color: #1e293b;">
                             <i data-lucide="user-check" style="width: 18px; height: 18px; color: #059669;"></i>
@@ -362,12 +438,14 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
                             Lihat Semua <i data-lucide="arrow-right" style="width: 13px; height: 13px;"></i>
                         </a>
                     </div>
-                    <div style="padding: 0;">
+                    <div style="padding: 0; flex: 1; display: flex; flex-direction: column;">
                         <?php if (empty($pesertaTerbaru)): ?>
-                            <div style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
-                                <i data-lucide="user-x" style="width: 40px; height: 40px; margin-bottom: 8px;"></i>
-                                <div style="font-size: 0.88rem; font-weight: 700; color: #475569;">Belum ada riwayat pengerjaan ujian</div>
-                                <div style="font-size: 0.78rem;">Siswa yang menyelesaikan ujian akan tampil di sini secara real-time.</div>
+                            <div style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8; margin: auto;">
+                                <div style="width: 54px; height: 54px; border-radius: 16px; background: #f1f5f9; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                                    <i data-lucide="user-x" style="width: 26px; height: 26px;"></i>
+                                </div>
+                                <div style="font-size: 0.92rem; font-weight: 800; color: #334155; margin-bottom: 4px;">Belum ada riwayat pengerjaan ujian</div>
+                                <div style="font-size: 0.78rem; color: #64748b; max-width: 280px; margin: 0 auto;">Siswa yang menyelesaikan ujian akan tampil di sini secara real-time.</div>
                             </div>
                         <?php else: ?>
                             <div class="z-table-wrap">
@@ -415,54 +493,44 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
             </div>
 
             <!-- Quick Action Cards Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                <a href="<?php echo base_url('cbt/jadwal'); ?>" class="card" style="padding: 1.25rem; text-decoration: none; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: 0.2s;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="calendar"></i>
-                    </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 1.25rem;">
+                <a href="<?php echo base_url('cbt/jadwal'); ?>" class="quick-nav-card">
+                    <div class="q-icon indigo"><i data-lucide="calendar"></i></div>
                     <div>
-                        <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Jadwal Ujian</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Atur waktu & sesi</div>
+                        <div class="q-title">Jadwal Ujian</div>
+                        <div class="q-sub">Atur waktu &amp; sesi</div>
                     </div>
                 </a>
 
-                <a href="<?php echo base_url('cbt/topik'); ?>" class="card" style="padding: 1.25rem; text-decoration: none; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: 0.2s;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #fdf4ff; color: #c026d3; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="layers"></i>
-                    </div>
+                <a href="<?php echo base_url('cbt/topik'); ?>" class="quick-nav-card">
+                    <div class="q-icon fuchsia"><i data-lucide="layers"></i></div>
                     <div>
-                        <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Topik Ujian</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">SAS, STS, UM, Try Out</div>
+                        <div class="q-title">Topik Ujian</div>
+                        <div class="q-sub">SAS, STS, UM, Try Out</div>
                     </div>
                 </a>
 
-                <a href="<?php echo base_url('cbt/token'); ?>" class="card" style="padding: 1.25rem; text-decoration: none; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: 0.2s;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #fffbeb; color: #d97706; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="key-round"></i>
-                    </div>
+                <a href="<?php echo base_url('cbt/token'); ?>" class="quick-nav-card">
+                    <div class="q-icon amber"><i data-lucide="key-round"></i></div>
                     <div>
-                        <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Token Ujian</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Generate token baru</div>
+                        <div class="q-title">Token Ujian</div>
+                        <div class="q-sub">Generate token baru</div>
                     </div>
                 </a>
 
-                <a href="<?php echo base_url('cbt/hasil'); ?>" class="card" style="padding: 1.25rem; text-decoration: none; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: 0.2s;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="award"></i>
-                    </div>
+                <a href="<?php echo base_url('cbt/hasil'); ?>" class="quick-nav-card">
+                    <div class="q-icon emerald"><i data-lucide="award"></i></div>
                     <div>
-                        <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Hasil & Rekap</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Nilai siswa & ekspor</div>
+                        <div class="q-title">Hasil &amp; Rekap</div>
+                        <div class="q-sub">Nilai siswa &amp; ekspor</div>
                     </div>
                 </a>
 
-                <a href="<?php echo base_url('cbt/analisis'); ?>" class="card" style="padding: 1.25rem; text-decoration: none; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; transition: 0.2s;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="bar-chart-2"></i>
-                    </div>
+                <a href="<?php echo base_url('cbt/analisis'); ?>" class="quick-nav-card">
+                    <div class="q-icon blue"><i data-lucide="bar-chart-2"></i></div>
                     <div>
-                        <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">Analisis Butir</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Tingkat kesukaran soal</div>
+                        <div class="q-title">Analisis Butir</div>
+                        <div class="q-sub">Tingkat kesukaran soal</div>
                     </div>
                 </a>
             </div>

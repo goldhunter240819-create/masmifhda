@@ -43,6 +43,14 @@ try {
     $teachingMap = $stmtM->fetchAll(PDO::FETCH_ASSOC);
 } catch (\Exception $e) {}
 
+function apkGetTingkat($nk) {
+    $nk = trim((string)$nk);
+    if (stripos($nk, 'X ') === 0 || $nk === 'X' || stripos($nk, '10') !== false) return 'Kelas X';
+    if (stripos($nk, 'XI ') === 0 || $nk === 'XI' || stripos($nk, '11') !== false) return 'Kelas XI';
+    if (stripos($nk, 'XII ') === 0 || $nk === 'XII' || stripos($nk, '12') !== false) return 'Kelas XII';
+    return !empty($nk) ? $nk : 'Kelas X';
+}
+
 // Siapkan data per topik
 $topikData = [];
 $totalMyPaket = 0;
@@ -64,12 +72,30 @@ foreach ($topikList as $tp) {
 
     // Auto-create jika topik aktif dan paket belum terdaftar untuk guru ini
     if (empty($paketList) && !empty($teachingMap) && $tp['status'] === 'Aktif') {
-        $stmtIns = $db->prepare("
-            INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_id, guru_nama, kkm, durasi_menit, is_locked)
-            VALUES (?, ?, ?, ?, ?, 75, 90, 0)
-        ");
+        $groupedApk = [];
         foreach ($teachingMap as $tm) {
-            $stmtIns->execute([$tId, $tm['nama_mapel'], $tm['nama_kelas'], $guru_id, $guru_nama]);
+            $mName = trim($tm['nama_mapel']);
+            $kName = trim($tm['nama_kelas']);
+            $tKls = apkGetTingkat($kName);
+            $key = $mName . '||' . $tKls;
+            if (!isset($groupedApk[$key])) {
+                $groupedApk[$key] = [
+                    'mapel' => $mName,
+                    'tingkat' => $tKls,
+                    'sasaran' => []
+                ];
+            }
+            if (!in_array($kName, $groupedApk[$key]['sasaran'])) {
+                $groupedApk[$key]['sasaran'][] = $kName;
+            }
+        }
+
+        $stmtIns = $db->prepare("
+            INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_id, guru_nama, kkm, durasi_menit, is_locked)
+            VALUES (?, ?, ?, ?, ?, ?, 75, 90, 0)
+        ");
+        foreach ($groupedApk as $ga) {
+            $stmtIns->execute([$tId, $ga['mapel'], $ga['tingkat'], implode(', ', $ga['sasaran']), $guru_id, $guru_nama]);
         }
         $stmtP->execute([$tId, $guru_id, $guru_nama, '%' . $guru_nama . '%']);
         $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
@@ -260,8 +286,8 @@ foreach ($topikList as $tp) {
                                     }
                                 ?>
                                 <div style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-                                    <!-- Header Paket: Mapel & Kelas -->
-                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                                    <!-- Header Paket: Mapel & Tingkat -->
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
                                         <div style="font-weight: 900; color: #0f172a; font-size: 0.95rem;">
                                             <?= htmlspecialchars($pk['mapel_nama']) ?>
                                         </div>
@@ -269,6 +295,12 @@ foreach ($topikList as $tp) {
                                             <i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars($kls) ?>
                                         </span>
                                     </div>
+
+                                    <?php if (!empty($pk['kelas_sasaran'])): ?>
+                                        <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; margin-bottom: 6px;">
+                                            Sasaran: <strong style="color: #0f172a;"><?= htmlspecialchars($pk['kelas_sasaran']) ?></strong>
+                                        </div>
+                                    <?php endif; ?>
 
                                     <!-- Status Kunci & Jumlah Soal -->
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.78rem;">

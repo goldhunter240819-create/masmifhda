@@ -99,6 +99,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'Pertanyaan soal tidak boleh kosong.';
                 $msg_type = 'error';
             }
+        } elseif ($action === 'copy') {
+            $srcPaketId = (int)($_POST['source_paket_id'] ?? 0);
+            $mode = $_POST['mode'] ?? 'append';
+            if ($srcPaketId > 0 && $srcPaketId !== $paket_id) {
+                $stmtSrc = $db->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                $stmtSrc->execute([$srcPaketId]);
+                $srcSoals = $stmtSrc->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($srcSoals)) {
+                    if ($mode === 'overwrite') {
+                        $db->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paket_id]);
+                        $startNo = 0;
+                    } else {
+                        $startNo = (int)$db->query("SELECT MAX(nomor_urut) FROM bs_soal WHERE paket_id = {$paket_id}")->fetchColumn();
+                    }
+                    $stmtIns = $db->prepare("
+                        INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+                    $cCount = 0;
+                    foreach ($srcSoals as $s) {
+                        $startNo++;
+                        $stmtIns->execute([
+                            $topik_id, $paket_id, $paket['mapel_nama'], $paket['kelas_nama'], $startNo,
+                            $s['tipe_soal'], $s['tingkat_kesulitan'] ?? 'Sedang', $s['skor_maksimal'] ?? 2.00,
+                            $s['pertanyaan'], $s['opsi_a'], $s['opsi_b'], $s['opsi_c'], $s['opsi_d'], $s['opsi_e'], $s['kunci_jawaban']
+                        ]);
+                        $cCount++;
+                    }
+                    $message = "Berhasil menduplikasi dan menyalin {$cCount} butir soal ke paket ini!";
+                    $msg_type = 'success';
+                } else {
+                    $message = 'Paket sumber tidak memiliki butir soal.';
+                    $msg_type = 'error';
+                }
+            }
         }
     }
 }
@@ -107,6 +142,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmtS = $db->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
 $stmtS->execute([$paket_id]);
 $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+// Ambil daftar paket sumber untuk modal salin soal
+$srcPaketList = [];
+try {
+    $stmtSrcP = $db->prepare("
+        SELECT p.id, p.mapel_nama, p.kelas_nama, p.kelas_sasaran, t.jenis,
+               (SELECT COUNT(*) FROM bs_soal WHERE paket_id = p.id) as jml_soal
+        FROM bs_paket p
+        JOIN bs_topik t ON p.topik_id = t.id
+        WHERE (SELECT COUNT(*) FROM bs_soal WHERE paket_id = p.id) > 0 AND p.id != ?
+        ORDER BY (p.mapel_nama = ?) DESC, t.id DESC, p.kelas_nama ASC
+    ");
+    $stmtSrcP->execute([$paket_id, $paket['mapel_nama']]);
+    $srcPaketList = $stmtSrcP->fetchAll(PDO::FETCH_ASSOC);
+} catch (\Exception $e) {}
 
 $page_title = 'Kelola Soal: ' . $paket['mapel_nama'];
 include 'header.php';
@@ -202,7 +252,7 @@ include 'header.php';
         <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span style="font-size: 0.82rem; font-weight: 800; background: #e0e7ff; color: #4338ca; padding: 3px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fa-solid fa-graduation-cap"></i> Kelas: <?= htmlspecialchars($paket['kelas_nama'] ?: 'Semua Kelas') ?>
+                    <i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars($paket['kelas_nama'] ?: 'Kelas X') ?>
                 </span>
                 <?php if ($isLocked): ?>
                     <span style="font-size: 0.72rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 12px; border: 1px solid #fde68a;">
@@ -215,6 +265,12 @@ include 'header.php';
                 <?php endif; ?>
             </div>
 
+            <?php if (!empty($paket['kelas_sasaran'])): ?>
+                <div style="font-size: 0.74rem; color: #64748b; font-weight: 700; margin-bottom: 6px;">
+                    Sasaran: <strong style="color: #0f172a;"><?= htmlspecialchars($paket['kelas_sasaran']) ?></strong>
+                </div>
+            <?php endif; ?>
+
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #64748b; margin-top: 8px;">
                 <div>Total Soal: <strong style="color: #0f172a; font-size: 0.95rem;"><?= count($soalList) ?></strong> Butir</div>
                 <a href="/bank_soal/daftar_soal?paket_id=<?= $paket_id ?>" target="_blank" style="color: #0284c7; font-weight: 700; text-decoration: none; font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
@@ -223,11 +279,16 @@ include 'header.php';
             </div>
         </div>
 
-        <!-- Tombol Tambah Soal (Hanya jika belum dikunci) -->
+        <!-- Tombol Tambah Soal & Salin Soal (Hanya jika belum dikunci) -->
         <?php if (!$isLocked): ?>
-            <button type="button" onclick="openModalTambah()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px;">
-                <i class="fa-solid fa-plus-circle"></i> Tambah Butir Soal Baru
-            </button>
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <button type="button" onclick="openModalTambah()" style="flex: 1.2; padding: 11px 8px; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 0.82rem; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <i class="fa-solid fa-plus-circle"></i> Tambah Soal Baru
+                </button>
+                <button type="button" onclick="openModalCopyApk()" style="flex: 1; padding: 11px 8px; background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; border-radius: 12px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <i class="fa-solid fa-copy"></i> Salin Soal
+                </button>
+            </div>
         <?php else: ?>
             <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.78rem; color: #92400e; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-lock" style="color: #d97706;"></i>
@@ -428,14 +489,82 @@ function closeModalSoal() {
     document.getElementById('modalFormSoal').classList.remove('open');
 }
 
-function handleTipeChange(tipe) {
-    const secOpsi = document.getElementById('section_opsi_pg');
-    if (tipe === 'sec_essay' || tipe === 'sec_bs') {
-        secOpsi.style.display = 'none';
-    } else {
-        secOpsi.style.display = 'block';
+    function handleTipeChange(tipe) {
+        const secOpsi = document.getElementById('section_opsi_pg');
+        if (tipe === 'sec_essay' || tipe === 'sec_bs') {
+            secOpsi.style.display = 'none';
+        } else {
+            secOpsi.style.display = 'block';
+        }
     }
-}
+
+    function openModalCopyApk() {
+        const modal = document.getElementById('modalCopyApk');
+        if (modal) modal.classList.add('open');
+    }
+</script>
+
+<!-- Modal Copy Soal Mobile -->
+<div id="modalCopyApk" class="modal-soal-hp" onclick="if(event.target === this) this.classList.remove('open')">
+    <div class="modal-content-hp">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-copy" style="color: #16a34a;"></i> Salin Soal dari Paket Lain
+            </h3>
+            <button type="button" onclick="document.getElementById('modalCopyApk').classList.remove('open')" style="background: none; border: none; font-size: 1.1rem; color: #94a3b8; cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <?php if (empty($srcPaketList)): ?>
+            <div style="padding: 24px 10px; text-align: center; color: #64748b;">
+                <i class="fa-solid fa-inbox" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 8px;"></i>
+                <div style="font-weight: 800; font-size: 0.9rem; color: #334155;">Belum Ada Paket Sumber</div>
+                <div style="font-size: 0.75rem; margin-top: 4px;">Belum ada paket mapel lain yang terisi butir soal untuk disalin.</div>
+            </div>
+        <?php else: ?>
+            <form method="POST" action="" onsubmit="return confirm('Salin butir soal dari paket sumber terpilih ke paket ini?')">
+                <input type="hidden" name="action" value="copy">
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Pilih Paket Sumber: *</label>
+                    <select name="source_paket_id" required style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.82rem; font-weight: 600; background: #fff;">
+                        <?php foreach($srcPaketList as $src): ?>
+                            <option value="<?= $src['id'] ?>">
+                                [<?= htmlspecialchars($src['jenis'] ?: 'SAS') ?>] <?= htmlspecialchars($src['mapel_nama']) ?> - <?= htmlspecialchars($src['kelas_nama']) ?> (<?= $src['jml_soal'] ?> Soal)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Metode Penyalinan:</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.8rem; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                            <input type="radio" name="mode" value="append" checked style="margin-top: 2px;">
+                            <div>
+                                <strong>Tambahkan (Append)</strong>
+                                <div style="font-size: 0.72rem; color: #64748b;">Soal baru ditaruh di nomor lanjutan.</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.8rem; padding: 8px 10px; border: 1.5px solid #fee2e2; border-radius: 8px; cursor: pointer; background: #fff5f5;">
+                            <input type="radio" name="mode" value="overwrite" style="margin-top: 2px;">
+                            <div>
+                                <strong style="color: #b91c1c;">Gantikan Seluruhnya (Overwrite)</strong>
+                                <div style="font-size: 0.72rem; color: #ef4444;">Hapus soal lama di paket ini, ganti dengan paket sumber.</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-top: 14px;">
+                    <button type="button" onclick="document.getElementById('modalCopyApk').classList.remove('open')" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-weight: 700; font-size: 0.82rem; cursor: pointer;">Batal</button>
+                    <button type="submit" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #16a34a; color: #fff; font-weight: 800; font-size: 0.82rem; cursor: pointer;">Salin Sekarang</button>
+                </div>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
 </script>
 
 <div style="height: 80px;"></div>

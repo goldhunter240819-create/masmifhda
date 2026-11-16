@@ -301,37 +301,40 @@ $currentView = $_GET['view'] ?? 'grid';
                 </div>
             </div>
 
-            <!-- Toolbar: Filter Hari & View Switcher -->
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom: 1.25rem;">
-                <!-- Filter Tab Hari -->
-                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                    <span style="font-size:0.8rem; font-weight:800; color:#64748b; margin-right:4px;">HARI:</span>
-                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=Semua&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === 'Semua') ? 'active' : ''; ?>">
-                        <i data-lucide="layers" style="width:14px;height:14px;"></i> Semua Hari
-                    </a>
-                    <?php foreach($hari_list as $h): ?>
-                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $h; ?>&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === $h) ? 'active' : ''; ?>">
-                        <?php echo $h; ?>
-                    </a>
-                    <?php endforeach; ?>
+            <!-- Unified Schedule Card (Toolbar Header + Schedule Content) -->
+            <div class="card" style="border-radius: 20px; border: 1.5px solid #e2e8f0; overflow: hidden; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 2rem;">
+                
+                <!-- Toolbar: Filter Hari & View Switcher (Integrated Card Header) -->
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding: 1rem 1.5rem; background: #ffffff; border-bottom: 1.5px solid #e2e8f0;">
+                    <!-- Filter Tab Hari -->
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <span style="font-size:0.8rem; font-weight:800; color:#64748b; margin-right:4px;">HARI:</span>
+                        <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=Semua&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === 'Semua') ? 'active' : ''; ?>">
+                            <i data-lucide="layers" style="width:14px;height:14px;"></i> Semua Hari
+                        </a>
+                        <?php foreach($hari_list as $h): ?>
+                        <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $h; ?>&view=<?php echo $currentView; ?>" class="tab-hari-pill <?php echo ($selectedHari === $h) ? 'active' : ''; ?>">
+                            <?php echo $h; ?>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- View Switcher -->
+                    <div style="display:flex; gap:6px; align-items:center; background:#f1f5f9; padding:4px; border-radius:10px;">
+                        <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $selectedHari; ?>&view=grid" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'grid') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
+                            <i data-lucide="grid" style="width:14px;height:14px;"></i> Matriks Jadwal
+                        </a>
+                        <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $selectedHari; ?>&view=list" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'list') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
+                            <i data-lucide="list" style="width:14px;height:14px;"></i> Daftar Sesi
+                        </a>
+                    </div>
                 </div>
 
-                <!-- View Switcher -->
-                <div style="display:flex; gap:6px; align-items:center; background:#f1f5f9; padding:4px; border-radius:10px;">
-                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $selectedHari; ?>&view=grid" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'grid') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
-                        <i data-lucide="grid" style="width:14px;height:14px;"></i> Matriks Jadwal
-                    </a>
-                    <a href="?topik_id=<?php echo $selectedTopikId; ?>&hari=<?php echo $selectedHari; ?>&view=list" style="padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:5px; <?php echo ($currentView === 'list') ? 'background:#fff; color:#0f172a; box-shadow:0 2px 4px rgba(0,0,0,0.06);' : 'color:#64748b;'; ?>">
-                        <i data-lucide="list" style="width:14px;height:14px;"></i> Daftar Sesi
-                    </a>
-                </div>
-            </div>
-
-            <?php if($currentView === 'grid'): ?>
-            <!-- ═══════════════════════════════════════════════════════════════ -->
-            <!-- TAMPILAN MATRIKS JADWAL (PERSIS MODEL JADWAL PELAJARAN)          -->
-            <!-- ═══════════════════════════════════════════════════════════════ -->
-            <div class="schedule-wrapper">
+                <?php if($currentView === 'grid'): ?>
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- TAMPILAN MATRIKS JADWAL (PERSIS MODEL JADWAL PELAJARAN)          -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <div class="schedule-wrapper" style="border: none; border-radius: 0; box-shadow: none; margin-bottom: 0;">
                 <table class="master-schedule-table">
                     <thead>
                         <tr>
@@ -423,15 +426,14 @@ $currentView = $_GET['view'] ?? 'grid';
             <!-- ═══════════════════════════════════════════════════════════════ -->
             <!-- TAMPILAN LIST / DAFTAR SESI UJIAN                               -->
             <!-- ═══════════════════════════════════════════════════════════════ -->
-            <div class="card" style="border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; background: #ffffff;">
-                <div style="padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <div style="font-weight: 800; font-size: 0.95rem; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                        <span>Daftar Paket & Sesi Ujian Aktif</span>
-                        <span style="font-size: 0.75rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 100px; font-weight: 800;">
-                            <?php echo count($ujianList); ?> Sesi
-                        </span>
-                    </div>
+            <div style="padding: 1.1rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="font-weight: 800; font-size: 0.95rem; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                    <span>Daftar Paket & Sesi Ujian Aktif</span>
+                    <span style="font-size: 0.75rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 100px; font-weight: 800;">
+                        <?php echo count($ujianList); ?> Sesi
+                    </span>
                 </div>
+            </div>
 
                 <div class="z-table-wrap">
                     <table class="z-table">
@@ -524,8 +526,8 @@ $currentView = $_GET['view'] ?? 'grid';
                         </tbody>
                     </table>
                 </div>
-            </div>
             <?php endif; ?>
+            </div> <!-- /card unified schedule -->
 
         </div>
     </div>

@@ -417,128 +417,131 @@ $active_menu = "bank_soal";
                 </div>
             </div>
 
-            <!-- Header Grid Topik Ujian -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <h2 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="folder-check" style="color: #0ea5e9; width: 22px; height: 22px;"></i>
-                        Pilih Topik Ujian
-                    </h2>
-                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                        Klik pada kartu topik untuk melihat daftar mapel, rincian jenis butir soal, dan kelola butir soal.
+            <!-- Unified Card Section: Pilih Topik Ujian & Grid Kartu Topik -->
+            <div class="card" style="border-radius: 20px; border: 1.5px solid #e2e8f0; background: #ffffff; padding: 1.5rem 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 2rem;">
+                <!-- Header inside Card -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h2 style="font-size: 1.2rem; font-weight: 900; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="folder-check" style="color: #0ea5e9; width: 22px; height: 22px;"></i>
+                            Pilih Topik Ujian
+                        </h2>
+                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 3px;">
+                            Klik pada kartu topik untuk melihat daftar mapel, rincian jenis butir soal, dan kelola butir soal.
+                        </div>
                     </div>
-                </div>
 
-                <!-- Tombol Kosongkan / Reset Global -->
-                <button type="button" onclick="confirmResetAll()" class="btn-reset-topik" title="Kosongkan seluruh paket dan butir soal di semua topik">
-                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                    <span>Kosongkan / Reset Semua Soal</span>
-                </button>
-            </div>
-
-            <!-- Grid Card Topik Ujian -->
-            <?php if (empty($allTopikList)): ?>
-                <div style="background: #ffffff; border-radius: 16px; border: 1.5px dashed #cbd5e1; padding: 4rem 2rem; text-align: center; color: #64748b;">
-                    <i data-lucide="layers" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 12px;"></i>
-                    <h3 style="font-size: 1.15rem; font-weight: 800; color: #1e293b; margin: 0 0 6px 0;">Belum Ada Topik Ujian</h3>
-                    <p style="font-size: 0.85rem; margin: 0 0 1.25rem 0;">Buat topik ujian baru seperti SAS, STS, atau Ujian Madrasah untuk mulai mengisi bank soal.</p>
-                    <button type="button" onclick="openModalTambahTopik()" class="btn btn-primary">
-                        <i data-lucide="plus"></i> Tambah Topik Sekarang
+                    <!-- Tombol Kosongkan / Reset Global -->
+                    <button type="button" onclick="confirmResetAll()" class="btn-reset-topik" title="Kosongkan seluruh paket dan butir soal di semua topik">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                        <span>Kosongkan / Reset Semua Soal</span>
                     </button>
                 </div>
-            <?php else: ?>
-                <div class="topik-grid-bs">
-                    <?php foreach($allTopikList as $tp): 
-                        $jenis = strtoupper($tp['jenis'] ?: 'SAS');
-                        $bClass = 'badge-sas';
-                        $themeClass = 'theme-sas';
-                        if ($jenis === 'STS' || $jenis === 'PTS') {
-                            $bClass = 'badge-sts';
-                            $themeClass = 'theme-sts';
-                        } elseif ($jenis === 'UM') {
-                            $bClass = 'badge-um';
-                            $themeClass = 'theme-um';
-                        } elseif ($jenis === 'TRY OUT' || $jenis === 'TO') {
-                            $bClass = 'badge-to';
-                            $themeClass = 'theme-to';
-                        }
 
-                        $st = $tp['status'] ?: 'Terjadwal';
-                        $tMulai = !empty($tp['tgl_mulai']) ? date('d M Y', strtotime($tp['tgl_mulai'])) : null;
-                        $tSelesai = !empty($tp['tgl_selesai']) ? date('d M Y', strtotime($tp['tgl_selesai'])) : null;
-                    ?>
-                    <div class="topik-card-bs <?php echo $themeClass; ?> <?php echo ($st === 'Aktif') ? 'active-topik' : ''; ?>">
-                        <div>
-                            <!-- Header Card: Jenis & Status -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <span class="topik-badge-jenis <?php echo $bClass; ?>">
-                                    <i data-lucide="bookmark" style="width: 12px; height: 12px;"></i>
-                                    <?php echo htmlspecialchars($jenis); ?> &bull; <?php echo htmlspecialchars($tp['semester'] ?? 'Ganjil'); ?>
-                                </span>
-                                <?php if ($st === 'Aktif'): ?>
-                                    <span class="badge-status-topik aktif">
-                                        <span class="pulsing-dot"></span> Aktif
-                                    </span>
-                                <?php elseif ($st === 'Selesai'): ?>
-                                    <span class="badge-status-topik selesai">
-                                        <i data-lucide="check" style="width: 12px; height: 12px;"></i> Selesai
-                                    </span>
-                                <?php else: ?>
-                                    <span class="badge-status-topik terjadwal">
-                                        <i data-lucide="clock" style="width: 12px; height: 12px;"></i> Terjadwal
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Title Topik (Uniform Height) -->
-                            <h3 class="topik-card-title">
-                                <?php echo htmlspecialchars($tp['nama_topik']); ?>
-                            </h3>
-
-                            <!-- Tanggal Pelaksanaan -->
-                            <div class="topik-date-box">
-                                <i data-lucide="calendar" style="width: 14px; height: 14px; color: #0ea5e9; flex-shrink: 0;"></i>
-                                <?php if ($tMulai): ?>
-                                    <span><?php echo $tMulai; ?> <?php echo $tSelesai ? 's/d ' . $tSelesai : ''; ?></span>
-                                <?php else: ?>
-                                    <span style="color: #94a3b8; font-style: italic;">Periode belum diset</span>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Stat Summary Card (Uniform Grid) -->
-                            <div class="topik-stat-box">
-                                <div class="topik-stat-item">
-                                    <div class="topik-stat-num" style="color: #0f172a;"><?php echo $tp['jml_paket']; ?></div>
-                                    <div class="topik-stat-lbl">Paket Mapel</div>
-                                </div>
-                                <div class="topik-stat-item" style="border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">
-                                    <div class="topik-stat-num" style="color: #0284c7;"><?php echo $tp['jml_soal']; ?></div>
-                                    <div class="topik-stat-lbl">Total Soal</div>
-                                </div>
-                                <div class="topik-stat-item">
-                                    <div class="topik-stat-num" style="font-size: 0.95rem;">
-                                        <?php if ($tp['jml_locked'] > 0): ?>
-                                            <span style="color: #d97706;"><?php echo $tp['jml_locked']; ?> Kunci</span>
-                                        <?php elseif ($tp['jml_paket'] > 0): ?>
-                                            <span style="color: #16a34a;">0 Kunci</span>
-                                        <?php else: ?>
-                                            <span style="color: #94a3b8;">-</span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="topik-stat-lbl">Status Kunci</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Tombol Buka Bank Soal Topik -->
-                        <a href="?topik_id=<?php echo $tp['id']; ?>" class="btn-open-topik <?php echo ($st === 'Aktif') ? 'btn-active-topik' : ''; ?>">
-                            <span>Buka Bank Soal Topik</span>
-                            <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
-                        </a>
+                <!-- Grid Card Topik Ujian -->
+                <?php if (empty($allTopikList)): ?>
+                    <div style="background: #f8fafc; border-radius: 16px; border: 1.5px dashed #cbd5e1; padding: 4rem 2rem; text-align: center; color: #64748b;">
+                        <i data-lucide="layers" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 12px;"></i>
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: #1e293b; margin: 0 0 6px 0;">Belum Ada Topik Ujian</h3>
+                        <p style="font-size: 0.85rem; margin: 0 0 1.25rem 0;">Buat topik ujian baru seperti SAS, STS, atau Ujian Madrasah untuk mulai mengisi bank soal.</p>
+                        <button type="button" onclick="openModalTambahTopik()" class="btn btn-primary">
+                            <i data-lucide="plus"></i> Tambah Topik Sekarang
+                        </button>
                     </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                <?php else: ?>
+                    <div class="topik-grid-bs" style="margin-bottom: 0;">
+                        <?php foreach($allTopikList as $tp): 
+                            $jenis = strtoupper($tp['jenis'] ?: 'SAS');
+                            $bClass = 'badge-sas';
+                            $themeClass = 'theme-sas';
+                            if ($jenis === 'STS' || $jenis === 'PTS') {
+                                $bClass = 'badge-sts';
+                                $themeClass = 'theme-sts';
+                            } elseif ($jenis === 'UM') {
+                                $bClass = 'badge-um';
+                                $themeClass = 'theme-um';
+                            } elseif ($jenis === 'TRY OUT' || $jenis === 'TO') {
+                                $bClass = 'badge-to';
+                                $themeClass = 'theme-to';
+                            }
+
+                            $st = $tp['status'] ?: 'Terjadwal';
+                            $tMulai = !empty($tp['tgl_mulai']) ? date('d M Y', strtotime($tp['tgl_mulai'])) : null;
+                            $tSelesai = !empty($tp['tgl_selesai']) ? date('d M Y', strtotime($tp['tgl_selesai'])) : null;
+                        ?>
+                        <div class="topik-card-bs <?php echo $themeClass; ?> <?php echo ($st === 'Aktif') ? 'active-topik' : ''; ?>">
+                            <div>
+                                <!-- Header Card: Jenis & Status -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <span class="topik-badge-jenis <?php echo $bClass; ?>">
+                                        <i data-lucide="bookmark" style="width: 12px; height: 12px;"></i>
+                                        <?php echo htmlspecialchars($jenis); ?> &bull; <?php echo htmlspecialchars($tp['semester'] ?? 'Ganjil'); ?>
+                                    </span>
+                                    <?php if ($st === 'Aktif'): ?>
+                                        <span class="badge-status-topik aktif">
+                                            <span class="pulsing-dot"></span> Aktif
+                                        </span>
+                                    <?php elseif ($st === 'Selesai'): ?>
+                                        <span class="badge-status-topik selesai">
+                                            <i data-lucide="check" style="width: 12px; height: 12px;"></i> Selesai
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge-status-topik terjadwal">
+                                            <i data-lucide="clock" style="width: 12px; height: 12px;"></i> Terjadwal
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Title Topik (Uniform Height) -->
+                                <h3 class="topik-card-title">
+                                    <?php echo htmlspecialchars($tp['nama_topik']); ?>
+                                </h3>
+
+                                <!-- Tanggal Pelaksanaan -->
+                                <div class="topik-date-box">
+                                    <i data-lucide="calendar" style="width: 14px; height: 14px; color: #0ea5e9; flex-shrink: 0;"></i>
+                                    <?php if ($tMulai): ?>
+                                        <span><?php echo $tMulai; ?> <?php echo $tSelesai ? 's/d ' . $tSelesai : ''; ?></span>
+                                    <?php else: ?>
+                                        <span style="color: #94a3b8; font-style: italic;">Periode belum diset</span>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Stat Summary Card (Uniform Grid) -->
+                                <div class="topik-stat-box">
+                                    <div class="topik-stat-item">
+                                        <div class="topik-stat-num" style="color: #0f172a;"><?php echo $tp['jml_paket']; ?></div>
+                                        <div class="topik-stat-lbl">Paket Mapel</div>
+                                    </div>
+                                    <div class="topik-stat-item" style="border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">
+                                        <div class="topik-stat-num" style="color: #0284c7;"><?php echo $tp['jml_soal']; ?></div>
+                                        <div class="topik-stat-lbl">Total Soal</div>
+                                    </div>
+                                    <div class="topik-stat-item">
+                                        <div class="topik-stat-num" style="font-size: 0.95rem;">
+                                            <?php if ($tp['jml_locked'] > 0): ?>
+                                                <span style="color: #d97706;"><?php echo $tp['jml_locked']; ?> Kunci</span>
+                                            <?php elseif ($tp['jml_paket'] > 0): ?>
+                                                <span style="color: #16a34a;">0 Kunci</span>
+                                            <?php else: ?>
+                                                <span style="color: #94a3b8;">-</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="topik-stat-lbl">Status Kunci</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tombol Buka Bank Soal Topik -->
+                            <a href="?topik_id=<?php echo $tp['id']; ?>" class="btn-open-topik <?php echo ($st === 'Aktif') ? 'btn-active-topik' : ''; ?>">
+                                <span>Buka Bank Soal Topik</span>
+                                <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+                            </a>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
 
             <?php else: ?>
             <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -705,21 +708,19 @@ $active_menu = "bank_soal";
                                     $tot = $pk['total_soal'] ?? 0;
                                     $kls = trim($pk['kelas_nama'] ?? '');
                                     
-                                    // Warna Badge per Kelas
+                                    // Warna Badge per Tingkat
                                     $klsBg = '#e0e7ff';
                                     $klsCol = '#4338ca';
                                     $klsBorder = '#c7d2fe';
-                                    if (strpos($kls, 'X E') !== false || $kls === 'X') {
+                                    if ($kls === 'Kelas X' || strpos($kls, 'X ') !== false) {
                                         $klsBg = '#eff6ff'; $klsCol = '#1d4ed8'; $klsBorder = '#bfdbfe';
-                                    } elseif (strpos($kls, 'XI F') !== false || $kls === 'XI') {
+                                    } elseif ($kls === 'Kelas XI' || strpos($kls, 'XI ') !== false) {
                                         $klsBg = '#ecfdf5'; $klsCol = '#047857'; $klsBorder = '#a7f3d0';
-                                    } elseif (strpos($kls, 'XII F.1') !== false) {
-                                        $klsBg = '#f5f3ff'; $klsCol = '#6d28d9'; $klsBorder = '#ddd6fe';
-                                    } elseif (strpos($kls, 'XII F.2') !== false) {
-                                        $klsBg = '#fffbeb'; $klsCol = '#b45309'; $klsBorder = '#fde68a';
+                                    } elseif ($kls === 'Kelas XII' || strpos($kls, 'XII ') !== false) {
+                                        $klsBg = '#fdf4ff'; $klsCol = '#7e22ce'; $klsBorder = '#f5d0fe';
                                     }
                                 ?>
-                                <tr class="row-paket-mapel" data-kelas="<?php echo htmlspecialchars($kls); ?>" data-search="<?php echo htmlspecialchars(strtolower(($pk['mapel_nama'] ?? '') . ' ' . ($pk['guru_nama'] ?? '') . ' ' . $kls)); ?>">
+                                <tr class="row-paket-mapel" data-kelas="<?php echo htmlspecialchars($kls); ?>" data-search="<?php echo htmlspecialchars(strtolower(($pk['mapel_nama'] ?? '') . ' ' . ($pk['guru_nama'] ?? '') . ' ' . $kls . ' ' . ($pk['kelas_sasaran'] ?? ''))); ?>">
                                     <td class="row-number-cell" style="text-align: center; color: #94a3b8; font-weight: 700;"><?php echo $no++; ?></td>
                                     <td>
                                         <div style="font-weight: 900; color: #0f172a; font-size: 0.95rem;">
@@ -733,10 +734,15 @@ $active_menu = "bank_soal";
                                         </div>
                                     </td>
                                     <td>
-                                        <span style="font-size: 0.8rem; font-weight: 800; background: <?php echo $klsBg; ?>; color: <?php echo $klsCol; ?>; border: 1px solid <?php echo $klsBorder; ?>; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;">
+                                        <span style="font-size: 0.82rem; font-weight: 800; background: <?php echo $klsBg; ?>; color: <?php echo $klsCol; ?>; border: 1px solid <?php echo $klsBorder; ?>; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;">
                                             <i data-lucide="graduation-cap" style="width: 13px; height: 13px;"></i>
-                                            <?php echo htmlspecialchars($kls ?: 'X E.1'); ?>
+                                            <?php echo htmlspecialchars($kls ?: 'Kelas X'); ?>
                                         </span>
+                                        <?php if (!empty($pk['kelas_sasaran'])): ?>
+                                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; margin-top: 4px;">
+                                                Sasaran: <span style="color: #0f172a;"><?php echo htmlspecialchars($pk['kelas_sasaran']); ?></span>
+                                            </div>
+                                        <?php endif; ?>
                                     </td>
                                     <td style="text-align: center;">
                                         <div style="font-size: 1.15rem; font-weight: 900; color: <?php echo ($tot > 0) ? '#0f172a' : '#94a3b8'; ?>;">
@@ -899,19 +905,27 @@ $active_menu = "bank_soal";
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem;">
                 <div>
-                    <label class="label-sm" style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px;">Kelas Sasaran <span style="color:#ef4444;">*</span></label>
+                    <label class="label-sm" style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px;">Tingkat Kelas <span style="color:#ef4444;">*</span></label>
                     <select name="kelas_nama" class="z-input" required style="width: 100%;">
-                        <option value="">-- Pilih Kelas Sasaran --</option>
-                        <?php foreach($kelasList as $k): ?>
-                            <option value="<?php echo htmlspecialchars($k['nama_kelas']); ?>">
-                                <?php echo htmlspecialchars($k['nama_kelas']); ?>
-                            </option>
-                        <?php endforeach; ?>
+                        <option value="Kelas X">Kelas X</option>
+                        <option value="Kelas XI">Kelas XI</option>
+                        <option value="Kelas XII">Kelas XII</option>
                     </select>
                 </div>
                 <div>
+                    <label class="label-sm" style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px;">Kelas Sasaran (Rombel)</label>
+                    <input type="text" name="kelas_sasaran" class="z-input" placeholder="Contoh: XII F.1, XII F.2" style="width: 100%;">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem;">
+                <div>
                     <label class="label-sm" style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px;">KKM</label>
                     <input type="number" name="kkm" class="z-input" value="75" min="0" max="100" style="width: 100%;">
+                </div>
+                <div>
+                    <label class="label-sm" style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px;">Durasi Ujian (Menit)</label>
+                    <input type="number" name="durasi_menit" class="z-input" value="90" min="1" max="300" style="width: 100%;">
                 </div>
             </div>
 

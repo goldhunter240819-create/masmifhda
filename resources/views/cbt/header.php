@@ -12,7 +12,7 @@ if ($roleId === 1 || $roleId === 99) {
 
 $pageTitle = $pageTitle ?? 'CBT Online';
 ?>
-<header class="z-header" style="height: 74px; padding: 0 1.75rem; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100;">
+<header class="z-header" style="height: 74px; padding: 0 2rem; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100;">
     <div class="z-header-left" style="display: flex; align-items: center; gap: 14px;">
         <button class="z-hamburger" id="zHamburger" onclick="zToggleSidebar()" style="background: none; border: none; cursor: pointer; color: #1e293b; display: flex; align-items: center; padding: 6px; border-radius: 8px;">
             <i data-lucide="menu" style="width: 20px; height: 20px;"></i>

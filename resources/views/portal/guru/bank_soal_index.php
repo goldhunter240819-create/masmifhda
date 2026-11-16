@@ -159,35 +159,39 @@ $page_title = 'Bank Soal Saya';
                         $tot = $pk['total_soal'] ?? 0;
                         $bd = $pk['breakdown'] ?? [];
 
-                        // Warna Badge Kelas
+                        // Warna Badge Tingkat
                         $klsBg = '#eff6ff'; $klsCol = '#1d4ed8'; $klsBorder = '#bfdbfe';
-                        if (strpos($kls, 'XI F') !== false) {
+                        if ($kls === 'Kelas XI' || strpos($kls, 'XI ') !== false) {
                             $klsBg = '#ecfdf5'; $klsCol = '#047857'; $klsBorder = '#a7f3d0';
-                        } elseif (strpos($kls, 'XII F.1') !== false) {
-                            $klsBg = '#f5f3ff'; $klsCol = '#6d28d9'; $klsBorder = '#ddd6fe';
-                        } elseif (strpos($kls, 'XII F.2') !== false) {
-                            $klsBg = '#fffbeb'; $klsCol = '#b45309'; $klsBorder = '#fde68a';
+                        } elseif ($kls === 'Kelas XII' || strpos($kls, 'XII ') !== false) {
+                            $klsBg = '#fdf4ff'; $klsCol = '#7e22ce'; $klsBorder = '#f5d0fe';
                         }
                     ?>
                     <div class="guru-bs-card">
                         <div>
-                            <!-- Header Card: Kelas & Status Kunci -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <span style="font-size: 0.8rem; font-weight: 800; background: <?php echo $klsBg; ?>; color: <?php echo $klsCol; ?>; border: 1px solid <?php echo $klsBorder; ?>; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;">
+                            <!-- Header Card: Tingkat & Status Kunci -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 0.82rem; font-weight: 800; background: <?php echo $klsBg; ?>; color: <?php echo $klsCol; ?>; border: 1px solid <?php echo $klsBorder; ?>; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;">
                                     <i data-lucide="graduation-cap" style="width: 13px; height: 13px;"></i>
-                                    Kelas: <?php echo htmlspecialchars($kls); ?>
+                                    <?php echo htmlspecialchars($kls); ?>
                                 </span>
 
                                 <?php if ($isLocked): ?>
                                     <span style="font-size: 0.72rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 4px;">
-                                        <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Terkunci (Final)
+                                        <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Terkunci
                                     </span>
                                 <?php else: ?>
                                     <span style="font-size: 0.72rem; font-weight: 800; background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 20px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 4px;">
-                                        <i data-lucide="unlock" style="width: 12px; height: 12px;"></i> Terbuka (Bisa Diedit)
+                                        <i data-lucide="unlock" style="width: 12px; height: 12px;"></i> Terbuka
                                     </span>
                                 <?php endif; ?>
                             </div>
+
+                            <?php if (!empty($pk['kelas_sasaran'])): ?>
+                                <div style="font-size: 0.74rem; color: #64748b; font-weight: 700; margin-bottom: 10px;">
+                                    Sasaran: <strong style="color: #0f172a;"><?php echo htmlspecialchars($pk['kelas_sasaran']); ?></strong>
+                                </div>
+                            <?php endif; ?>
 
                             <!-- Mapel Title -->
                             <h3 style="margin: 0 0 6px 0; font-size: 1.2rem; font-weight: 900; color: #0f172a; line-height: 1.3;">

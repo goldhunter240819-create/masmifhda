@@ -82,6 +82,10 @@ $isLocked = !empty($paketInfo['is_locked']);
                     <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                         <i data-lucide="trash-2" style="width: 20px; height: 20px; color: #ef4444;"></i> Butir soal berhasil dihapus dari paket.
                     </div>
+                <?php elseif($_GET['msg'] === 'soal_copied'): ?>
+                    <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                        <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Berhasil menyalin <?php echo (int)($_GET['count'] ?? 0); ?> butir soal ke paket ini!
+                    </div>
                 <?php elseif($_GET['msg'] === 'error_locked'): ?>
                     <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                         <i data-lucide="lock" style="width: 20px; height: 20px; color: #ef4444;"></i> Soal ini sedang terkunci! Buka kunci paket terlebih dahulu untuk menambah atau mengedit soal.
@@ -117,8 +121,13 @@ $isLocked = !empty($paketInfo['is_locked']);
                             [<?php echo htmlspecialchars($topikInfo['jenis'] ?? 'SAS'); ?>]
                         </span>
                         <span style="font-size: 0.82rem; font-weight: 800; background: #e0e7ff; color: #4338ca; padding: 3px 10px; border-radius: 8px;">
-                            Kelas: <?php echo htmlspecialchars($paketInfo['kelas_nama'] ?? 'Semua Kelas'); ?>
+                            <?php echo htmlspecialchars($paketInfo['kelas_nama'] ?? 'Kelas X'); ?>
                         </span>
+                        <?php if (!empty($paketInfo['kelas_sasaran'])): ?>
+                            <span style="font-size: 0.82rem; font-weight: 700; background: #f1f5f9; color: #334155; padding: 3px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                Sasaran: <strong><?php echo htmlspecialchars($paketInfo['kelas_sasaran']); ?></strong>
+                            </span>
+                        <?php endif; ?>
                         <?php if ($isLocked): ?>
                             <span style="font-size: 0.82rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 3px 12px; border-radius: 20px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 4px;">
                                 <i data-lucide="lock" style="width: 13px; height: 13px;"></i> Terkunci (Final)
@@ -184,6 +193,14 @@ $isLocked = !empty($paketInfo['is_locked']);
                     </form>
                     <?php endif; ?>
 
+                    <!-- Tombol Salin Soal -->
+                    <?php if (!$isLocked && $paketInfo): ?>
+                        <button type="button" onclick="openModalCopySoal()" class="btn btn-outline" style="background: #f0fdf4; border-color: #86efac; color: #166534; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
+                            <i data-lucide="copy" style="width: 15px; height: 15px; color: #16a34a;"></i>
+                            <span>Salin Soal dari Paket Lain</span>
+                        </button>
+                    <?php endif; ?>
+
                     <!-- Tombol Tambah Soal -->
                     <?php if ($isLocked): ?>
                         <button type="button" class="btn" style="background: #e2e8f0; color: #94a3b8; cursor: not-allowed; font-weight: 700;" title="Soal terkunci, buka kunci untuk menambah butir soal">
@@ -232,7 +249,17 @@ $isLocked = !empty($paketInfo['is_locked']);
                                 <td colspan="6" style="padding: 4rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="file-question" style="width: 48px; height: 48px; margin-bottom: 10px; color: #cbd5e1;"></i>
                                     <div style="font-size: 1rem; font-weight: 800; color: #475569;">Belum ada butir soal pada paket ini</div>
-                                    <div style="font-size: 0.82rem; margin-top: 4px;">Klik tombol "Tambah Butir Soal Baru" di atas untuk mulai memasukkan soal.</div>
+                                    <div style="font-size: 0.82rem; margin-top: 4px;">Klik tombol "Tambah Butir Soal Baru" di atas untuk mulai memasukkan soal, atau salin dari paket mapel lain.</div>
+                                    <?php if (!$isLocked && $paketInfo): ?>
+                                    <div style="margin-top: 14px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                                        <a href="<?php echo base_url('bank_soal/tambah_soal?paket_id=' . ($paketInfo['id'] ?? '') . '&topik_id=' . ($topikInfo['id'] ?? 1) . '&mapel=' . urlencode($mapelNama)); ?>" class="btn btn-primary" style="font-size: 0.82rem; font-weight: 800; background: #0ea5e9; border: none;">
+                                            <i data-lucide="plus"></i> Tambah Butir Soal Baru
+                                        </a>
+                                        <button type="button" onclick="openModalCopySoal()" class="btn btn-outline" style="background: #f0fdf4; border-color: #86efac; color: #166534; font-size: 0.82rem; font-weight: 800;">
+                                            <i data-lucide="copy" style="width: 14px; height: 14px; color: #16a34a;"></i> Salin dari Paket Lain
+                                        </button>
+                                    </div>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                             <?php else: ?>
@@ -413,6 +440,93 @@ $isLocked = !empty($paketInfo['is_locked']);
         document.getElementById('modalPreviewSoal').classList.add('open');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
+
+    function openModalCopySoal() {
+        const modal = document.getElementById('modalCopySoal');
+        if (modal) {
+            modal.classList.add('open');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL: SALIN BUTIR SOAL DARI PAKET LAIN                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="modalCopySoal" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('open')">
+    <div style="background: #ffffff; width: 92%; max-width: 540px; border-radius: 20px; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18); border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="copy" style="width: 20px; height: 20px; color: #16a34a;"></i>
+                Salin Butir Soal ke Paket Ini
+            </h3>
+            <button type="button" onclick="document.getElementById('modalCopySoal').classList.remove('open')" style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px;">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 1.25rem; font-size: 0.82rem; color: #475569;">
+            <div>Target Tujuan: <strong><?php echo htmlspecialchars($mapelNama); ?> (<?php echo htmlspecialchars($paketInfo['kelas_nama'] ?? ''); ?>)</strong></div>
+            <div style="color: #64748b; font-size: 0.76rem; margin-top: 2px;">Seluruh butir soal, opsi pilihan ganda, dan kunci jawaban dari paket sumber akan diduplikasi secara otomatis.</div>
+        </div>
+
+        <?php if(empty($sourcePaketList)): ?>
+            <div style="padding: 2rem 1rem; text-align: center; color: #64748b;">
+                <i data-lucide="inbox" style="width: 40px; height: 40px; color: #cbd5e1; margin-bottom: 8px;"></i>
+                <div style="font-weight: 800; color: #334155; font-size: 0.95rem;">Belum Ada Paket Sumber yang Memiliki Soal</div>
+                <div style="font-size: 0.8rem; margin-top: 4px;">Belum ada paket mapel lain yang terisi butir soal untuk disalin. Silakan buat butir soal baru terlebih dahulu.</div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                <button type="button" onclick="document.getElementById('modalCopySoal').classList.remove('open')" class="btn btn-outline">Tutup</button>
+            </div>
+        <?php else: ?>
+            <form method="POST" action="<?php echo base_url('bank_soal/soal/copy'); ?>" onsubmit="return confirm('Salin butir soal dari paket sumber terpilih ke paket ini?')">
+                <input type="hidden" name="target_paket_id" value="<?php echo $paketInfo['id'] ?? 0; ?>">
+
+                <div style="margin-bottom: 1.2rem;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                        Pilih Paket Soal Sumber: *
+                    </label>
+                    <select name="source_paket_id" id="source_paket_id" required style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 600; background: #ffffff;">
+                        <?php foreach($sourcePaketList as $src): ?>
+                            <option value="<?php echo $src['id']; ?>">
+                                [<?php echo htmlspecialchars($src['topik_jenis'] ?: 'SAS'); ?>] <?php echo htmlspecialchars($src['mapel_nama']); ?> - <?php echo htmlspecialchars($src['kelas_nama']); ?> (<?php echo $src['jml_soal']; ?> Soal)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                        Metode Penyalinan:
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; background: #ffffff;">
+                            <input type="radio" name="mode" value="append" checked style="margin-top: 3px;">
+                            <div>
+                                <div style="font-weight: 800; font-size: 0.85rem; color: #0f172a;">Tambahkan (Append)</div>
+                                <div style="font-size: 0.74rem; color: #64748b;">Soal yang sudah ada di paket ini tetap tersimpan, soal baru akan ditambahkan di nomor berikutnya.</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1.5px solid #fee2e2; border-radius: 10px; cursor: pointer; background: #fff5f5;">
+                            <input type="radio" name="mode" value="overwrite" style="margin-top: 3px;">
+                            <div>
+                                <div style="font-weight: 800; font-size: 0.85rem; color: #b91c1c;">Gantikan Seluruhnya (Overwrite)</div>
+                                <div style="font-size: 0.74rem; color: #ef4444;">Hapus seluruh soal di paket ini terlebih dahulu dan gantikan persis seperti paket sumber.</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" onclick="document.getElementById('modalCopySoal').classList.remove('open')" class="btn btn-outline" style="border-color: #cbd5e1; font-weight: 700;">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="background: #16a34a; border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
+                        <i data-lucide="copy" style="width: 15px; height: 15px;"></i> Salin Sekarang
+                    </button>
+                </div>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
 </body>
 </html>

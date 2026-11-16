@@ -2267,6 +2267,8 @@ $router->add('POST', '/bank_soal/tambah_soal', ['\App\Controllers\BankSoalContro
 $router->add('POST', '/bank_soal/soal/simpan', ['\App\Controllers\BankSoalController', 'simpanSoal']);
 $router->add('GET', '/bank_soal/hapus_soal', ['\App\Controllers\BankSoalController', 'hapusSoal']);
 $router->add('POST', '/bank_soal/hapus_soal', ['\App\Controllers\BankSoalController', 'hapusSoal']);
+$router->add('POST', '/bank_soal/soal/copy', ['\App\Controllers\BankSoalController', 'copySoal']);
+$router->add('POST', '/guru/bank-soal/copy', ['\App\Controllers\BankSoalController', 'copySoal']);
 
 // Template UI Routes
 $router->add('GET', '/template', function() {
