@@ -45,9 +45,22 @@ try {
     $deletedOrphans = $db->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
     $output .= "CLEANED ORPHAN BS_PAKET: " . $deletedOrphans . " rows deleted\n";
     
-    // Total count now
-    $totalNow = $db->query("SELECT COUNT(*) FROM bs_paket")->fetchColumn();
-    $output .= "NEW TOTAL BS_PAKET: " . $totalNow . "\n";
+    // Find which rows in mRows are not in sasPaket
+    $diff = [];
+    foreach ($mRows as $mr) {
+        $found = false;
+        foreach ($sasPaket as $sp) {
+            if ($sp['mapel_nama'] === $mr['nama_mapel'] && $sp['kelas_nama'] === $mr['nama_kelas']) {
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            $diff[] = $mr;
+        }
+    }
+    $output .= "DIFF ROWS (" . count($diff) . "): " . json_encode($diff) . "\n";
+
 
 } catch (\Exception $e) {
     $output .= "\nError querying bs_paket: " . $e->getMessage() . "\n";
