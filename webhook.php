@@ -21,15 +21,34 @@ require_once __DIR__ . '/app/Core/Database.php';
 try {
     $db = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
     
-    // Check bs_topik and bs_paket
-    $topiks = $db->query("SELECT id, jenis, nama_topik, status FROM bs_topik")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "\nLIVE TOPIK: " . json_encode($topiks) . "\n";
+    // Check difference between active mengajar and bs_paket for topik 3
+    $sasPaket = $db->query("SELECT mapel_nama, kelas_nama, guru_nama FROM bs_paket WHERE topik_id = 3")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nSAS PAKET (ID 3) count: " . count($sasPaket) . "\n";
     
-    $groupPaket = $db->query("SELECT topik_id, COUNT(*) as cnt FROM bs_paket GROUP BY topik_id")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "LIVE BS_PAKET by topik_id: " . json_encode($groupPaket) . "\n";
+    // Check which active mengajar is not in sasPaket
+    $mRows = $db->query("
+        SELECT DISTINCT mp.nama_mapel, k.nama_kelas, COALESCE(g.nama, g_siakad.nama_lengkap) as guru_nama
+        FROM mengajar m
+        JOIN kelas k ON m.kelas_id = k.id
+        JOIN mapel mp ON m.mapel_id = mp.id
+        LEFT JOIN aula_db.guru g ON m.guru_id = g.id
+        LEFT JOIN guru g_siakad ON m.guru_id = g_siakad.id
+        WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
+          AND (m.tahun_ajaran_id = 2 OR m.tahun_ajaran_id IS NULL)
+          AND (m.semester = 1 OR m.semester IS NULL OR m.semester = 0)
+          AND mp.nama_mapel NOT IN ('Upacara', 'Senam', 'Pramuka', 'Sholat Dhuha', 'Juz Amma - Asmaul Husna', 'BTQ', 'IPAS', 'SBdP', 'Baca Tulis Qur\'an', 'Ilmu Pengetahuan Alam Sosial', 'Seni Budaya dan Prakarya')
+        ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "ACTIVE MENGAJAR DISTINCT (TA 2, Sem 1): " . count($mRows) . "\n";
     
-    $orphans = $db->query("SELECT id, topik_id, mapel_nama, kelas_nama FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "LIVE ORPHANS (" . count($orphans) . "): " . json_encode($orphans) . "\n";
+    // Clean up orphan bs_paket whose topik_id is not in bs_topik
+    $deletedOrphans = $db->exec("DELETE FROM bs_paket WHERE topik_id NOT IN (SELECT id FROM bs_topik) OR topik_id IS NULL OR topik_id = 0");
+    $output .= "CLEANED ORPHAN BS_PAKET: " . $deletedOrphans . " rows deleted\n";
+    
+    // Total count now
+    $totalNow = $db->query("SELECT COUNT(*) FROM bs_paket")->fetchColumn();
+    $output .= "NEW TOTAL BS_PAKET: " . $totalNow . "\n";
+
 } catch (\Exception $e) {
     $output .= "\nError querying bs_paket: " . $e->getMessage() . "\n";
 }
