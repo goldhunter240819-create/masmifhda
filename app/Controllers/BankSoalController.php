@@ -25,7 +25,7 @@ class BankSoalController {
     }
 
     /**
-     * Pastikan tabel bs_topik, bs_paket, dan bs_soal ada di database
+     * Pastikan tabel bs_topik, bs_paket, dan bs_soal ada di database beserta semua kolom terbarunya
      */
     public static function ensureTables($db) {
         if (!$db) return;
@@ -86,6 +86,78 @@ class BankSoalController {
                 INDEX idx_paket_soal (paket_id),
                 INDEX idx_mapel_soal (mapel_nama)
             )");
+
+            // ═══════════════════════════════════════════════════════════════
+            // AUTO MIGRATION: Pastikan kolom baru selalu ada di live database
+            // ═══════════════════════════════════════════════════════════════
+            $colsSoal = $db->query("DESCRIBE bs_soal")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('paket_id', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN paket_id INT DEFAULT NULL AFTER topik_id");
+                try { $db->exec("ALTER TABLE bs_soal ADD INDEX idx_paket_soal (paket_id)"); } catch (\Exception $e) {}
+            }
+            if (!in_array('kelas_nama', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN kelas_nama VARCHAR(100) DEFAULT NULL AFTER mapel_nama");
+            }
+            if (!in_array('nomor_urut', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN nomor_urut INT DEFAULT 1 AFTER kelas_nama");
+            }
+            if (!in_array('opsi_a', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN opsi_a LONGTEXT DEFAULT NULL AFTER pertanyaan");
+            }
+            if (!in_array('opsi_b', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN opsi_b LONGTEXT DEFAULT NULL AFTER opsi_a");
+            }
+            if (!in_array('opsi_c', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN opsi_c LONGTEXT DEFAULT NULL AFTER opsi_b");
+            }
+            if (!in_array('opsi_d', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN opsi_d LONGTEXT DEFAULT NULL AFTER opsi_c");
+            }
+            if (!in_array('opsi_e', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN opsi_e LONGTEXT DEFAULT NULL AFTER opsi_d");
+            }
+            if (!in_array('kunci_jawaban', $colsSoal)) {
+                $db->exec("ALTER TABLE bs_soal ADD COLUMN kunci_jawaban TEXT DEFAULT NULL AFTER opsi_e");
+            }
+
+            // MIGRASI KOLOM BS_PAKET
+            $colsPaket = $db->query("DESCRIBE bs_paket")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('is_locked', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN is_locked TINYINT(1) DEFAULT 0");
+            }
+            if (!in_array('locked_at', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN locked_at DATETIME DEFAULT NULL");
+            }
+            if (!in_array('locked_by', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN locked_by VARCHAR(100) DEFAULT NULL");
+            }
+            if (!in_array('guru_id', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN guru_id INT DEFAULT NULL");
+            }
+            if (!in_array('guru_nama', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN guru_nama VARCHAR(150) DEFAULT NULL");
+            }
+            if (!in_array('kkm', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN kkm INT DEFAULT 75");
+            }
+            if (!in_array('durasi_menit', $colsPaket)) {
+                $db->exec("ALTER TABLE bs_paket ADD COLUMN durasi_menit INT DEFAULT 90");
+            }
+
+            // MIGRASI KOLOM BS_TOPIK
+            $colsTopik = $db->query("DESCRIBE bs_topik")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('tgl_mulai', $colsTopik)) {
+                $db->exec("ALTER TABLE bs_topik ADD COLUMN tgl_mulai DATE DEFAULT NULL");
+            }
+            if (!in_array('tgl_selesai', $colsTopik)) {
+                $db->exec("ALTER TABLE bs_topik ADD COLUMN tgl_selesai DATE DEFAULT NULL");
+            }
+            if (!in_array('status', $colsTopik)) {
+                $db->exec("ALTER TABLE bs_topik ADD COLUMN status VARCHAR(30) DEFAULT 'Terjadwal'");
+            }
+            if (!in_array('jenis', $colsTopik)) {
+                $db->exec("ALTER TABLE bs_topik ADD COLUMN jenis VARCHAR(50) NOT NULL DEFAULT 'SAS'");
+            }
         } catch (\Exception $e) {}
     }
 
@@ -147,14 +219,16 @@ class BankSoalController {
                 // Hitung detail butir soal & breakdown per jenis soal
                 foreach ($paketList as &$pk) {
                     $pId = (int)$pk['id'];
-                    $stmtB = $this->db->prepare("SELECT tipe_soal, COUNT(*) as jml FROM bs_soal WHERE paket_id = ? GROUP BY tipe_soal");
-                    $stmtB->execute([$pId]);
                     $breakdown = [];
                     $totalButir = 0;
-                    foreach ($stmtB->fetchAll(PDO::FETCH_ASSOC) as $bRow) {
-                        $breakdown[$bRow['tipe_soal']] = (int)$bRow['jml'];
-                        $totalButir += (int)$bRow['jml'];
-                    }
+                    try {
+                        $stmtB = $this->db->prepare("SELECT tipe_soal, COUNT(*) as jml FROM bs_soal WHERE paket_id = ? GROUP BY tipe_soal");
+                        $stmtB->execute([$pId]);
+                        foreach ($stmtB->fetchAll(PDO::FETCH_ASSOC) as $bRow) {
+                            $breakdown[$bRow['tipe_soal']] = (int)$bRow['jml'];
+                            $totalButir += (int)$bRow['jml'];
+                        }
+                    } catch (\Exception $e) {}
                     $pk['breakdown'] = $breakdown;
                     $pk['total_soal'] = $totalButir;
                 }
