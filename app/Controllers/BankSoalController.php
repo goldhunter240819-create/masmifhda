@@ -652,12 +652,16 @@ class BankSoalController {
             $this->db_core->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '')")->execute([$topikId]);
         }
 
-        // 2. Ambil penugasan mengajar riil per kelas dari tabel mengajar
+        // 2. Ambil penugasan mengajar riil dari tabel mengajar
         $assignments = [];
         try {
-            $activeYear = \App\Core\AcademicYear::current();
-            $thn_id = $activeYear['id'] ?? 2;
-            $smt = $activeYear['semester'] ?? 1;
+            $thn_id = 2;
+            $smt = 1;
+            if (class_exists('\App\Core\AcademicYear')) {
+                $activeYear = \App\Core\AcademicYear::current();
+                $thn_id = $activeYear['id'] ?? 2;
+                $smt = $activeYear['semester'] ?? 1;
+            }
 
             $sql = "
                 SELECT DISTINCT mp.nama_mapel, k.nama_kelas, m.guru_id, COALESCE(g.nama, g_siakad.nama_lengkap) as guru_nama

@@ -195,29 +195,36 @@ include 'header.php';
     .modal-soal-hp {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.7);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        z-index: 100000;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        z-index: 999999 !important;
         display: none;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
-        padding: 20px 16px;
+        padding: 35px 16px 60px;
         box-sizing: border-box;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .modal-soal-hp.open { display: flex; }
     .modal-content-hp {
         background: #ffffff;
         width: 100%;
-        max-width: 540px;
-        max-height: 85vh;
+        max-width: 520px;
+        max-height: 82vh;
         border-radius: 20px;
-        padding: 22px 20px 24px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        padding: 22px 20px 28px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.35);
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         position: relative;
         margin: auto;
         box-sizing: border-box;
+    }
+    /* Sembunyikan bottom navigation bawaan APK saat modal terbuka agar tidak menutupi tombol simpan/batal */
+    body.modal-open-hp .bottom-nav {
+        display: none !important;
     }
 </style>
 
@@ -467,6 +474,7 @@ function openModalTambah() {
     document.getElementById('form_skor').value = '2.0';
     handleTipeChange('sec_pg');
     document.getElementById('modalFormSoal').classList.add('open');
+    document.body.classList.add('modal-open-hp');
 }
 
 function openModalEdit(data) {
@@ -483,10 +491,12 @@ function openModalEdit(data) {
     document.getElementById('form_skor').value = data.skor_maksimal || '2.0';
     handleTipeChange(data.tipe_soal || 'sec_pg');
     document.getElementById('modalFormSoal').classList.add('open');
+    document.body.classList.add('modal-open-hp');
 }
 
 function closeModalSoal() {
     document.getElementById('modalFormSoal').classList.remove('open');
+    document.body.classList.remove('modal-open-hp');
 }
 
     function handleTipeChange(tipe) {
@@ -500,18 +510,29 @@ function closeModalSoal() {
 
     function openModalCopyApk() {
         const modal = document.getElementById('modalCopyApk');
-        if (modal) modal.classList.add('open');
+        if (modal) {
+            modal.classList.add('open');
+            document.body.classList.add('modal-open-hp');
+        }
+    }
+
+    function closeModalCopyApk() {
+        const modal = document.getElementById('modalCopyApk');
+        if (modal) {
+            modal.classList.remove('open');
+            document.body.classList.remove('modal-open-hp');
+        }
     }
 </script>
 
 <!-- Modal Copy Soal Mobile -->
-<div id="modalCopyApk" class="modal-soal-hp" onclick="if(event.target === this) this.classList.remove('open')">
+<div id="modalCopyApk" class="modal-soal-hp" onclick="if(event.target === this) closeModalCopyApk()">
     <div class="modal-content-hp">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
             <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-copy" style="color: #16a34a;"></i> Salin Soal dari Paket Lain
             </h3>
-            <button type="button" onclick="document.getElementById('modalCopyApk').classList.remove('open')" style="background: none; border: none; font-size: 1.1rem; color: #94a3b8; cursor: pointer;">
+            <button type="button" onclick="closeModalCopyApk()" style="background: none; border: none; font-size: 1.1rem; color: #94a3b8; cursor: pointer;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>

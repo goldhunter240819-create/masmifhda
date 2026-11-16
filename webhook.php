@@ -17,6 +17,12 @@ if (function_exists('opcache_reset')) {
 }
 
 // 3.5 Bersihkan & Migrasikan Bank Soal ke Basis Tingkat
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+if (file_exists(__DIR__ . '/app/Core/AcademicYear.php')) {
+    require_once __DIR__ . '/app/Core/AcademicYear.php';
+}
 require_once __DIR__ . '/app/Core/Database.php';
 require_once __DIR__ . '/app/Controllers/BankSoalController.php';
 try {
