@@ -158,7 +158,92 @@ class BankSoalController {
             if (!in_array('jenis', $colsTopik)) {
                 $db->exec("ALTER TABLE bs_topik ADD COLUMN jenis VARCHAR(50) NOT NULL DEFAULT 'SAS'");
             }
+
+            // Bersihkan data MI lama
+            self::cleanMILeftovers($db);
         } catch (\Exception $e) {}
+    }
+
+    /**
+     * Bersihkan sisa-sisa data MI (Madrasah Ibtidaiyah) agar tidak pernah muncul lagi di MAS MIFTAHUL HUDA
+     */
+    public static function cleanMILeftovers($db) {
+        if (!$db) return;
+        try {
+            // 1. Hapus paket yang guru atau mapelnya merupakan data MI lama
+            $db->exec("DELETE FROM bs_paket WHERE 
+                guru_nama LIKE '%Marlena%' OR 
+                guru_nama LIKE '%ROMADLON%' OR 
+                guru_nama LIKE '%Romadlon%' OR 
+                guru_nama LIKE '%Zuli%' OR 
+                guru_nama LIKE '%Astutik%' OR 
+                guru_nama LIKE '%Lilis%' OR 
+                guru_nama LIKE '%Samsul%' OR 
+                guru_nama LIKE '%Putri Nur Anisa%' OR 
+                guru_nama LIKE '%Roqaiyah%' OR 
+                guru_nama LIKE '%Shoha%' OR 
+                guru_nama LIKE '%Ari %' OR 
+                guru_nama LIKE '%ARI %' OR 
+                guru_nama LIKE '%Asatidz%' OR 
+                guru_nama LIKE '%Okta Kusuma%' OR 
+                mapel_nama LIKE '%Aqidah Akhlak%' OR 
+                mapel_nama LIKE '%Al-Qur\'an Hadist%' OR 
+                mapel_nama LIKE '%Baca Tulis Qur\'an%' OR 
+                mapel_nama LIKE '%BTQ%' OR 
+                mapel_nama LIKE '%Ilmu Pengetahuan Alam Sosial%' OR 
+                mapel_nama LIKE '%IPAS%' OR 
+                mapel_nama LIKE '%Seni Budaya dan Prakarya%' OR 
+                mapel_nama LIKE '%SBdP%' OR 
+                mapel_nama LIKE '%Al Qur\'an Hadits%' OR 
+                mapel_nama LIKE '%Pendidikan Kewarganegaraan%' OR 
+                mapel_nama = 'Sejarah Kebudayaan Islam'
+            ");
+
+            // 2. Hapus butir soal yang mapelnya data MI lama
+            $db->exec("DELETE FROM bs_soal WHERE 
+                mapel_nama LIKE '%Aqidah Akhlak%' OR 
+                mapel_nama LIKE '%Al-Qur\'an Hadist%' OR 
+                mapel_nama LIKE '%Baca Tulis Qur\'an%' OR 
+                mapel_nama LIKE '%BTQ%' OR 
+                mapel_nama LIKE '%Ilmu Pengetahuan Alam Sosial%' OR 
+                mapel_nama LIKE '%IPAS%' OR 
+                mapel_nama LIKE '%Seni Budaya dan Prakarya%' OR 
+                mapel_nama LIKE '%SBdP%' OR 
+                mapel_nama LIKE '%Al Qur\'an Hadits%' OR 
+                mapel_nama LIKE '%Pendidikan Kewarganegaraan%' OR 
+                mapel_nama = 'Sejarah Kebudayaan Islam'
+            ");
+
+            // 3. Hapus orphaned butir soal yang paket_id nya sudah tidak ada di bs_paket
+            $db->exec("DELETE FROM bs_soal WHERE paket_id IS NOT NULL AND paket_id NOT IN (SELECT id FROM bs_paket)");
+        } catch (\Exception $e) {}
+    }
+
+    /**
+     * Standard resmi 19 Mata Pelajaran MAS Miftahul Huda beserta Guru Pengampu MAS
+     */
+    public static function getOfficialMasMapelList() {
+        return [
+            'Al-Qur\'an Hadits' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
+            'Akidah Akhlak' => ['guru_id' => 7, 'guru_nama' => 'SITI AISAH, S.Pd.I'],
+            'Fikih' => ['guru_id' => 7, 'guru_nama' => 'SITI AISAH, S.Pd.I'],
+            'Sejarah Kebudayaan Islam (SKI)' => ['guru_id' => 48, 'guru_nama' => 'SHOBIRIN'],
+            'Bahasa Arab' => ['guru_id' => 37, 'guru_nama' => 'DIDI HARTONO, S.Pd.I'],
+            'Bahasa Indonesia' => ['guru_id' => 41, 'guru_nama' => 'INDAH YUNITASARI, S.Pd'],
+            'Bahasa Inggris' => ['guru_id' => 42, 'guru_nama' => 'M. Wahidin, S.Pd'],
+            'Matematika' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
+            'Informatika' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
+            'Fisika' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
+            'Kimia' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
+            'Biologi' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
+            'Sosiologi' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
+            'Geografi' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
+            'Ekonomi' => ['guru_id' => 46, 'guru_nama' => 'ENDANG KURNIASIH, S.E.'],
+            'Sejarah Umum' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
+            'Pendidikan Pancasila & Kewarganegaraan (PPKn)' => ['guru_id' => 44, 'guru_nama' => 'SAWALUDIN, S.Pd'],
+            'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)' => ['guru_id' => 40, 'guru_nama' => 'SAIPUDIN AZIZ, S.Pd'],
+            'Seni Budaya' => ['guru_id' => 47, 'guru_nama' => 'JULAINI, S.Pd'],
+        ];
     }
 
     /**
@@ -204,14 +289,20 @@ class BankSoalController {
             }
 
             if ($selectedTopik) {
+                // Pastikan sisa data MI dibersihkan seketika
+                self::cleanMILeftovers($this->db);
+                if ($this->db_core !== $this->db) {
+                    self::cleanMILeftovers($this->db_core);
+                }
+
                 // Ambil daftar paket mapel untuk topik ini
                 $stmtP = $this->db->prepare("SELECT * FROM bs_paket WHERE topik_id = ? ORDER BY mapel_nama ASC, kelas_nama ASC");
                 $stmtP->execute([$topikId]);
                 $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
-                // JIKA BELUM ADA PAKET MAPEL, OTOMATIS LANGSUNG MUNCULKAN MAPEL YANG ADA PENGAMPUNYA!
-                if (empty($paketList)) {
-                    $this->syncFromPengampu($topikId);
+                // JIKA BELUM ADA PAKET MAPEL / KURANG DARI 19 MAPEL RESMI, OTOMATIS LANGSUNG MUNCULKAN!
+                if (count($paketList) < 19) {
+                    $this->syncFromPengampu($topikId, true);
                     $stmtP->execute([$topikId]);
                     $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
                 }
@@ -246,19 +337,19 @@ class BankSoalController {
         } catch (\Exception $e) {}
         if (empty($guruList)) {
             $guruList = [
-                ['id' => 1, 'nama' => 'M AZIZ SULAIMAN, S.Pd'],
-                ['id' => 2, 'nama' => 'SAIPUDIN AZIZ, S.Pd'],
-                ['id' => 3, 'nama' => 'INDAH YUNITASARI, S.Pd'],
-                ['id' => 4, 'nama' => 'M. Wahidin, S.Pd'],
-                ['id' => 5, 'nama' => 'SYAIFUL BAHRI, S.Pd'],
-                ['id' => 6, 'nama' => 'SAWALUDIN, S.Pd'],
-                ['id' => 7, 'nama' => 'Drs. Hamim Hasyim'],
-                ['id' => 8, 'nama' => 'ERWANSAH, S.Pd'],
-                ['id' => 9, 'nama' => 'ENDANG KURNIASIH, S.E.'],
-                ['id' => 10, 'nama' => 'JULAINI, S.Pd'],
-                ['id' => 11, 'nama' => 'SHOBIRIN'],
-                ['id' => 12, 'nama' => 'SITI AISAH, S.Pd.I'],
-                ['id' => 13, 'nama' => 'DIDI HARTONO, S.Pd.I']
+                ['id' => 7, 'nama' => 'SITI AISAH, S.Pd.I'],
+                ['id' => 14, 'nama' => 'M AZIZ SULAIMAN, S.Pd'],
+                ['id' => 37, 'nama' => 'DIDI HARTONO, S.Pd.I'],
+                ['id' => 39, 'nama' => 'Drs. Hamim Hasyim'],
+                ['id' => 40, 'nama' => 'SAIPUDIN AZIZ, S.Pd'],
+                ['id' => 41, 'nama' => 'INDAH YUNITASARI, S.Pd'],
+                ['id' => 42, 'nama' => 'M. Wahidin, S.Pd'],
+                ['id' => 43, 'nama' => 'SYAIFUL BAHRI, S.Pd'],
+                ['id' => 44, 'nama' => 'SAWALUDIN, S.Pd'],
+                ['id' => 45, 'nama' => 'ERWANSAH, S.Pd'],
+                ['id' => 46, 'nama' => 'ENDANG KURNIASIH, S.E.'],
+                ['id' => 47, 'nama' => 'JULAINI, S.Pd'],
+                ['id' => 48, 'nama' => 'SHOBIRIN']
             ];
         }
 
@@ -358,44 +449,22 @@ class BankSoalController {
     }
 
     /**
-     * Dapatkan kamus nama guru lengkap dari core dan siakad
+     * Dapatkan kamus nama guru resmi MAS MIFTAHUL HUDA
      */
     public function getGuruDictionary() {
         $dict = [];
         try {
-            $gCore = $this->db_core->query("SELECT id, nama FROM guru")->fetchAll(PDO::FETCH_ASSOC);
+            $gCore = $this->db_core->query("SELECT id, nama FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($gCore as $g) {
                 if (!empty($g['nama'])) $dict[(int)$g['id']] = $g['nama'];
             }
         } catch (\Exception $e) {}
 
-        try {
-            $gSiakad = $this->db->query("SELECT id, nama_lengkap FROM guru")->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($gSiakad as $g) {
-                if (!empty($g['nama_lengkap']) && empty($dict[(int)$g['id']])) {
-                    $dict[(int)$g['id']] = $g['nama_lengkap'];
-                }
-            }
-        } catch (\Exception $e) {}
-
-        // Fallback nama guru madrasah MAS Miftahul Huda
+        // Fallback 13 Guru Resmi MAS Miftahul Huda
         $fallbacks = [
-            4 => 'PUTRI NUR ANISA MEI, S.Pd',
-            6 => 'M. Aziz Sulaiman, S.Pd',
             7 => 'SITI AISAH, S.Pd.I',
-            8 => 'Zuli Astutik, S.Pd.I',
-            9 => 'Siti Aisah, S.Pd.I',
-            10 => 'Marlena, S.Pd.I',
-            11 => 'Siti Roqaiyah, S.Pd.I',
-            12 => 'Lilis Dwi Wati, S.Pd.I',
-            13 => "Siti Mar'atus Sholehah, S.Pd",
             14 => 'M AZIZ SULAIMAN, S.Pd',
-            15 => 'Samsul Arifin, M.Pd',
-            16 => 'Siti Roqaiyah, S.Pd.I',
-            17 => 'Didi Hartono, S.Pd.I',
-            18 => 'Okta Kusuma W, S.Pd',
             37 => 'DIDI HARTONO, S.Pd.I',
-            38 => 'M. Wahidin, S.Pd',
             39 => 'Drs. Hamim Hasyim',
             40 => 'SAIPUDIN AZIZ, S.Pd',
             41 => 'INDAH YUNITASARI, S.Pd',
@@ -416,99 +485,48 @@ class BankSoalController {
     }
 
     /**
-     * Otomatis ambil & buat paket mapel berdasarkan Guru Pengampu
+     * Otomatis ambil & buat paket mapel berdasarkan 19 Mapel Resmi MAS Miftahul Huda & Guru Pengampunya
      * Langsung muncul tanpa perlu menunggu jadwal ujian CBT selesai disetting
      */
-    public function syncFromPengampu($topikId = null) {
+    public function syncFromPengampu($topikId = null, $isInternal = false) {
         $topikId = $topikId ?: (isset($_POST['topik_id']) ? (int)$_POST['topik_id'] : (isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0));
         if ($topikId <= 0) {
-            if (isset($_POST['topik_id']) || isset($_GET['topik_id'])) {
+            if (!$isInternal && (isset($_POST['topik_id']) || isset($_GET['topik_id']))) {
                 redirect('/bank_soal');
                 exit;
             }
             return 0;
         }
 
-        $guruDict = $this->getGuruDictionary();
-
-        // 1. Ambil dari tabel mengajar & jadwal_pelajaran yang memiliki guru_id
-        $assigned = [];
-        try {
-            $sql = "
-                SELECT DISTINCT m.mapel_id, mp.nama_mapel, m.guru_id
-                FROM (
-                    SELECT mapel_id, guru_id FROM mengajar WHERE guru_id IS NOT NULL AND guru_id > 0
-                    UNION
-                    SELECT mata_pelajaran_id as mapel_id, guru_id FROM jadwal_pelajaran WHERE guru_id IS NOT NULL AND guru_id > 0
-                ) m
-                JOIN mapel mp ON m.mapel_id = mp.id
-                WHERE mp.kategori NOT IN ('Pembiasaan/Tambahan', 'Ekstrakurikuler')
-                ORDER BY mp.nama_mapel ASC
-            ";
-            $assigned = $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Exception $e) {}
-
-        // 2. Pemetaan standar guru pengampu madrasah MAS Miftahul Huda
-        $standardPengampu = [
-            'Al-Qur\'an Hadits' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
-            'Akidah Akhlak' => ['guru_id' => 10, 'guru_nama' => 'Marlena, S.Pd.I'],
-            'Fikih' => ['guru_id' => 7, 'guru_nama' => 'SITI AISAH, S.Pd.I'],
-            'Sejarah Kebudayaan Islam' => ['guru_id' => 48, 'guru_nama' => 'SHOBIRIN'],
-            'Bahasa Arab' => ['guru_id' => 37, 'guru_nama' => 'DIDI HARTONO, S.Pd.I'],
-            'Bahasa Indonesia' => ['guru_id' => 41, 'guru_nama' => 'INDAH YUNITASARI, S.Pd'],
-            'Matematika' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
-            'Ilmu Pengetahuan Alam Sosial' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
-            'Pendidikan Kewarganegaraan' => ['guru_id' => 44, 'guru_nama' => 'SAWALUDIN, S.Pd'],
-            'Seni Budaya dan Prakarya' => ['guru_id' => 47, 'guru_nama' => 'JULAINI, S.Pd'],
-            'Pendidikan Jasmani, Olahraga, dan Kesehatan' => ['guru_id' => 40, 'guru_nama' => 'SAIPUDIN AZIZ, S.Pd'],
-            'Bahasa Inggris' => ['guru_id' => 42, 'guru_nama' => 'M. Wahidin, S.Pd'],
-            'Informatika' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
-            'Sejarah Umum' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
-            'Sosiologi' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
-            'Geografi' => ['guru_id' => 43, 'guru_nama' => 'SYAIFUL BAHRI, S.Pd'],
-            'Ekonomi' => ['guru_id' => 46, 'guru_nama' => 'ENDANG KURNIASIH, S.E.'],
-            'Fisika' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
-            'Biologi' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
-            'Kimia' => ['guru_id' => 45, 'guru_nama' => 'ERWANSAH, S.Pd'],
-            'Baca Tulis Qur\'an' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
-        ];
-
-        $mapelsToInsert = [];
-        foreach ($assigned as $row) {
-            $mName = trim($row['nama_mapel']);
-            $gId = (int)$row['guru_id'];
-            $gName = $guruDict[$gId] ?? ($standardPengampu[$mName]['guru_nama'] ?? "Guru #{$gId}");
-            if (!isset($mapelsToInsert[$mName])) {
-                $mapelsToInsert[$mName] = [
-                    'guru_id' => $gId,
-                    'guru_nama' => $gName
-                ];
-            }
+        // 1. Bersihkan sisa data MI terlebih dahulu
+        self::cleanMILeftovers($this->db);
+        if ($this->db_core !== $this->db) {
+            self::cleanMILeftovers($this->db_core);
         }
 
-        // Tambahkan mapel standar jika belum tercakup
-        foreach ($standardPengampu as $defName => $defInfo) {
-            if (!isset($mapelsToInsert[$defName])) {
-                $mapelsToInsert[$defName] = $defInfo;
-            }
-        }
-
+        // 2. Gunakan 19 Mapel Resmi MAS Miftahul Huda beserta Pengampu MAS
+        $masMapel = self::getOfficialMasMapelList();
         $inserted = 0;
+
         $stmtCheck = $this->db->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ?");
         $stmtIns = $this->db->prepare("
             INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_id, guru_nama, kkm, durasi_menit, is_locked) 
             VALUES (?, ?, 'Semua Kelas', ?, ?, 75, 90, 0)
         ");
+        $stmtUpd = $this->db->prepare("UPDATE bs_paket SET guru_id = ?, guru_nama = ? WHERE id = ?");
 
-        foreach ($mapelsToInsert as $mName => $info) {
+        foreach ($masMapel as $mName => $info) {
             $stmtCheck->execute([$topikId, $mName]);
-            if (!$stmtCheck->fetchColumn()) {
+            $existingId = $stmtCheck->fetchColumn();
+            if (!$existingId) {
                 $stmtIns->execute([$topikId, $mName, $info['guru_id'], $info['guru_nama']]);
                 $inserted++;
+            } else {
+                $stmtUpd->execute([$info['guru_id'], $info['guru_nama'], $existingId]);
             }
         }
 
-        if (isset($_POST['topik_id']) || isset($_GET['topik_id'])) {
+        if (!$isInternal && (isset($_POST['topik_id']) || isset($_GET['topik_id']))) {
             redirect("/bank_soal?topik_id={$topikId}&msg=synced_pengampu&count={$inserted}");
             exit;
         }

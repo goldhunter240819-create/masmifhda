@@ -212,44 +212,30 @@ class CbtController {
     }
 
     /**
-     * Dapatkan daftar Mata Pelajaran Real dari tabel mata_pelajaran di database siakad / core
+     * Dapatkan daftar Mata Pelajaran Real MAS MIFTAHUL HUDA (Madrasah Aliyah)
+     * Terisolasi dari sisa data MI (Madrasah Ibtidaiyah) lama
      */
     public static function getRealMapelList($db_siakad = null, $db_core = null) {
-        if ($db_siakad) {
-            try {
-                $list = $db_siakad->query("SELECT id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
-                if (!empty($list)) return $list;
-            } catch (\Exception $e) {}
-        }
-        if ($db_core) {
-            try {
-                $list = $db_core->query("SELECT id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
-                if (!empty($list)) return $list;
-            } catch (\Exception $e) {}
-        }
-
-        // Fallback daftar mapel standar madrasah jika tabel kosong
         return [
-            ['id' => 1, 'nama_mapel' => "Al-Qur'an Hadits"],
-            ['id' => 2, 'nama_mapel' => 'Akidah Akhlak'],
-            ['id' => 3, 'nama_mapel' => 'Fiqih'],
-            ['id' => 4, 'nama_mapel' => 'Sejarah Kebudayaan Islam'],
-            ['id' => 5, 'nama_mapel' => 'Bahasa Arab'],
-            ['id' => 6, 'nama_mapel' => 'Bahasa Indonesia'],
-            ['id' => 7, 'nama_mapel' => 'Matematika'],
-            ['id' => 8, 'nama_mapel' => 'Bahasa Inggris'],
-            ['id' => 9, 'nama_mapel' => 'Biologi'],
-            ['id' => 10, 'nama_mapel' => 'Fisika'],
-            ['id' => 11, 'nama_mapel' => 'Kimia'],
-            ['id' => 12, 'nama_mapel' => 'Ekonomi'],
-            ['id' => 13, 'nama_mapel' => 'Sosiologi'],
-            ['id' => 14, 'nama_mapel' => 'Geografi'],
-            ['id' => 15, 'nama_mapel' => 'Informatika'],
-            ['id' => 16, 'nama_mapel' => 'Pendidikan Pancasila / PKn'],
-            ['id' => 17, 'nama_mapel' => 'PJOK'],
-            ['id' => 18, 'nama_mapel' => 'Seni Budaya'],
-            ['id' => 19, 'nama_mapel' => 'Prakarya dan Kewirausahaan'],
-            ['id' => 20, 'nama_mapel' => 'Aswaja / Ke-NU-an / MA']
+            ['id' => 1, 'nama_mapel' => "Al-Qur'an Hadits", 'kode_mapel' => 'QH'],
+            ['id' => 2, 'nama_mapel' => 'Akidah Akhlak', 'kode_mapel' => 'AA'],
+            ['id' => 3, 'nama_mapel' => 'Fikih', 'kode_mapel' => 'FIQ'],
+            ['id' => 4, 'nama_mapel' => 'Sejarah Kebudayaan Islam (SKI)', 'kode_mapel' => 'SKI'],
+            ['id' => 5, 'nama_mapel' => 'Bahasa Arab', 'kode_mapel' => 'ARB'],
+            ['id' => 6, 'nama_mapel' => 'Bahasa Indonesia', 'kode_mapel' => 'IND'],
+            ['id' => 7, 'nama_mapel' => 'Bahasa Inggris', 'kode_mapel' => 'ING'],
+            ['id' => 8, 'nama_mapel' => 'Matematika', 'kode_mapel' => 'MTK'],
+            ['id' => 9, 'nama_mapel' => 'Informatika', 'kode_mapel' => 'INF'],
+            ['id' => 10, 'nama_mapel' => 'Fisika', 'kode_mapel' => 'FIS'],
+            ['id' => 11, 'nama_mapel' => 'Kimia', 'kode_mapel' => 'KIM'],
+            ['id' => 12, 'nama_mapel' => 'Biologi', 'kode_mapel' => 'BIO'],
+            ['id' => 13, 'nama_mapel' => 'Sosiologi', 'kode_mapel' => 'SOS'],
+            ['id' => 14, 'nama_mapel' => 'Geografi', 'kode_mapel' => 'GEO'],
+            ['id' => 15, 'nama_mapel' => 'Ekonomi', 'kode_mapel' => 'EKO'],
+            ['id' => 16, 'nama_mapel' => 'Sejarah Umum', 'kode_mapel' => 'SEJ'],
+            ['id' => 17, 'nama_mapel' => 'Pendidikan Pancasila & Kewarganegaraan (PPKn)', 'kode_mapel' => 'PPKN'],
+            ['id' => 18, 'nama_mapel' => 'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)', 'kode_mapel' => 'PJOK'],
+            ['id' => 19, 'nama_mapel' => 'Seni Budaya', 'kode_mapel' => 'SBD'],
         ];
     }
 
