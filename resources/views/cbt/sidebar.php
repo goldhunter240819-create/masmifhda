@@ -95,23 +95,5 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             </a>
         </nav>
     </div>
-
-    <!-- User Card -->
-    <div class="z-user-card">
-        <div class="z-uc-av" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #fff;">
-            <?php echo $initial; ?>
-        </div>
-        <div class="z-uc-info">
-            <div class="z-uc-name"><?php echo htmlspecialchars($nama); ?></div>
-            <div class="z-uc-role"><?php echo $roleLabel; ?></div>
-        </div>
-        <a href="<?php echo base_url('logout'); ?>"
-           style="background:rgba(239,68,68,.1);color:#f87171;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0;"
-           onmouseover="this.style.background='rgba(239,68,68,.2)'"
-           onmouseout="this.style.background='rgba(239,68,68,.1)'"
-           title="Logout">
-            <i data-lucide="log-out" style="width:15px;height:15px;"></i>
-        </a>
-    </div>
 </aside>
 

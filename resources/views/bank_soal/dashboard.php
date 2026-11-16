@@ -548,17 +548,24 @@ $active_menu = "bank_soal";
             <!-- STATE 2: DETAIL PAKET MAPEL & BUTIR SOAL TOPIK TERPILIH          -->
             <!-- ═══════════════════════════════════════════════════════════════ -->
 
-            <!-- Breadcrumb Navigation -->
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem;">
-                <a href="<?php echo base_url('bank_soal'); ?>" style="color: #64748b; text-decoration: none; display: flex; align-items: center; gap: 5px;">
-                    <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i> Kembali ke Semua Topik
-                </a>
-                <span style="color: #cbd5e1;">/</span>
-                <span style="color: #0ea5e9;"><?php echo htmlspecialchars($selectedTopik['nama_topik']); ?></span>
-            </div>
-
             <!-- Topik Info Banner Card -->
-            <div style="background: #ffffff; border-radius: 20px; border: 1.5px solid #e0f2fe; padding: 1.75rem 2rem; margin-bottom: 2rem; box-shadow: 0 6px 25px rgba(14, 165, 233, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+            <div style="background: #ffffff; border-radius: 20px; border: 1.5px solid #e0f2fe; padding: 1.75rem 2rem; margin-bottom: 2rem; box-shadow: 0 6px 25px rgba(14, 165, 233, 0.08);">
+                <!-- Breadcrumb Terintegrasi di Dalam Card -->
+                <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.83rem; font-weight: 700;">
+                        <a href="<?php echo base_url('bank_soal'); ?>" style="color: #0284c7; background: #f0f9ff; padding: 5px 12px; border-radius: 8px; border: 1px solid #bae6fd; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; font-size: 0.8rem;">
+                            <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Kembali ke Semua Topik
+                        </a>
+                        <span style="color: #cbd5e1;">/</span>
+                        <span style="color: #0ea5e9; font-weight: 800;"><?php echo htmlspecialchars($selectedTopik['nama_topik']); ?></span>
+                    </div>
+
+                    <div style="font-size: 0.78rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <i data-lucide="book-marked" style="width: 14px; height: 14px; color: #0284c7;"></i> Kelola Paket Mapel
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
                 <div style="display: flex; align-items: center; gap: 18px; flex: 1; min-width: 320px;">
                     <div style="width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(14, 165, 233, 0.3); flex-shrink: 0;">
                         <i data-lucide="layers" style="width: 28px; height: 28px;"></i>
@@ -624,6 +631,7 @@ $active_menu = "bank_soal";
                         </button>
                     </form>
                 </div>
+            </div>
             </div>
 
             <!-- Tabel Daftar Paket Mapel & Kelas -->

@@ -93,7 +93,6 @@ $isLocked = !empty($paketInfo['is_locked']);
                 <?php endif; ?>
             <?php endif; ?>
 
-            <!-- Breadcrumb Navigation -->
             <?php
             $isGuruUser = isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 2;
             $backUrl = $isGuruUser 
@@ -103,18 +102,27 @@ $isLocked = !empty($paketInfo['is_locked']);
                 ? 'Kembali ke Bank Soal Saya' 
                 : 'Kembali ke Bank Soal Topik';
             ?>
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem;">
-                <a href="<?php echo $backUrl; ?>" style="color: #64748b; text-decoration: none; display: flex; align-items: center; gap: 5px;">
-                    <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i> <?php echo $backLabel; ?>
-                </a>
-                <span style="color: #cbd5e1;">/</span>
-                <span style="color: #0f172a;"><?php echo htmlspecialchars($topikInfo['nama_topik'] ?? 'Topik Ujian'); ?></span>
-                <span style="color: #cbd5e1;">/</span>
-                <span style="color: #0ea5e9;"><?php echo htmlspecialchars($mapelNama); ?></span>
-            </div>
 
             <!-- Header Card Paket Soal -->
-            <div style="background: #ffffff; border-radius: 20px; border: 1.5px solid #e0f2fe; padding: 1.5rem 2rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+            <div style="background: #ffffff; border-radius: 20px; border: 1.5px solid #e0f2fe; padding: 1.5rem 2rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                <!-- Breadcrumb Terintegrasi di Dalam Card -->
+                <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.83rem; font-weight: 700; flex-wrap: wrap;">
+                        <a href="<?php echo $backUrl; ?>" style="color: #0284c7; background: #f0f9ff; padding: 5px 12px; border-radius: 8px; border: 1px solid #bae6fd; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; font-size: 0.8rem;">
+                            <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> <?php echo $backLabel; ?>
+                        </a>
+                        <span style="color: #cbd5e1;">/</span>
+                        <span style="color: #64748b;"><?php echo htmlspecialchars($topikInfo['nama_topik'] ?? 'Topik Ujian'); ?></span>
+                        <span style="color: #cbd5e1;">/</span>
+                        <span style="color: #0ea5e9; font-weight: 800;"><?php echo htmlspecialchars($mapelNama); ?></span>
+                    </div>
+
+                    <div style="font-size: 0.78rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <i data-lucide="shield-check" style="width: 14px; height: 14px; color: #10b981;"></i> CBT Repository
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
                         <span class="pill-jenis-lg" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
@@ -212,6 +220,7 @@ $isLocked = !empty($paketInfo['is_locked']);
                         </a>
                     <?php endif; ?>
                 </div>
+            </div>
             </div>
 
             <!-- Tabel Daftar Butir Soal -->
