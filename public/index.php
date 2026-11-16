@@ -2243,10 +2243,14 @@ $router->add('GET', '/admin/siakad/kop-surat', ['\App\Controllers\KopSuratContro
 $router->add('POST', '/admin/siakad/kop-surat/update', ['\App\Controllers\KopSuratController', 'update']);
 
 // Bank Soal Routes
-$router->add('GET', '/bank_soal', function() {
-    include __DIR__ . '/../resources/views/bank_soal/dashboard.php';
-    exit;
-});
+$router->add('GET', '/bank_soal', ['\App\Controllers\BankSoalController', 'dashboard']);
+$router->add('POST', '/bank_soal/paket/simpan', ['\App\Controllers\BankSoalController', 'simpanPaket']);
+$router->add('POST', '/bank_soal/paket/hapus', ['\App\Controllers\BankSoalController', 'hapusPaket']);
+$router->add('POST', '/bank_soal/paket/toggle-lock', ['\App\Controllers\BankSoalController', 'toggleLockPaket']);
+$router->add('POST', '/bank_soal/paket/sync-jadwal', ['\App\Controllers\BankSoalController', 'syncFromJadwal']);
+$router->add('POST', '/bank_soal/generate-dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('POST', '/bank_soal/reset-data', ['\App\Controllers\BankSoalController', 'resetData']);
+
 $router->add('GET', '/bank_soal/topik', ['\App\Controllers\BankSoalController', 'indexTopik']);
 $router->add('POST', '/bank_soal/topik/simpan', ['\App\Controllers\BankSoalController', 'simpanTopik']);
 $router->add('GET', '/bank_soal/topik/hapus', ['\App\Controllers\BankSoalController', 'hapusTopik']);
@@ -2256,7 +2260,9 @@ $router->add('GET', '/bank_soal/daftar_soal', ['\App\Controllers\BankSoalControl
 
 $router->add('GET', '/bank_soal/tambah_soal', ['\App\Controllers\BankSoalController', 'tambahSoal']);
 $router->add('POST', '/bank_soal/tambah_soal', ['\App\Controllers\BankSoalController', 'simpanSoal']);
+$router->add('POST', '/bank_soal/soal/simpan', ['\App\Controllers\BankSoalController', 'simpanSoal']);
 $router->add('GET', '/bank_soal/hapus_soal', ['\App\Controllers\BankSoalController', 'hapusSoal']);
+$router->add('POST', '/bank_soal/hapus_soal', ['\App\Controllers\BankSoalController', 'hapusSoal']);
 
 // Template UI Routes
 $router->add('GET', '/template', function() {

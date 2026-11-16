@@ -1,176 +1,409 @@
 <?php
-if (!isset($page_title)) $page_title = "Daftar Soal - Bank Soal";
-if (!isset($active_page)) $active_page = "kelola_soal"; // tetep highlight Kelola Soal di sidebar
+$page_title = "Daftar Soal: " . ($mapelNama ?: 'Bank Soal');
+$active_menu = "bank_soal";
+$isLocked = !empty($paketInfo['is_locked']);
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <?php include __DIR__ . '/../admin/_zamrud_head.php'; ?>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($page_title); ?> - MAS MIFTAHUL HUDA</title>
+    <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>?v=<?php echo time(); ?>">
+    <link href="<?php echo base_url('public/assets/css/zamrud.css'); ?>" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .welcome-hero::before {
-            content: ''; position: absolute; inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.15' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
-            pointer-events: none; opacity: 0.5;
+        .pill-jenis-lg {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
         }
-        /* DataTables Custom Styling */
-        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { margin-bottom: 1.5rem; padding: 1.5rem 1.5rem 0 1.5rem; }
-        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { padding: 1.5rem; }
-        .dataTables_wrapper .dataTables_paginate .paginate_button { 
-            border-radius: 8px !important; border: 1px solid #e2e8f0 !important; 
-            background: #fff !important; color: #475569 !important; font-weight: 600 !important;
-            padding: 6px 12px !important; margin: 0 3px !important; transition: 0.2s;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-            background: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #0f172a !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current { 
-            background: #0ea5e9 !important; color: #fff !important; border-color: #0ea5e9 !important; 
-        }
-        .dataTables_wrapper select, .dataTables_wrapper input[type="search"] {
-            border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 14px;
-            font-family: inherit; font-size: 0.85rem; color: #0f172a; outline: none; transition: 0.2s;
-            background-color: #f8fafc;
-        }
-        .dataTables_wrapper select:focus, .dataTables_wrapper input[type="search"]:focus {
-            border-color: #0ea5e9; background-color: white; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
-        }
-        
-        /* Table Edge Alignment */
-        .z-table th:first-child, .z-table td:first-child { padding-left: 1.5rem !important; }
-        .z-table th:last-child, .z-table td:last-child { padding-right: 1.5rem !important; }
+        .pill-pg { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .pill-pgk { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+        .pill-essay { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        .pill-bs { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .pill-jodoh { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
 
-        /* Action Buttons Alignment Fix */
-        .btn-action {
-            width: 32px !important; height: 32px !important; padding: 0 !important;
-            display: inline-flex !important; justify-content: center !important; align-items: center !important;
-            border-radius: 8px !important; border: none !important; cursor: pointer; transition: 0.2s; outline: none !important;
+        .btn-action-soal {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: 0.2s;
         }
-        .btn-action svg { width: 16px !important; height: 16px !important; margin: 0 !important; }
-        .btn-edit { background: #e0f2fe !important; color: #0ea5e9 !important; }
-        .btn-edit:hover { background: #bae6fd !important; }
-        .btn-delete { background: #fee2e2 !important; color: #ef4444 !important; }
-        .btn-delete:hover { background: #fecaca !important; }
+        .btn-action-soal.view { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+        .btn-action-soal.view:hover { background: #dcfce7; }
+        .btn-action-soal.edit { background: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+        .btn-action-soal.edit:hover { background: #bae6fd; }
+        .btn-action-soal.delete { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
+        .btn-action-soal.delete:hover { background: #fecaca; }
+
+        /* Modal Preview */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px); z-index: 9999; display: none;
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
     </style>
 </head>
 <body class="z-bg">
+
 <div class="z-wrap">
     <?php include __DIR__ . '/_sidebar.php'; ?>
+
     <main class="z-main">
         <?php 
         $page_badge = 'Bank Soal';
         include __DIR__ . '/../siakad/_siakad_header.php'; 
         ?>
 
-        <div class="z-content">
-            <!-- Hero Banner -->
-            <div class="elite-page-header welcome-hero" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); padding: 2rem 2.5rem; border-radius: var(--z-radius, 12px); margin-bottom: 2rem; color: white; position: relative; overflow: hidden;">
-                <div style="position: relative; z-index: 1;">
-                    <a href="<?php echo base_url('bank_soal/kelola_soal?topik_id=' . $topikInfo['id']); ?>" style="color: rgba(255,255,255,0.8); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; font-size: 0.9rem; margin-bottom: 10px;">
-                        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Kembali ke Daftar Mapel
-                    </a>
-                    <h1 style="font-size: 1.8rem; font-weight: 800; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 10px;">
-                        <i data-lucide="file-question" style="color: rgba(255,255,255,0.8);"></i> Daftar Soal: <?= htmlspecialchars($mapel_nama) ?>
+        <div class="z-content" style="padding: 1.5rem 2rem 3rem;">
+
+            <!-- Alerts -->
+            <?php if(isset($_GET['msg'])): ?>
+                <?php if($_GET['msg'] === 'soal_saved'): ?>
+                    <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                        <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Butir soal dan kunci jawaban berhasil disimpan!
+                    </div>
+                <?php elseif($_GET['msg'] === 'soal_deleted'): ?>
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                        <i data-lucide="trash-2" style="width: 20px; height: 20px; color: #ef4444;"></i> Butir soal berhasil dihapus dari paket.
+                    </div>
+                <?php elseif($_GET['msg'] === 'error_locked'): ?>
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                        <i data-lucide="lock" style="width: 20px; height: 20px; color: #ef4444;"></i> Soal ini sedang terkunci! Buka kunci paket terlebih dahulu untuk menambah atau mengedit soal.
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <!-- Breadcrumb Navigation -->
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem;">
+                <a href="<?php echo base_url('bank_soal?topik_id=' . ($topikInfo['id'] ?? 1)); ?>" style="color: #64748b; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                    <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i> Kembali ke Bank Soal Topik
+                </a>
+                <span style="color: #cbd5e1;">/</span>
+                <span style="color: #0f172a;"><?php echo htmlspecialchars($topikInfo['nama_topik'] ?? 'Topik Ujian'); ?></span>
+                <span style="color: #cbd5e1;">/</span>
+                <span style="color: #0ea5e9;"><?php echo htmlspecialchars($mapelNama); ?></span>
+            </div>
+
+            <!-- Header Card Paket Soal -->
+            <div style="background: #ffffff; border-radius: 20px; border: 1.5px solid #e0f2fe; padding: 1.5rem 2rem; margin-bottom: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
+                        <span class="pill-jenis-lg" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
+                            [<?php echo htmlspecialchars($topikInfo['jenis'] ?? 'SAS'); ?>]
+                        </span>
+                        <span style="font-size: 0.82rem; font-weight: 800; background: #e0e7ff; color: #4338ca; padding: 3px 10px; border-radius: 8px;">
+                            Kelas: <?php echo htmlspecialchars($paketInfo['kelas_nama'] ?? 'Semua Kelas'); ?>
+                        </span>
+                        <?php if ($isLocked): ?>
+                            <span style="font-size: 0.82rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 3px 12px; border-radius: 20px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="lock" style="width: 13px; height: 13px;"></i> Terkunci (Final)
+                            </span>
+                        <?php else: ?>
+                            <span style="font-size: 0.82rem; font-weight: 800; background: #ecfdf5; color: #059669; padding: 3px 12px; border-radius: 20px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="unlock" style="width: 13px; height: 13px;"></i> Terbuka (Bisa Diedit Guru)
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <h1 style="margin: 0 0 6px 0; font-size: 1.6rem; font-weight: 900; color: #0f172a;">
+                        Kelola Soal: <?php echo htmlspecialchars($mapelNama); ?>
                     </h1>
-                    <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 0.95rem;">Topik: <strong><?= htmlspecialchars($topikInfo['jenis'] . ' - ' . $topikInfo['nama_topik']) ?></strong></p>
+                    
+                    <!-- Breakdown Pills -->
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                        <span style="font-size: 0.82rem; font-weight: 800; color: #0f172a;">
+                            Total: <?php echo count($soals); ?> Butir Soal
+                        </span>
+                        <span style="color: #cbd5e1;">&bull;</span>
+                        <span class="pill-jenis-lg pill-pg">
+                            <i data-lucide="check-circle-2" style="width: 13px; height: 13px;"></i>
+                            <strong><?php echo $breakdown['sec_pg'] ?? 0; ?></strong> PG
+                        </span>
+                        <span class="pill-jenis-lg pill-pgk">
+                            <i data-lucide="check-square" style="width: 13px; height: 13px;"></i>
+                            <strong><?php echo $breakdown['sec_pgk'] ?? 0; ?></strong> PG Kompleks
+                        </span>
+                        <span class="pill-jenis-lg pill-essay">
+                            <i data-lucide="file-text" style="width: 13px; height: 13px;"></i>
+                            <strong><?php echo $breakdown['sec_essay'] ?? 0; ?></strong> Essay / Uraian
+                        </span>
+                        <?php if(!empty($breakdown['sec_bs'])): ?>
+                            <span class="pill-jenis-lg pill-bs">
+                                <strong><?php echo $breakdown['sec_bs']; ?></strong> Benar-Salah
+                            </span>
+                        <?php endif; ?>
+                        <?php if(!empty($breakdown['sec_jodoh'])): ?>
+                            <span class="pill-jenis-lg pill-jodoh">
+                                <strong><?php echo $breakdown['sec_jodoh']; ?></strong> Menjodohkan
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Actions Header -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <!-- Tombol Kunci / Buka Kunci -->
+                    <?php if ($paketInfo): ?>
+                    <form method="POST" action="<?php echo base_url('bank_soal/paket/toggle-lock'); ?>" style="display: inline;" onsubmit="return confirm('<?php echo $isLocked ? 'Buka kunci soal ini?' : 'Kunci soal ini agar guru tidak dapat mengedit lagi?'; ?>')">
+                        <input type="hidden" name="paket_id" value="<?php echo $paketInfo['id']; ?>">
+                        <input type="hidden" name="topik_id" value="<?php echo $topikInfo['id']; ?>">
+                        <?php if ($isLocked): ?>
+                            <button type="submit" class="btn btn-outline" style="border-color: #cbd5e1; color: #1e293b; font-weight: 700;">
+                                <i data-lucide="unlock" style="color: #22c55e;"></i> Buka Kunci Soal
+                            </button>
+                        <?php else: ?>
+                            <button type="submit" class="btn btn-outline" style="background: #fffbeb; color: #b45309; border-color: #fde68a; font-weight: 700;">
+                                <i data-lucide="lock" style="color: #d97706;"></i> Kunci Soal Sekarang
+                            </button>
+                        <?php endif; ?>
+                    </form>
+                    <?php endif; ?>
+
+                    <!-- Tombol Tambah Soal -->
+                    <?php if ($isLocked): ?>
+                        <button type="button" class="btn" style="background: #e2e8f0; color: #94a3b8; cursor: not-allowed; font-weight: 700;" title="Soal terkunci, buka kunci untuk menambah butir soal">
+                            <i data-lucide="lock" style="width: 15px; height: 15px;"></i> Tambah Soal (Terkunci)
+                        </button>
+                    <?php else: ?>
+                        <a href="<?php echo base_url('bank_soal/tambah_soal?paket_id=' . ($paketInfo['id'] ?? '') . '&topik_id=' . ($topikInfo['id'] ?? 1) . '&mapel=' . urlencode($mapelNama)); ?>" class="btn btn-primary" style="background: #0ea5e9; border: none; font-weight: 800; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
+                            <i data-lucide="plus"></i> Tambah Butir Soal Baru
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
 
-            <!-- Table Card -->
-            <div class="z-card" style="padding: 0;">
-                <div style="padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; font-size: 1.1rem;">Daftar Soal Tersimpan <span class="z-badge" style="margin-left:10px; background:#e0f2fe; color:#0284c7;">Total: <?= count($soals) ?> Soal</span></h3>
-                    <a href="<?php echo base_url('bank_soal/tambah_soal?topik_id='.$topikInfo['id'].'&mapel='.urlencode($mapel_nama)); ?>" class="btn btn-primary">
-                        <i data-lucide="plus"></i> Tambah Soal
-                    </a>
+            <!-- Tabel Daftar Butir Soal -->
+            <div class="z-card" style="padding: 0; border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                <div style="padding: 1.25rem 1.75rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                        <span>Daftar Butir Soal & Kunci Jawaban</span>
+                        <span style="font-size: 0.75rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 100px; font-weight: 800;">
+                            <?php echo count($soals); ?> Butir
+                        </span>
+                    </div>
+
+                    <?php if ($isLocked): ?>
+                        <div style="font-size: 0.78rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 4px 12px; border-radius: 20px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 5px;">
+                            <i data-lucide="shield-alert" style="width: 14px; height: 14px;"></i> Mode Baca Saja (Terkunci)
+                        </div>
+                    <?php endif; ?>
                 </div>
-                
-                <table id="tabelSoal" class="z-table" style="width:100%;">
-                    <thead>
-                        <tr>
-                            <th style="width: 50px;">No</th>
-                            <th style="width: 150px;">Tipe Soal</th>
-                            <th>Cuplikan Pertanyaan</th>
-                            <th style="text-align: center; width: 80px;">Skor</th>
-                            <th style="text-align: center; width: 120px;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $no=1; 
-                        $tipe_badges = [
-                            'sec_pg' => ['Pilihan Ganda', '#f1f5f9', '#475569'],
-                            'sec_pgk' => ['PG Kompleks', '#e0e7ff', '#4338ca'],
-                            'sec_bs' => ['Benar / Salah', '#dcfce7', '#15803d'],
-                            'sec_jodoh' => ['Menjodohkan', '#fae8ff', '#a21caf'],
-                            'sec_isian' => ['Isian Singkat', '#ffedd5', '#c2410c'],
-                            'sec_essay' => ['Esai / Uraian', '#fef3c7', '#d97706']
-                        ];
-                        foreach($soals as $s): 
-                            $badge = $tipe_badges[$s['tipe_soal']] ?? ['Unknown', '#eee', '#333'];
-                        ?>
-                        <tr>
-                            <td><?= $no++ ?></td>
-                            <td><span class="z-badge" style="background: <?= $badge[1] ?>; color: <?= $badge[2] ?>;"><?= $badge[0] ?></span></td>
-                            <td style="color: #334155;"><?= strip_tags(substr($s['pertanyaan'], 0, 100)) ?>...</td>
-                            <td style="text-align: center; font-weight: 600;"><?= $s['skor_maksimal'] ?></td>
-                            <td style="text-align: center;">
-                                <div style="display: flex; gap: 5px; justify-content: center;">
-                                    <button type="button" class="btn-action btn-delete" onclick="deleteSoal(<?= $s['id'] ?>)" title="Hapus"><i data-lucide="trash-2"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+
+                <div class="z-table-wrap">
+                    <table id="tabelSoal" class="z-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px; text-align: center;">No</th>
+                                <th style="width: 140px;">Tipe Soal</th>
+                                <th>Pertanyaan & Cuplikan Soal</th>
+                                <th>Kunci Jawaban</th>
+                                <th style="text-align: center; width: 80px;">Skor</th>
+                                <th style="text-align: right; width: 130px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($soals)): ?>
+                            <tr>
+                                <td colspan="6" style="padding: 4rem 1.5rem; text-align: center; color: #94a3b8;">
+                                    <i data-lucide="file-question" style="width: 48px; height: 48px; margin-bottom: 10px; color: #cbd5e1;"></i>
+                                    <div style="font-size: 1rem; font-weight: 800; color: #475569;">Belum ada butir soal pada paket ini</div>
+                                    <div style="font-size: 0.82rem; margin-top: 4px;">Klik tombol "Tambah Butir Soal Baru" di atas untuk mulai memasukkan soal.</div>
+                                </td>
+                            </tr>
+                            <?php else: ?>
+                                <?php 
+                                $no = 1;
+                                foreach($soals as $s): 
+                                    $t = $s['tipe_soal'];
+                                    $tLabel = 'Pilihan Ganda';
+                                    $tClass = 'pill-pg';
+                                    if ($t === 'sec_pgk') { $tLabel = 'PG Kompleks'; $tClass = 'pill-pgk'; }
+                                    elseif ($t === 'sec_essay') { $tLabel = 'Essay (Uraian)'; $tClass = 'pill-essay'; }
+                                    elseif ($t === 'sec_bs') { $tLabel = 'Benar / Salah'; $tClass = 'pill-bs'; }
+                                    elseif ($t === 'sec_jodoh') { $tLabel = 'Menjodohkan'; $tClass = 'pill-jodoh'; }
+
+                                    $cleanPertanyaan = strip_tags($s['pertanyaan']);
+                                    if (strlen($cleanPertanyaan) > 120) {
+                                        $cleanPertanyaan = substr($cleanPertanyaan, 0, 120) . '...';
+                                    }
+                                ?>
+                                <tr>
+                                    <td style="text-align: center; font-weight: 800; color: #64748b;"><?php echo $s['nomor_urut'] ?: $no++; ?></td>
+                                    <td>
+                                        <span class="pill-jenis-lg <?php echo $tClass; ?>" style="font-size: 0.72rem;">
+                                            <?php echo $tLabel; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight: 700; color: #1e293b; font-size: 0.88rem; line-height: 1.4;">
+                                            <?php echo htmlspecialchars($cleanPertanyaan); ?>
+                                        </div>
+                                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 3px;">
+                                            Tingkat: <span style="font-weight: 700;"><?php echo htmlspecialchars($s['tingkat_kesulitan'] ?: 'Sedang'); ?></span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <?php if ($t === 'sec_pg'): ?>
+                                            <span style="font-size: 0.82rem; font-weight: 900; background: #ecfdf5; color: #059669; padding: 3px 10px; border-radius: 6px; border: 1px solid #a7f3d0;">
+                                                Kunci: <?php echo htmlspecialchars($s['kunci_jawaban'] ?: '-'); ?>
+                                            </span>
+                                        <?php elseif ($t === 'sec_pgk'): ?>
+                                            <span style="font-size: 0.78rem; font-weight: 800; background: #f3e8ff; color: #7e22ce; padding: 3px 8px; border-radius: 6px; border: 1px solid #e9d5ff;">
+                                                Kunci: [<?php echo htmlspecialchars($s['kunci_jawaban'] ?: '-'); ?>]
+                                            </span>
+                                        <?php elseif ($t === 'sec_essay'): ?>
+                                            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 6px; max-width: 220px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                Pedoman: <?php echo htmlspecialchars($s['kunci_jawaban'] ?: 'Rubrik penilaian'); ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span style="font-size: 0.75rem; color: #64748b;">
+                                                <?php echo htmlspecialchars(substr($s['kunci_jawaban'], 0, 30)); ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align: center; font-weight: 800; color: #0ea5e9;">
+                                        <?php echo (float)$s['skor_maksimal']; ?>
+                                    </td>
+                                    <td style="text-align: right; white-space: nowrap;">
+                                        <div style="display: inline-flex; gap: 4px; align-items: center;">
+                                            <!-- Preview Soal -->
+                                            <button type="button" class="btn-action-soal view" onclick="previewSoal(<?php echo htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8'); ?>)" title="Lihat Tampilan Soal">
+                                                <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
+                                            </button>
+
+                                            <!-- Edit Soal (hanya jika tidak terkunci) -->
+                                            <?php if (!$isLocked): ?>
+                                                <a href="<?php echo base_url('bank_soal/tambah_soal?id=' . $s['id'] . '&paket_id=' . ($paketInfo['id'] ?? '') . '&topik_id=' . ($topikInfo['id'] ?? 1) . '&mapel=' . urlencode($mapelNama)); ?>" class="btn-action-soal edit" title="Edit Butir Soal">
+                                                    <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>
+                                                </a>
+                                                <form method="POST" action="<?php echo base_url('bank_soal/hapus_soal'); ?>" style="display: inline;" onsubmit="return confirm('Hapus butir soal no. <?php echo $s['nomor_urut']; ?> ini?')">
+                                                    <input type="hidden" name="id" value="<?php echo $s['id']; ?>">
+                                                    <button type="submit" class="btn-action-soal delete" title="Hapus Butir Soal">
+                                                        <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         </div>
     </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Modal Preview Soal -->
+<div id="modalPreviewSoal" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('open')">
+    <div style="background: #ffffff; width: 92%; max-width: 650px; border-radius: 20px; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18); border: 1px solid #e2e8f0; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="prevTipeBadge" class="pill-jenis-lg pill-pg">PG</span>
+                <span id="prevTingkat" style="font-size: 0.75rem; font-weight: 700; color: #64748b;">Tingkat: Sedang</span>
+            </div>
+            <button type="button" onclick="document.getElementById('modalPreviewSoal').classList.remove('open')" style="background: none; border: none; cursor: pointer; color: #94a3b8;">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+
+        <div style="font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 1.25rem; line-height: 1.5;" id="prevPertanyaan">
+            -
+        </div>
+
+        <div id="prevOpsiContainer" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 8px;">
+            <!-- Opsi populated by JS -->
+        </div>
+
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Kunci Jawaban:</span>
+                <div id="prevKunci" style="font-size: 1rem; font-weight: 900; color: #059669; margin-top: 2px;">-</div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Bobot Skor:</span>
+                <div id="prevSkor" style="font-size: 1.1rem; font-weight: 900; color: #0ea5e9; margin-top: 2px;">-</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+            <button type="button" onclick="document.getElementById('modalPreviewSoal').classList.remove('open')" class="btn btn-outline">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     lucide.createIcons();
-    function zToggleSidebar() {
-        document.querySelector('.z-sidebar').classList.toggle('open');
-    }
 
-    function deleteSoal(id) {
-        Swal.fire({
-            title: 'Hapus Soal?',
-            text: 'Soal ini akan dihapus permanen!',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = "<?= base_url('bank_soal/hapus_soal?id=') ?>" + id;
-            }
-        });
-    }
+    function previewSoal(data) {
+        document.getElementById('prevPertanyaan').innerHTML = data.pertanyaan || '';
+        document.getElementById('prevTingkat').innerText = 'Tingkat: ' + (data.tingkat_kesulitan || 'Sedang');
+        document.getElementById('prevKunci').innerText = data.kunci_jawaban || '-';
+        document.getElementById('prevSkor').innerText = data.skor_maksimal || '2';
 
-    document.addEventListener("DOMContentLoaded", function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has('success')) {
-            Swal.fire('Berhasil!', 'Soal berhasil disimpan.', 'success');
-        } else if(urlParams.has('deleted')) {
-            Swal.fire('Terhapus!', 'Soal berhasil dihapus.', 'success');
+        const badge = document.getElementById('prevTipeBadge');
+        const container = document.getElementById('prevOpsiContainer');
+        container.innerHTML = '';
+
+        if (data.tipe_soal === 'sec_pg') {
+            badge.className = 'pill-jenis-lg pill-pg';
+            badge.innerText = 'Pilihan Ganda';
+            const ops = ['A', 'B', 'C', 'D', 'E'];
+            ops.forEach(o => {
+                const fName = 'opsi_' + o.toLowerCase();
+                if (data[fName]) {
+                    const isK = (data.kunci_jawaban && data.kunci_jawaban.trim().toUpperCase() === o);
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding: 8px 14px; border-radius: 10px; border: 1.5px solid ' + (isK ? '#86efac; background: #f0fdf4;' : '#e2e8f0; background: #fff;') + ' font-size: 0.88rem; display: flex; align-items: center; gap: 8px;';
+                    div.innerHTML = '<strong style="color:' + (isK ? '#15803d' : '#0f172a') + ';">' + o + '.</strong> <span>' + data[fName] + '</span>' + (isK ? ' <span style="margin-left: auto; font-size: 0.72rem; font-weight: 800; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px;">KUNCI</span>' : '');
+                    container.appendChild(div);
+                }
+            });
+        } else if (data.tipe_soal === 'sec_pgk') {
+            badge.className = 'pill-jenis-lg pill-pgk';
+            badge.innerText = 'PG Kompleks';
+            try {
+                const kObj = JSON.parse(data.konten_tambahan || '{}');
+                if (kObj.opsi && Array.isArray(kObj.opsi)) {
+                    kObj.opsi.forEach((op, idx) => {
+                        const div = document.createElement('div');
+                        const isK = op.is_kunci;
+                        div.style.cssText = 'padding: 8px 14px; border-radius: 10px; border: 1.5px solid ' + (isK ? '#d8b4fe; background: #faf5ff;' : '#e2e8f0; background: #fff;') + ' font-size: 0.88rem; display: flex; align-items: center; gap: 8px;';
+                        div.innerHTML = '<input type="checkbox" ' + (isK ? 'checked' : '') + ' disabled> <span>' + (op.teks || '') + '</span>' + (isK ? ' <span style="margin-left: auto; font-size: 0.72rem; font-weight: 800; background: #f3e8ff; color: #7e22ce; padding: 2px 6px; border-radius: 4px;">KUNCI</span>' : '');
+                        container.appendChild(div);
+                    });
+                }
+            } catch(e) {}
+        } else if (data.tipe_soal === 'sec_essay') {
+            badge.className = 'pill-jenis-lg pill-essay';
+            badge.innerText = 'Essay (Uraian)';
+            container.innerHTML = '<div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 12px; font-size: 0.85rem; color: #64748b; font-style: italic;">[Kotak jawaban essay siswa]</div>';
         }
-    });
 
-    $(document).ready(function() {
-        $('#tabelSoal').DataTable({
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
-            }
-        });
-    });
+        document.getElementById('modalPreviewSoal').classList.add('open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
 </script>
 </body>
 </html>
