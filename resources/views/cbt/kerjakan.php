@@ -421,6 +421,11 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
         </div>
 
         <div style="display: flex; align-items: center; gap: 14px;">
+            <div id="saveIndicator" style="font-size: 0.78rem; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 14px; border-radius: 20px; display: inline-flex; align-items: center; gap: 7px; transition: opacity 0.3s; opacity: 0;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                <span id="saveIndicatorText">Tersimpan Otomatis</span>
+            </div>
+
             <div class="cbt-timer-box">
                 <div>
                     <div class="cbt-timer-label">Sisa Waktu</div>
@@ -552,30 +557,157 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
     <script>
         const soalList = <?php echo json_encode($soalList); ?>;
         const totalSoal = soalList.length;
+        const ujianId = <?php echo (int)$ujianInfo['id']; ?>;
+        const pesertaId = <?php echo (int)($pesertaInfo['id'] ?? 0); ?>;
+        const serverSavedData = <?php echo json_encode($savedData ?? []); ?>;
+
+        const storageKeyAns = `cbt_ans_${ujianId}_${pesertaId}`;
+        const storageKeyRagu = `cbt_ragu_${ujianId}_${pesertaId}`;
+        const storageKeyIdx = `cbt_idx_${ujianId}_${pesertaId}`;
+
         let currentIndex = 0;
-        let userAnswers = {}; // { index: 'A' }
-        let raguState = {};   // { index: true }
-        let timeLeft = <?php echo $durasiDetik; ?>;
+        let userAnswers = {}; // { index: answerValue }
+        let raguState = {};   // { index: true/false }
+        let timeLeft = <?php echo (int)$durasiDetik; ?>;
+        let autoSaveTimer = null;
 
         function initCbt() {
+            // 1. Pulihkan data tersimpan dari Cloud Server (jika ada)
+            if (serverSavedData && typeof serverSavedData === 'object') {
+                if (serverSavedData.answers_by_index) {
+                    userAnswers = { ...serverSavedData.answers_by_index };
+                } else if (serverSavedData.answers) {
+                    // Map soal_id ke index urutan
+                    soalList.forEach((s, idx) => {
+                        if (serverSavedData.answers[s.id] !== undefined && serverSavedData.answers[s.id] !== null) {
+                            userAnswers[idx] = serverSavedData.answers[s.id];
+                        }
+                    });
+                }
+                if (serverSavedData.ragu) {
+                    raguState = { ...serverSavedData.ragu };
+                }
+                if (serverSavedData.last_index !== undefined) {
+                    const lIdx = parseInt(serverSavedData.last_index);
+                    if (!isNaN(lIdx) && lIdx >= 0 && lIdx < totalSoal) {
+                        currentIndex = lIdx;
+                    }
+                }
+            }
+
+            // 2. Pulihkan dari LocalStorage (jika lebih baru atau server baru dibuka kembali)
+            try {
+                const localAns = localStorage.getItem(storageKeyAns);
+                if (localAns) {
+                    const parsed = JSON.parse(localAns);
+                    if (parsed && typeof parsed === 'object') {
+                        userAnswers = { ...userAnswers, ...parsed };
+                    }
+                }
+                const localRagu = localStorage.getItem(storageKeyRagu);
+                if (localRagu) {
+                    const parsedR = JSON.parse(localRagu);
+                    if (parsedR && typeof parsedR === 'object') {
+                        raguState = { ...raguState, ...parsedR };
+                    }
+                }
+                const localIdx = localStorage.getItem(storageKeyIdx);
+                if (localIdx !== null) {
+                    const pIdx = parseInt(localIdx);
+                    if (!isNaN(pIdx) && pIdx >= 0 && pIdx < totalSoal) {
+                        currentIndex = pIdx;
+                    }
+                }
+            } catch (e) {}
+
             renderPalette();
-            loadQuestion(0);
+            loadQuestion(currentIndex);
             startTimer();
             lucide.createIcons();
+            showSaveIndicator('Sesi Siap', false);
+        }
+
+        // Simpan jawaban siswa secara otomatis (LocalStorage + Cloud Sync)
+        function saveCurrentAnswers(syncCloud = true) {
+            // 1. Simpan seketika di LocalStorage HP / Laptop siswa
+            try {
+                localStorage.setItem(storageKeyAns, JSON.stringify(userAnswers));
+                localStorage.setItem(storageKeyRagu, JSON.stringify(raguState));
+                localStorage.setItem(storageKeyIdx, String(currentIndex));
+            } catch(e) {}
+
+            // 2. Sinkronisasi background ke Database Server
+            if (syncCloud && pesertaId > 0) {
+                showSaveIndicator('Menyimpan...', true);
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => {
+                    const payload = {
+                        answers_by_index: userAnswers,
+                        answers: {},
+                        ragu: raguState,
+                        last_index: currentIndex
+                    };
+                    for (let i = 0; i < totalSoal; i++) {
+                        const sId = soalList[i].id;
+                        payload.answers[sId] = userAnswers[i] !== undefined ? userAnswers[i] : '';
+                    }
+
+                    const formData = new FormData();
+                    formData.append('ujian_id', ujianId);
+                    formData.append('peserta_id', pesertaId);
+                    formData.append('jawaban_payload', JSON.stringify(payload));
+
+                    fetch('<?php echo base_url("cbt/kerjakan/simpan-jawaban"); ?>', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.status === 'success') {
+                            showSaveIndicator('Tersimpan di Cloud ✓', false);
+                        } else {
+                            showSaveIndicator('Tersimpan Lokal', false);
+                        }
+                    })
+                    .catch(() => {
+                        showSaveIndicator('Tersimpan Lokal', false);
+                    });
+                }, 400);
+            }
+        }
+
+        function showSaveIndicator(text, isSaving) {
+            const el = document.getElementById('saveIndicator');
+            const txtEl = document.getElementById('saveIndicatorText');
+            if (el && txtEl) {
+                txtEl.textContent = text;
+                el.style.opacity = '1';
+                if (isSaving) {
+                    el.style.color = '#0284c7';
+                    el.style.background = '#f0f9ff';
+                    el.style.borderColor = '#bae6fd';
+                } else {
+                    el.style.color = '#16a34a';
+                    el.style.background = '#f0fdf4';
+                    el.style.borderColor = '#bbf7d0';
+                }
+            }
         }
 
         function loadQuestion(idx) {
             if (idx < 0 || idx >= totalSoal) return;
             currentIndex = idx;
+            saveCurrentAnswers(false); // Simpan nomor soal terakhir yang dibuka
 
             const q = soalList[idx];
             document.getElementById('currentQBadge').textContent = `Soal Nomor ${idx + 1} dari ${totalSoal}`;
             
-            // Render Pertanyaan (Dukung HTML Rich Text, Underline, dan SVG Diagram)
+            // Render Teks Pertanyaan (Mendukung HTML Rich Text, Underline, dan Diagram SVG)
+            const qEl = document.getElementById('questionText');
             if (q.pertanyaan.includes('<div') || q.pertanyaan.includes('<p') || q.pertanyaan.includes('<svg')) {
-                document.getElementById('questionText').innerHTML = q.pertanyaan;
+                qEl.innerHTML = q.pertanyaan;
             } else {
-                document.getElementById('questionText').innerHTML = q.pertanyaan.replace(/\n/g, '<br>');
+                qEl.innerHTML = q.pertanyaan.replace(/\n/g, '<br>');
             }
 
             const container = document.getElementById('optionsContainer');
@@ -584,7 +716,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             const qType = q.tipe_soal || 'sec_pg';
             
             if (qType === 'sec_pgk') {
-                // PG Kompleks: Checkboxes Multi Jawaban
+                // MODEL 2: Pilihan Ganda Kompleks (Multi-Select Checkboxes)
                 let curAns = [];
                 if (Array.isArray(userAnswers[idx])) {
                     curAns = userAnswers[idx];
@@ -613,7 +745,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                     const item = document.createElement('div');
                     item.className = 'opt-label' + (isChecked ? ' selected' : '');
                     item.style.cursor = 'pointer';
-                    item.onclick = (e) => {
+                    item.onclick = () => {
                         let updated = [...curAns];
                         if (updated.includes(opt.key)) {
                             updated = updated.filter(x => x !== opt.key);
@@ -624,6 +756,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                         userAnswers[idx] = updated.join(', ');
                         loadQuestion(idx);
                         renderPalette();
+                        saveCurrentAnswers(true);
                     };
 
                     item.innerHTML = `
@@ -632,23 +765,30 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                     `;
                     container.appendChild(item);
                 });
+
             } else if (qType === 'sec_bs') {
-                // Tabel Benar / Salah
+                // MODEL 3: Tabel Pernyataan Benar / Salah
                 let kData = {};
                 try { kData = JSON.parse(q.konten_tambahan || '{}'); } catch(e) {}
                 const butir = kData.butir || [];
                 let curAns = {};
-                try { curAns = typeof userAnswers[idx] === 'object' ? userAnswers[idx] : JSON.parse(userAnswers[idx] || '{}'); } catch(e) {}
+                try {
+                    if (typeof userAnswers[idx] === 'object' && userAnswers[idx] !== null) {
+                        curAns = userAnswers[idx];
+                    } else if (typeof userAnswers[idx] === 'string' && userAnswers[idx]) {
+                        curAns = JSON.parse(userAnswers[idx]);
+                    }
+                } catch(e) {}
                 if (typeof curAns !== 'object' || curAns === null) curAns = {};
 
                 const table = document.createElement('table');
-                table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:8px; font-size:0.9rem; background:#ffffff; border-radius:10px; overflow:hidden; border:1px solid #cbd5e1;';
+                table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:12px; font-size:0.92rem; background:#ffffff; border-radius:12px; overflow:hidden; border:1.5px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
                 table.innerHTML = `
                     <thead>
-                        <tr style="background:#f1f5f9; color:#334155;">
-                            <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #cbd5e1;">Pernyataan Materi</th>
-                            <th style="padding:10px 14px; text-align:center; width:85px; border-bottom:1px solid #cbd5e1;">Benar</th>
-                            <th style="padding:10px 14px; text-align:center; width:85px; border-bottom:1px solid #cbd5e1;">Salah</th>
+                        <tr style="background:#f8fafc; color:#334155; border-bottom:2px solid #cbd5e1;">
+                            <th style="padding:12px 16px; text-align:left; font-weight:800;">Pernyataan Materi</th>
+                            <th style="padding:12px 14px; text-align:center; width:95px; font-weight:800; border-left:1px solid #e2e8f0;">Benar</th>
+                            <th style="padding:12px 14px; text-align:center; width:95px; font-weight:800; border-left:1px solid #e2e8f0;">Salah</th>
                         </tr>
                     </thead>
                     <tbody id="bsTbody_${idx}"></tbody>
@@ -660,46 +800,59 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                     const isB = (curAns[bIdx] === 'Benar');
                     const isS = (curAns[bIdx] === 'Salah');
                     row.innerHTML = `
-                        <td style="padding:10px 14px; color:#1e293b; font-weight:600;">${b.teks}</td>
-                        <td style="padding:10px 14px; text-align:center;">
-                            <button type="button" class="btn" style="padding:5px 14px; font-size:0.8rem; font-weight:800; border-radius:6px; cursor:pointer; background:${isB ? '#16a34a' : '#ffffff'}; color:${isB ? '#ffffff' : '#16a34a'}; border:1.5px solid #86efac;">Benar</button>
+                        <td style="padding:12px 16px; color:#1e293b; font-weight:600; line-height:1.5;">${b.teks}</td>
+                        <td style="padding:10px 14px; text-align:center; border-left:1px solid #e2e8f0;">
+                            <button type="button" class="btn" style="padding:7px 16px; font-size:0.85rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isB ? '#16a34a' : '#ffffff'}; color:${isB ? '#ffffff' : '#16a34a'}; border:1.5px solid #86efac; box-shadow:${isB ? '0 2px 4px rgba(22,163,74,0.3)' : 'none'};">
+                                ${isB ? '✓ Benar' : 'Benar'}
+                            </button>
                         </td>
-                        <td style="padding:10px 14px; text-align:center;">
-                            <button type="button" class="btn" style="padding:5px 14px; font-size:0.8rem; font-weight:800; border-radius:6px; cursor:pointer; background:${isS ? '#dc2626' : '#ffffff'}; color:${isS ? '#ffffff' : '#dc2626'}; border:1.5px solid #fca5a5;">Salah</button>
+                        <td style="padding:10px 14px; text-align:center; border-left:1px solid #e2e8f0;">
+                            <button type="button" class="btn" style="padding:7px 16px; font-size:0.85rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isS ? '#dc2626' : '#ffffff'}; color:${isS ? '#ffffff' : '#dc2626'}; border:1.5px solid #fca5a5; box-shadow:${isS ? '0 2px 4px rgba(220,38,38,0.3)' : 'none'};">
+                                ${isS ? '✕ Salah' : 'Salah'}
+                            </button>
                         </td>
                     `;
                     row.querySelectorAll('button')[0].onclick = () => {
                         curAns[bIdx] = 'Benar';
-                        userAnswers[idx] = curAns;
+                        userAnswers[idx] = { ...curAns };
                         loadQuestion(idx);
                         renderPalette();
+                        saveCurrentAnswers(true);
                     };
                     row.querySelectorAll('button')[1].onclick = () => {
                         curAns[bIdx] = 'Salah';
-                        userAnswers[idx] = curAns;
+                        userAnswers[idx] = { ...curAns };
                         loadQuestion(idx);
                         renderPalette();
+                        saveCurrentAnswers(true);
                     };
                     tbody.appendChild(row);
                 });
                 container.appendChild(table);
+
             } else if (qType === 'sec_jodoh') {
-                // Menjodohkan Matching Pairs
+                // MODEL 4: Menjodohkan (Matching Premis -> Respon Dropdown)
                 let kData = {};
                 try { kData = JSON.parse(q.konten_tambahan || '{}'); } catch(e) {}
                 const pasangan = kData.pasangan || [];
                 let curAns = {};
-                try { curAns = typeof userAnswers[idx] === 'object' ? userAnswers[idx] : JSON.parse(userAnswers[idx] || '{}'); } catch(e) {}
+                try {
+                    if (typeof userAnswers[idx] === 'object' && userAnswers[idx] !== null) {
+                        curAns = userAnswers[idx];
+                    } else if (typeof userAnswers[idx] === 'string' && userAnswers[idx]) {
+                        curAns = JSON.parse(userAnswers[idx]);
+                    }
+                } catch(e) {}
                 if (typeof curAns !== 'object' || curAns === null) curAns = {};
 
                 const allRespon = Array.from(new Set(pasangan.map(p => p.respon)));
 
                 const wrap = document.createElement('div');
-                wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px; margin-top:8px;';
+                wrap.style.cssText = 'display:flex; flex-direction:column; gap:12px; margin-top:12px;';
                 pasangan.forEach((p, pIdx) => {
                     const row = document.createElement('div');
-                    row.style.cssText = 'display:flex; align-items:center; gap:12px; background:#ffffff; padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px;';
-                    let selectHtml = `<select class="input-sm" style="flex:1; font-weight:700; color:#0284c7; border:1.5px solid #cbd5e1; border-radius:8px; padding:6px 10px;">
+                    row.style.cssText = 'display:flex; align-items:center; gap:14px; background:#ffffff; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.04);';
+                    let selectHtml = `<select class="input-sm" style="flex:1.5; font-weight:700; color:#0369a1; border:1.5px solid #94a3b8; border-radius:8px; padding:8px 12px; font-size:0.9rem; background:#f8fafc; cursor:pointer;">
                         <option value="">-- Pilih Pasangan Jawaban --</option>`;
                     allRespon.forEach(r => {
                         const sel = (curAns[pIdx] === r) ? 'selected' : '';
@@ -708,41 +861,51 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                     selectHtml += `</select>`;
 
                     row.innerHTML = `
-                        <div style="flex:1.2; font-weight:700; color:#1e293b;">${p.premis}</div>
-                        <div style="color:#64748b; font-weight:bold;">➜</div>
+                        <div style="flex:1.2; font-weight:700; color:#1e293b; font-size:0.92rem;">${p.premis}</div>
+                        <div style="color:#0284c7; font-weight:bold; font-size:1.1rem;">➜</div>
                         <div style="flex:1.5;">${selectHtml}</div>
                     `;
                     const selEl = row.querySelector('select');
                     selEl.onchange = () => {
                         curAns[pIdx] = selEl.value;
-                        userAnswers[idx] = curAns;
+                        userAnswers[idx] = { ...curAns };
                         renderPalette();
+                        saveCurrentAnswers(true);
                     };
                     wrap.appendChild(row);
                 });
                 container.appendChild(wrap);
+
             } else if (qType === 'sec_isian' || qType === 'sec_essay') {
-                // Isian Singkat / Essay
+                // MODEL 5: Isian Singkat / Uraian
                 const curVal = userAnswers[idx] || '';
                 const box = document.createElement('div');
-                box.style.cssText = 'background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:14px; margin-top:8px;';
+                box.style.cssText = 'background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; margin-top:12px; box-shadow:0 1px 3px rgba(0,0,0,0.04);';
                 box.innerHTML = `
-                    <label style="font-size:0.85rem; font-weight:700; color:#475569; display:block; margin-bottom:8px;">
-                        Tuliskan Jawaban Singkat Anda di Sini:
+                    <label style="font-size:0.88rem; font-weight:800; color:#334155; display:block; margin-bottom:10px;">
+                        Tuliskan Jawaban Singkat Anda di Bawah Ini:
                     </label>
-                    <input type="text" class="input-sm" id="isianInput_${idx}" value="${curVal}" placeholder="Ketik jawaban angka atau kata di sini..." style="width:100%; font-size:1.05rem; font-weight:800; color:#0f172a; padding:10px 14px; border:2px solid #0284c7; border-radius:8px; background:#f0f9ff;">
+                    <input type="text" class="input-sm" id="isianInput_${idx}" value="${curVal}" placeholder="Ketik jawaban angka atau kata di sini..." style="width:100%; font-size:1.1rem; font-weight:800; color:#0f172a; padding:12px 16px; border:2px solid #0284c7; border-radius:10px; background:#f0f9ff; outline:none;">
                 `;
                 const inp = box.querySelector(`#isianInput_${idx}`);
                 inp.oninput = () => {
                     userAnswers[idx] = inp.value;
                     renderPalette();
+                    saveCurrentAnswers(true);
                 };
                 container.appendChild(box);
+
             } else {
-                // Default: Pilihan Ganda (A, B, C, D, E)
+                // MODEL 1: Pilihan Ganda Biasa (A, B, C, D, E)
                 const opts = ['A', 'B', 'C', 'D', 'E'];
                 opts.forEach(k => {
-                    const text = q['opsi_' + k.toLowerCase()];
+                    let text = q['opsi_' + k.toLowerCase()];
+                    if (!text && q.konten_tambahan) {
+                        try {
+                            const kd = JSON.parse(q.konten_tambahan);
+                            if (kd.opsi && kd.opsi[k]) text = kd.opsi[k];
+                        } catch(e) {}
+                    }
                     if (!text) return;
 
                     const isSelected = (userAnswers[idx] === k);
@@ -763,7 +926,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             document.getElementById('btnNext').style.display = (idx === totalSoal - 1) ? 'none' : 'inline-flex';
             document.getElementById('btnSubmitModal').style.display = (idx === totalSoal - 1) ? 'inline-flex' : 'none';
 
-            // Update Ragu button state
+            // Update Status Tombol Ragu-Ragu
             const btnRagu = document.getElementById('btnRagu');
             if (raguState[idx]) {
                 btnRagu.classList.add('active');
@@ -778,6 +941,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             userAnswers[qIdx] = key;
             loadQuestion(qIdx);
             renderPalette();
+            saveCurrentAnswers(true);
         }
 
         function toggleRagu() {
@@ -789,6 +953,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 btnRagu.classList.remove('active');
             }
             renderPalette();
+            saveCurrentAnswers(true);
         }
 
         function navigateQuestion(step) {
@@ -811,16 +976,24 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 if (i === currentIndex) btn.classList.add('current');
 
                 let ansTag = '';
-                if (userAnswers[i] !== undefined && userAnswers[i] !== null && userAnswers[i] !== '') {
-                    answeredCount++;
-                    btn.classList.add('answered');
-                    if (typeof userAnswers[i] === 'object') {
-                        ansTag = '✓';
+                const ans = userAnswers[i];
+                if (ans !== undefined && ans !== null && ans !== '') {
+                    if (typeof ans === 'object') {
+                        if (Object.keys(ans).length > 0) {
+                            answeredCount++;
+                            btn.classList.add('answered');
+                            ansTag = '✓';
+                        }
                     } else {
-                        const str = String(userAnswers[i]);
-                        ansTag = str.length > 3 ? '✓' : str;
+                        const str = String(ans).trim();
+                        if (str.length > 0) {
+                            answeredCount++;
+                            btn.classList.add('answered');
+                            ansTag = str.length > 3 ? '✓' : str;
+                        }
                     }
                 }
+
                 if (raguState[i]) {
                     btn.classList.remove('answered');
                     btn.classList.add('doubt');
@@ -878,31 +1051,55 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
         }
 
         function openConfirmModal() {
-            let answered = Object.keys(userAnswers).length;
+            let answered = 0;
+            for (let i = 0; i < totalSoal; i++) {
+                const ans = userAnswers[i];
+                if (ans !== undefined && ans !== null && ans !== '') {
+                    if (typeof ans === 'object') {
+                        if (Object.keys(ans).length > 0) answered++;
+                    } else if (String(ans).trim().length > 0) {
+                        answered++;
+                    }
+                }
+            }
             let unanswered = totalSoal - answered;
             document.getElementById('modalSummaryText').innerHTML = `
                 Anda telah menjawab <strong>${answered}</strong> dari <strong>${totalSoal}</strong> butir soal.<br>
                 ${unanswered > 0 ? `<span style="color:#dc2626;font-weight:700;">Masih ada ${unanswered} butir soal yang belum dijawab!</span>` : '<span style="color:#16a34a;font-weight:700;">Seluruh soal telah selesai Anda jawab.</span>'}
             `;
 
-            // Prepare payload
+            // Siapkan payload final berdasar ID soal
             const payload = {};
             for (let i = 0; i < totalSoal; i++) {
                 const soalId = soalList[i].id;
-                payload[soalId] = userAnswers[i] || '';
+                payload[soalId] = userAnswers[i] !== undefined ? userAnswers[i] : '';
             }
             document.getElementById('jawabanPayloadInput').value = JSON.stringify(payload);
             document.getElementById('modalConfirm').classList.add('open');
             lucide.createIcons();
         }
 
+        // Hapus cache lokal setelah ujian resmi dikirim
+        document.getElementById('formSubmitUjian').onsubmit = function() {
+            try {
+                localStorage.removeItem(storageKeyAns);
+                localStorage.removeItem(storageKeyRagu);
+                localStorage.removeItem(storageKeyIdx);
+            } catch(e) {}
+        };
+
         function autoSubmit() {
             alert('Waktu ujian telah habis! Jawaban Anda akan otomatis dikumpulkan.');
             const payload = {};
             for (let i = 0; i < totalSoal; i++) {
-                payload[soalList[i].id] = userAnswers[i] || '';
+                payload[soalList[i].id] = userAnswers[i] !== undefined ? userAnswers[i] : '';
             }
             document.getElementById('jawabanPayloadInput').value = JSON.stringify(payload);
+            try {
+                localStorage.removeItem(storageKeyAns);
+                localStorage.removeItem(storageKeyRagu);
+                localStorage.removeItem(storageKeyIdx);
+            } catch(e) {}
             document.getElementById('formSubmitUjian').submit();
         }
 

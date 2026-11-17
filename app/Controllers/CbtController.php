@@ -1901,8 +1901,8 @@ class CbtController {
             exit;
         }
 
-        // Ambil butir soal
-        $stmtS = $db->prepare("SELECT id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, bobot FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+        // Ambil butir soal (Lengkap dengan tipe_soal dan konten_tambahan untuk 5 model CBT)
+        $stmtS = $db->prepare("SELECT id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
         $stmtS->execute([$ujian_id]);
         $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 
@@ -2002,7 +2002,56 @@ class CbtController {
             ];
         }
 
+        // Ambil data jawaban yang telah tersimpan sebelumnya (untuk fitur Lanjutkan Ujian)
+        $savedData = [];
+        if (!empty($pesertaInfo['jawaban_json'])) {
+            $savedData = json_decode($pesertaInfo['jawaban_json'], true) ?: [];
+        }
+
+        // Hitung sisa waktu pengerjaan secara akurat (melanjutkan dari waktu_mulai)
+        $durasiMenit = (int)($ujianInfo['durasi_menit'] ?? 90);
+        $totalDetik = $durasiMenit * 60;
+        $durasiDetik = $totalDetik;
+        if (!empty($pesertaInfo['waktu_mulai'])) {
+            $wMulai = strtotime($pesertaInfo['waktu_mulai']);
+            if ($wMulai > 0) {
+                $elapsed = time() - $wMulai;
+                if ($elapsed > 0 && $elapsed < $totalDetik) {
+                    $durasiDetik = $totalDetik - $elapsed;
+                } elseif ($elapsed >= $totalDetik) {
+                    $durasiDetik = 60; // Waktu habis atau toleransi 1 menit
+                }
+            }
+        }
+
         include __DIR__ . '/../../resources/views/cbt/kerjakan.php';
+    }
+
+    /**
+     * Auto-Save Jawaban Siswa secara Real-Time (AJAX)
+     */
+    public static function ajaxSimpanJawaban() {
+        header('Content-Type: application/json; charset=utf-8');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+
+        $ujian_id = isset($_POST['ujian_id']) ? (int)$_POST['ujian_id'] : 0;
+        $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
+        $payloadRaw = $_POST['jawaban_payload'] ?? '';
+
+        if ($peserta_id <= 0 || empty($payloadRaw)) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid parameters']);
+            exit;
+        }
+
+        try {
+            $stmt = $db->prepare("UPDATE cbt_peserta SET jawaban_json = ?, status_pengerjaan = 'Mengerjakan' WHERE id = ? AND ujian_id = ?");
+            $stmt->execute([$payloadRaw, $peserta_id, $ujian_id]);
+            echo json_encode(['status' => 'success', 'saved_at' => date('H:i:s')]);
+        } catch (\Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        exit;
     }
 
     /**
@@ -2018,8 +2067,8 @@ class CbtController {
             $rawPayload = $_POST['jawaban_payload'] ?? '{}';
             $answers = json_decode($rawPayload, true) ?: [];
 
-            // Ambil seluruh kunci jawaban dan bobot soal
-            $stmtSoal = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot FROM cbt_soal WHERE ujian_id = ?");
+            // Ambil seluruh butir soal dengan tipe dan kuncinya
+            $stmtSoal = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ?");
             $stmtSoal->execute([$ujian_id]);
             $soals = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
 
@@ -2041,13 +2090,33 @@ class CbtController {
                     $userAns = strtoupper(trim((string)$userAnsRaw));
                 }
 
-                $kunci = strtoupper(trim((string)$s['kunci_jawaban']));
+                $kunciRaw = (string)$s['kunci_jawaban'];
+                $kunci = strtoupper(trim($kunciRaw));
                 $isMatch = false;
 
-                if (!empty($userAns)) {
+                // 1. Evaluasi Tipe JSON (Tabel Benar/Salah & Menjodohkan)
+                $kDec = json_decode($kunciRaw, true);
+                if (is_array($kDec)) {
+                    if (is_array($userAnsRaw) && !empty($userAnsRaw)) {
+                        if (isset($kDec[0]['respon'])) {
+                            // Menjodohkan
+                            $expected = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_column($kDec, 'respon'));
+                            $actual = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_values($userAnsRaw));
+                            if ($expected == $actual) $isMatch = true;
+                        } else {
+                            // Benar / Salah
+                            $expected = array_map(function($v) { return strtoupper(trim((string)$v)); }, $kDec);
+                            $actual = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_values($userAnsRaw));
+                            if ($expected == $actual) $isMatch = true;
+                        }
+                    }
+                } elseif (!empty($userAns)) {
+                    // 2. Evaluasi PG Single Choice
                     if ($userAns === $kunci) {
                         $isMatch = true;
-                    } elseif (strpos($kunci, ',') !== false) {
+                    } 
+                    // 3. Evaluasi PG Kompleks (A, B, C)
+                    elseif (strpos($kunci, ',') !== false) {
                         $uParts = array_map('trim', explode(',', $userAns));
                         $kParts = array_map('trim', explode(',', $kunci));
                         sort($uParts);
@@ -2055,10 +2124,12 @@ class CbtController {
                         if ($uParts === $kParts) {
                             $isMatch = true;
                         }
-                    } elseif (json_decode((string)$s['kunci_jawaban'], true)) {
-                        $kDec = json_decode((string)$s['kunci_jawaban'], true);
-                        if (is_array($kDec) && is_array($userAnsRaw)) {
-                            if ($kDec == $userAnsRaw) $isMatch = true;
+                    } 
+                    // 4. Evaluasi Isian Singkat (Numeric & Text tolerance)
+                    elseif (is_numeric($kunci)) {
+                        $numUser = preg_replace('/[^0-9]/', '', $userAns);
+                        if ($numUser === $kunci) {
+                            $isMatch = true;
                         }
                     }
                 }
