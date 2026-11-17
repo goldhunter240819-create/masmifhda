@@ -66,7 +66,33 @@ try {
     $output .= "\nEnsured all columns in kurikulum_supervisi_administrasi.\n";
 } catch (\Exception $e) {}
 
-
+// 3.8 Check live server DB tables & perangkat_pembelajaran
+try {
+    $dbS = \App\Core\Database::connect('siakad');
+    $dbC = \App\Core\Database::connect('core');
+    $currentDbS = $dbS->query("SELECT DATABASE()")->fetchColumn();
+    $currentDbC = $dbC->query("SELECT DATABASE()")->fetchColumn();
+    $output .= "\nDB Siakad: $currentDbS, DB Core: $currentDbC\n";
+    
+    $tablesS = $dbS->query("SHOW TABLES LIKE '%perangkat%'")->fetchAll(PDO::FETCH_COLUMN);
+    $tablesC = $dbC->query("SHOW TABLES LIKE '%perangkat%'")->fetchAll(PDO::FETCH_COLUMN);
+    $output .= "Siakad tables with 'perangkat': " . json_encode($tablesS) . "\n";
+    $output .= "Core tables with 'perangkat': " . json_encode($tablesC) . "\n";
+    
+    if (in_array('perangkat_pembelajaran', $tablesS)) {
+        $cntS = $dbS->query("SELECT COUNT(*) FROM `perangkat_pembelajaran`")->fetchColumn();
+        $output .= "perangkat_pembelajaran count in Siakad: $cntS\n";
+    }
+    if (in_array('perangkat_pembelajaran', $tablesC)) {
+        $cntC = $dbC->query("SELECT COUNT(*) FROM `perangkat_pembelajaran`")->fetchColumn();
+        $output .= "perangkat_pembelajaran count in Core: $cntC\n";
+    }
+    // Also check guru_perangkat
+    $tablesCoreAll = $dbC->query("SHOW TABLES LIKE '%guru%'")->fetchAll(PDO::FETCH_COLUMN);
+    $output .= "Core tables with 'guru': " . json_encode($tablesCoreAll) . "\n";
+} catch (\Throwable $e) {
+    $output .= "\nDiag error: " . $e->getMessage() . "\n";
+}
 
 // 4. Catat riwayat ke log
 $logData = date('Y-m-d H:i:s') . "\nResult:\n" . $output . "\n-------------------------\n";
