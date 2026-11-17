@@ -50,8 +50,20 @@ try {
 // 3.7 Ensure kurikulum_supervisi_administrasi columns
 try {
     $dbCore = \App\Core\Database::connect('core');
-    $dbCore->exec("ALTER TABLE `kurikulum_supervisi_administrasi` ADD COLUMN `keterangan` TEXT NULL");
-    $output .= "\nAdded keterangan to kurikulum_supervisi_administrasi.\n";
+    $colsToAdd = [
+        'keterangan' => 'TEXT NULL',
+        'pegawai_id' => 'INT NULL',
+        'guru_id' => 'INT NULL',
+        'supervisor_id' => 'INT NULL',
+        'penilai_id' => 'INT NULL',
+        'tanggal_supervisi' => 'DATE NULL',
+        'penilai_nama' => 'VARCHAR(150) NULL',
+        'nilai_akhir' => 'FLOAT NULL'
+    ];
+    foreach ($colsToAdd as $c => $t) {
+        try { $dbCore->exec("ALTER TABLE `kurikulum_supervisi_administrasi` ADD COLUMN `$c` $t"); } catch (\Throwable $e) {}
+    }
+    $output .= "\nEnsured all columns in kurikulum_supervisi_administrasi.\n";
 } catch (\Exception $e) {}
 
 

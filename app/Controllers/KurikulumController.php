@@ -1192,33 +1192,31 @@ class KurikulumController {
         $db = \App\Core\Database::connect('core');
         self::ensureSupervisiTables($db);
 
-        try {
-            $db->exec("ALTER TABLE `kurikulum_supervisi_administrasi` ADD COLUMN `keterangan` TEXT NULL");
-        } catch (\Throwable $e) {}
+        $cols = $db->query("SHOW COLUMNS FROM `kurikulum_supervisi_administrasi`")->fetchAll(\PDO::FETCH_COLUMN);
+        $hasCol = function($name) use ($cols) { return in_array($name, $cols); };
+
+        $colPegawai    = ($hasCol('pegawai_id') && $hasCol('guru_id')) ? 'COALESCE(sa.pegawai_id, sa.guru_id)' : ($hasCol('pegawai_id') ? 'sa.pegawai_id' : ($hasCol('guru_id') ? 'sa.guru_id' : 'NULL'));
+        $colSupervisor = ($hasCol('supervisor_id') && $hasCol('penilai_id')) ? 'COALESCE(sa.supervisor_id, sa.penilai_id)' : ($hasCol('supervisor_id') ? 'sa.supervisor_id' : ($hasCol('penilai_id') ? 'sa.penilai_id' : 'NULL'));
+        $colTanggal    = ($hasCol('tanggal') && $hasCol('tanggal_supervisi')) ? 'COALESCE(sa.tanggal, sa.tanggal_supervisi)' : ($hasCol('tanggal') ? 'sa.tanggal' : ($hasCol('tanggal_supervisi') ? 'sa.tanggal_supervisi' : 'CURDATE()'));
+        $colKet        = $hasCol('keterangan') ? "COALESCE(sa.keterangan, 'Verifikasi Dokumen & Administrasi Pembelajaran')" : "'Verifikasi Dokumen & Administrasi Pembelajaran'";
+        $colPenilaiNm  = $hasCol('penilai_nama') ? 'sa.penilai_nama' : "NULL";
 
         $daftar_supervisi = $db->query("
             SELECT sa.*, 
-                   COALESCE(sa.pegawai_id, sa.guru_id) as pegawai_id,
-                   COALESCE(sa.supervisor_id, sa.penilai_id) as supervisor_id,
-                   COALESCE(sa.tanggal, sa.tanggal_supervisi) as tanggal,
+                   $colPegawai as pegawai_id,
+                   $colSupervisor as supervisor_id,
+                   $colTanggal as tanggal,
+                   $colKet as nama_mapel,
                    COALESCE(g.nama, 'Pegawai') as nama_guru, 
                    COALESCE(g.nip, '-') as nip_guru, 
-                   COALESCE(sp.nama, sa.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nama, $colPenilaiNm, 'Supervisor') as nama_supervisor, 
                    COALESCE(sp.nip, '-') as nip_supervisor,
-                   'Verifikasi Dokumen & Administrasi Pembelajaran' as nama_mapel,
                    '-' as nama_kelas
             FROM kurikulum_supervisi_administrasi sa 
-            LEFT JOIN guru g ON COALESCE(sa.pegawai_id, sa.guru_id) = g.id 
-            LEFT JOIN guru sp ON COALESCE(sa.supervisor_id, sa.penilai_id) = sp.id 
-            ORDER BY COALESCE(sa.tanggal, sa.tanggal_supervisi) ASC, sa.id ASC
+            LEFT JOIN guru g ON $colPegawai = g.id 
+            LEFT JOIN guru sp ON $colSupervisor = sp.id 
+            ORDER BY $colTanggal ASC, sa.id ASC
         ")->fetchAll(\PDO::FETCH_ASSOC);
-
-        foreach ($daftar_supervisi as &$row) {
-            if (!empty($row['keterangan'])) {
-                $row['nama_mapel'] = $row['keterangan'];
-            }
-        }
-        unset($row);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC) ?: [];
         $legalitas = self::getSupervisiLegalitas($db);
@@ -1234,7 +1232,7 @@ class KurikulumController {
         $semester = 'Ganjil';
         $tipe = 'Administrasi';
 
-        require_once __DIR__ . '/../../resources/views/kurikulum/supervisi_jadwal_cetak.php';
+        require __DIR__ . '/../../resources/views/kurikulum/supervisi_jadwal_cetak.php';
     }
 
     public function rilisSupervisiAdministrasi() {
@@ -1752,6 +1750,7 @@ class KurikulumController {
     public function cetakJadwalSupervisiKelas() {
         $db = \App\Core\Database::connect('core');
         $siakad_db = \App\Core\Database::connect('siakad');
+        self::ensureSupervisiTables($db);
 
         $mapels = [];
         try {
@@ -1763,17 +1762,24 @@ class KurikulumController {
             $kelasList = $siakad_db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
         } catch (\Throwable $e) {}
 
+        $colsKls = $db->query("SHOW COLUMNS FROM `kurikulum_supervisi_kelas`")->fetchAll(\PDO::FETCH_COLUMN);
+        $hasColKls = function($name) use ($colsKls) { return in_array($name, $colsKls); };
+
+        $colTanggalKls    = ($hasColKls('tanggal') && $hasColKls('tanggal_supervisi')) ? 'COALESCE(sk.tanggal, sk.tanggal_supervisi)' : ($hasColKls('tanggal') ? 'sk.tanggal' : ($hasColKls('tanggal_supervisi') ? 'sk.tanggal_supervisi' : 'CURDATE()'));
+        $colSupervisorKls = $hasColKls('supervisor_id') ? 'sk.supervisor_id' : 'NULL';
+        $colPenilaiNmKls  = $hasColKls('penilai_nama') ? 'sk.penilai_nama' : 'NULL';
+
         $daftar_supervisi = $db->query("
             SELECT sk.*, 
-                   COALESCE(sk.tanggal, sk.tanggal_supervisi) as tanggal,
+                   $colTanggalKls as tanggal,
                    g.nama as nama_guru, 
                    g.nip as nip_guru, 
-                   COALESCE(sp.nama, sk.penilai_nama, 'Supervisor') as nama_supervisor, 
+                   COALESCE(sp.nama, $colPenilaiNmKls, 'Supervisor') as nama_supervisor, 
                    COALESCE(sp.nip, '-') as nip_supervisor 
             FROM kurikulum_supervisi_kelas sk 
             JOIN guru g ON sk.guru_id = g.id 
-            LEFT JOIN guru sp ON sk.supervisor_id = sp.id 
-            ORDER BY COALESCE(sk.tanggal, sk.tanggal_supervisi) ASC, sk.id ASC
+            LEFT JOIN guru sp ON $colSupervisorKls = sp.id 
+            ORDER BY $colTanggalKls ASC, sk.id ASC
         ")->fetchAll(\PDO::FETCH_ASSOC);
 
         foreach ($daftar_supervisi as &$s) {
@@ -1796,7 +1802,7 @@ class KurikulumController {
         $tahun_ajaran = $ta_aktif;
         $semester = 'Ganjil';
 
-        require_once __DIR__ . '/../../resources/views/kurikulum/supervisi_jadwal_cetak.php';
+        require __DIR__ . '/../../resources/views/kurikulum/supervisi_jadwal_cetak.php';
     }
     
     public function getGuruKelas() {
@@ -2573,10 +2579,15 @@ class KurikulumController {
             // Ensure columns for Administrasi
             $ensureAdm = [
                 'pegawai_id' => 'INT NULL',
+                'guru_id' => 'INT NULL',
                 'supervisor_id' => 'INT NULL',
+                'penilai_id' => 'INT NULL',
                 'tanggal' => 'DATE NULL',
+                'tanggal_supervisi' => 'DATE NULL',
                 'keterangan' => 'TEXT NULL',
+                'penilai_nama' => 'VARCHAR(150) NULL',
                 'nilai' => 'FLOAT NULL',
+                'nilai_akhir' => 'FLOAT NULL',
                 'catatan_evaluasi' => 'TEXT NULL',
                 'status' => "VARCHAR(50) DEFAULT 'Jadwal'",
                 'is_released' => 'TINYINT(1) DEFAULT 0',
@@ -2589,7 +2600,10 @@ class KurikulumController {
             // Ensure columns for Kelas
             $ensureKls = [
                 'tanggal' => 'DATE NULL',
+                'tanggal_supervisi' => 'DATE NULL',
+                'penilai_nama' => 'VARCHAR(150) NULL',
                 'nilai' => 'FLOAT NULL',
+                'nilai_akhir' => 'FLOAT NULL',
                 'catatan_evaluasi' => 'TEXT NULL',
                 'status' => "VARCHAR(50) DEFAULT 'Jadwal'",
                 'kelas_id' => 'INT NULL',
