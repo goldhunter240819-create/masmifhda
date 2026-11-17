@@ -300,6 +300,10 @@ class PortalGuruPribadiController {
                 $stmtUpd->execute([$nama_berkas, $doc_id, $guru['id']]);
             }
             
+            try {
+                \App\Controllers\KurikulumController::syncFromGuruPerangkat($db_siakad, $db_core);
+            } catch (\Throwable $t) {}
+
             header("Location: " . base_url('guru/perangkat/detail?kelas=' . $kelas_id . '&mapel=' . $mapel_id));
             exit;
         }

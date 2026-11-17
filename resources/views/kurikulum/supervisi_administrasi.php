@@ -23,6 +23,9 @@
                     <a href="/kurikulum/supervisi/laporan-hasil" class="e-btn" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); color: #fff; text-decoration: none;" title="Buka Dokumen Laporan Hasil Supervisi Bab I - IV">
                         <i data-lucide="file-bar-chart-2"></i> Laporan Hasil
                     </a>
+                    <a href="/kurikulum/supervisi/administrasi/rekapitulasi" class="e-btn" style="background: #4f46e5; border: 1px solid rgba(255,255,255,0.5); color: #fff; text-decoration: none; font-weight:700; box-shadow:0 4px 12px rgba(79,70,229,0.35);" title="Buka Rekapitulasi Laporan Hasil Supervisi Administrasi GTK (Format A4)">
+                        <i data-lucide="file-check-2"></i> Rekapitulasi
+                    </a>
                     <a href="/kurikulum/supervisi/tindak-lanjut" class="e-btn" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); color: #fff; text-decoration: none;" title="Buka Rencana Tindak Lanjut (RTL) Pasca Supervisi">
                         <i data-lucide="arrow-right-circle"></i> Tindak Lanjut (RTL)
                     </a>
@@ -45,6 +48,9 @@
                     <i data-lucide="list"></i> Daftar Supervisi Administrasi
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
+                    <a href="/kurikulum/supervisi/administrasi/rekapitulasi" class="e-btn e-btn-outline" style="font-size: 0.82rem; padding: 0.35rem 0.85rem; display: inline-flex; align-items: center; gap: 6px; color:#4f46e5; border-color:#4f46e5; background:rgba(79,70,229,0.06); text-decoration:none; font-weight:700;" title="Buka Rekapitulasi Laporan Hasil (A4)">
+                        <i data-lucide="clipboard-check" style="width:15px;height:15px;"></i> Rekapitulasi (A4)
+                    </a>
                     <a href="/kurikulum/supervisi/administrasi/cetak-jadwal" target="_blank" class="e-btn e-btn-outline" style="font-size: 0.82rem; padding: 0.35rem 0.85rem; display: inline-flex; align-items: center; gap: 6px; color:#059669; border-color:#059669; background:rgba(5,150,105,0.06); text-decoration:none; font-weight:700;" title="Cetak Jadwal Supervisi (1 Lembar)">
                         <i data-lucide="calendar" style="width:15px;height:15px;"></i> Cetak Jadwal (1 Lembar)
                     </a>

@@ -1567,6 +1567,9 @@ class AdminPkkmController {
         $db = Database::connect('core');
         $db_siakad = Database::connect('siakad');
         
+        $dbConfig = require __DIR__ . '/../../config/database.php';
+        $coreDbName = $dbConfig['core']['db_name'] ?? 'aula_db';
+        
         $inst = null;
         $kamad = null;
         try {
@@ -1615,12 +1618,12 @@ class AdminPkkmController {
         $assigns = $db_siakad->query("
             SELECT m.guru_id, m.kelas_id, m.mapel_id, k.nama_kelas, mp.nama_mapel
             FROM mengajar m
-            JOIN core_db.kelas k ON k.id = m.kelas_id
+            JOIN {$coreDbName}.kelas k ON k.id = m.kelas_id
             JOIN mapel mp ON mp.id = m.mapel_id
             UNION
             SELECT jp.guru_id, jp.kelas_id, jp.mata_pelajaran_id as mapel_id, k.nama_kelas, mp.nama_mapel
             FROM jadwal_pelajaran jp
-            JOIN core_db.kelas k ON k.id = jp.kelas_id
+            JOIN {$coreDbName}.kelas k ON k.id = jp.kelas_id
             JOIN mapel mp ON mp.id = jp.mata_pelajaran_id
         ")->fetchAll(\PDO::FETCH_ASSOC);
 
@@ -1693,15 +1696,17 @@ class AdminPkkmController {
             $params[':q'] = "%$q%";
         }
 
-        // Ambil semua berkas perangkat tanpa limit sewenang-wenang (agar penilai dapat mengaudit seluruh 404+ berkas)
+        // Ambil semua berkas perangkat tanpa limit sewenang-wenang (agar penilai dapat mengaudit seluruh berkas)
         $allDocsStmt = $db_siakad->prepare("
-            SELECT p.*, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, m.nama_mapel, k.nama_kelas
+            SELECT p.*, g.nama as nama_guru, g.nip as nip_guru, g.foto as foto_guru, 
+                   COALESCE(m.nama_mapel, p.mapel_nama, '-') as nama_mapel, 
+                   COALESCE(k.nama_kelas, p.kelas_nama, '-') as nama_kelas
             FROM perangkat_pembelajaran p
-            LEFT JOIN core_db.guru g ON g.id = p.guru_id
+            LEFT JOIN {$coreDbName}.guru g ON g.id = p.guru_id
             LEFT JOIN mapel m ON m.id = p.mapel_id
-            LEFT JOIN core_db.kelas k ON k.id = p.kelas_id
+            LEFT JOIN {$coreDbName}.kelas k ON k.id = p.kelas_id
             WHERE " . implode(" AND ", $where) . "
-            ORDER BY g.nama ASC, m.nama_mapel ASC, k.nama_kelas ASC, p.id DESC
+            ORDER BY g.nama ASC, COALESCE(m.nama_mapel, p.mapel_nama) ASC, p.id DESC
         ");
         $allDocsStmt->execute($params);
         $katalogPerangkat = $allDocsStmt->fetchAll(\PDO::FETCH_ASSOC);

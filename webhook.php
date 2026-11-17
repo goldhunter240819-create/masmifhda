@@ -66,37 +66,35 @@ try {
     $output .= "\nEnsured all columns in kurikulum_supervisi_administrasi.\n";
 } catch (\Exception $e) {}
 
-// 3.8 Check live server DB tables & perangkat_pembelajaran
+// 3.8 Sinkronisasi Perangkat Pembelajaran Guru ke SIAKAD & PKKM
 try {
     $dbS = \App\Core\Database::connect('siakad');
     $dbC = \App\Core\Database::connect('core');
-    $currentDbS = $dbS->query("SELECT DATABASE()")->fetchColumn();
-    $currentDbC = $dbC->query("SELECT DATABASE()")->fetchColumn();
-    $output .= "\nDB Siakad: $currentDbS, DB Core: $currentDbC\n";
-    
-    $tablesS = $dbS->query("SHOW TABLES LIKE '%perangkat%'")->fetchAll(PDO::FETCH_COLUMN);
-    $tablesC = $dbC->query("SHOW TABLES LIKE '%perangkat%'")->fetchAll(PDO::FETCH_COLUMN);
-    $output .= "Siakad tables with 'perangkat': " . json_encode($tablesS) . "\n";
-    $output .= "Core tables with 'perangkat': " . json_encode($tablesC) . "\n";
-    
-    if (in_array('perangkat_pembelajaran', $tablesS)) {
-        $cntS = $dbS->query("SELECT COUNT(*) FROM `perangkat_pembelajaran`")->fetchColumn();
-        $output .= "perangkat_pembelajaran count in Siakad: $cntS\n";
+
+    // Ensure columns in perangkat_pembelajaran
+    $colsPP = $dbS->query("SHOW COLUMNS FROM `perangkat_pembelajaran`")->fetchAll(PDO::FETCH_COLUMN);
+    $ppColsToAdd = [
+        'guru_perangkat_id' => 'INT NULL',
+        'mapel_nama' => 'VARCHAR(150) NULL',
+        'kelas_nama' => 'VARCHAR(100) NULL'
+    ];
+    foreach ($ppColsToAdd as $c => $t) {
+        if (!in_array($c, $colsPP)) {
+            try { $dbS->exec("ALTER TABLE `perangkat_pembelajaran` ADD COLUMN `$c` $t"); } catch (\Throwable $e) {}
+        }
     }
-    if (in_array('perangkat_pembelajaran', $tablesC)) {
-        $cntC = $dbC->query("SELECT COUNT(*) FROM `perangkat_pembelajaran`")->fetchColumn();
-        $output .= "perangkat_pembelajaran count in Core: $cntC\n";
+    try { $dbS->exec("ALTER TABLE `perangkat_pembelajaran` ADD INDEX `idx_gp_id` (`guru_perangkat_id`)"); } catch (\Throwable $e) {}
+
+    // Jalankan sync
+    $hasGP = $dbC->query("SHOW TABLES LIKE 'guru_perangkat'")->fetchColumn();
+    if ($hasGP) {
+        require_once __DIR__ . '/app/Controllers/KurikulumController.php';
+        $synced = \App\Controllers\KurikulumController::syncFromGuruPerangkat($dbS, $dbC);
+        $totalPP = (int)$dbS->query("SELECT COUNT(*) FROM `perangkat_pembelajaran`")->fetchColumn();
+        $output .= "\nSynced perangkat_pembelajaran from guru_perangkat: $synced processed. Total in Siakad now: $totalPP.\n";
     }
-    if (in_array('guru_perangkat', $tablesC)) {
-        $cntGP = $dbC->query("SELECT COUNT(*) FROM `guru_perangkat`")->fetchColumn();
-        $output .= "guru_perangkat count in Core: $cntGP\n";
-    }
-    $allDbs = $dbC->query("SHOW DATABASES")->fetchAll(PDO::FETCH_COLUMN);
-    $output .= "Available databases: " . json_encode($allDbs) . "\n";
-    $mapelTablesS2 = $dbS->query("SHOW TABLES LIKE '%mata_pelajaran%'")->fetchAll(PDO::FETCH_COLUMN);
-    $output .= "Siakad mapel tables: " . json_encode(array_merge($mapelTablesS, $mapelTablesS2)) . "\n";
 } catch (\Throwable $e) {
-    $output .= "\nDiag error: " . $e->getMessage() . "\n";
+    $output .= "\nPerangkat migration error: " . $e->getMessage() . "\n";
 }
 
 // 4. Catat riwayat ke log

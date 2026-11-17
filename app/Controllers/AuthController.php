@@ -12,7 +12,18 @@ class AuthController {
         }
 
         if (isset($_SESSION['user_id'])) {
-            redirect('/');
+            $role = $_SESSION['role_id'] ?? 0;
+            if ($role == 5) {
+                redirect('/pengawas/pkkm');
+            } elseif ($role == 2) {
+                redirect('/guru/dashboard');
+            } elseif ($role == 3) {
+                redirect('/siswa/dashboard');
+            } elseif ($role == 99) {
+                redirect('/dev-panel');
+            } else {
+                redirect('/');
+            }
             exit;
         }
 
@@ -44,16 +55,24 @@ class AuthController {
                             $_SESSION['is_kamad'] = true;
                         }
                     }
+                } elseif ($user['role_id'] == 5) { // Pengawas PKKM
+                    $p = $db->query("SELECT nama, peran FROM pkkm_pengawas WHERE user_id = " . (int)$user['id'])->fetch();
+                    if ($p) {
+                        $nama = $p['nama'];
+                        $_SESSION['peran_pengawas'] = $p['peran'];
+                    }
                 }
                 $_SESSION['nama'] = $nama;
 
                 // â”€â”€ Audit Log â”€â”€
-                $roleMap = [1 => 'Admin', 2 => 'Guru', 3 => 'Siswa', 99 => 'Dev'];
+                $roleMap = [1 => 'Admin', 2 => 'Guru', 3 => 'Siswa', 5 => 'Pengawas', 99 => 'Dev'];
                 $roleName = $roleMap[$user['role_id']] ?? 'Unknown';
                 AuditLogger::loginSuccess($user['username'], $roleName);
 
                 if ($user['role_id'] == 99) {
                     redirect('/dev-panel');
+                } elseif ($user['role_id'] == 5) {
+                    redirect('/pengawas/pkkm');
                 } elseif ($user['role_id'] == 2) {
                     redirect('/guru/dashboard');
                 } elseif ($user['role_id'] == 3) {
@@ -291,6 +310,7 @@ class AuthController {
 
                     $redir = '/portal';
                     if ($user['role_id'] == 99) $redir = '/dev-panel';
+                    elseif ($user['role_id'] == 5) $redir = '/pengawas/pkkm';
                     elseif ($user['role_id'] == 2) $redir = '/guru/dashboard';
                     elseif ($user['role_id'] == 3) {
                         $redir = $is_alumni ? '/alumni/dashboard' : '/siswa';

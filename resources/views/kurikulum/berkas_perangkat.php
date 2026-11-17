@@ -200,6 +200,9 @@
                     <p>Sinkronisasi dan monitoring berkas RPP, Modul Ajar, ATP, CP, Prota, Promes, & KKTP guru.</p>
                 </div>
                 <div class="header-actions-premium" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <a href="/kurikulum/berkas/perangkat?sync=1" class="e-btn" style="background:rgba(16,185,129,0.25); border:1px solid rgba(16,185,129,0.5); color:#fff; backdrop-filter:blur(10px); text-decoration:none;" title="Sinkronkan seluruh unggahan berkas perangkat guru dari Portal Guru">
+                        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Sinkronkan Berkas Guru
+                    </a>
                     <a href="/admin/pkkm/cetak-bukti/perangkat-guru" target="_blank" class="e-btn" style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; backdrop-filter:blur(10px); text-decoration:none;" title="Buka Halaman Monitoring Perangkat Pembelajaran untuk Pengawas & Asesor PKKM">
                         <i data-lucide="eye" style="width:14px;height:14px;"></i> Halaman Pengawas PKKM (View-Only)
                     </a>
@@ -252,6 +255,14 @@
                 <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-left:4px solid #10b981; color:#065f46; padding:1rem 1.25rem; border-radius:10px; margin-top:1.5rem; display:flex; align-items:center; gap:10px;">
                     <i data-lucide="check-circle" style="color:#10b981; width:22px; height:22px; flex-shrink:0;"></i>
                     <span>Dokumen perangkat pembelajaran berhasil diunggah dan disimpan ke server!</span>
+                </div>
+            <?php elseif($_GET['msg'] === 'synced'): ?>
+                <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-left:4px solid #10b981; color:#065f46; padding:1rem 1.25rem; border-radius:10px; margin-top:1.5rem; display:flex; align-items:center; gap:10px;">
+                    <i data-lucide="check-circle" style="color:#10b981; width:22px; height:22px; flex-shrink:0;"></i>
+                    <div>
+                        <strong>Sinkronisasi Berhasil!</strong>
+                        <span>Seluruh berkas perangkat pembelajaran guru telah berhasil disinkronkan ke repositori Kurikulum & PKKM.</span>
+                    </div>
                 </div>
             <?php elseif($_GET['msg'] === 'status_updated'): ?>
                 <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-left:4px solid #10b981; color:#065f46; padding:1rem 1.25rem; border-radius:10px; margin-top:1.5rem; display:flex; align-items:center; gap:10px;">
@@ -531,9 +542,15 @@
                                     <span style="font-size:0.72rem; color:#94a3b8;"><?= date('H:i', strtotime($row['created_at'])) ?> WIB</span>
                                 </td>
                                 <td align="center">
+                                    <?php 
+                                    $rawFileUrl = $row['file_path'] ?? '';
+                                    if (!empty($rawFileUrl) && strpos($rawFileUrl, 'http') !== 0 && strpos($rawFileUrl, '/') !== 0) {
+                                        $rawFileUrl = '/' . $rawFileUrl;
+                                    }
+                                    ?>
                                     <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
                                         <!-- Tombol Buka File -->
-                                        <a href="<?= htmlspecialchars($row['file_path']) ?>" target="_blank" class="btn-action btn-action-view" title="Buka / Unduh File">
+                                        <a href="<?= htmlspecialchars($rawFileUrl) ?>" target="_blank" class="btn-action btn-action-view" title="Buka / Unduh File">
                                             <i data-lucide="eye" style="width:14px;height:14px;"></i>
                                         </a>
 

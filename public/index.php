@@ -157,6 +157,10 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
         exit;
     }
 
+    if ($is_logged_in && $role == 5) {
+        redirect('/pengawas/pkkm');
+        exit;
+    }
     if ($is_logged_in && $role == 2) {
         redirect('/guru/dashboard');
         exit;
@@ -839,8 +843,12 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
     <?php endif;
 });
 
-// / -> redirect ke /portal (untuk kasus akses via router, bukan file langsung)
+// / -> redirect ke portal sesuai role pengguna
 $router->add('GET', '/', function() {
+    if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 5) {
+        redirect('/pengawas/pkkm');
+        exit;
+    }
     redirect('/portal');
     exit;
 });
@@ -2497,6 +2505,9 @@ $router->add('POST', '/kurikulum/supervisi/administrasi/evaluasi', [\App\Control
 $router->add('GET', '/kurikulum/supervisi/administrasi/cetak', [\App\Controllers\KurikulumController::class, 'cetakSupervisiAdministrasi']);
 $router->add('GET', '/kurikulum/supervisi/administrasi/cetak-semua', [\App\Controllers\KurikulumController::class, 'cetakSemuaSupervisiAdministrasi']);
 $router->add('GET', '/kurikulum/supervisi/administrasi/cetak-jadwal', [\App\Controllers\KurikulumController::class, 'cetakJadwalSupervisiAdministrasi']);
+$router->add('GET', '/kurikulum/supervisi/administrasi/rekapitulasi', [\App\Controllers\KurikulumController::class, 'rekapitulasiSupervisiAdministrasi']);
+$router->add('GET', '/admin/pkkm/cetak-bukti/supervisi-administrasi', [\App\Controllers\KurikulumController::class, 'rekapitulasiSupervisiAdministrasi']);
+$router->add('GET', '/pengawas/pkkm/bukti-digital/supervisi-administrasi', [\App\Controllers\KurikulumController::class, 'rekapitulasiSupervisiAdministrasi']);
 $router->add('GET', '/kurikulum/supervisi/kelas', [\App\Controllers\KurikulumController::class, 'supervisiKelas']);
 $router->add('POST', '/kurikulum/supervisi/kelas', [\App\Controllers\KurikulumController::class, 'storeSupervisiKelas']);
 $router->add('POST', '/kurikulum/supervisi/kelas/update', [\App\Controllers\KurikulumController::class, 'updateSupervisiKelas']);
