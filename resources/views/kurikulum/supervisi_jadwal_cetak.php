@@ -41,7 +41,7 @@ $kamad_nama = $kamad['nama'] ?? 'Drs. Hamim Hasyim';
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Jadwal Supervisi Pembelajaran - <?= htmlspecialchars($sekolah_nama) ?></title>
+    <title><?= (isset($tipe) && $tipe === 'Administrasi') ? 'Jadwal Supervisi Administrasi' : 'Jadwal Supervisi Pembelajaran' ?> - <?= htmlspecialchars($sekolah_nama) ?></title>
     <link rel="icon" type="image/png" href="<?= htmlspecialchars($brand['favicon']) ?>">
     <style>
         @page {
@@ -172,7 +172,7 @@ $kamad_nama = $kamad['nama'] ?? 'Drs. Hamim Hasyim';
 
         <!-- JUDUL JADWAL -->
         <div class="doc-title">
-            <h1>JADWAL PELAKSANAAN SUPERVISI PEMBELAJARAN (KELAS)</h1>
+            <h1><?= (isset($tipe) && $tipe === 'Administrasi') ? 'JADWAL PELAKSANAAN SUPERVISI ADMINISTRASI GURU & TENDIK' : 'JADWAL PELAKSANAAN SUPERVISI PEMBELAJARAN (KELAS)' ?></h1>
             <div class="sub-title">SEMESTER <?= strtoupper(htmlspecialchars($semester)) ?> TAHUN PELAJARAN <?= htmlspecialchars($tahun_ajaran) ?></div>
         </div>
 
@@ -181,18 +181,20 @@ $kamad_nama = $kamad['nama'] ?? 'Drs. Hamim Hasyim';
             <thead>
                 <tr>
                     <th style="width: 30px;">No</th>
-                    <th style="width: 125px;">Hari / Tanggal</th>
-                    <th style="width: 65px;">Waktu</th>
-                    <th>Nama Guru Disupervisi</th>
-                    <th>Mata Pelajaran</th>
+                    <th style="width: 130px;">Hari / Tanggal</th>
+                    <th style="width: 70px;">Waktu</th>
+                    <th><?= (isset($tipe) && $tipe === 'Administrasi') ? 'Nama Pegawai / Guru' : 'Nama Guru Disupervisi' ?></th>
+                    <th><?= (isset($tipe) && $tipe === 'Administrasi') ? 'Fokus Verifikasi Administrasi' : 'Mata Pelajaran' ?></th>
+                    <?php if (!isset($tipe) || $tipe !== 'Administrasi'): ?>
                     <th style="width: 50px;">Kelas</th>
+                    <?php endif; ?>
                     <th>Supervisor / Observer</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if(empty($daftar_supervisi)): ?>
                 <tr>
-                    <td colspan="7" align="center" style="padding: 15px;">Belum ada jadwal pelaksanaan supervisi yang ditetapkan.</td>
+                    <td colspan="<?= (isset($tipe) && $tipe === 'Administrasi') ? 6 : 7 ?>" align="center" style="padding: 15px;">Belum ada jadwal pelaksanaan supervisi yang ditetapkan.</td>
                 </tr>
                 <?php else: ?>
                     <?php 
@@ -201,7 +203,7 @@ $kamad_nama = $kamad['nama'] ?? 'Drs. Hamim Hasyim';
                         $tgl_item = strtotime($row['tanggal']);
                         $hari_item = $hariIndo[(int)date('w', $tgl_item)] ?? '-';
                         $tgl_formatted = $hari_item . ', ' . date('d', $tgl_item) . ' ' . ($bulanIndoSingkat[(int)date('n', $tgl_item)] ?? date('M', $tgl_item)) . ' ' . date('Y', $tgl_item);
-                        $jam_ke = !empty($row['jam_ke']) ? $row['jam_ke'] : 'Jam KBM';
+                        $jam_ke = !empty($row['jam_ke']) ? $row['jam_ke'] : ((isset($tipe) && $tipe === 'Administrasi') ? '08:00 WIB' : 'Jam KBM');
                     ?>
                     <tr>
                         <td align="center"><?= $no++ ?></td>
@@ -209,7 +211,9 @@ $kamad_nama = $kamad['nama'] ?? 'Drs. Hamim Hasyim';
                         <td align="center" style="font-size: 9pt;"><?= htmlspecialchars($jam_ke) ?></td>
                         <td><strong><?= htmlspecialchars($row['nama_guru']) ?></strong></td>
                         <td><?= htmlspecialchars($row['nama_mapel']) ?></td>
+                        <?php if (!isset($tipe) || $tipe !== 'Administrasi'): ?>
                         <td align="center"><?= htmlspecialchars($row['nama_kelas']) ?></td>
+                        <?php endif; ?>
                         <td><?= htmlspecialchars($row['nama_supervisor'] ?: $kamad_nama) ?></td>
                     </tr>
                     <?php endforeach; ?>
@@ -220,10 +224,17 @@ $kamad_nama = $kamad['nama'] ?? 'Drs. Hamim Hasyim';
         <!-- CATATAN / KETENTUAN SINGKAT -->
         <div style="font-size: 8.5pt; color: #334155; margin-bottom: 15px; border-left: 3px solid #059669; padding-left: 8px;">
             <strong>Catatan Pelaksanaan:</strong>
+            <?php if (isset($tipe) && $tipe === 'Administrasi'): ?>
+            <ol style="margin: 2px 0 0 0; padding-left: 14px;">
+                <li>Guru dan Tenaga Kependidikan menyiapkan kelengkapan berkas fisik maupun digital perangkat pembelajaran dan administrasi madrasah sebelum jadwal verifikasi.</li>
+                <li>Verifikasi dokumen mencakup butir instrumen kelengkapan administrasi kurikulum madrasah yang telah ditetapkan.</li>
+            </ol>
+            <?php else: ?>
             <ol style="margin: 2px 0 0 0; padding-left: 14px;">
                 <li>Guru yang bersangkutan menyiapkan Perangkat Ajar (Modul Ajar/RPP, Media, Bahan Ajar, dan LKPD) sebelum jadwal observasi.</li>
                 <li>Pengamatan difokuskan pada kegiatan pendahuluan, inti pembelajaran berdiferensiasi, serta asesmen autentik (KKTP).</li>
             </ol>
+            <?php endif; ?>
         </div>
 
         <!-- TANDA TANGAN (BEBAS NIP) -->

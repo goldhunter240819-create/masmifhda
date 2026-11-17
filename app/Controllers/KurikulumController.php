@@ -1190,21 +1190,35 @@ class KurikulumController {
 
     public function cetakJadwalSupervisiAdministrasi() {
         $db = \App\Core\Database::connect('core');
+        self::ensureSupervisiTables($db);
+
+        try {
+            $db->exec("ALTER TABLE `kurikulum_supervisi_administrasi` ADD COLUMN `keterangan` TEXT NULL");
+        } catch (\Throwable $e) {}
 
         $daftar_supervisi = $db->query("
             SELECT sa.*, 
+                   COALESCE(sa.pegawai_id, sa.guru_id) as pegawai_id,
+                   COALESCE(sa.supervisor_id, sa.penilai_id) as supervisor_id,
                    COALESCE(sa.tanggal, sa.tanggal_supervisi) as tanggal,
                    COALESCE(g.nama, 'Pegawai') as nama_guru, 
                    COALESCE(g.nip, '-') as nip_guru, 
                    COALESCE(sp.nama, sa.penilai_nama, 'Supervisor') as nama_supervisor, 
                    COALESCE(sp.nip, '-') as nip_supervisor,
-                   COALESCE(sa.keterangan, 'Verifikasi Dokumen & Administrasi Pembelajaran') as nama_mapel,
+                   'Verifikasi Dokumen & Administrasi Pembelajaran' as nama_mapel,
                    '-' as nama_kelas
             FROM kurikulum_supervisi_administrasi sa 
             LEFT JOIN guru g ON COALESCE(sa.pegawai_id, sa.guru_id) = g.id 
             LEFT JOIN guru sp ON COALESCE(sa.supervisor_id, sa.penilai_id) = sp.id 
             ORDER BY COALESCE(sa.tanggal, sa.tanggal_supervisi) ASC, sa.id ASC
         ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        foreach ($daftar_supervisi as &$row) {
+            if (!empty($row['keterangan'])) {
+                $row['nama_mapel'] = $row['keterangan'];
+            }
+        }
+        unset($row);
 
         $institusi = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC) ?: [];
         $legalitas = self::getSupervisiLegalitas($db);
@@ -2561,6 +2575,7 @@ class KurikulumController {
                 'pegawai_id' => 'INT NULL',
                 'supervisor_id' => 'INT NULL',
                 'tanggal' => 'DATE NULL',
+                'keterangan' => 'TEXT NULL',
                 'nilai' => 'FLOAT NULL',
                 'catatan_evaluasi' => 'TEXT NULL',
                 'status' => "VARCHAR(50) DEFAULT 'Jadwal'",

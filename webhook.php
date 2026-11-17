@@ -47,6 +47,13 @@ try {
     $output .= "\nBranding update migration error: " . $e->getMessage() . "\n";
 }
 
+// 3.7 Ensure kurikulum_supervisi_administrasi columns
+try {
+    $dbCore = \App\Core\Database::connect('core');
+    $dbCore->exec("ALTER TABLE `kurikulum_supervisi_administrasi` ADD COLUMN `keterangan` TEXT NULL");
+    $output .= "\nAdded keterangan to kurikulum_supervisi_administrasi.\n";
+} catch (\Exception $e) {}
+
 
 
 // 4. Catat riwayat ke log
