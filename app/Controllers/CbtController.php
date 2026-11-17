@@ -1718,23 +1718,62 @@ class CbtController {
         $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($soalList)) {
+            // Coba auto-import dari bs_soal jika topik_id atau mapel_nama cocok di Bank Soal
+            try {
+                $db_siakad = $ctx['db_siakad'] ?? $db;
+                $topikIdExam = !empty($ujianInfo['topik_id']) ? (int)$ujianInfo['topik_id'] : 0;
+                $stmtBS = $db_siakad->prepare("SELECT * FROM bs_soal WHERE (topik_id = ? AND ? > 0) OR mapel_nama = ? ORDER BY nomor_urut ASC LIMIT 50");
+                $stmtBS->execute([$topikIdExam, $topikIdExam, $ujianInfo['mapel_nama']]);
+                $bsItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                if (empty($bsItems) && $db !== $db_siakad) {
+                    $stmtBSCore = $db->prepare("SELECT * FROM bs_soal WHERE (topik_id = ? AND ? > 0) OR mapel_nama = ? ORDER BY nomor_urut ASC LIMIT 50");
+                    $stmtBSCore->execute([$topikIdExam, $topikIdExam, $ujianInfo['mapel_nama']]);
+                    $bsItems = $stmtBSCore->fetchAll(PDO::FETCH_ASSOC);
+                }
+
+                if (!empty($bsItems)) {
+                    $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $no = 1;
+                    foreach ($bsItems as $bItem) {
+                        $kunci = 'A'; $opA = ''; $opB = ''; $opC = ''; $opD = ''; $opE = '';
+                        $kData = !empty($bItem['konten_tambahan']) ? json_decode($bItem['konten_tambahan'], true) : [];
+                        if (is_array($kData)) {
+                            $kunci = strtoupper($kData['kunci'] ?? 'A');
+                            if (isset($kData['opsi']) && is_array($kData['opsi'])) {
+                                $opA = $kData['opsi']['A'] ?? '';
+                                $opB = $kData['opsi']['B'] ?? '';
+                                $opC = $kData['opsi']['C'] ?? '';
+                                $opD = $kData['opsi']['D'] ?? '';
+                                $opE = $kData['opsi']['E'] ?? '';
+                            }
+                        }
+                        $stmtInsS->execute([$ujian_id, $no++, $bItem['pertanyaan'], $opA, $opB, $opC, $opD, $opE, $kunci, 1.0]);
+                    }
+                    $stmtS->execute([$ujian_id]);
+                    $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+                }
+            } catch (\Exception $e) {}
+        }
+
+        if (empty($soalList)) {
             echo "<script>alert('Paket ujian ini belum memiliki butir soal! Tambahkan butir soal terlebih dahulu.'); window.location.href='" . base_url('cbt/soal?ujian_id=' . $ujian_id) . "';</script>";
             exit;
         }
 
-        // Cek identitas peserta (siswa login atau trial guru)
+        // Cek identitas peserta (siswa login via web atau APK Siswa)
         $userId = (int)($_SESSION['user_id'] ?? 0);
         $roleId = (int)($_SESSION['role_id'] ?? 0);
+        $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
 
         $pesertaInfo = null;
 
-        if ($roleId === 3) {
+        if ($roleId === 3 || $siswaSessionId > 0) {
             // Role Siswa: Cari data siswa di database core
             $stmtSiswa = $db->prepare("SELECT s.id, s.nis, s.nama, COALESCE(k.nama_kelas, 'Umum') as kelas_nama 
                                        FROM siswa s 
                                        LEFT JOIN kelas k ON s.kelas_id = k.id 
-                                       WHERE s.user_id = ? LIMIT 1");
-            $stmtSiswa->execute([$userId]);
+                                       WHERE (s.user_id = ? AND ? > 0) OR (s.id = ? AND ? > 0) LIMIT 1");
+            $stmtSiswa->execute([$userId, $userId, $siswaSessionId, $siswaSessionId]);
             $realSiswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
 
             if ($realSiswa) {

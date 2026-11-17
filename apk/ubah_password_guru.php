@@ -9,7 +9,7 @@ if (!isset($_SESSION['guru_id'])) {
 $guru_id = $_SESSION['guru_id'];
 
 // Get user_id from guru table
-$stmt = $core_db->prepare("SELECT user_id, nama FROM guru WHERE id = :id LIMIT 1");
+$stmt = $core_db->prepare("SELECT user_id, nama, nip, nik FROM guru WHERE id = :id LIMIT 1");
 $stmt->execute(['id' => $guru_id]);
 $guru = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -32,15 +32,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (strlen($pass_baru) < 6) {
         $error_msg = "Password baru minimal 6 karakter.";
     } else {
-        // Cek password lama
-        $stmt_u = $core_db->prepare("SELECT password FROM users WHERE id = :uid LIMIT 1");
+        // Cek password lama (hash atau default NIK / NIP)
+        $stmt_u = $core_db->prepare("SELECT password_hash, username FROM users WHERE id = :uid LIMIT 1");
         $stmt_u->execute(['uid' => $user_id]);
         $user_row = $stmt_u->fetch(PDO::FETCH_ASSOC);
 
-        if ($user_row && password_verify($pass_lama, $user_row['password'])) {
+        $old_ok = false;
+        if ($user_row) {
+            if (password_verify($pass_lama, $user_row['password_hash'])) {
+                $old_ok = true;
+            } elseif (!empty($guru['nik']) && $pass_lama === $guru['nik']) {
+                $old_ok = true;
+            } elseif (!empty($guru['nip']) && $pass_lama === $guru['nip']) {
+                $old_ok = true;
+            } elseif ($pass_lama === $user_row['username']) {
+                $old_ok = true;
+            }
+        }
+
+        if ($old_ok) {
             // Update password baru
             $hashed = password_hash($pass_baru, PASSWORD_DEFAULT);
-            $stmt_update = $core_db->prepare("UPDATE users SET password = :pass WHERE id = :uid");
+            $stmt_update = $core_db->prepare("UPDATE users SET password_hash = :pass WHERE id = :uid");
             if ($stmt_update->execute(['pass' => $hashed, 'uid' => $user_id])) {
                 $success_msg = "Password berhasil diubah!";
                 

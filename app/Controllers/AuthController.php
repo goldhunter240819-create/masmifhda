@@ -32,28 +32,71 @@ class AuthController {
             $password = $_POST['password'];
 
             $db = Database::connect('core');
-            $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
-            $stmt->execute([$username]);
+            $loginInput = trim($username);
+            $stmt = $db->prepare("
+                SELECT u.*, 
+                       s.id as s_id, s.nama as s_nama, s.nis as s_nis, s.nik as s_nik,
+                       g.id as g_id, g.nama as g_nama, g.nip as g_nip, g.nik as g_nik, g.is_kamad as g_kamad
+                FROM users u 
+                LEFT JOIN siswa s ON s.user_id = u.id 
+                LEFT JOIN guru g ON g.user_id = u.id 
+                WHERE u.username = :login_id 
+                   OR s.nik = :login_id 
+                   OR s.nis = :login_id 
+                   OR g.nik = :login_id 
+                   OR g.nip = :login_id
+                LIMIT 1
+            ");
+            $stmt->execute(['login_id' => $loginInput]);
             $user = $stmt->fetch();
 
-            if ($user && password_verify($password, $user['password_hash'])) {
+            $pass_ok = false;
+            if ($user) {
+                // 1. Cek apakah password cocok dengan hash (misal sudah diganti oleh pengguna)
+                if (password_verify($password, $user['password_hash'])) {
+                    $pass_ok = true;
+                } 
+                // 2. Cek plain password / MD5 legacy
+                elseif (!empty($user['plain_password']) && $user['plain_password'] === $password) {
+                    $pass_ok = true;
+                } elseif (md5($password) === $user['password_hash']) {
+                    $pass_ok = true;
+                }
+                // 3. Default Password = NIK (Kecuali jika user sudah mengganti password)
+                elseif (!empty($user['s_nik']) && $password === $user['s_nik']) {
+                    $pass_ok = true;
+                } elseif (!empty($user['g_nik']) && $password === $user['g_nik']) {
+                    $pass_ok = true;
+                }
+                // 4. Fallback jika login menggunakan NIS (siswa) / NIP (guru) / Username
+                elseif (!empty($user['s_nis']) && $password === $user['s_nis']) {
+                    $pass_ok = true;
+                } elseif (!empty($user['g_nip']) && $password === $user['g_nip']) {
+                    $pass_ok = true;
+                } elseif ($password === $user['username']) {
+                    $pass_ok = true;
+                }
+            }
+
+            if ($user && $pass_ok) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['role_id'] = $user['role_id'];
                 
                 // Fetch Full Name based on role
-                $db = Database::connect('core');
                 $nama = $user['username'];
                 if ($user['role_id'] == 3) { // Siswa
-                    $s = $db->query("SELECT nama FROM siswa WHERE user_id = " . $user['id'])->fetch();
-                    if ($s) $nama = $s['nama'];
+                    $nama = $user['s_nama'] ?? $user['username'];
+                    $_SESSION['siswa_id'] = $user['s_id'] ?? null;
+                    $_SESSION['siswa_nama'] = $user['s_nama'] ?? '';
+                    $_SESSION['siswa_nis'] = $user['s_nis'] ?? '';
                 } elseif ($user['role_id'] == 2) { // Guru
-                    $g = $db->query("SELECT nama, is_kamad FROM guru WHERE user_id = " . $user['id'])->fetch();
-                    if ($g) {
-                        $nama = $g['nama'];
-                        if ($g['is_kamad'] == 1) {
-                            $_SESSION['is_kamad'] = true;
-                        }
+                    $nama = $user['g_nama'] ?? $user['username'];
+                    $_SESSION['guru_id'] = $user['g_id'] ?? null;
+                    $_SESSION['guru_nama'] = $user['g_nama'] ?? '';
+                    $_SESSION['guru_nip'] = $user['g_nip'] ?? '-';
+                    if (!empty($user['g_kamad']) && $user['g_kamad'] == 1) {
+                        $_SESSION['is_kamad'] = true;
                     }
                 } elseif ($user['role_id'] == 5) { // Pengawas PKKM
                     $p = $db->query("SELECT nama, peran FROM pkkm_pengawas WHERE user_id = " . (int)$user['id'])->fetch();

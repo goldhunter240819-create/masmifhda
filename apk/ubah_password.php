@@ -9,7 +9,7 @@ if (!isset($_SESSION['siswa_id'])) {
 $siswa_id = $_SESSION['siswa_id'];
 
 // Get user_id from siswa table
-$stmt = $core_db->prepare("SELECT user_id, nama FROM siswa WHERE id = :id LIMIT 1");
+$stmt = $core_db->prepare("SELECT user_id, nama, nis, nik FROM siswa WHERE id = :id LIMIT 1");
 $stmt->execute(['id' => $siswa_id]);
 $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -32,15 +32,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (strlen($pass_baru) < 6) {
         $error_msg = "Password baru minimal 6 karakter.";
     } else {
-        // Cek password lama
-        $stmt_u = $core_db->prepare("SELECT password FROM users WHERE id = :uid LIMIT 1");
+        // Cek password lama (bisa password hash saat ini, atau default NIK/NIS)
+        $stmt_u = $core_db->prepare("SELECT password_hash, username FROM users WHERE id = :uid LIMIT 1");
         $stmt_u->execute(['uid' => $user_id]);
         $user_row = $stmt_u->fetch(PDO::FETCH_ASSOC);
 
-        if ($user_row && password_verify($pass_lama, $user_row['password'])) {
+        $old_ok = false;
+        if ($user_row) {
+            if (password_verify($pass_lama, $user_row['password_hash'])) {
+                $old_ok = true;
+            } elseif (!empty($siswa['nik']) && $pass_lama === $siswa['nik']) {
+                $old_ok = true;
+            } elseif (!empty($siswa['nis']) && $pass_lama === $siswa['nis']) {
+                $old_ok = true;
+            } elseif ($pass_lama === $user_row['username']) {
+                $old_ok = true;
+            }
+        }
+
+        if ($old_ok) {
             // Update password baru
             $hashed = password_hash($pass_baru, PASSWORD_DEFAULT);
-            $stmt_update = $core_db->prepare("UPDATE users SET password = :pass WHERE id = :uid");
+            $stmt_update = $core_db->prepare("UPDATE users SET password_hash = :pass WHERE id = :uid");
             if ($stmt_update->execute(['pass' => $hashed, 'uid' => $user_id])) {
                 $success_msg = "Password berhasil diubah!";
                 

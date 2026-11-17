@@ -253,6 +253,28 @@ include 'header.php';
         </a>
     </div>
 
+    <!-- ================= CBT UJIAN ONLINE BANNER ================= -->
+    <a href="cbt.php" style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #4338ca 100%); color: white; padding: 16px 18px; border-radius: 16px; text-decoration: none; margin-bottom: 16px; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.28); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.15);">
+        <div style="position: absolute; right: -10px; bottom: -15px; font-size: 85px; opacity: 0.12; pointer-events: none;">
+            <i class="fa-solid fa-laptop-code"></i>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; position: relative; z-index: 2;">
+            <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(255,255,255,0.2); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; font-size: 22px; color: #ffffff;">
+                <i class="fa-solid fa-laptop-code"></i>
+            </div>
+            <div>
+                <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 3px;">
+                    <i class="fa-solid fa-circle" style="color: #4ade80; font-size: 6px;"></i> CBT ENGINE v2.5
+                </div>
+                <h4 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: white;">CBT Ujian Online</h4>
+                <p style="margin: 2px 0 0; font-size: 0.75rem; opacity: 0.9;">Evaluasi belajar & asesmen madrasah</p>
+            </div>
+        </div>
+        <div style="position: relative; z-index: 2; background: rgba(255,255,255,0.2); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-right"></i>
+        </div>
+    </a>
+
     <!-- ================= JADWAL BUTTON ================= -->
     <button onclick="document.getElementById('modal-jadwal').style.display='flex'" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px; display: flex; align-items: center; justify-content: center; gap: 10px;">
         <i class="fa-solid fa-calendar-alt"></i> Lihat Jadwal Pelajaran

@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Cari pengguna berdasarkan username akun, NIK siswa, NIS siswa, NIK guru, atau NIP guru
                 $stmt = $core_db->prepare("
                     SELECT u.*, 
-                           s.id as s_id, s.nama as s_nama, s.nis as s_nis, s.status as s_status,
-                           g.id as g_id, g.nama as g_nama, g.nip as g_nip, g.is_kamad as g_kamad
+                           s.id as s_id, s.nama as s_nama, s.nis as s_nis, s.nik as s_nik, s.status as s_status,
+                           g.id as g_id, g.nama as g_nama, g.nip as g_nip, g.nik as g_nik, g.is_kamad as g_kamad
                     FROM users u 
                     LEFT JOIN siswa s ON s.user_id = u.id 
                     LEFT JOIN guru g ON g.user_id = u.id 
@@ -57,11 +57,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $pass_ok = false;
                 if ($user) {
+                    // 1. Cek apakah password cocok dengan password_hash (misal password sudah diubah oleh pengguna)
                     if (password_verify($password_input, $user['password_hash'])) {
                         $pass_ok = true;
-                    } elseif (!empty($user['plain_password']) && $user['plain_password'] === $password_input) {
+                    } 
+                    // 2. Cek apakah cocok dengan plain_password atau MD5 legacy
+                    elseif (!empty($user['plain_password']) && $user['plain_password'] === $password_input) {
                         $pass_ok = true;
                     } elseif (md5($password_input) === $user['password_hash']) {
+                        $pass_ok = true;
+                    }
+                    // 3. Login Default menggunakan NIK (kecuali sudah diubah secara khusus)
+                    elseif (!empty($user['s_nik']) && $password_input === $user['s_nik']) {
+                        $pass_ok = true;
+                    } elseif (!empty($user['g_nik']) && $password_input === $user['g_nik']) {
+                        $pass_ok = true;
+                    }
+                    // 4. Fallback jika login menggunakan NIS (siswa) / NIP (guru) / Username
+                    elseif (!empty($user['s_nis']) && $password_input === $user['s_nis']) {
+                        $pass_ok = true;
+                    } elseif (!empty($user['g_nip']) && $password_input === $user['g_nip']) {
+                        $pass_ok = true;
+                    } elseif ($password_input === $user['username']) {
                         $pass_ok = true;
                     }
                 }
@@ -97,6 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $_SESSION['siswa_status'] = $siswa_status;
                                 $_SESSION['role_id'] = $user['role_id'];
                                 $_SESSION['user_id'] = $user['id'];
+                                $_SESSION['username'] = $user['username'];
+                                $_SESSION['nama'] = $siswa_nama;
 
                                 if ($remember) {
                                     setcookie('apk_remember_siswa', $siswa_id, time() + (86400 * 365), "/");
@@ -140,6 +159,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $_SESSION['guru_nip'] = $guru_nip ?? '-';
                                 $_SESSION['role_id'] = $user['role_id'];
                                 $_SESSION['user_id'] = $user['id'];
+                                $_SESSION['username'] = $user['username'];
+                                $_SESSION['nama'] = $guru_nama;
                                 if (!empty($is_kamad)) {
                                     $_SESSION['is_kamad'] = true;
                                 }
@@ -586,7 +607,7 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
                 <h2>Selamat Datang</h2>
                 <p id="greeting-subtitle">
                     <?= $active_tab === 'manual' 
-                        ? 'Masukkan <b>NIK, NIS</b>, atau <b>Username</b> dan password untuk masuk.' 
+                        ? 'Gunakan <b>NIK</b> sebagai username dan password (kecuali jika sudah diubah).' 
                         : 'Silakan pindai <b>Kartu Pelajar Elektronik</b> Anda ke kamera untuk masuk.' ?>
                 </p>
             </div>
@@ -647,8 +668,11 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
                         <label for="input-password">Password</label>
                         <div class="input-wrapper">
                             <i class="fa-solid fa-lock input-icon"></i>
-                            <input type="password" name="password" id="input-password" placeholder="Masukkan Password" required autocomplete="current-password">
+                            <input type="password" name="password" id="input-password" placeholder="Masukkan Password (Default: NIK)" required autocomplete="current-password">
                             <i class="fa-solid fa-eye toggle-pw" id="icon-toggle-pw" onclick="togglePasswordVisibility()" title="Lihat Password"></i>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-circle-info" style="color: #38bdf8;"></i> Default password: <b>NIK</b> Anda (kecuali sudah diubah).
                         </div>
                     </div>
 
@@ -737,7 +761,7 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
                 secQr.style.display = 'none';
                 secManual.style.display = 'block';
                 if (subtitle) {
-                    subtitle.innerHTML = 'Masukkan <b>NIK, NIS</b>, atau <b>Username</b> dan password untuk masuk.';
+                    subtitle.innerHTML = 'Gunakan <b>NIK</b> sebagai username & password (kecuali jika sudah diubah).';
                 }
                 stopQRScanner();
                 setTimeout(() => {
