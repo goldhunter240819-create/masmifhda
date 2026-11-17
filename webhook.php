@@ -83,6 +83,8 @@ try {
             try { $dbS->exec("ALTER TABLE `perangkat_pembelajaran` ADD COLUMN `$c` $t"); } catch (\Throwable $e) {}
         }
     }
+    try { $dbS->exec("ALTER TABLE `perangkat_pembelajaran` MODIFY COLUMN `mapel_id` INT NULL DEFAULT NULL"); } catch (\Throwable $e) {}
+    try { $dbS->exec("ALTER TABLE `perangkat_pembelajaran` MODIFY COLUMN `kelas_id` INT NULL DEFAULT NULL"); } catch (\Throwable $e) {}
     try { $dbS->exec("ALTER TABLE `perangkat_pembelajaran` ADD INDEX `idx_gp_id` (`guru_perangkat_id`)"); } catch (\Throwable $e) {}
 
     // Jalankan sync

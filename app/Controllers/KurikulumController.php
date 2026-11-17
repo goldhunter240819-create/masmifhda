@@ -613,6 +613,8 @@ class KurikulumController {
                     try { $db_siakad->exec("ALTER TABLE `perangkat_pembelajaran` ADD COLUMN `$c` $t"); } catch (\Throwable $e) {}
                 }
             }
+            try { $db_siakad->exec("ALTER TABLE `perangkat_pembelajaran` MODIFY COLUMN `mapel_id` INT NULL DEFAULT NULL"); } catch (\Throwable $e) {}
+            try { $db_siakad->exec("ALTER TABLE `perangkat_pembelajaran` MODIFY COLUMN `kelas_id` INT NULL DEFAULT NULL"); } catch (\Throwable $e) {}
             try { $db_siakad->exec("ALTER TABLE `perangkat_pembelajaran` ADD INDEX `idx_gp_id` (`guru_perangkat_id`)"); } catch (\Throwable $e) {}
 
             $coreTables = $db_core->query("SHOW TABLES LIKE 'guru_perangkat'")->fetchAll(\PDO::FETCH_COLUMN);
@@ -666,8 +668,8 @@ class KurikulumController {
                 $guruId   = (int)$gp['guru_id'];
                 $mNameRaw = trim($gp['mapel_nama'] ?? '');
                 $kNameRaw = trim($gp['kelas_nama'] ?? '');
-                $mapelId  = $mapelMap[strtolower($mNameRaw)] ?? null;
-                $kelasId  = $kelasMap[strtolower($kNameRaw)] ?? null;
+                $mapelId  = $mapelMap[strtolower($mNameRaw)] ?? 0;
+                $kelasId  = $kelasMap[strtolower($kNameRaw)] ?? 0;
                 $jenis    = trim($gp['kategori'] ?? 'Modul Ajar');
                 $judul    = trim($gp['nama_berkas'] ?? $jenis);
                 if (empty($judul)) $judul = $jenis;
