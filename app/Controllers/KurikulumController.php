@@ -704,7 +704,7 @@ class KurikulumController {
             return $count;
         } catch (\Throwable $e) {
             error_log("syncFromGuruPerangkat error: " . $e->getMessage());
-            return 0;
+            throw $e;
         }
     }
 
