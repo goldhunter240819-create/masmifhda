@@ -406,6 +406,142 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Interaktif Tarik Garis Menjodohkan (Curved Colored Bezier Lines) */
+        .matching-wrapper {
+            margin-top: 14px;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05);
+        }
+
+        .matching-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .matching-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0369a1;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            padding: 6px 14px;
+            border-radius: 20px;
+            transition: all 0.3s;
+        }
+
+        .matching-board {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 80px;
+            min-height: 260px;
+            padding: 10px 0;
+        }
+
+        .matching-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+            overflow: visible;
+        }
+
+        .matching-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 3;
+        }
+
+        .matching-card {
+            position: relative;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e293b;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 52px;
+        }
+
+        .matching-card:hover {
+            border-color: #94a3b8;
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+
+        .matching-card.selected-source {
+            border-color: #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 0 0 4px rgba(37,99,235,0.18) !important;
+            transform: scale(1.02);
+        }
+
+        .connector-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #94a3b8;
+            border: 2.5px solid #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: all 0.25s ease;
+        }
+
+        .matching-left .connector-dot {
+            right: -8px;
+        }
+
+        .matching-right .connector-dot {
+            left: -8px;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% { transform: translateY(-50%) scale(1.1); box-shadow: 0 0 0 0 rgba(37,99,235,0.5); }
+            50% { transform: translateY(-50%) scale(1.35); box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+        }
+
+        .matching-card.selected-source .connector-dot {
+            animation: pulseDot 1.4s infinite;
+        }
+
+        @media (max-width: 640px) {
+            .matching-board {
+                gap: 40px;
+            }
+            .matching-card {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -570,6 +706,18 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
         let raguState = {};   // { index: true/false }
         let timeLeft = <?php echo (int)$durasiDetik; ?>;
         let autoSaveTimer = null;
+
+        // Palet warna garis melengkung untuk setiap pasangan soal menjodohkan
+        const MATCH_COLORS = [
+            { border: '#3b82f6', bg: '#eff6ff', line: '#2563eb', text: '#1d4ed8', name: 'Biru' },
+            { border: '#10b981', bg: '#ecfdf5', line: '#059669', text: '#047857', name: 'Hijau' },
+            { border: '#8b5cf6', bg: '#f5f3ff', line: '#7c3aed', text: '#6d28d9', name: 'Ungu' },
+            { border: '#f59e0b', bg: '#fffbeb', line: '#d97706', text: '#b45309', name: 'Oranye' },
+            { border: '#ec4899', bg: '#fdf2f8', line: '#db2777', text: '#be185d', name: 'Pink' },
+            { border: '#06b6d4', bg: '#ecfeff', line: '#0891b2', text: '#0e7490', name: 'Cyan' },
+            { border: '#f43f5e', bg: '#fff1f2', line: '#e11d48', text: '#be123c', name: 'Merah' },
+            { border: '#14b8a6', bg: '#f0fdfa', line: '#0d9488', text: '#0f766e', name: 'Teal' }
+        ];
 
         function initCbt() {
             // 1. Pulihkan data tersimpan dari Cloud Server (jika ada)
@@ -831,7 +979,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 container.appendChild(table);
 
             } else if (qType === 'sec_jodoh') {
-                // MODEL 4: Menjodohkan (Matching Premis -> Respon Dropdown)
+                // MODEL 4: Menjodohkan (Interaktif Tarik Garis Melengkung Berwarna)
                 let kData = {};
                 try { kData = JSON.parse(q.konten_tambahan || '{}'); } catch(e) {}
                 const pasangan = kData.pasangan || [];
@@ -846,35 +994,245 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 if (typeof curAns !== 'object' || curAns === null) curAns = {};
 
                 const allRespon = Array.from(new Set(pasangan.map(p => p.respon)));
+                let selectedLeftIdx = null;
 
-                const wrap = document.createElement('div');
-                wrap.style.cssText = 'display:flex; flex-direction:column; gap:12px; margin-top:12px;';
+                const wrapper = document.createElement('div');
+                wrapper.className = 'matching-wrapper';
+
+                wrapper.innerHTML = `
+                    <div class="matching-toolbar">
+                        <div class="matching-hint" id="matchingHint_${idx}">
+                            <i data-lucide="sparkles" style="width:16px;height:16px;color:#0284c7;"></i>
+                            <span id="hintText_${idx}">Klik pernyataan di kolom kiri, lalu klik jawaban yang sesuai di kanan untuk membuat garis melengkung.</span>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn" id="btnResetLines_${idx}" style="font-size:0.75rem; font-weight:700; color:#dc2626; background:#fff1f2; border:1px solid #fecdd3; border-radius:12px; padding:6px 14px; cursor:pointer;">
+                                <i data-lucide="rotate-ccw" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i> Reset Garis
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="matching-board" id="matchingBoard_${idx}">
+                        <svg class="matching-svg" id="matchingSvg_${idx}"></svg>
+                        
+                        <!-- Kolom Kiri: Pernyataan (Premis) -->
+                        <div class="matching-col matching-left" id="matchingLeft_${idx}">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:6px;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#2563eb;"></span> Kolom Pernyataan
+                            </div>
+                        </div>
+
+                        <!-- Kolom Kanan: Pilihan Jawaban (Respon) -->
+                        <div class="matching-col matching-right" id="matchingRight_${idx}">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:6px;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#059669;"></span> Pilihan Jawaban
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const board = wrapper.querySelector(`#matchingBoard_${idx}`);
+                const svg = wrapper.querySelector(`#matchingSvg_${idx}`);
+                const leftCol = wrapper.querySelector(`#matchingLeft_${idx}`);
+                const rightCol = wrapper.querySelector(`#matchingRight_${idx}`);
+                const hintEl = wrapper.querySelector(`#hintText_${idx}`);
+
+                function updateHint(text) {
+                    if (hintEl) hintEl.textContent = text;
+                }
+
+                // Render Kartu Kolom Kiri (Pernyataan)
                 pasangan.forEach((p, pIdx) => {
-                    const row = document.createElement('div');
-                    row.style.cssText = 'display:flex; align-items:center; gap:14px; background:#ffffff; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.04);';
-                    let selectHtml = `<select class="input-sm" style="flex:1.5; font-weight:700; color:#0369a1; border:1.5px solid #94a3b8; border-radius:8px; padding:8px 12px; font-size:0.9rem; background:#f8fafc; cursor:pointer;">
-                        <option value="">-- Pilih Pasangan Jawaban --</option>`;
-                    allRespon.forEach(r => {
-                        const sel = (curAns[pIdx] === r) ? 'selected' : '';
-                        selectHtml += `<option value="${r}" ${sel}>${r}</option>`;
-                    });
-                    selectHtml += `</select>`;
+                    const lc = document.createElement('div');
+                    lc.className = 'matching-card';
+                    lc.setAttribute('data-idx', pIdx);
+                    const col = MATCH_COLORS[pIdx % MATCH_COLORS.length];
 
-                    row.innerHTML = `
-                        <div style="flex:1.2; font-weight:700; color:#1e293b; font-size:0.92rem;">${p.premis}</div>
-                        <div style="color:#0284c7; font-weight:bold; font-size:1.1rem;">➜</div>
-                        <div style="flex:1.5;">${selectHtml}</div>
+                    lc.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:${col.line}; color:#fff; font-size:0.78rem; font-weight:800; flex-shrink:0;">${pIdx + 1}</span>
+                            <span style="font-size:0.92rem; font-weight:700; color:#1e293b;">${p.premis}</span>
+                        </div>
+                        <div class="connector-dot"></div>
                     `;
-                    const selEl = row.querySelector('select');
-                    selEl.onchange = () => {
-                        curAns[pIdx] = selEl.value;
-                        userAnswers[idx] = { ...curAns };
-                        renderPalette();
-                        saveCurrentAnswers(true);
+
+                    lc.onclick = () => {
+                        if (selectedLeftIdx === pIdx) {
+                            selectedLeftIdx = null;
+                            lc.classList.remove('selected-source');
+                            updateHint('Klik pernyataan di kiri, lalu klik jawaban yang sesuai di kanan.');
+                        } else {
+                            selectedLeftIdx = pIdx;
+                            leftCol.querySelectorAll('.matching-card').forEach(c => c.classList.remove('selected-source'));
+                            lc.classList.add('selected-source');
+                            updateHint(`Pernyataan [${pIdx + 1}] aktif (Garis ${col.name}). Silakan klik pilihan jawaban di kolom kanan!`);
+                        }
                     };
-                    wrap.appendChild(row);
+                    leftCol.appendChild(lc);
                 });
-                container.appendChild(wrap);
+
+                // Render Kartu Kolom Kanan (Pilihan Jawaban)
+                allRespon.forEach(r => {
+                    const rc = document.createElement('div');
+                    rc.className = 'matching-card';
+                    rc.setAttribute('data-val', r);
+
+                    rc.innerHTML = `
+                        <div class="connector-dot"></div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;">
+                            <span style="font-size:0.92rem; font-weight:700; color:#1e293b;">${r}</span>
+                            <div class="match-badge-wrap" style="display:flex; gap:4px; flex-wrap:wrap;"></div>
+                        </div>
+                    `;
+
+                    rc.onclick = () => {
+                        if (selectedLeftIdx !== null) {
+                            curAns[selectedLeftIdx] = r;
+                            userAnswers[idx] = { ...curAns };
+
+                            leftCol.querySelectorAll('.matching-card').forEach(c => c.classList.remove('selected-source'));
+                            const connectedCol = MATCH_COLORS[selectedLeftIdx % MATCH_COLORS.length];
+                            selectedLeftIdx = null;
+
+                            drawLines();
+                            renderPalette();
+                            saveCurrentAnswers(true);
+                            updateHint(`Garis lengkung berwarna ${connectedCol.name} berhasil terhubung!`);
+                        } else {
+                            const connectedLeft = Object.keys(curAns).filter(k => curAns[k] === r);
+                            if (connectedLeft.length > 0) {
+                                updateHint(`Jawaban '${r}' terhubung dengan Pernyataan ${connectedLeft.map(n => parseInt(n) + 1).join(', ')}.`);
+                            } else {
+                                updateHint('Silakan klik salah satu pernyataan di sebelah kiri terlebih dahulu.');
+                            }
+                        }
+                    };
+                    rightCol.appendChild(rc);
+                });
+
+                // Fungsi Menggambar Garis Melengkung (Cubic Bezier S-Curves)
+                function drawLines() {
+                    svg.innerHTML = '';
+                    const boardRect = board.getBoundingClientRect();
+                    svg.setAttribute('viewBox', `0 0 ${boardRect.width} ${boardRect.height}`);
+
+                    const leftCards = leftCol.querySelectorAll('.matching-card');
+                    const rightCards = rightCol.querySelectorAll('.matching-card');
+
+                    // Reset styling kartu kanan
+                    rightCards.forEach(rc => {
+                        rc.style.borderColor = '#e2e8f0';
+                        rc.style.background = '#f8fafc';
+                        const badgeWrap = rc.querySelector('.match-badge-wrap');
+                        if (badgeWrap) badgeWrap.innerHTML = '';
+                        const dot = rc.querySelector('.connector-dot');
+                        if (dot) {
+                            dot.style.background = '#94a3b8';
+                            dot.style.boxShadow = 'none';
+                        }
+                    });
+
+                    leftCards.forEach((lc, pIdx) => {
+                        const col = MATCH_COLORS[pIdx % MATCH_COLORS.length];
+                        const dot = lc.querySelector('.connector-dot');
+                        const targetVal = curAns[pIdx];
+
+                        if (targetVal) {
+                            lc.style.borderColor = col.border;
+                            lc.style.background = col.bg;
+                            if (dot) {
+                                dot.style.background = col.line;
+                                dot.style.boxShadow = `0 0 0 4px ${col.line}35`;
+                            }
+
+                            let targetRc = null;
+                            rightCards.forEach(rc => {
+                                if (rc.getAttribute('data-val') === targetVal) {
+                                    targetRc = rc;
+                                }
+                            });
+
+                            if (targetRc) {
+                                targetRc.style.borderColor = col.border;
+                                targetRc.style.background = col.bg;
+                                const rDot = targetRc.querySelector('.connector-dot');
+                                if (rDot) {
+                                    rDot.style.background = col.line;
+                                    rDot.style.boxShadow = `0 0 0 4px ${col.line}35`;
+                                }
+
+                                const badgeWrap = targetRc.querySelector('.match-badge-wrap');
+                                if (badgeWrap) {
+                                    const badge = document.createElement('span');
+                                    badge.style.cssText = `background:${col.line}; color:#ffffff; font-size:0.75rem; font-weight:800; padding:2px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:3px; box-shadow:0 1px 3px rgba(0,0,0,0.15);`;
+                                    badge.innerHTML = `<span>[${pIdx + 1}]</span>`;
+                                    badgeWrap.appendChild(badge);
+                                }
+
+                                const lDotRect = dot.getBoundingClientRect();
+                                const rDotRect = rDot.getBoundingClientRect();
+
+                                const x1 = lDotRect.left + lDotRect.width / 2 - boardRect.left;
+                                const y1 = lDotRect.top + lDotRect.height / 2 - boardRect.top;
+                                const x2 = rDotRect.left + rDotRect.width / 2 - boardRect.left;
+                                const y2 = rDotRect.top + rDotRect.height / 2 - boardRect.top;
+
+                                // Garis Bezier Melengkung Halus (S-Curve)
+                                const dx = Math.max(35, (x2 - x1) * 0.48);
+                                const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+
+                                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                                path.setAttribute('d', pathD);
+                                path.setAttribute('stroke', col.line);
+                                path.setAttribute('stroke-width', '3.5');
+                                path.setAttribute('stroke-linecap', 'round');
+                                path.setAttribute('fill', 'none');
+                                path.style.filter = `drop-shadow(0 2px 6px ${col.line}50)`;
+                                svg.appendChild(path);
+
+                                const c1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                                c1.setAttribute('cx', x1); c1.setAttribute('cy', y1); c1.setAttribute('r', '4');
+                                c1.setAttribute('fill', col.line);
+                                svg.appendChild(c1);
+
+                                const c2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                                c2.setAttribute('cx', x2); c2.setAttribute('cy', y2); c2.setAttribute('r', '4');
+                                c2.setAttribute('fill', col.line);
+                                svg.appendChild(c2);
+                            }
+                        } else {
+                            lc.style.borderColor = '#e2e8f0';
+                            lc.style.background = '#f8fafc';
+                            if (dot) {
+                                dot.style.background = '#94a3b8';
+                                dot.style.boxShadow = 'none';
+                            }
+                        }
+                    });
+                }
+
+                // Tombol Reset Garis
+                const btnReset = wrapper.querySelector(`#btnResetLines_${idx}`);
+                btnReset.onclick = () => {
+                    curAns = {};
+                    userAnswers[idx] = {};
+                    selectedLeftIdx = null;
+                    leftCol.querySelectorAll('.matching-card').forEach(c => c.classList.remove('selected-source'));
+                    drawLines();
+                    renderPalette();
+                    saveCurrentAnswers(true);
+                    updateHint('Seluruh garis telah dilepas. Silakan hubungkan kembali.');
+                };
+
+                container.appendChild(wrapper);
+
+                // Gambar garis awal setelah DOM dirender
+                setTimeout(() => {
+                    drawLines();
+                    lucide.createIcons();
+                }, 40);
+
+                window.refreshMatching = drawLines;
 
             } else if (qType === 'sec_isian' || qType === 'sec_essay') {
                 // MODEL 5: Isian Singkat / Uraian
@@ -1027,6 +1385,9 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             if (size === 'sm') textEl.style.fontSize = '0.92rem';
             if (size === 'md') textEl.style.fontSize = '1.08rem';
             if (size === 'lg') textEl.style.fontSize = '1.25rem';
+            if (typeof window.refreshMatching === 'function') {
+                setTimeout(window.refreshMatching, 50);
+            }
         }
 
         function startTimer() {
@@ -1102,6 +1463,12 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             } catch(e) {}
             document.getElementById('formSubmitUjian').submit();
         }
+
+        window.addEventListener('resize', () => {
+            if (typeof window.refreshMatching === 'function') {
+                window.refreshMatching();
+            }
+        });
 
         window.onload = initCbt;
     </script>
