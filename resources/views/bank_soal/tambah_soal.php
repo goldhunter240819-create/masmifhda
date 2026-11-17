@@ -276,12 +276,17 @@ $kontenDecoded = !empty($soalEdit['konten_tambahan']) ? json_decode($soalEdit['k
     $('.editor').trumbowyg({
         btns: [
             ['viewHTML'],
-            ['strong', 'em', 'del'],
+            ['undo', 'redo'],
+            ['formatting'],
+            ['strong', 'em', 'underline', 'del'],
             ['superscript', 'subscript'],
+            ['link'],
+            ['insertImage'],
             ['justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull'],
             ['unorderedList', 'orderedList'],
             ['horizontalRule'],
-            ['removeformat']
+            ['removeformat'],
+            ['fullscreen']
         ]
     });
 

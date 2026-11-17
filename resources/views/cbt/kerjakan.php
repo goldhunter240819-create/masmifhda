@@ -570,27 +570,193 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
 
             const q = soalList[idx];
             document.getElementById('currentQBadge').textContent = `Soal Nomor ${idx + 1} dari ${totalSoal}`;
-            document.getElementById('questionText').innerHTML = q.pertanyaan.replace(/\n/g, '<br>');
+            
+            // Render Pertanyaan (Dukung HTML Rich Text, Underline, dan SVG Diagram)
+            if (q.pertanyaan.includes('<div') || q.pertanyaan.includes('<p') || q.pertanyaan.includes('<svg')) {
+                document.getElementById('questionText').innerHTML = q.pertanyaan;
+            } else {
+                document.getElementById('questionText').innerHTML = q.pertanyaan.replace(/\n/g, '<br>');
+            }
 
             const container = document.getElementById('optionsContainer');
             container.innerHTML = '';
 
-            const opts = ['A', 'B', 'C', 'D', 'E'];
-            opts.forEach(k => {
-                const text = q['opsi_' + k.toLowerCase()];
-                if (!text) return;
+            const qType = q.tipe_soal || 'sec_pg';
+            
+            if (qType === 'sec_pgk') {
+                // PG Kompleks: Checkboxes Multi Jawaban
+                let curAns = [];
+                if (Array.isArray(userAnswers[idx])) {
+                    curAns = userAnswers[idx];
+                } else if (typeof userAnswers[idx] === 'string' && userAnswers[idx]) {
+                    curAns = userAnswers[idx].split(',').map(s => s.trim().toUpperCase());
+                }
 
-                const isSelected = (userAnswers[idx] === k);
-                const item = document.createElement('div');
-                item.className = 'opt-label' + (isSelected ? ' selected' : '');
-                item.onclick = () => selectOption(idx, k);
+                let kData = {};
+                try { kData = JSON.parse(q.konten_tambahan || '{}'); } catch(e) {}
+                const pgkOptions = [];
+                if (kData.opsi && Array.isArray(kData.opsi)) {
+                    kData.opsi.forEach((o, i) => {
+                        const letter = ['A','B','C','D','E','F'][i];
+                        pgkOptions.push({ key: letter, text: o.teks });
+                    });
+                } else {
+                    ['A','B','C','D','E'].forEach(k => {
+                        if (q['opsi_' + k.toLowerCase()]) {
+                            pgkOptions.push({ key: k, text: q['opsi_' + k.toLowerCase()] });
+                        }
+                    });
+                }
 
-                item.innerHTML = `
-                    <div class="opt-key">${k}</div>
-                    <div class="opt-text">${text}</div>
+                pgkOptions.forEach(opt => {
+                    const isChecked = curAns.includes(opt.key);
+                    const item = document.createElement('div');
+                    item.className = 'opt-label' + (isChecked ? ' selected' : '');
+                    item.style.cursor = 'pointer';
+                    item.onclick = (e) => {
+                        let updated = [...curAns];
+                        if (updated.includes(opt.key)) {
+                            updated = updated.filter(x => x !== opt.key);
+                        } else {
+                            updated.push(opt.key);
+                        }
+                        updated.sort();
+                        userAnswers[idx] = updated.join(', ');
+                        loadQuestion(idx);
+                        renderPalette();
+                    };
+
+                    item.innerHTML = `
+                        <div class="opt-key" style="border-radius:6px; background:${isChecked ? '#0284c7' : '#f1f5f9'}; color:${isChecked ? '#fff' : '#0f172a'};">${isChecked ? '✓' : opt.key}</div>
+                        <div class="opt-text" style="flex:1;">${opt.text}</div>
+                    `;
+                    container.appendChild(item);
+                });
+            } else if (qType === 'sec_bs') {
+                // Tabel Benar / Salah
+                let kData = {};
+                try { kData = JSON.parse(q.konten_tambahan || '{}'); } catch(e) {}
+                const butir = kData.butir || [];
+                let curAns = {};
+                try { curAns = typeof userAnswers[idx] === 'object' ? userAnswers[idx] : JSON.parse(userAnswers[idx] || '{}'); } catch(e) {}
+                if (typeof curAns !== 'object' || curAns === null) curAns = {};
+
+                const table = document.createElement('table');
+                table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:8px; font-size:0.9rem; background:#ffffff; border-radius:10px; overflow:hidden; border:1px solid #cbd5e1;';
+                table.innerHTML = `
+                    <thead>
+                        <tr style="background:#f1f5f9; color:#334155;">
+                            <th style="padding:10px 14px; text-align:left; border-bottom:1px solid #cbd5e1;">Pernyataan Materi</th>
+                            <th style="padding:10px 14px; text-align:center; width:85px; border-bottom:1px solid #cbd5e1;">Benar</th>
+                            <th style="padding:10px 14px; text-align:center; width:85px; border-bottom:1px solid #cbd5e1;">Salah</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bsTbody_${idx}"></tbody>
                 `;
-                container.appendChild(item);
-            });
+                const tbody = table.querySelector(`#bsTbody_${idx}`);
+                butir.forEach((b, bIdx) => {
+                    const row = document.createElement('tr');
+                    row.style.borderBottom = '1px solid #e2e8f0';
+                    const isB = (curAns[bIdx] === 'Benar');
+                    const isS = (curAns[bIdx] === 'Salah');
+                    row.innerHTML = `
+                        <td style="padding:10px 14px; color:#1e293b; font-weight:600;">${b.teks}</td>
+                        <td style="padding:10px 14px; text-align:center;">
+                            <button type="button" class="btn" style="padding:5px 14px; font-size:0.8rem; font-weight:800; border-radius:6px; cursor:pointer; background:${isB ? '#16a34a' : '#ffffff'}; color:${isB ? '#ffffff' : '#16a34a'}; border:1.5px solid #86efac;">Benar</button>
+                        </td>
+                        <td style="padding:10px 14px; text-align:center;">
+                            <button type="button" class="btn" style="padding:5px 14px; font-size:0.8rem; font-weight:800; border-radius:6px; cursor:pointer; background:${isS ? '#dc2626' : '#ffffff'}; color:${isS ? '#ffffff' : '#dc2626'}; border:1.5px solid #fca5a5;">Salah</button>
+                        </td>
+                    `;
+                    row.querySelectorAll('button')[0].onclick = () => {
+                        curAns[bIdx] = 'Benar';
+                        userAnswers[idx] = curAns;
+                        loadQuestion(idx);
+                        renderPalette();
+                    };
+                    row.querySelectorAll('button')[1].onclick = () => {
+                        curAns[bIdx] = 'Salah';
+                        userAnswers[idx] = curAns;
+                        loadQuestion(idx);
+                        renderPalette();
+                    };
+                    tbody.appendChild(row);
+                });
+                container.appendChild(table);
+            } else if (qType === 'sec_jodoh') {
+                // Menjodohkan Matching Pairs
+                let kData = {};
+                try { kData = JSON.parse(q.konten_tambahan || '{}'); } catch(e) {}
+                const pasangan = kData.pasangan || [];
+                let curAns = {};
+                try { curAns = typeof userAnswers[idx] === 'object' ? userAnswers[idx] : JSON.parse(userAnswers[idx] || '{}'); } catch(e) {}
+                if (typeof curAns !== 'object' || curAns === null) curAns = {};
+
+                const allRespon = Array.from(new Set(pasangan.map(p => p.respon)));
+
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px; margin-top:8px;';
+                pasangan.forEach((p, pIdx) => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; align-items:center; gap:12px; background:#ffffff; padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px;';
+                    let selectHtml = `<select class="input-sm" style="flex:1; font-weight:700; color:#0284c7; border:1.5px solid #cbd5e1; border-radius:8px; padding:6px 10px;">
+                        <option value="">-- Pilih Pasangan Jawaban --</option>`;
+                    allRespon.forEach(r => {
+                        const sel = (curAns[pIdx] === r) ? 'selected' : '';
+                        selectHtml += `<option value="${r}" ${sel}>${r}</option>`;
+                    });
+                    selectHtml += `</select>`;
+
+                    row.innerHTML = `
+                        <div style="flex:1.2; font-weight:700; color:#1e293b;">${p.premis}</div>
+                        <div style="color:#64748b; font-weight:bold;">➜</div>
+                        <div style="flex:1.5;">${selectHtml}</div>
+                    `;
+                    const selEl = row.querySelector('select');
+                    selEl.onchange = () => {
+                        curAns[pIdx] = selEl.value;
+                        userAnswers[idx] = curAns;
+                        renderPalette();
+                    };
+                    wrap.appendChild(row);
+                });
+                container.appendChild(wrap);
+            } else if (qType === 'sec_isian' || qType === 'sec_essay') {
+                // Isian Singkat / Essay
+                const curVal = userAnswers[idx] || '';
+                const box = document.createElement('div');
+                box.style.cssText = 'background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:14px; margin-top:8px;';
+                box.innerHTML = `
+                    <label style="font-size:0.85rem; font-weight:700; color:#475569; display:block; margin-bottom:8px;">
+                        Tuliskan Jawaban Singkat Anda di Sini:
+                    </label>
+                    <input type="text" class="input-sm" id="isianInput_${idx}" value="${curVal}" placeholder="Ketik jawaban angka atau kata di sini..." style="width:100%; font-size:1.05rem; font-weight:800; color:#0f172a; padding:10px 14px; border:2px solid #0284c7; border-radius:8px; background:#f0f9ff;">
+                `;
+                const inp = box.querySelector(`#isianInput_${idx}`);
+                inp.oninput = () => {
+                    userAnswers[idx] = inp.value;
+                    renderPalette();
+                };
+                container.appendChild(box);
+            } else {
+                // Default: Pilihan Ganda (A, B, C, D, E)
+                const opts = ['A', 'B', 'C', 'D', 'E'];
+                opts.forEach(k => {
+                    const text = q['opsi_' + k.toLowerCase()];
+                    if (!text) return;
+
+                    const isSelected = (userAnswers[idx] === k);
+                    const item = document.createElement('div');
+                    item.className = 'opt-label' + (isSelected ? ' selected' : '');
+                    item.onclick = () => selectOption(idx, k);
+
+                    item.innerHTML = `
+                        <div class="opt-key">${k}</div>
+                        <div class="opt-text">${text}</div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
 
             // Update Nav Buttons
             document.getElementById('btnPrev').style.visibility = (idx === 0) ? 'hidden' : 'visible';
@@ -644,9 +810,16 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 btn.className = 'pal-btn';
                 if (i === currentIndex) btn.classList.add('current');
 
-                if (userAnswers[i]) {
+                let ansTag = '';
+                if (userAnswers[i] !== undefined && userAnswers[i] !== null && userAnswers[i] !== '') {
                     answeredCount++;
                     btn.classList.add('answered');
+                    if (typeof userAnswers[i] === 'object') {
+                        ansTag = '✓';
+                    } else {
+                        const str = String(userAnswers[i]);
+                        ansTag = str.length > 3 ? '✓' : str;
+                    }
                 }
                 if (raguState[i]) {
                     btn.classList.remove('answered');
@@ -656,7 +829,7 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 btn.onclick = () => loadQuestion(i);
                 btn.innerHTML = `
                     <span>${i + 1}</span>
-                    ${userAnswers[i] ? `<span class="pal-ans-tag">${userAnswers[i]}</span>` : ''}
+                    ${ansTag ? `<span class="pal-ans-tag">${ansTag}</span>` : ''}
                 `;
                 grid.appendChild(btn);
             }

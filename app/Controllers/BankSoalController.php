@@ -839,132 +839,13 @@ class BankSoalController {
                 $topikId = $tp ? (int)$tp['id'] : 1;
             }
 
-            // 1. Cek atau Buat Paket Matematika (Default Kelas X E.1)
-            $stmtP = $this->db->prepare("SELECT id, kelas_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama = 'Matematika' ORDER BY id ASC LIMIT 1");
-            $stmtP->execute([$topikId]);
-            $pktRow = $stmtP->fetch(PDO::FETCH_ASSOC);
-            $paketId = $pktRow ? (int)$pktRow['id'] : 0;
-            $kelasNamaTarget = $pktRow ? ($pktRow['kelas_nama'] ?: 'X E.1') : 'X E.1';
+            // Panggil service CbtDummyGenerator untuk generate 50 soal ber-stimulus per tingkat (Kelas X, XI, XII)
+            \App\Services\CbtDummyGenerator::generateAll($topikId);
 
-            if (!$paketId) {
-                $stmtInsP = $this->db->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, 'Matematika', 'X E.1', 'SAWALUDIN, S.Pd', 75, 90, 0)");
-                $stmtInsP->execute([$topikId]);
-                $paketId = $this->db->lastInsertId();
-            }
-
-            // Bersihkan butir soal lama di paket ini agar pas 50 soal
-            $this->db->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]);
-
-            // 2. Masukkan 40 Butir Pilihan Ganda (PG)
-            $samplePG = [
-                ['Bentuk sederhana dari (2³ × 2⁴) : 2⁵ adalah...', '2', '4', '8', '16', '32', 'B'],
-                ['Nilai dari logaritma ²log 16 + ²log 4 adalah...', '4', '5', '6', '8', '10', 'C'],
-                ['Himpunan penyelesaian dari sistem persamaan 2x + y = 8 dan x - y = 1 adalah...', '{(3, 2)}', '{(2, 3)}', '{(4, 0)}', '{(1, 6)}', '{(5, -2)}', 'A'],
-                ['Akar-akar dari persamaan kuadrat x² - 5x + 6 = 0 adalah...', 'x = 1 atau x = 6', 'x = 2 atau x = 3', 'x = -2 atau x = -3', 'x = -1 atau x = -6', 'x = 3 atau x = 5', 'B'],
-                ['Fungsi f(x) = 2x² - 4x + 5 memiliki titik puncak pada koordinat...', '(1, 3)', '(2, 5)', '(-1, 11)', '(1, -3)', '(0, 5)', 'A'],
-            ];
-
-            $stmtSoal = $this->db->prepare("
-                INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan)
-                VALUES (?, ?, 'Matematika', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-
-            for ($i = 1; $i <= 40; $i++) {
-                $ref = $samplePG[($i - 1) % count($samplePG)];
-                $pertanyaan = "Soal No. {$i}: " . $ref[0];
-                $konten = json_encode(['kunci' => $ref[6], 'opsi' => ['A' => $ref[1], 'B' => $ref[2], 'C' => $ref[3], 'D' => $ref[4], 'E' => $ref[5]]]);
-                $stmtSoal->execute([
-                    $topikId, $paketId, $kelasNamaTarget, $i, 'sec_pg', ($i % 3 === 0 ? 'Sukar' : ($i % 2 === 0 ? 'Sedang' : 'Mudah')), 2.00,
-                    $pertanyaan, $ref[1], $ref[2], $ref[3], $ref[4], $ref[5], $ref[6], $konten
-                ]);
-            }
-
-            // 3. Masukkan 5 Butir PG Kompleks (PGK - Multi Jawaban)
-            $samplePGK = [
-                [
-                    'Pilihlah seluruh pernyataan berikut yang BENAR mengenai sifat-sifat eksponen:',
-                    [
-                        ['teks' => 'a^m × a^n = a^(m+n)', 'is_kunci' => true],
-                        ['teks' => '(a^m)^n = a^(m × n)', 'is_kunci' => true],
-                        ['teks' => 'a^0 = 0 untuk a ≠ 0', 'is_kunci' => false],
-                        ['teks' => 'a^(-n) = 1 / a^n', 'is_kunci' => true],
-                    ],
-                    json_encode(['A', 'B', 'D'])
-                ],
-                [
-                    'Manakah dari fungsi-fungsi berikut yang merupakan fungsi kuadrat definit positif?',
-                    [
-                        ['teks' => 'f(x) = x² + 2x + 5', 'is_kunci' => true],
-                        ['teks' => 'f(x) = 2x² - 4x + 7', 'is_kunci' => true],
-                        ['teks' => 'f(x) = -x² + 3x - 4', 'is_kunci' => false],
-                        ['teks' => 'f(x) = x² - 6x + 9', 'is_kunci' => false],
-                    ],
-                    json_encode(['A', 'B'])
-                ],
-                [
-                    'Pernyataan yang tepat mengenai persamaan linear dua variabel 3x + 2y = 12 adalah:',
-                    [
-                        ['teks' => 'Memotong sumbu X di titik (4, 0)', 'is_kunci' => true],
-                        ['teks' => 'Memotong sumbu Y di titik (0, 6)', 'is_kunci' => true],
-                        ['teks' => 'Gradien garisnya adalah -3/2', 'is_kunci' => true],
-                        ['teks' => 'Titik (2, 2) berada pada garis tersebut', 'is_kunci' => false],
-                    ],
-                    json_encode(['A', 'B', 'C'])
-                ],
-                [
-                    'Pilihlah sudut-sudut istimewa yang memiliki nilai sinus positif:',
-                    [
-                        ['teks' => '30° (Kuadran I)', 'is_kunci' => true],
-                        ['teks' => '150° (Kuadran II)', 'is_kunci' => true],
-                        ['teks' => '210° (Kuadran III)', 'is_kunci' => false],
-                        ['teks' => '330° (Kuadran IV)', 'is_kunci' => false],
-                    ],
-                    json_encode(['A', 'B'])
-                ],
-                [
-                    'Tentukan pernyataan yang benar mengenai matriks persegi ordo 2x2 berinvers:',
-                    [
-                        ['teks' => 'Determinannya tidak sama dengan nol (det ≠ 0)', 'is_kunci' => true],
-                        ['teks' => 'Perkalian matriks dengan inversnya menghasilkan matriks identitas', 'is_kunci' => true],
-                        ['teks' => 'Matriks singular selalu memiliki matriks balikan', 'is_kunci' => false],
-                        ['teks' => 'det(A⁻¹) = 1 / det(A)', 'is_kunci' => true],
-                    ],
-                    json_encode(['A', 'B', 'D'])
-                ]
-            ];
-
-            for ($j = 0; $j < 5; $j++) {
-                $noUrut = 41 + $j;
-                $pgk = $samplePGK[$j];
-                $konten = json_encode(['opsi' => $pgk[1], 'kunci_array' => $pgk[2]]);
-                $stmtSoal->execute([
-                    $topikId, $paketId, $kelasNamaTarget, $noUrut, 'sec_pgk', 'Sukar', 3.00,
-                    "Soal No. {$noUrut} (PG Kompleks): " . $pgk[0],
-                    $pgk[1][0]['teks'], $pgk[1][1]['teks'], $pgk[1][2]['teks'], $pgk[1][3]['teks'] ?? null, null,
-                    $pgk[2], $konten
-                ]);
-            }
-
-            // 4. Masukkan 5 Butir Essay (Uraian)
-            $sampleEssay = [
-                ['Tentukan nilai x yang memenuhi persamaan eksponen 3^(2x - 1) = 27!', 'Ubah 27 menjadi 3³. Maka 2x - 1 = 3 => 2x = 4 => x = 2. Skor maksimal jika langkah lengkap.'],
-                ['Sebuah peluru ditembakkan ke atas dengan rumus ketinggian h(t) = 40t - 5t² meter. Tentukan tinggi maksimum yang dapat dicapai peluru tersebut!', 'Titik puncak t = -b/(2a) = -40 / (2 * -5) = 4 detik. h(4) = 40(4) - 5(16) = 160 - 80 = 80 meter.'],
-                ['Diketahui deret aritmetika dengan suku pertama a = 5 dan beda b = 3. Tentukan jumlah 20 suku pertama (S20)!', 'S_n = n/2 * (2a + (n-1)b) => S20 = 10 * (10 + 19*3) = 10 * (10 + 57) = 10 * 67 = 670.'],
-                ['Jelaskan langkah-langkah dalam menyelesaikan pertidaksamaan kuadrat x² - 4x - 5 ≤ 0!', '1. Faktorkan menjadi (x - 5)(x + 1) ≤ 0. 2. Pembuat nol x = 5 atau x = -1. 3. Uji titik pada garis bilangan. 4. HP = {-1 ≤ x ≤ 5}.'],
-                ['Suatu modal sebesar Rp 10.000.000 dibungakan dengan bunga majemuk 5% per tahun. Hitunglah besar modal tersebut setelah 3 tahun!', 'M_n = M_0 * (1 + i)^n => M_3 = 10.000.000 * (1 + 0.05)³ = 10.000.000 * 1.157625 = Rp 11.576.250.']
-            ];
-
-            for ($k = 0; $k < 5; $k++) {
-                $noUrut = 46 + $k;
-                $ess = $sampleEssay[$k];
-                $konten = json_encode(['rubrik' => $ess[1]]);
-                $stmtSoal->execute([
-                    $topikId, $paketId, $kelasNamaTarget, $noUrut, 'sec_essay', 'Sedang', 5.00,
-                    "Soal No. {$noUrut} (Essay): " . $ess[0],
-                    null, null, null, null, null,
-                    $ess[1], $konten
-                ]);
-            }
+            // Sinkronkan langsung dengan jadwal dan ujian CBT
+            try {
+                \App\Controllers\CbtController::syncJadwalWithUjian($this->db_core, $this->db, $topikId);
+            } catch (\Exception $e) {}
 
             redirect("/bank_soal?topik_id={$topikId}&msg=dummy_created");
             exit;

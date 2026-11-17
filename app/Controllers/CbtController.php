@@ -42,11 +42,19 @@ class CbtController {
                 opsi_c TEXT DEFAULT NULL,
                 opsi_d TEXT DEFAULT NULL,
                 opsi_e TEXT DEFAULT NULL,
-                kunci_jawaban VARCHAR(5) NOT NULL,
+                kunci_jawaban TEXT DEFAULT NULL,
                 bobot DECIMAL(5,2) DEFAULT 1.00,
+                tipe_soal VARCHAR(50) DEFAULT 'sec_pg',
+                konten_tambahan LONGTEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX (ujian_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            try { $db->exec("ALTER TABLE cbt_soal ADD COLUMN tipe_soal VARCHAR(50) DEFAULT 'sec_pg' AFTER bobot"); } catch (\Exception $e) {}
+            try { $db->exec("ALTER TABLE cbt_soal ADD COLUMN konten_tambahan LONGTEXT DEFAULT NULL AFTER tipe_soal"); } catch (\Exception $e) {}
+            try { $db->exec("ALTER TABLE cbt_soal MODIFY COLUMN kunci_jawaban TEXT DEFAULT NULL"); } catch (\Exception $e) {}
+            try { $db->exec("ALTER TABLE cbt_soal MODIFY COLUMN opsi_a TEXT DEFAULT NULL"); } catch (\Exception $e) {}
+            try { $db->exec("ALTER TABLE cbt_soal MODIFY COLUMN opsi_b TEXT DEFAULT NULL"); } catch (\Exception $e) {}
 
             // 3. Tabel Token Ujian
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_token (
@@ -439,6 +447,9 @@ class CbtController {
             $selectedTopikId = (int)$selectedTopik['id'];
         }
 
+        // Auto-sinkronkan grid jadwal dengan cbt_ujian & Bank Soal
+        self::syncJadwalWithUjian($db, $db_siakad, $selectedTopikId);
+
         // Pemetaan hari ke tanggal riil berdasarkan tgl_mulai topik
         $hari_tanggal_map = [];
         if (!empty($selectedTopik['tgl_mulai'])) {
@@ -798,6 +809,178 @@ class CbtController {
     }
 
     /**
+     * Sinkronisasi Otomatis Matriks Jadwal (cbt_jadwal_grid) dengan Paket Ujian (cbt_ujian)
+     * Menjamin bahwa setiap mapel yang dijadwalkan langsung memiliki paket ujian aktif,
+     * butir soal tersinkron dari Bank Soal, token aktif tersedia, dan terbaca 100% di APK Siswa!
+     */
+    public static function syncJadwalWithUjian($db, $db_siakad = null, $topik_id = null) {
+        if (!$db) return;
+        if (!$db_siakad) {
+            $ctx = self::getAuthContext();
+            $db_siakad = $ctx['db_siakad'] ?? $db;
+        }
+
+        try {
+            self::ensureTables($db);
+
+            $sql = "SELECT * FROM cbt_jadwal_grid WHERE mapel_nama IS NOT NULL AND mapel_nama != ''";
+            $params = [];
+            if ($topik_id) {
+                $sql .= " AND (topik_id = ? OR topik_id IS NULL)";
+                $params[] = $topik_id;
+            }
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $gridRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($gridRows as $g) {
+                $tId = !empty($g['topik_id']) ? (int)$g['topik_id'] : ($topik_id ?: 0);
+                $mapel = trim($g['mapel_nama']);
+                $kelasNama = trim($g['kelas_nama']);
+                $ujianId = !empty($g['ujian_id']) ? (int)$g['ujian_id'] : 0;
+
+                // Tentukan tingkat kelas (Kelas X, Kelas XI, Kelas XII)
+                $tingkat = 'Kelas X';
+                if (stripos($kelasNama, 'XII') !== false || stripos($kelasNama, '12') !== false) {
+                    $tingkat = 'Kelas XII';
+                } elseif (stripos($kelasNama, 'XI') !== false || stripos($kelasNama, '11') !== false) {
+                    $tingkat = 'Kelas XI';
+                }
+
+                $existingUjian = null;
+                if ($ujianId > 0) {
+                    $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ?");
+                    $stmtU->execute([$ujianId]);
+                    $existingUjian = $stmtU->fetch(PDO::FETCH_ASSOC);
+                }
+
+                if (!$existingUjian) {
+                    // Cari berdasarkan topik_id, mapel_nama, dan kelas_nama / tingkat
+                    $stmtFind = $db->prepare("SELECT * FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas' OR kelas_nama LIKE ?) ORDER BY id DESC LIMIT 1");
+                    $stmtFind->execute([$tId, $mapel, $kelasNama, $tingkat, '%' . $tingkat . '%']);
+                    $existingUjian = $stmtFind->fetch(PDO::FETCH_ASSOC);
+                }
+
+                if (!$existingUjian) {
+                    $kode = 'UJN-' . strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $mapel), 0, 3)) . '-' . strtoupper(substr(uniqid(), -4));
+                    $namaUjian = "Ujian {$mapel} - {$kelasNama}";
+                    
+                    if ($tId) {
+                        try {
+                            $tpRow = $db_siakad->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
+                            if (!$tpRow && $db !== $db_siakad) {
+                                $tpRow = $db->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
+                            }
+                            if ($tpRow && !empty($tpRow['nama_topik'])) {
+                                $namaUjian = $tpRow['nama_topik'] . " - " . $mapel . " (" . $kelasNama . ")";
+                            }
+                        } catch (\Exception $e) {}
+                    }
+
+                    $stmtIns = $db->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, status) VALUES (?, ?, ?, ?, ?, 90, 75, 1, 1, 'Aktif')");
+                    $stmtIns->execute([$tId, $kode, $namaUjian, $mapel, $kelasNama]);
+                    $newUjianId = (int)$db->lastInsertId();
+                    $existingUjian = ['id' => $newUjianId, 'topik_id' => $tId, 'mapel_nama' => $mapel, 'kelas_nama' => $kelasNama];
+
+                    $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE id = ?")->execute([$newUjianId, $g['id']]);
+                } else {
+                    if (empty($g['ujian_id']) || $g['ujian_id'] != $existingUjian['id']) {
+                        $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE id = ?")->execute([$existingUjian['id'], $g['id']]);
+                    }
+                    $db->prepare("UPDATE cbt_ujian SET status = 'Aktif' WHERE id = ?")->execute([$existingUjian['id']]);
+                }
+
+                // Sinkronkan butir soal jika cbt_soal masih 0
+                $targetUjianId = (int)$existingUjian['id'];
+                $soalCount = (int)$db->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$targetUjianId}")->fetchColumn();
+                if ($soalCount === 0) {
+                    $bsItems = [];
+                    try {
+                        $stmtBS = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
+                        $stmtBS->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
+                        $bsItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                    } catch (\Exception $e) {}
+
+                    if (empty($bsItems) && $db !== $db_siakad) {
+                        try {
+                            $stmtBSCore = $db->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
+                            $stmtBSCore->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
+                            $bsItems = $stmtBSCore->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (\Exception $e) {}
+                    }
+
+                    if (empty($bsItems)) {
+                        try {
+                            $stmtBSAll = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) ORDER BY nomor_urut ASC, id ASC LIMIT 50");
+                            $stmtBSAll->execute([$mapel, $tId, $tId]);
+                            $bsItems = $stmtBSAll->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (\Exception $e) {}
+                    }
+
+                    // Fallback cerdas: cari butir soal mapel & tingkat ini dari topik lain di Bank Soal
+                    if (empty($bsItems)) {
+                        try {
+                            $stmtBSAny = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY id DESC LIMIT 50");
+                            $stmtBSAny->execute([$mapel, $kelasNama, $tingkat, '%' . $tingkat . '%']);
+                            $bsItems = $stmtBSAny->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (\Exception $e) {}
+                    }
+
+                    if (empty($bsItems)) {
+                        try {
+                            $stmtBSAnyMapel = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? ORDER BY id DESC LIMIT 50");
+                            $stmtBSAnyMapel->execute([$mapel]);
+                            $bsItems = $stmtBSAnyMapel->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (\Exception $e) {}
+                    }
+
+                    // Fallback terakhir: salin dari paket ujian CBT yang sudah memiliki soal untuk mapel & tingkat yang sama
+                    if (empty($bsItems)) {
+                        try {
+                            $stmtOther = $db->prepare("SELECT id FROM cbt_ujian WHERE mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = 'Semua Kelas') AND id != ? AND (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = cbt_ujian.id) > 0 ORDER BY id DESC LIMIT 1");
+                            $stmtOther->execute([$mapel, $kelasNama, $tingkat, '%' . $tingkat . '%', $targetUjianId]);
+                            $otherUjianId = $stmtOther->fetchColumn();
+                            if ($otherUjianId) {
+                                $stmtCopy = $db->prepare("SELECT * FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC");
+                                $stmtCopy->execute([$otherUjianId]);
+                                $bsItems = $stmtCopy->fetchAll(PDO::FETCH_ASSOC);
+                            }
+                        } catch (\Exception $e) {}
+                    }
+
+                    if (!empty($bsItems)) {
+                        $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        $no = 1;
+                        foreach ($bsItems as $b) {
+                            $stmtInsS->execute([
+                                $targetUjianId,
+                                $no++,
+                                $b['pertanyaan'],
+                                $b['opsi_a'] ?? '',
+                                $b['opsi_b'] ?? '',
+                                $b['opsi_c'] ?? '',
+                                $b['opsi_d'] ?? '',
+                                $b['opsi_e'] ?? '',
+                                $b['kunci_jawaban'] ?? 'A',
+                                $b['skor_maksimal'] ?? 2.00,
+                                $b['tipe_soal'] ?? 'sec_pg',
+                                $b['konten_tambahan'] ?? null
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // Pastikan Token Ujian Aktif
+            $tokAktif = $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            if (!$tokAktif) {
+                $tokenStr = 'MAS' . rand(100, 999);
+                $db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, 240, 'Aktif', NOW())")->execute([$tokenStr]);
+            }
+        } catch (\Exception $e) {}
+    }
+
+    /**
      * Atur Jadwal Ujian Bulk untuk Satu Kelas (Tombol [ATUR])
      * Mengatur Mata Pelajaran & Guru Pengawas per slot untuk kelas tertentu
      */
@@ -865,6 +1048,7 @@ class CbtController {
                     }
                 }
             }
+            self::syncJadwalWithUjian($db, $ctx['db_siakad'], $topik_id);
             redirect('/cbt/jadwal?topik_id=' . ($topik_id ?: '') . '&msg=bulk_saved');
             exit;
         }
@@ -957,6 +1141,7 @@ class CbtController {
                 }
             }
 
+            self::syncJadwalWithUjian($db, $db_siakad, $topik_id);
             redirect('/cbt/jadwal?topik_id=' . ($topik_id ?: '') . '&msg=global_saved');
             exit;
         }
@@ -1423,7 +1608,7 @@ class CbtController {
             $stmt = $db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, 120, 'Aktif', NOW())");
             $stmt->execute([$tokenStr]);
 
-            redirect('/cbt/token?success=1');
+            redirect('/cbt/token?msg=generated&success=1');
             exit;
         }
         redirect('/cbt/token');
@@ -1444,7 +1629,7 @@ class CbtController {
             } else {
                 $db->exec("UPDATE cbt_token SET status = 'Expired' WHERE status = 'Aktif'");
             }
-            redirect('/cbt/token?stopped=1');
+            redirect('/cbt/token?msg=expired&stopped=1');
             exit;
         }
         redirect('/cbt/token');
@@ -1456,6 +1641,8 @@ class CbtController {
     public static function hasil() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        self::ensureTables($db);
+        self::syncJadwalWithUjian($db, $ctx['db_siakad']);
 
         $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1542,6 +1729,8 @@ class CbtController {
     public static function analisis() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        self::ensureTables($db);
+        self::syncJadwalWithUjian($db, $ctx['db_siakad']);
 
         $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1843,10 +2032,38 @@ class CbtController {
                 $bobot = (float)($s['bobot'] > 0 ? $s['bobot'] : 1.0);
                 $totalBobot += $bobot;
 
-                $userAns = strtoupper(trim($answers[$s['id']] ?? ''));
-                $kunci = strtoupper(trim($s['kunci_jawaban']));
+                $userAnsRaw = $answers[$s['id']] ?? '';
+                if (is_array($userAnsRaw)) {
+                    $uTemp = $userAnsRaw;
+                    sort($uTemp);
+                    $userAns = strtoupper(trim(implode(', ', $uTemp)));
+                } else {
+                    $userAns = strtoupper(trim((string)$userAnsRaw));
+                }
 
-                if (!empty($userAns) && $userAns === $kunci) {
+                $kunci = strtoupper(trim((string)$s['kunci_jawaban']));
+                $isMatch = false;
+
+                if (!empty($userAns)) {
+                    if ($userAns === $kunci) {
+                        $isMatch = true;
+                    } elseif (strpos($kunci, ',') !== false) {
+                        $uParts = array_map('trim', explode(',', $userAns));
+                        $kParts = array_map('trim', explode(',', $kunci));
+                        sort($uParts);
+                        sort($kParts);
+                        if ($uParts === $kParts) {
+                            $isMatch = true;
+                        }
+                    } elseif (json_decode((string)$s['kunci_jawaban'], true)) {
+                        $kDec = json_decode((string)$s['kunci_jawaban'], true);
+                        if (is_array($kDec) && is_array($userAnsRaw)) {
+                            if ($kDec == $userAnsRaw) $isMatch = true;
+                        }
+                    }
+                }
+
+                if ($isMatch) {
                     $poinPerolehan += $bobot;
                     $jumlahBenar++;
                 } else {

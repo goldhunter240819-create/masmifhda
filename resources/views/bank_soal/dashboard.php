@@ -617,10 +617,10 @@ $active_menu = "bank_soal";
                         </button>
                     </form>
 
-                    <form method="POST" action="<?php echo base_url('bank_soal/generate-dummy'); ?>" style="display: inline;" onsubmit="return confirm('Buat contoh paket Matematika 50 Soal (40 PG, 5 PG Kompleks, 5 Essay)?')">
+                    <form method="POST" action="<?php echo base_url('bank_soal/generate-dummy'); ?>" style="display: inline;" onsubmit="return confirm('Generate otomatis 50 Soal Simulasi Matematika (5 Model Soal: PG, PGK, B/S, Jodoh, Isian) ber-Stimulus untuk Kelas 10, 11, dan 12?')">
                         <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
-                        <button type="submit" class="btn btn-outline" style="background: #fdf4ff; border-color: #f5d0fe; color: #9333ea; font-weight: 800;" title="Contoh data dummy seperti permintaan user">
-                            <i data-lucide="sparkles" style="width: 15px; height: 15px; color: #c026d3;"></i> Buat Contoh Dummy (Matematika 50 Soal)
+                        <button type="submit" class="btn btn-outline" style="background: #fdf4ff; border-color: #f5d0fe; color: #9333ea; font-weight: 800;" title="Contoh data dummy 5 model soal ber-stimulus untuk Kelas 10, 11, dan 12">
+                            <i data-lucide="sparkles" style="width: 15px; height: 15px; color: #c026d3;"></i> Buat Contoh Dummy (Matematika 50 Soal Kls 10, 11, 12)
                         </button>
                     </form>
 

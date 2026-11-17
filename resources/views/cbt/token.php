@@ -11,13 +11,13 @@ $active_menu = 'token';
         <div class="z-scroll" style="padding: 0 0 3rem 0;">
 
             <!-- Alerts -->
-            <?php if(isset($_GET['msg']) && $_GET['msg'] === 'generated'): ?>
+            <?php if((isset($_GET['msg']) && $_GET['msg'] === 'generated') || isset($_GET['success'])): ?>
             <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                 <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Token ujian baru berhasil dirilis!
             </div>
             <?php endif; ?>
 
-            <?php if(isset($_GET['msg']) && $_GET['msg'] === 'expired'): ?>
+            <?php if((isset($_GET['msg']) && $_GET['msg'] === 'expired') || isset($_GET['stopped'])): ?>
             <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                 <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: #ef4444;"></i> Token aktif telah dihentikan/kadaluarsa.
             </div>

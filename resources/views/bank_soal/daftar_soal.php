@@ -440,10 +440,39 @@ $isLocked = !empty($paketInfo['is_locked']);
                     });
                 }
             } catch(e) {}
-        } else if (data.tipe_soal === 'sec_essay') {
+        } else if (data.tipe_soal === 'sec_bs') {
+            badge.className = 'pill-jenis-lg pill-bs';
+            badge.innerText = 'Benar / Salah';
+            try {
+                const kObj = JSON.parse(data.konten_tambahan || '{}');
+                if (kObj.butir && Array.isArray(kObj.butir)) {
+                    let tableHtml = '<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 6px;"><tr style="background:#f1f5f9; font-weight:700;"><th style="padding:6px 10px; text-align:left; border:1px solid #e2e8f0;">Pernyataan</th><th style="padding:6px 10px; text-align:center; width:90px; border:1px solid #e2e8f0;">Kunci</th></tr>';
+                    kObj.butir.forEach(b => {
+                        const isB = (b.kunci === 'Benar');
+                        tableHtml += `<tr><td style="padding:8px 10px; border:1px solid #e2e8f0;">${b.teks}</td><td style="padding:8px 10px; text-align:center; border:1px solid #e2e8f0; font-weight:800; color:${isB ? '#16a34a' : '#dc2626'}; background:${isB ? '#f0fdf4' : '#fef2f2'};">${b.kunci}</td></tr>`;
+                    });
+                    tableHtml += '</table>';
+                    container.innerHTML = tableHtml;
+                }
+            } catch(e) {}
+        } else if (data.tipe_soal === 'sec_jodoh') {
+            badge.className = 'pill-jenis-lg pill-jodoh';
+            badge.innerText = 'Menjodohkan';
+            try {
+                const kObj = JSON.parse(data.konten_tambahan || '{}');
+                if (kObj.pasangan && Array.isArray(kObj.pasangan)) {
+                    let tableHtml = '<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 6px;"><tr style="background:#f1f5f9; font-weight:700;"><th style="padding:6px 10px; text-align:left; border:1px solid #e2e8f0;">Premis (Kiri)</th><th style="padding:6px 10px; text-align:center; width:40px; border:1px solid #e2e8f0;">➜</th><th style="padding:6px 10px; text-align:left; border:1px solid #e2e8f0;">Respon (Kanan)</th></tr>';
+                    kObj.pasangan.forEach(p => {
+                        tableHtml += `<tr><td style="padding:8px 10px; border:1px solid #e2e8f0; font-weight:600;">${p.premis}</td><td style="padding:8px 10px; text-align:center; border:1px solid #e2e8f0; color:#64748b;">➜</td><td style="padding:8px 10px; border:1px solid #e2e8f0; font-weight:700; color:#0284c7; background:#f0f9ff;">${p.respon}</td></tr>`;
+                    });
+                    tableHtml += '</table>';
+                    container.innerHTML = tableHtml;
+                }
+            } catch(e) {}
+        } else if (data.tipe_soal === 'sec_essay' || data.tipe_soal === 'sec_isian') {
             badge.className = 'pill-jenis-lg pill-essay';
-            badge.innerText = 'Essay (Uraian)';
-            container.innerHTML = '<div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 12px; font-size: 0.85rem; color: #64748b; font-style: italic;">[Kotak jawaban essay siswa]</div>';
+            badge.innerText = (data.tipe_soal === 'sec_isian') ? 'Isian Singkat' : 'Essay (Uraian)';
+            container.innerHTML = '<div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 12px; font-size: 0.85rem; color: #475569;"><strong>Kunci Jawaban / Rubrik:</strong> ' + (data.kunci_jawaban || '-') + '</div>';
         }
 
         document.getElementById('modalPreviewSoal').classList.add('open');

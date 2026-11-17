@@ -96,7 +96,7 @@ $active_menu = 'ujian';
 
                         <!-- Isi Pertanyaan -->
                         <div style="font-size: 0.95rem; color: #1e293b; line-height: 1.6; margin-bottom: 1.25rem; font-weight: 600;">
-                            <?php echo nl2br(htmlspecialchars($s['pertanyaan'])); ?>
+                            <?php echo strip_tags($s['pertanyaan'], '<u><b><strong><i><em><img><svg><path><circle><rect><polygon><polyline><line><text><g><p><br><span><font><table><tr><td><th><tbody><thead><div>'); ?>
                         </div>
 
                         <!-- Opsi A - E -->

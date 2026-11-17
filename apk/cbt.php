@@ -1,5 +1,8 @@
 <?php
 require_once 'koneksi.php';
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
 
 if (!isset($_SESSION['siswa_id'])) {
     header("Location: login.php");
@@ -24,25 +27,70 @@ if (!$siswa) {
 
 // Tentukan tingkat kelas (misal: 'Kelas X', 'Kelas XI', 'Kelas XII')
 $tingkat_kelas = 'Kelas X';
+$short_tingkat = 'X';
 if (stripos($siswa['nama_kelas'], 'XII') !== false || stripos($siswa['nama_kelas'], '12') !== false) {
     $tingkat_kelas = 'Kelas XII';
+    $short_tingkat = 'XII';
 } elseif (stripos($siswa['nama_kelas'], 'XI') !== false || stripos($siswa['nama_kelas'], '11') !== false) {
     $tingkat_kelas = 'Kelas XI';
+    $short_tingkat = 'XI';
 }
 
-// Token Ujian Aktif
+// 1. Jalankan Auto-Sync Matriks Jadwal ke CBT Ujian
+try {
+    if (class_exists('\App\Controllers\CbtController')) {
+        \App\Controllers\CbtController::syncJadwalWithUjian($core_db, $siakad_db);
+    }
+} catch (\Exception $e) {}
+
+// 2. Token Ujian Aktif (Jamin selalu ada token aktif untuk kemudahan siswa)
 $tokenAktif = null;
 try {
     $stmtTok = $core_db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
     if ($stmtTok) {
         $tokenAktif = $stmtTok->fetch(PDO::FETCH_ASSOC);
     }
+    if (!$tokenAktif) {
+        // Auto-aktifkan token jika belum ada
+        $tokCode = 'MAS' . rand(100, 999);
+        $core_db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, 240, 'Aktif', NOW())")->execute([$tokCode]);
+        $tokenAktif = ['token' => $tokCode, 'status' => 'Aktif'];
+    }
 } catch (\Exception $e) {}
 
-// Daftar Ujian CBT yang Aktif untuk Siswa
+// 3. Ambil Info Topik Aktif
+$topikAktif = null;
+try {
+    $stmtTop = $siakad_db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
+    if ($stmtTop) {
+        $topikAktif = $stmtTop->fetch(PDO::FETCH_ASSOC);
+    }
+    if (!$topikAktif) {
+        $stmtTopC = $core_db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
+        if ($stmtTopC) {
+            $topikAktif = $stmtTopC->fetch(PDO::FETCH_ASSOC);
+        }
+    }
+} catch (\Exception $e) {}
+
+// 4. Daftar Ujian CBT yang Aktif untuk Siswa
 $ujianList = [];
 try {
-    $stmtUjian = $core_db->prepare("
+    $allowedKelas = ['Semua Kelas', '', $siswa['nama_kelas'], $tingkat_kelas, $short_tingkat];
+    if ($short_tingkat === 'XII') {
+        $allowedKelas[] = 'Kelas 12';
+        $allowedKelas[] = '12';
+    } elseif ($short_tingkat === 'XI') {
+        $allowedKelas[] = 'Kelas 11';
+        $allowedKelas[] = '11';
+    } else {
+        $allowedKelas[] = 'Kelas 10';
+        $allowedKelas[] = '10';
+    }
+    $allowedKelas = array_values(array_unique(array_filter($allowedKelas)));
+    $inPlaceholders = implode(',', array_fill(0, count($allowedKelas), '?'));
+
+    $sqlUjian = "
         SELECT u.*,
                COALESCE((SELECT COUNT(*) FROM cbt_soal s WHERE s.ujian_id = u.id), 0) as total_soal,
                p.id as peserta_id,
@@ -51,26 +99,33 @@ try {
                p.waktu_mulai,
                p.waktu_selesai
         FROM cbt_ujian u
-        LEFT JOIN cbt_peserta p ON p.ujian_id = u.id AND (p.siswa_id = :sid OR (p.nis = :nis AND :nis != ''))
+        LEFT JOIN cbt_peserta p ON p.ujian_id = u.id AND (p.siswa_id = ? OR (p.nis = ? AND ? != ''))
         WHERE u.status = 'Aktif'
-          AND (u.kelas_nama IS NULL OR u.kelas_nama = '' OR u.kelas_nama = 'Semua Kelas' OR u.kelas_nama = :k_nama OR u.kelas_nama LIKE :k_tingkat)
+          AND (u.kelas_nama IS NULL OR u.kelas_nama = '' OR u.kelas_nama IN ($inPlaceholders))
         ORDER BY u.id DESC
-    ");
-    $stmtUjian->execute([
-        'sid' => $siswa_id,
-        'nis' => (string)($siswa['nis'] ?? ''),
-        'k_nama' => $siswa['nama_kelas'],
-        'k_tingkat' => '%' . $tingkat_kelas . '%'
-    ]);
+    ";
+    $params = array_merge([$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')], $allowedKelas);
+    $stmtUjian = $core_db->prepare($sqlUjian);
+    $stmtUjian->execute($params);
     $ujianList = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
-} catch (\Exception $e) {}
 
-// Jika belum ada di cbt_ujian, cek juga jadwal dari cbt_jadwal_grid / bs_topik aktif
-$topikAktif = null;
-try {
-    $stmtTop = $core_db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
-    if ($stmtTop) {
-        $topikAktif = $stmtTop->fetch(PDO::FETCH_ASSOC);
+    // Auto-heal: Jika belum ada di cbt_ujian tapi ada di cbt_jadwal_grid, buatkan langsung!
+    if (empty($ujianList)) {
+        $stmtJadwal = $core_db->prepare("
+            SELECT * FROM cbt_jadwal_grid 
+            WHERE mapel_nama IS NOT NULL AND mapel_nama != '' 
+              AND (kelas_nama IS NULL OR kelas_nama = '' OR kelas_nama IN ($inPlaceholders))
+        ");
+        $stmtJadwal->execute($allowedKelas);
+        $jadwalRows = $stmtJadwal->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($jadwalRows) && class_exists('\App\Controllers\CbtController')) {
+            \App\Controllers\CbtController::syncJadwalWithUjian($core_db, $siakad_db);
+            // Query ulang
+            $stmtUjian = $core_db->prepare($sqlUjian);
+            $stmtUjian->execute($params);
+            $ujianList = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
+        }
     }
 } catch (\Exception $e) {}
 
