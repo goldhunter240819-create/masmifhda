@@ -98,7 +98,7 @@ class PortalKeuanganController {
         $profileUrl = ($role_id == 2) ? '/profil-guru' : '/profil-siswa';
         
         extract($extra_data);
-        $title = "$title_page - GH-SSS";
+        $title = "$title_page - MA Miftahul Huda";
         
         include __DIR__ . '/../../resources/views/portal/keuangan.php';
     }

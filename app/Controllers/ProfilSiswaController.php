@@ -33,7 +33,7 @@ class ProfilSiswaController {
             exit;
         }
 
-        $title = "Profil Saya - GH-SSS";
+        $title = "Profil Saya - MA Miftahul Huda";
         ob_start();
         include __DIR__ . '/../../resources/views/portal/profil_siswa.php';
         echo ob_get_clean();

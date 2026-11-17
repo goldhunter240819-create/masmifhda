@@ -23,7 +23,7 @@ $percentUploaded = $totalMaster > 0 ? round(($totalUploaded / $totalMaster) * 10
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $title_page; ?> - Portal Guru GH-SSS</title>
+    <title><?php echo $title_page; ?> - MA Miftahul Huda</title>
     <link rel="icon" type="image/png" href="<?php echo \App\Core\Branding::getInstitusiFavicon(); ?>">
     <link rel="stylesheet" href="/public/assets/css/plus-jakarta-sans.css">
     <script src="/public/assets/js/lucide.min.js"></script>

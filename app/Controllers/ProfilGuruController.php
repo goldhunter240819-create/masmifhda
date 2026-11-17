@@ -61,7 +61,7 @@ class ProfilGuruController {
                                           ORDER BY k.nama_kelas ASC, ma.nama_mapel ASC")->fetchAll();
         }
 
-        $title = "Profil Saya - GH-SSS";
+        $title = "Profil Saya - MA Miftahul Huda";
         ob_start();
         include __DIR__ . '/../../resources/views/portal/profil_guru.php';
         echo ob_get_clean();

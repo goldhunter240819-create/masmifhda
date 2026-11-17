@@ -69,14 +69,15 @@ class AuthController {
             }
         }
 
-        $title = "Login - GH-SSS";
+        $title = "Login - MA Miftahul Huda";
         ob_start();
+        $instLogo = \App\Core\Branding::getInstitusiLogo();
         ?>
         <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
             <div class="card fade-up" style="width: 100%; max-width: 400px; padding: 3rem;">
                 <div style="text-align: center; margin-bottom: 2rem;">
                     <div style="margin: 0 auto 1.5rem; display: flex; justify-content: center;">
-                        <img src="/public/assets/images/logo.png" alt="GH-SSS Logo" style="height: 80px; object-fit: contain; mix-blend-mode: multiply;">
+                        <img src="<?php echo $instLogo; ?>" alt="Logo" style="height: 80px; object-fit: contain;">
                     </div>
                     <h2 style="margin: 0; color: var(--primary-blue);">Portal Login</h2>
                     <p style="font-size: 0.9rem; color: var(--text-muted);">Masukkan kredensial untuk akses sistem.</p>
