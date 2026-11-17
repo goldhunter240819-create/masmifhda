@@ -90,11 +90,11 @@ try {
     if (in_array('guru_perangkat', $tablesC)) {
         $cntGP = $dbC->query("SELECT COUNT(*) FROM `guru_perangkat`")->fetchColumn();
         $output .= "guru_perangkat count in Core: $cntGP\n";
-        $sampleGP = $dbC->query("SELECT * FROM `guru_perangkat` LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
-        $output .= "Sample guru_perangkat: " . json_encode($sampleGP) . "\n";
     }
-    $tablesCoreAll = $dbC->query("SHOW TABLES LIKE '%guru%'")->fetchAll(PDO::FETCH_COLUMN);
-    $output .= "Core tables with 'guru': " . json_encode($tablesCoreAll) . "\n";
+    $allDbs = $dbC->query("SHOW DATABASES")->fetchAll(PDO::FETCH_COLUMN);
+    $output .= "Available databases: " . json_encode($allDbs) . "\n";
+    $mapelTablesS2 = $dbS->query("SHOW TABLES LIKE '%mata_pelajaran%'")->fetchAll(PDO::FETCH_COLUMN);
+    $output .= "Siakad mapel tables: " . json_encode(array_merge($mapelTablesS, $mapelTablesS2)) . "\n";
 } catch (\Throwable $e) {
     $output .= "\nDiag error: " . $e->getMessage() . "\n";
 }
