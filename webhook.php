@@ -87,7 +87,12 @@ try {
         $cntC = $dbC->query("SELECT COUNT(*) FROM `perangkat_pembelajaran`")->fetchColumn();
         $output .= "perangkat_pembelajaran count in Core: $cntC\n";
     }
-    // Also check guru_perangkat
+    if (in_array('guru_perangkat', $tablesC)) {
+        $cntGP = $dbC->query("SELECT COUNT(*) FROM `guru_perangkat`")->fetchColumn();
+        $output .= "guru_perangkat count in Core: $cntGP\n";
+        $sampleGP = $dbC->query("SELECT * FROM `guru_perangkat` LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+        $output .= "Sample guru_perangkat: " . json_encode($sampleGP) . "\n";
+    }
     $tablesCoreAll = $dbC->query("SHOW TABLES LIKE '%guru%'")->fetchAll(PDO::FETCH_COLUMN);
     $output .= "Core tables with 'guru': " . json_encode($tablesCoreAll) . "\n";
 } catch (\Throwable $e) {
