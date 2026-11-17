@@ -15,12 +15,15 @@ class Branding {
         $instLogo    = self::getInstitusiLogo();
         $instFavicon = self::getInstitusiFavicon();
 
+        $name = (!empty($portal['app_name']) && stripos($portal['app_name'], 'Aula') === false && stripos($portal['app_name'], 'GH-SSS') === false) ? $portal['app_name'] : 'MA Miftahul Huda';
+        $title = (!empty($portal['tab_title']) && stripos($portal['tab_title'], 'Aula') === false && stripos($portal['tab_title'], 'GH-SSS') === false) ? $portal['tab_title'] : 'MA Miftahul Huda';
+
         self::$cache = [
-            'name'    => !empty($portal['app_name']) ? $portal['app_name'] : 'MASMIFHDA SYSTEM',
+            'name'    => $name,
             'logo'    => $instLogo,
             'favicon' => $instFavicon,
             'theme'   => !empty($portal['theme_color']) ? "#" . $portal['theme_color'] : "#0ea5e9",
-            'title'   => !empty($portal['tab_title']) ? $portal['tab_title'] : 'MASMIFHDA SYSTEM',
+            'title'   => $title,
             // Logo & favicon langsung dari institusi (dipakai sidebar/favicon SIAKAD)
             'inst_logo'    => $instLogo,
             'inst_favicon' => $instFavicon,

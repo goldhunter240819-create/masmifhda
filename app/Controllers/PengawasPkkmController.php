@@ -230,6 +230,8 @@ class PengawasPkkmController {
 
         // Statistik per komponen untuk Dashboard
         $komponen_stats = [];
+        $totalBerkasSemua = 0;
+        $totalIndikatorTerpenuhiSemua = 0;
         foreach ($komponens as $k) {
             $kid = $k['id'];
             $kIndikators = array_filter($indikators, function($ind) use ($kid) {
@@ -238,23 +240,36 @@ class PengawasPkkmController {
             $kTotal = count($kIndikators);
             $kDinilai = 0;
             $kSkor = 0;
+            $kBerkasCount = 0;
+            $kIndikatorTerpenuhi = 0;
             foreach ($kIndikators as $kind) {
                 if (($kind['skor_penilai'] ?? 0) > 0) {
                     $kDinilai++;
                     $kSkor += $kind['skor_penilai'];
                 }
+                $fileCountForInd = !empty($kind['berkas_list']) ? count($kind['berkas_list']) : 0;
+                $kBerkasCount += $fileCountForInd;
+                if ($fileCountForInd > 0) {
+                    $kIndikatorTerpenuhi++;
+                }
             }
+            $totalBerkasSemua += $kBerkasCount;
+            $totalIndikatorTerpenuhiSemua += $kIndikatorTerpenuhi;
+
             $kMax = $kTotal * 4;
             $kPersen = $kMax > 0 ? round(($kSkor / $kMax) * 100, 1) : 0;
             $komponen_stats[$kid] = [
                 'id' => $kid,
-                'nama' => $k['nama'],
+                'nama' => $k['nama_komponen'] ?? $k['nama'] ?? ('Komponen ' . ($k['urutan'] ?? $kid)),
                 'urutan' => $k['urutan'] ?? $kid,
                 'total' => $kTotal,
                 'dinilai' => $kDinilai,
                 'skor' => $kSkor,
                 'max' => $kMax,
-                'persen' => $kPersen
+                'persen' => $kPersen,
+                'berkas_terpenuhi' => $kIndikatorTerpenuhi,
+                'total_berkas' => $kBerkasCount,
+                'status_lengkap' => ($kTotal > 0 && $kIndikatorTerpenuhi >= $kTotal)
             ];
         }
 

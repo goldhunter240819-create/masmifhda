@@ -1,7 +1,8 @@
 <?php
-/* _zamrud_head.php â€” include di <head> setiap admin page */
+/* _zamrud_head.php — include di <head> setiap admin page */
 $brand = \App\Core\Branding::get();
-$pt = isset($page_title) ? $page_title . ' - ' . $brand['name'] : $brand['name'];
+$brand_name = (!empty($brand['name']) && stripos($brand['name'], 'Aula') === false) ? $brand['name'] : 'MA Miftahul Huda';
+$pt = isset($page_title) ? $page_title . ' - ' . $brand_name : $brand_name;
 ?>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

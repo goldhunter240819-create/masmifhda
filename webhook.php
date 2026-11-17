@@ -38,6 +38,15 @@ try {
     $output .= "\nBank Soal migration: " . $e->getMessage() . "\n";
 }
 
+// 3.6 Update Brand Names & Tab Titles di Database
+try {
+    $dbCore = \App\Core\Database::connect('core');
+    $dbCore->exec("UPDATE app_modules SET app_name = 'MA Miftahul Huda', tab_title = 'MA Miftahul Huda' WHERE app_code = 'portal' OR app_name LIKE '%Aula%' OR tab_title LIKE '%Aula%'");
+    $output .= "\nApp modules branding updated to MA Miftahul Huda successfully.\n";
+} catch (\Exception $e) {
+    $output .= "\nBranding update migration error: " . $e->getMessage() . "\n";
+}
+
 
 
 // 4. Catat riwayat ke log

@@ -1481,10 +1481,10 @@ $curTab = $active_tab ?? 'dashboard';
                     </div>
 
                     <div class="stat-card-box amber">
-                        <div class="stat-icon-wrap"><i data-lucide="file-check" style="width:18px;height:18px;"></i></div>
+                        <div class="stat-icon-wrap"><i data-lucide="folder-check" style="width:18px;height:18px;"></i></div>
                         <div>
-                            <div class="stat-card-val">42 Butir</div>
-                            <div class="stat-card-lbl">Standar Juknis 1, 2, 3</div>
+                            <div class="stat-card-val"><?php echo $totalIndikatorTerpenuhiSemua; ?> <span style="font-size:0.82rem;color:#94a3b8;font-weight:600;">/ <?php echo $totalIndikator; ?></span></div>
+                            <div class="stat-card-lbl">Berkas Lengkap (<?php echo $totalBerkasSemua; ?> File)</div>
                         </div>
                     </div>
                 </div>
@@ -1521,16 +1521,31 @@ $curTab = $active_tab ?? 'dashboard';
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 0.76rem; font-weight: 700;">
-                                <span class="text-muted">Kelengkapan:</span>
-                                <span class="text-success"><?php echo $ks['dinilai']; ?> / <?php echo $ks['total']; ?></span>
+                            <!-- Kelengkapan Berkas Madrasah -->
+                            <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 0.76rem;">
+                                <span class="text-muted d-inline-flex align-items-center gap-1">
+                                    <i data-lucide="file-check" style="width:13px;height:13px;color:#0284c7;"></i> Kelengkapan Berkas:
+                                </span>
+                                <span class="fw-bold <?php echo !empty($ks['status_lengkap']) ? 'text-success' : 'text-primary'; ?>">
+                                    <?php echo $ks['berkas_terpenuhi']; ?> / <?php echo $ks['total']; ?>
+                                    <span class="fw-normal text-muted" style="font-size:0.7rem;">(<?php echo $ks['total_berkas']; ?> file)</span>
+                                    <?php if (!empty($ks['status_lengkap'])): ?>
+                                        <span class="badge bg-success-subtle text-success ms-1" style="font-size:0.65rem;padding:2px 6px;">Lengkap</span>
+                                    <?php endif; ?>
+                                </span>
                             </div>
 
-                            <div class="progress mb-2.5" style="height: 6px; border-radius: 999px; background: #e2e8f0;">
-                                <div class="progress-bar bg-success" style="width: <?php echo ($ks['total'] > 0) ? round(($ks['dinilai'] / $ks['total']) * 100) : 0; ?>%;"></div>
+                            <!-- Progres Penilaian Asesor -->
+                            <div class="d-flex justify-content-between align-items-center mb-1 pt-1.5 border-top" style="font-size: 0.74rem;">
+                                <span class="text-muted">Progres Penilaian:</span>
+                                <span class="fw-bold text-dark"><?php echo $ks['dinilai']; ?> / <?php echo $ks['total']; ?></span>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="font-size: 0.76rem;">
+                            <div class="progress mb-2" style="height: 6px; border-radius: 999px; background: #e2e8f0;">
+                                <div class="progress-bar bg-primary" style="width: <?php echo ($ks['total'] > 0) ? round(($ks['dinilai'] / $ks['total']) * 100) : 0; ?>%;"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center pt-1.5 border-top" style="font-size: 0.74rem;">
                                 <span class="text-muted">Skor Perolehan:</span>
                                 <span class="fw-bold text-dark"><?php echo $ks['skor']; ?> / <?php echo $ks['max']; ?> (<?php echo $ks['persen']; ?>%)</span>
                             </div>
@@ -1659,7 +1674,7 @@ $curTab = $active_tab ?? 'dashboard';
                         <!-- Mini Progress Box on Right of Banner -->
                         <div class="banner-green-progress-box">
                             <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 0.76rem; font-weight: 700;">
-                                <span style="color: rgba(255,255,255,0.9);"><i data-lucide="sparkles" style="width:12px;height:12px;color:#38bdf8;"></i> Kelengkapan:</span>
+                                <span style="color: rgba(255,255,255,0.9);"><i data-lucide="sparkles" style="width:12px;height:12px;color:#38bdf8;"></i> Progres Penilaian:</span>
                                 <span id="lbl_progress_pct" class="text-white fw-bold" style="font-size: 0.84rem;"><?php echo round(($totalDinilai / 42) * 100); ?>%</span>
                             </div>
                             <div class="progress" style="height: 7px; border-radius: 999px; background: rgba(0,0,0,0.25);">

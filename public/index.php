@@ -109,7 +109,7 @@ $router = new Router();
 // --- GLOBAL BRANDING FETCH ---
 $db_core = \App\Core\Database::connect('core');
 $portal_mod = $db_core->query("SELECT * FROM app_modules WHERE app_code = 'portal'")->fetch();
-$portal_name = ($portal_mod && isset($portal_mod['app_name'])) ? $portal_mod['app_name'] : "Portal GH-SSS";
+$portal_name = ($portal_mod && !empty($portal_mod['app_name']) && stripos($portal_mod['app_name'], 'Aula') === false) ? $portal_mod['app_name'] : "MA Miftahul Huda";
 $portal_version = ($portal_mod && isset($portal_mod['app_version'])) ? $portal_mod['app_version'] : "1.0";
 $portal_theme = ($portal_mod && isset($portal_mod['theme_color'])) ? $portal_mod['theme_color'] : "0ea5e9";
 
@@ -123,7 +123,7 @@ $portal_logo    = ($portal_mod && isset($portal_mod['logo_path']) && $portal_mod
 $portal_favicon = ($portal_mod && isset($portal_mod['favicon_path']) && $portal_mod['favicon_path'])
     ? base_url('public/assets/images/') . $portal_mod['favicon_path']
     : $_inst_favicon;
-$portal_title = ($portal_mod && isset($portal_mod['tab_title'])) ? $portal_mod['tab_title'] : "GH-SSS Platform";
+$portal_title = ($portal_mod && !empty($portal_mod['tab_title']) && stripos($portal_mod['tab_title'], 'Aula') === false) ? $portal_mod['tab_title'] : "MA Miftahul Huda";
 
 
 // Define routes
@@ -167,6 +167,7 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
     }
 
     $title = $portal_title;
+    $site_name = 'MA Miftahul Huda';
     $site_logo = $portal_logo;
     $site_favicon = $portal_favicon;
     $site_version = $portal_version;
