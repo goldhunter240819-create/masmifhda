@@ -246,6 +246,23 @@ foreach ($ujianListRaw as $u) {
     $ujianTersedia[] = $u;
 }
 
+// 4b. Tentukan Asesmen yang Sedang Berlangsung Saat Ini
+$activeOngoingUjian = null;
+$upcomingUjian = null;
+
+foreach ($ujianTersedia as $uItem) {
+    if (in_array($uItem['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan'])) {
+        $activeOngoingUjian = $uItem;
+        break;
+    }
+    if ($uItem['can_take'] && !$activeOngoingUjian) {
+        $activeOngoingUjian = $uItem;
+    }
+    if ($uItem['schedule_state'] === 'early' && !$upcomingUjian) {
+        $upcomingUjian = $uItem;
+    }
+}
+
 // 5. Riwayat Ujian yang Sudah Selesai
 $riwayatUjian = [];
 try {
@@ -550,7 +567,7 @@ include 'header.php';
     <div class="cbt-topbar">
         <div>
             <div class="cbt-brand-sub">PORTAL EVALUASI AKADEMIK</div>
-            <h1 class="cbt-brand-title">Ruang Asesmen Siswa</h1>
+            <h1 class="cbt-brand-title">CBT MASMIFHDA</h1>
         </div>
         <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
             <i class="fa-solid fa-laptop-code"></i>
@@ -606,21 +623,57 @@ include 'header.php';
         <?php endif; ?>
     </div>
 
-    <!-- Banner CBT Info -->
-    <div class="cbt-banner-pro">
-        <div>
-            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; color: #38bdf8; font-weight: 800; margin-bottom: 2px;">
-                <i class="fa-solid fa-calendar-day"></i> Agenda Asesmen Terjadwal
+    <!-- Banner Status Asesmen Berlangsung -->
+    <?php if ($activeOngoingUjian): ?>
+        <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); border: 1px solid rgba(56, 189, 248, 0.3);">
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
+                    <span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.35); padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0.5px;">
+                        <span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 6px #22c55e;"></span>
+                        ASESMEN BERLANGSUNG
+                    </span>
+                    <?php if (!empty($activeOngoingUjian['jadwal_slot_label'])): ?>
+                        <span style="font-size: 0.7rem; color: #93c5fd; font-weight: 700;">
+                            <i class="fa-solid fa-clock"></i> <?= htmlspecialchars($activeOngoingUjian['jadwal_slot_label']) ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <h3 style="font-size: 1.05rem; font-weight: 900; color: #38bdf8; margin: 0 0 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <?= htmlspecialchars($activeOngoingUjian['nama_ujian'] ?: $activeOngoingUjian['mapel_nama']) ?>
+                </h3>
+                <p style="color: #cbd5e1; font-size: 0.76rem;">
+                    <?= in_array($activeOngoingUjian['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']) ? 'Sesi sedang berjalan. Silakan lanjutkan pengerjaan di bawah.' : 'Sesi telah dibuka sesuai jadwal. Silakan klik "Mulai Ujian" di bawah.' ?>
+                </p>
             </div>
-            <h3 style="font-size: 1.05rem; font-weight: 900; color: #ffffff; margin: 0 0 4px 0;">
-                <?= htmlspecialchars(!empty($topikAktif['nama_topik']) && stripos($topikAktif['nama_topik'], 'SIMULASI') === false ? $topikAktif['nama_topik'] : 'Sumatif Akhir Semester (SAS) Ganjil') ?>
-            </h3>
-            <p>Pastikan koneksi internet stabil & gawai terisi baterai sebelum memulai.</p>
+            <div style="font-size: 2.2rem; opacity: 0.4; margin-left: 14px; color: #38bdf8; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-play"></i>
+            </div>
         </div>
-        <div style="font-size: 2rem; opacity: 0.35; margin-left: 12px; color: #38bdf8;">
-            <i class="fa-solid fa-shield-halved"></i>
+    <?php else: ?>
+        <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(255, 255, 255, 0.08);">
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                    <span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-circle-pause" style="font-size: 0.65rem;"></i>
+                        ASESMEN BERLANGSUNG
+                    </span>
+                </div>
+                <h3 style="font-size: 1.05rem; font-weight: 900; color: #94a3b8; margin: 0 0 3px 0;">
+                    Tidak Ada
+                </h3>
+                <p style="color: #64748b; font-size: 0.76rem;">
+                    <?php if ($upcomingUjian): ?>
+                        Sesi berikutnya: <b style="color: #94a3b8;"><?= htmlspecialchars($upcomingUjian['mapel_nama']) ?></b> (<?= htmlspecialchars($upcomingUjian['schedule_notice']) ?>)
+                    <?php else: ?>
+                        Tidak ada sesi asesmen yang aktif saat ini sesuai jadwal.
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div style="font-size: 2rem; opacity: 0.25; margin-left: 14px; color: #94a3b8; flex-shrink: 0;">
+                <i class="fa-solid fa-calendar-xmark"></i>
+            </div>
         </div>
-    </div>
+    <?php endif; ?>
 
     <!-- Section Daftar Ujian Tersedia (Yang Belum Selesai) -->
     <div style="padding: 0 16px 10px; display: flex; align-items: center; justify-content: space-between;">
