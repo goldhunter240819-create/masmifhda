@@ -169,9 +169,9 @@ class CbtDummyGenerator {
      * Helper untuk membuat kotak Stimulus ber-CSS indah dengan Inline SVG
      */
     private static function wrapStimulus($stimulusNo, $soalRange, $title, $svgDiagram, $storyHtml, $badgeTipe, $questionPrompt) {
-        $html = '<div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:14px; padding:16px 18px; margin-bottom:14px; box-shadow:0 3px 8px rgba(0,0,0,0.03); font-family:sans-serif;">';
-        $html .= '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1.5px solid #e2e8f0; padding-bottom:8px;">';
-        $html .= '<span style="font-size:0.75rem; font-weight:800; background:#0284c7; color:#ffffff; padding:4px 10px; border-radius:20px; letter-spacing:0.5px;">STIMULUS ' . $stimulusNo . ' (UNTUK SOAL NO. ' . $soalRange . ')</span>';
+        $html = '<div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:14px; padding:14px 16px; margin-bottom:14px; box-shadow:0 3px 8px rgba(0,0,0,0.03); font-family:sans-serif;">';
+        $html .= '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px 12px; margin-bottom:8px; border-bottom:1.5px solid #e2e8f0; padding-bottom:8px;">';
+        $html .= '<span style="font-size:0.75rem; font-weight:800; background:#0284c7; color:#ffffff; padding:4px 10px; border-radius:20px; letter-spacing:0.3px;">STIMULUS ' . $stimulusNo . ' (UNTUK SOAL NO. ' . $soalRange . ')</span>';
         $html .= '<span style="font-size:0.75rem; font-weight:700; color:#64748b;">Simulasi Asesmen AKM</span>';
         $html .= '</div>';
         $html .= '<div style="font-size:1rem; font-weight:800; color:#0f172a; margin-bottom:10px;">' . $title . '</div>';

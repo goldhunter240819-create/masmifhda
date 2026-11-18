@@ -153,6 +153,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             padding-bottom: 1rem;
             border-bottom: 1px solid #f1f5f9;
             margin-bottom: 1.5rem;
+            gap: 10px;
         }
 
         .q-badge-num {
@@ -165,12 +166,16 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .font-sizer {
-            display: flex;
+            display: inline-flex;
             gap: 6px;
             align-items: center;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .font-btn {
@@ -612,15 +617,57 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             .q-header {
                 margin-bottom: 1rem;
                 padding-bottom: 0.75rem;
+                gap: 8px;
+                flex-wrap: nowrap;
             }
             .q-badge-num {
-                font-size: 0.82rem;
-                padding: 4px 10px;
+                font-size: 0.8rem;
+                padding: 5px 10px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .q-badge-num i, .q-badge-num svg {
+                width: 14px !important;
+                height: 14px !important;
+            }
+            .font-sizer {
+                gap: 4px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .font-sizer .font-label {
+                display: none !important;
+            }
+            .font-btn {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                min-width: 28px;
             }
             .q-text {
                 font-size: 0.96rem;
                 margin-bottom: 1.25rem;
                 line-height: 1.6;
+            }
+
+            /* AKM Stimulus Box di Layar HP / APK Responsif & Rapi */
+            .q-text div[style*="justify-content:space-between"] {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 6px !important;
+            }
+            .q-text span[style*="background:#0284c7"] {
+                white-space: normal !important;
+                display: inline-block !important;
+                font-size: 0.72rem !important;
+                padding: 4px 10px !important;
+                border-radius: 20px !important;
+                line-height: 1.35 !important;
+                letter-spacing: 0.3px !important;
+            }
+            .q-text span[style*="color:#64748b"] {
+                font-size: 0.72rem !important;
+                margin-left: 2px !important;
+                display: block !important;
             }
             .opt-label {
                 padding: 10px 14px;
@@ -897,11 +944,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 <div class="q-header">
                     <div class="q-badge-num">
                         <i data-lucide="file-question" style="width: 16px; height: 16px;"></i>
-                        <span id="currentQBadge">Soal Nomor 1</span>
+                        <span id="currentQBadge">Soal <strong>1</strong> <span style="font-weight:600;opacity:0.75;">/ <?php echo count($soalList); ?></span></span>
                     </div>
 
                     <div class="font-sizer">
-                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 700; margin-right: 4px;">Ukuran Font:</span>
+                        <span class="font-label" style="font-size: 0.75rem; color: #64748b; font-weight: 700; margin-right: 4px;">Ukuran Font:</span>
                         <button type="button" class="font-btn" onclick="setFontSize('sm')">A-</button>
                         <button type="button" class="font-btn active" id="fontMid" onclick="setFontSize('md')">A</button>
                         <button type="button" class="font-btn" onclick="setFontSize('lg')">A+</button>
@@ -1350,7 +1397,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             saveCurrentAnswers(false); // Simpan nomor soal terakhir yang dibuka
 
             const qBadge = document.getElementById('currentQBadge');
-            if (qBadge) qBadge.textContent = `Soal Nomor ${idx + 1} dari ${totalSoal}`;
+            if (qBadge) qBadge.innerHTML = `Soal <strong>${idx + 1}</strong> <span style="font-weight:600;opacity:0.75;">/ ${totalSoal}</span>`;
             const mobBadge = document.getElementById('mobileQBadge');
             if (mobBadge) mobBadge.textContent = `${idx + 1}/${totalSoal} Soal ▾`;
             
