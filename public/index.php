@@ -2464,6 +2464,8 @@ $router->add('GET', '/cbt/token', [\App\Controllers\CbtController::class, 'token
 $router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::class, 'generateToken']);
 $router->add('POST', '/cbt/token/expire', [\App\Controllers\CbtController::class, 'expireToken']);
 $router->add('GET', '/cbt/hasil', [\App\Controllers\CbtController::class, 'hasil']);
+$router->add('POST', '/cbt/hasil/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
+$router->add('POST', '/cbt/peserta/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
 $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'analisis']);
 $router->add('GET', '/cbt/pengaturan', [\App\Controllers\CbtController::class, 'pengaturan']);
 $router->add('POST', '/cbt/pengaturan/save', [\App\Controllers\CbtController::class, 'savePengaturan']);

@@ -665,6 +665,67 @@ $listTerkunci = $listTerkunci ?? [];
                     <?php endif; ?>
                 </div>
 
+                <!-- Daftar Siswa yang Telah Selesai / Auto-Submit -->
+                <div class="card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 2px 0;">Buka Ujian Kembali (Siswa Selesai / Ter-Auto-Submit)</h3>
+                            <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Izinkan siswa yang sudah selesai atau ter-submit otomatis karena alarm pelanggaran untuk melanjutkan kembali ujiannya.</p>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($listSelesai)): ?>
+                        <div class="table-responsive">
+                            <table class="table-custom" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">NO</th>
+                                        <th>NIS & NAMA SISWA</th>
+                                        <th>KELAS</th>
+                                        <th>PAKET UJIAN</th>
+                                        <th>SKOR SAAT INI</th>
+                                        <th style="text-align: right;">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php $no = 1; foreach ($listSelesai as $ls): ?>
+                                    <tr>
+                                        <td style="font-weight: 700; color: #64748b;"><?php echo $no++; ?></td>
+                                        <td>
+                                            <div style="font-weight: 800; color: #0f172a;"><?php echo htmlspecialchars($ls['nama_siswa']); ?></div>
+                                            <div style="font-size: 0.75rem; color: #64748b;">NIS: <?php echo htmlspecialchars($ls['nis']); ?></div>
+                                        </td>
+                                        <td><span class="badge badge-subtle"><?php echo htmlspecialchars($ls['kelas_nama'] ?: '-'); ?></span></td>
+                                        <td>
+                                            <div style="font-weight: 700; font-size: 0.85rem; color: #1e293b;"><?php echo htmlspecialchars($ls['nama_ujian'] ?: 'Ujian'); ?></div>
+                                            <div style="font-size: 0.75rem; color: #64748b;"><?php echo htmlspecialchars($ls['mapel_nama'] ?: '-'); ?></div>
+                                        </td>
+                                        <td>
+                                            <span style="font-weight: 900; font-size: 0.95rem; color: <?php echo (float)$ls['nilai_akhir'] >= 75 ? '#16a34a' : '#dc2626'; ?>;">
+                                                <?php echo number_format((float)$ls['nilai_akhir'], 1); ?>
+                                            </span>
+                                        </td>
+                                        <td style="text-align: right;">
+                                            <form method="POST" action="<?php echo base_url('cbt/hasil/buka-ujian'); ?>" onsubmit="return confirm('Buka ujian kembali untuk <?php echo addslashes($ls['nama_siswa']); ?>?\nSiswa dapat langsung masuk kembali ke ruang ujian dan melanjutkan.')" style="display: inline-block;">
+                                                <input type="hidden" name="peserta_id" value="<?php echo $ls['id']; ?>">
+                                                <input type="hidden" name="mode" value="lanjutkan">
+                                                <button type="submit" class="e-btn e-btn-primary" style="background: #0ea5e9; padding: 6px 14px; font-size: 0.78rem;">
+                                                    <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Buka Ujian
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div style="padding: 2rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                            Belum ada siswa dengan status selesai untuk dibuka kembali.
+                        </div>
+                    <?php endif; ?>
+                </div>
+
                 <!-- Emergency Factory Reset Card -->
                 <div class="card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid #fecaca; background: #fff5f5;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">

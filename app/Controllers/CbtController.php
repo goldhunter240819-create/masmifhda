@@ -88,6 +88,9 @@ class CbtController {
                 INDEX (nis)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+            try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN reset_count INT DEFAULT 0 AFTER jawaban_json"); } catch (\Exception $e) {}
+            try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN violation_count INT DEFAULT 0 AFTER reset_count"); } catch (\Exception $e) {}
+
             // 5. Tabel Custom Jam / Slot Waktu Ujian CBT
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_jam_slot (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -2301,6 +2304,14 @@ class CbtController {
                                    ORDER BY p.id DESC LIMIT 50");
         $listTerkunci = $stmtTerkunci->fetchAll(PDO::FETCH_ASSOC);
 
+        // Daftar peserta yang telah selesai / auto-submit untuk pemulihan cepat
+        $stmtSelesai = $db->query("SELECT p.*, u.nama_ujian, u.mapel_nama 
+                                   FROM cbt_peserta p 
+                                   LEFT JOIN cbt_ujian u ON p.ujian_id = u.id 
+                                   WHERE p.status_pengerjaan = 'Selesai' 
+                                   ORDER BY p.id DESC LIMIT 30");
+        $listSelesai = $stmtSelesai->fetchAll(PDO::FETCH_ASSOC);
+
         $title = "Pengaturan & Keamanan CBT - MAS MIFTAHUL HUDA";
         $active_menu = 'pengaturan';
 
@@ -2348,15 +2359,77 @@ class CbtController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
             if ($peserta_id > 0) {
-                $stmt = $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Sedang Mengerjakan' WHERE id = ?");
+                $stmt = $db->prepare("UPDATE cbt_peserta 
+                                        SET status_pengerjaan = 'Sedang Mengerjakan', 
+                                            waktu_selesai = NULL, 
+                                            waktu_mulai = NOW(), 
+                                            reset_count = COALESCE(reset_count, 0) + 1, 
+                                            violation_count = 0 
+                                        WHERE id = ?");
                 $stmt->execute([$peserta_id]);
             } else {
-                $db->exec("UPDATE cbt_peserta SET status_pengerjaan = 'Sedang Mengerjakan' WHERE status_pengerjaan IN ('Terkunci', 'Pelanggaran')");
+                $db->exec("UPDATE cbt_peserta 
+                            SET status_pengerjaan = 'Sedang Mengerjakan', 
+                                waktu_selesai = NULL, 
+                                waktu_mulai = NOW(), 
+                                reset_count = COALESCE(reset_count, 0) + 1, 
+                                violation_count = 0 
+                            WHERE status_pengerjaan IN ('Terkunci', 'Pelanggaran')");
             }
             redirect('/cbt/pengaturan?unlocked=1');
             exit;
         }
         redirect('/cbt/pengaturan');
+    }
+
+    /**
+     * Buka Ujian Kembali / Izinkan Siswa Melanjutkan atau Mengulang Ujian
+     * Digunakan ketika siswa ter-auto-submit karena 3x pelanggaran keluar tab, salah kirim, atau kendala jaringan.
+     */
+    public static function bukaUjianKembali() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
+            $mode = $_POST['mode'] ?? 'lanjutkan'; // 'lanjutkan' (simpan jawaban lama) atau 'ulang' (reset dari 0)
+
+            if ($peserta_id > 0) {
+                if ($mode === 'ulang') {
+                    $stmt = $db->prepare("UPDATE cbt_peserta 
+                                            SET status_pengerjaan = 'Sedang Mengerjakan', 
+                                                waktu_selesai = NULL, 
+                                                waktu_mulai = NOW(), 
+                                                nilai_akhir = 0.00, 
+                                                jumlah_benar = 0, 
+                                                jumlah_salah = 0, 
+                                                jawaban_json = NULL,
+                                                reset_count = COALESCE(reset_count, 0) + 1,
+                                                violation_count = 0
+                                            WHERE id = ?");
+                    $stmt->execute([$peserta_id]);
+                } else {
+                    // Default: Lanjutkan ujian (mempertahankan jawaban yang sudah tersimpan)
+                    $stmt = $db->prepare("UPDATE cbt_peserta 
+                                            SET status_pengerjaan = 'Sedang Mengerjakan', 
+                                                waktu_selesai = NULL, 
+                                                waktu_mulai = NOW(),
+                                                reset_count = COALESCE(reset_count, 0) + 1,
+                                                violation_count = 0
+                                            WHERE id = ?");
+                    $stmt->execute([$peserta_id]);
+                }
+            }
+
+            $ref = $_SERVER['HTTP_REFERER'] ?? base_url('cbt/hasil');
+            $cleanRef = preg_replace('/([?&])reopened=[^&]+(&|$)/', '$1', $ref);
+            $cleanRef = rtrim($cleanRef, '?&');
+            $join = (strpos($cleanRef, '?') !== false) ? '&' : '?';
+            redirect($cleanRef . $join . 'reopened=1');
+            exit;
+        }
+        redirect('/cbt/hasil');
     }
 
     /**

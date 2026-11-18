@@ -10,6 +10,17 @@ $active_menu = 'hasil';
 
         <div class="z-scroll" style="padding: 0 0 3rem 0;">
 
+            <!-- Alert Buka Ujian Kembali -->
+            <?php if (isset($_GET['reopened'])): ?>
+            <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(34,197,94,0.1);">
+                <i data-lucide="check-circle" style="width: 22px; height: 22px; color: #22c55e; flex-shrink: 0;"></i>
+                <div>
+                    <div style="font-size: 0.95rem;">Sesi Ujian Siswa Berhasil Dibuka Kembali!</div>
+                    <div style="font-size: 0.82rem; font-weight: 500; color: #15803d; margin-top: 2px;">Status pengerjaan siswa telah diaktifkan kembali dan pelanggaran direset. Siswa dapat langsung masuk ke ruang ujian untuk melanjutkan.</div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Elite Page Header -->
             <div class="elite-page-header">
                 <div class="header-bg-shapes"></div>
@@ -135,12 +146,13 @@ $active_menu = 'hasil';
                                 <th>Jawaban Salah</th>
                                 <th>Nilai Akhir</th>
                                 <th>Status Kelulusan</th>
+                                <th style="width: 130px; text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($pesertaList)): ?>
                             <tr>
-                                <td colspan="8" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
+                                <td colspan="9" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="folder-search" style="width: 44px; height: 44px; margin-bottom: 10px; color: #cbd5e1;"></i>
                                     <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Tidak ada data hasil ujian</div>
                                     <div style="font-size: 0.78rem;">Pilih paket ujian lain atau tunggu siswa menyelesaikan ujian.</div>
@@ -201,6 +213,19 @@ $active_menu = 'hasil';
                                         <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b;">
                                             Belum Mengerjakan
                                         </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align: right; white-space: nowrap;">
+                                        <?php if ($isSelesai || in_array($p['status_pengerjaan'] ?? '', ['Sedang Mengerjakan', 'Mengerjakan', 'Terkunci', 'Pelanggaran'])): ?>
+                                            <form method="POST" action="<?php echo base_url('cbt/hasil/buka-ujian'); ?>" onsubmit="return confirm('Buka ujian kembali untuk <?php echo addslashes($p['nama_siswa']); ?>?\nSiswa dapat langsung masuk kembali ke ruang ujian dan melanjutkan pengerjaan.')" style="display:inline-block;">
+                                                <input type="hidden" name="peserta_id" value="<?php echo $p['id']; ?>">
+                                                <input type="hidden" name="mode" value="lanjutkan">
+                                                <button type="submit" class="e-btn" style="background: #0ea5e9; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 5px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(14,165,233,0.25);" title="Buka Sesi Ujian Kembali">
+                                                    <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i> Buka Ujian
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <span style="color: #cbd5e1; font-size: 0.8rem; font-weight: 700;">-</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>

@@ -1595,7 +1595,20 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         const actionViolation = '<?php echo $actionViolation; ?>';
 
         const storageKeyViol = `cbt_viol_${ujianId}_${pesertaId}`;
+        const storageKeyReset = `cbt_reset_${ujianId}_${pesertaId}`;
+        const serverResetCount = <?php echo (int)($pesertaInfo['reset_count'] ?? 0); ?>;
+        const localResetCount = parseInt(localStorage.getItem(storageKeyReset) || '0', 10);
+
         let violationCount = parseInt(localStorage.getItem(storageKeyViol) || '0', 10);
+
+        // Jika ujian dibuka kembali oleh proktor / guru:
+        if (serverResetCount > localResetCount) {
+            try {
+                localStorage.removeItem(storageKeyViol);
+                localStorage.setItem(storageKeyReset, serverResetCount);
+            } catch(e) {}
+            violationCount = 0;
+        }
         let isExamSubmitted = false;
         let isViolationModalOpen = false;
         let lastViolationTime = 0;
