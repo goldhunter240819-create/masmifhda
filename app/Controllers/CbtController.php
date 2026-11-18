@@ -2094,34 +2094,58 @@ class CbtController {
             $stmtG = $db->prepare("SELECT g.*, s.jam_mulai, s.jam_selesai 
                                    FROM cbt_jadwal_grid g 
                                    LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
-                                   WHERE g.ujian_id = ? 
-                                   ORDER BY g.tanggal DESC, g.id DESC LIMIT 1");
-            $stmtG->execute([$ujian_id]);
+                                   WHERE g.ujian_id = :uid
+                                      OR (
+                                          g.mapel_nama = (SELECT mapel_nama FROM cbt_ujian WHERE id = :uid2 LIMIT 1)
+                                      )
+                                   ORDER BY (g.ujian_id = :uid3) DESC, g.tanggal DESC, g.id DESC LIMIT 1");
+            $stmtG->execute([':uid' => $ujian_id, ':uid2' => $ujian_id, ':uid3' => $ujian_id]);
             $jGrid = $stmtG->fetch(PDO::FETCH_ASSOC);
 
             if ($jGrid) {
-                $jStart = null;
-                $jEnd = null;
-                if (!empty($jGrid['tanggal']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
-                    $jStart = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_mulai']);
-                    $jEnd = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_selesai']);
-                } elseif (!empty($jGrid['hari']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
-                    $hariIndo = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'];
-                    $curHari = $hariIndo[date('l')] ?? '';
-                    if (strcasecmp($curHari, $jGrid['hari']) === 0) {
-                        $todayDate = date('Y-m-d');
-                        $jStart = strtotime($todayDate . ' ' . $jGrid['jam_mulai']);
-                        $jEnd = strtotime($todayDate . ' ' . $jGrid['jam_selesai']);
-                    }
-                }
+                $todayDate = date('Y-m-d');
+                $hariIndo = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'];
+                $curHari = $hariIndo[date('l')] ?? '';
+                $dayOrder = ['Senin' => 1, 'Selasa' => 2, 'Rabu' => 3, 'Kamis' => 4, 'Jumat' => 5, 'Sabtu' => 6, 'Minggu' => 7];
 
-                if ($jStart && $jEnd) {
-                    if ($nowTs < $jStart) {
-                        echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai: " . date('d M Y, H:i', $jStart) . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                if (!empty($jGrid['tanggal'])) {
+                    $gridDate = $jGrid['tanggal'];
+                    if ($todayDate < $gridDate) {
+                        $startInfo = date('d M Y', strtotime($gridDate)) . (!empty($jGrid['jam_mulai']) ? ' pukul ' . $jGrid['jam_mulai'] . ' WIB' : '');
+                        echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai: " . $startInfo . "'); window.location.href='/apk/cbt.php';</script>";
                         exit;
-                    } elseif ($nowTs > $jEnd) {
-                        echo "<script>alert('Waktu sesi ujian ini telah berakhir pada " . date('d M Y, H:i', $jEnd) . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                    } elseif ($todayDate > $gridDate) {
+                        echo "<script>alert('Waktu pelaksanaan ujian ini telah berakhir pada " . date('d M Y', strtotime($gridDate)) . ". Hubungi proktor jika Anda membutuhkan ujian susulan.'); window.location.href='/apk/cbt.php';</script>";
                         exit;
+                    } else {
+                        // Hari ini sama dengan tanggal jadwal (Masih di hari sesuai jadwalnya)
+                        if (!empty($jGrid['jam_mulai'])) {
+                            $jStart = strtotime($todayDate . ' ' . $jGrid['jam_mulai']);
+                            if ($nowTs < $jStart) {
+                                echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai hari ini pukul " . $jGrid['jam_mulai'] . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                                exit;
+                            }
+                        }
+                    }
+                } elseif (!empty($jGrid['hari'])) {
+                    $curDayIdx = $dayOrder[$curHari] ?? 0;
+                    $gridDayIdx = $dayOrder[trim($jGrid['hari'])] ?? 0;
+
+                    if ($curDayIdx < $gridDayIdx) {
+                        echo "<script>alert('Sesi ujian belum dibuka! Jadwal: Hari " . $jGrid['hari'] . (!empty($jGrid['jam_mulai']) ? ' pukul ' . $jGrid['jam_mulai'] . ' WIB' : '') . "'); window.location.href='/apk/cbt.php';</script>";
+                        exit;
+                    } elseif ($curDayIdx > $gridDayIdx) {
+                        echo "<script>alert('Jadwal ujian Hari " . $jGrid['hari'] . " telah terlewat. Hubungi proktor jika Anda membutuhkan ujian susulan.'); window.location.href='/apk/cbt.php';</script>";
+                        exit;
+                    } else {
+                        // Hari ini sama dengan hari jadwal (Masih di hari sesuai jadwalnya)
+                        if (!empty($jGrid['jam_mulai'])) {
+                            $jStart = strtotime(date('Y-m-d') . ' ' . $jGrid['jam_mulai']);
+                            if ($nowTs < $jStart) {
+                                echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai hari ini pukul " . $jGrid['jam_mulai'] . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                                exit;
+                            }
+                        }
                     }
                 }
             }

@@ -161,17 +161,15 @@ try {
 
 // Filter & Validasi Paket Ujian Tersedia (Sembunyikan yang sudah selesai)
 $ujianTersedia = [];
+$allEvaluatedUjian = []; // Menyimpan semua ujian untuk evaluasi status asesmen hari ini
 $hariIndo = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'];
 $curHari = $hariIndo[date('l')] ?? '';
+$todayDate = date('Y-m-d');
 $nowTs = time();
+$dayOrder = ['Senin' => 1, 'Selasa' => 2, 'Rabu' => 3, 'Kamis' => 4, 'Jumat' => 5, 'Sabtu' => 6, 'Minggu' => 7];
 
 foreach ($ujianListRaw as $u) {
-    // 1. Sembunyikan ujian yang sudah selesai dari daftar paket tersedia!
-    if ($u['status_pengerjaan'] === 'Selesai') {
-        continue;
-    }
-
-    // 2. Jamin Token Spesifik per Mapel & Kelas
+    // 1. Jamin Token Spesifik per Mapel & Kelas
     if (empty($u['token'])) {
         $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $u['mapel_nama'] ?: 'CBT'), 0, 3));
         if (strlen($prefix) < 3) $prefix = str_pad($prefix, 3, 'X');
@@ -182,11 +180,12 @@ foreach ($ujianListRaw as $u) {
         } catch (\Exception $e) {}
     }
 
-    // 3. Evaluasi Aturan Jadwal (Strict Schedule vs Mode Susulan)
+    // 2. Evaluasi Aturan Jadwal (Strict Schedule vs Mode Susulan)
     $canTake = true;
     $scheduleState = 'open'; // 'open', 'early', 'expired'
     $scheduleNotice = '';
     $jadwalSlotLabel = '';
+    $isHariIni = false;
 
     if ($lockSchedule) {
         try {
@@ -194,72 +193,194 @@ foreach ($ujianListRaw as $u) {
                 SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
                 FROM cbt_jadwal_grid g 
                 LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
-                WHERE g.ujian_id = ? 
-                ORDER BY g.tanggal DESC, g.id DESC LIMIT 1
+                WHERE g.ujian_id = :uid 
+                   OR (
+                       g.mapel_nama = :mapel 
+                       AND (g.kelas_nama = :kelas OR g.kelas_nama = :tingkat OR g.kelas_nama = 'Semua Kelas' OR :kelas LIKE CONCAT('%', g.kelas_nama, '%'))
+                   )
+                ORDER BY (g.ujian_id = :uid2) DESC, g.tanggal DESC, g.id DESC LIMIT 1
             ");
-            $stmtJ->execute([$u['id']]);
+            $stmtJ->execute([
+                ':uid' => $u['id'],
+                ':mapel' => $u['mapel_nama'],
+                ':kelas' => $siswa['nama_kelas'],
+                ':tingkat' => $tingkat_kelas,
+                ':uid2' => $u['id']
+            ]);
             $jGrid = $stmtJ->fetch(PDO::FETCH_ASSOC);
 
-            $jStart = null;
-            $jEnd = null;
+            if ($jGrid) {
+                $slotLabel = $jGrid['label_sesi'] ?: $jGrid['jam_slot'];
+                $timeRange = (!empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) ? $jGrid['jam_mulai'] . ' - ' . $jGrid['jam_selesai'] . ' WIB' : '';
+                $jadwalSlotLabel = trim($slotLabel . ' ' . ($timeRange ? "($timeRange)" : ''));
 
-            if ($jGrid && !empty($jGrid['tanggal']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
-                $jStart = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_mulai']);
-                $jEnd = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_selesai']);
-                $jadwalSlotLabel = ($jGrid['label_sesi'] ?: $jGrid['jam_slot']) . ' (' . $jGrid['jam_mulai'] . ' - ' . $jGrid['jam_selesai'] . ')';
-            } elseif ($jGrid && !empty($jGrid['hari']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
-                if (strcasecmp($curHari, $jGrid['hari']) === 0) {
-                    $jStart = strtotime(date('Y-m-d') . ' ' . $jGrid['jam_mulai']);
-                    $jEnd = strtotime(date('Y-m-d') . ' ' . $jGrid['jam_selesai']);
-                } else {
-                    $scheduleState = 'early';
-                    $canTake = false;
-                    $scheduleNotice = 'Jadwal: Hari ' . $jGrid['hari'] . ' (' . $jGrid['jam_mulai'] . ' WIB)';
+                if (!empty($jGrid['tanggal'])) {
+                    $gridDate = $jGrid['tanggal'];
+                    if ($todayDate < $gridDate) {
+                        $scheduleState = 'early';
+                        $canTake = false;
+                        $scheduleNotice = 'Jadwal: ' . date('d M Y', strtotime($gridDate)) . (!empty($jGrid['jam_mulai']) ? ' (' . $jGrid['jam_mulai'] . ' WIB)' : '');
+                    } elseif ($todayDate > $gridDate) {
+                        $scheduleState = 'expired';
+                        $canTake = false;
+                        $scheduleNotice = 'Sesi telah berakhir pada ' . date('d M Y', strtotime($gridDate));
+                    } else {
+                        // Masih di hari sesuai jadwalnya!
+                        $isHariIni = true;
+                        if (!empty($jGrid['jam_mulai'])) {
+                            $startTs = strtotime($todayDate . ' ' . $jGrid['jam_mulai']);
+                            if ($nowTs < $startTs) {
+                                $scheduleState = 'early';
+                                $canTake = false;
+                                $scheduleNotice = 'Sesi dimulai hari ini pukul ' . $jGrid['jam_mulai'] . ' WIB';
+                            } else {
+                                $scheduleState = 'open';
+                                $canTake = true;
+                                $scheduleNotice = 'Hari Ini (' . ($timeRange ?: 'Sesi Terbuka') . ')';
+                            }
+                        } else {
+                            $scheduleState = 'open';
+                            $canTake = true;
+                            $scheduleNotice = 'Hari Ini (Sesuai Jadwal)';
+                        }
+                    }
+                } elseif (!empty($jGrid['hari'])) {
+                    $curDayIdx = $dayOrder[$curHari] ?? 0;
+                    $gridDayIdx = $dayOrder[trim($jGrid['hari'])] ?? 0;
+
+                    if ($curDayIdx < $gridDayIdx) {
+                        $scheduleState = 'early';
+                        $canTake = false;
+                        $scheduleNotice = 'Jadwal: Hari ' . $jGrid['hari'] . (!empty($jGrid['jam_mulai']) ? ' (' . $jGrid['jam_mulai'] . ' WIB)' : '');
+                    } elseif ($curDayIdx > $gridDayIdx) {
+                        $scheduleState = 'expired';
+                        $canTake = false;
+                        $scheduleNotice = 'Jadwal Hari ' . $jGrid['hari'] . ' telah terlewat';
+                    } else {
+                        // Masih di hari sesuai jadwalnya!
+                        $isHariIni = true;
+                        if (!empty($jGrid['jam_mulai'])) {
+                            $startTs = strtotime($todayDate . ' ' . $jGrid['jam_mulai']);
+                            if ($nowTs < $startTs) {
+                                $scheduleState = 'early';
+                                $canTake = false;
+                                $scheduleNotice = 'Sesi dimulai hari ini pukul ' . $jGrid['jam_mulai'] . ' WIB';
+                            } else {
+                                $scheduleState = 'open';
+                                $canTake = true;
+                                $scheduleNotice = 'Hari Ini (' . ($timeRange ?: 'Sesi Terbuka') . ')';
+                            }
+                        } else {
+                            $scheduleState = 'open';
+                            $canTake = true;
+                            $scheduleNotice = 'Hari Ini (Sesuai Jadwal)';
+                        }
+                    }
                 }
-                $jadwalSlotLabel = ($jGrid['label_sesi'] ?: $jGrid['jam_slot']) . ' (' . $jGrid['jam_mulai'] . ' - ' . $jGrid['jam_selesai'] . ')';
-            } elseif (!empty($u['tgl_mulai']) && !empty($u['tgl_selesai'])) {
-                $jStart = strtotime($u['tgl_mulai']);
-                $jEnd = strtotime($u['tgl_selesai']);
-                $jadwalSlotLabel = date('H:i', $jStart) . ' - ' . date('H:i', $jEnd);
-            }
+            } elseif (!empty($u['tgl_mulai'])) {
+                $uStartDate = date('Y-m-d', strtotime($u['tgl_mulai']));
+                $uEndDate = !empty($u['tgl_selesai']) ? date('Y-m-d', strtotime($u['tgl_selesai'])) : $uStartDate;
 
-            if ($jStart && $jEnd) {
-                if ($nowTs < $jStart) {
+                if ($todayDate < $uStartDate) {
                     $scheduleState = 'early';
                     $canTake = false;
-                    $scheduleNotice = 'Sesi dimulai: ' . date('d M, H:i', $jStart) . ' WIB';
-                } elseif ($nowTs > $jEnd) {
+                    $scheduleNotice = 'Jadwal: ' . date('d M Y, H:i', strtotime($u['tgl_mulai'])) . ' WIB';
+                } elseif ($todayDate > $uEndDate) {
                     $scheduleState = 'expired';
                     $canTake = false;
-                    $scheduleNotice = 'Sesi berakhir pada ' . date('d M, H:i', $jEnd) . ' WIB';
+                    $scheduleNotice = 'Sesi telah berakhir pada ' . date('d M Y', strtotime($uEndDate));
+                } else {
+                    $isHariIni = true;
+                    $startTs = strtotime($u['tgl_mulai']);
+                    if ($nowTs < $startTs) {
+                        $scheduleState = 'early';
+                        $canTake = false;
+                        $scheduleNotice = 'Sesi dimulai hari ini pukul ' . date('H:i', $startTs) . ' WIB';
+                    } else {
+                        $scheduleState = 'open';
+                        $canTake = true;
+                        $scheduleNotice = 'Hari Ini (Sesi Terbuka)';
+                    }
                 }
+                $jadwalSlotLabel = date('H:i', strtotime($u['tgl_mulai'])) . (!empty($u['tgl_selesai']) ? ' - ' . date('H:i', strtotime($u['tgl_selesai'])) : '');
+            } else {
+                $isHariIni = true;
+                $scheduleState = 'open';
+                $canTake = true;
+                $scheduleNotice = 'Hari Ini (Sesi Terbuka)';
             }
         } catch (\Exception $e) {}
     } else {
-        $scheduleNotice = 'Mode Ujian Susulan';
+        $isHariIni = true;
+        $scheduleState = 'open';
+        $canTake = true;
+        $scheduleNotice = 'Mode Ujian Susulan (Terbuka)';
     }
 
+    $u['is_hari_ini'] = $isHariIni;
     $u['can_take'] = $canTake;
     $u['schedule_state'] = $scheduleState;
     $u['schedule_notice'] = $scheduleNotice;
     $u['jadwal_slot_label'] = $jadwalSlotLabel;
-    $ujianTersedia[] = $u;
+
+    $allEvaluatedUjian[] = $u;
+
+    // Hanya masukkan ke daftar paket yang BISA dikerjakan jika belum selesai
+    if ($u['status_pengerjaan'] !== 'Selesai') {
+        $ujianTersedia[] = $u;
+    }
 }
 
 // 4b. Tentukan Asesmen yang Sedang Berlangsung Saat Ini
 $activeOngoingUjian = null;
 $upcomingUjian = null;
+$completedTodayUjian = null;
 
-foreach ($ujianTersedia as $uItem) {
+// Prioritas 1: Yang sedang dikerjakan saat ini
+foreach ($allEvaluatedUjian as $uItem) {
     if (in_array($uItem['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan'])) {
         $activeOngoingUjian = $uItem;
         break;
     }
-    if ($uItem['can_take'] && !$activeOngoingUjian) {
-        $activeOngoingUjian = $uItem;
+}
+
+// Prioritas 2: Yang aktif hari ini dan siap dikerjakan
+if (!$activeOngoingUjian) {
+    foreach ($allEvaluatedUjian as $uItem) {
+        if ($uItem['status_pengerjaan'] !== 'Selesai' && $uItem['can_take']) {
+            $activeOngoingUjian = $uItem;
+            break;
+        }
     }
-    if ($uItem['schedule_state'] === 'early' && !$upcomingUjian) {
-        $upcomingUjian = $uItem;
+}
+
+// Prioritas 3: Jadwal hari ini tapi jam mulai belum tiba
+if (!$activeOngoingUjian) {
+    foreach ($allEvaluatedUjian as $uItem) {
+        if (!empty($uItem['is_hari_ini']) && $uItem['schedule_state'] === 'early') {
+            $upcomingUjian = $uItem;
+            break;
+        }
+    }
+}
+
+// Prioritas 4: Jika jadwal hari ini sudah diselesaikan siswa
+if (!$activeOngoingUjian && !$upcomingUjian) {
+    foreach ($allEvaluatedUjian as $uItem) {
+        if (!empty($uItem['is_hari_ini']) && $uItem['status_pengerjaan'] === 'Selesai') {
+            $completedTodayUjian = $uItem;
+            break;
+        }
+    }
+}
+
+// Prioritas 5: Cari jadwal mendatang di hari berikutnya
+if (!$activeOngoingUjian && !$upcomingUjian && !$completedTodayUjian) {
+    foreach ($allEvaluatedUjian as $uItem) {
+        if ($uItem['status_pengerjaan'] !== 'Selesai' && $uItem['schedule_state'] === 'early') {
+            $upcomingUjian = $uItem;
+            break;
+        }
     }
 }
 
@@ -649,6 +770,49 @@ include 'header.php';
                 <i class="fa-solid fa-circle-play"></i>
             </div>
         </div>
+    <?php elseif ($completedTodayUjian): ?>
+        <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%); border: 1px solid rgba(16, 185, 129, 0.35);">
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
+                    <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.35); padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-circle-check"></i>
+                        ASESMEN HARI INI
+                    </span>
+                    <span style="font-size: 0.7rem; color: #a7f3d0; font-weight: 700;">
+                        Selesai Dikerjakan
+                    </span>
+                </div>
+                <h3 style="font-size: 1.05rem; font-weight: 900; color: #6ee7b7; margin: 0 0 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <?= htmlspecialchars($completedTodayUjian['nama_ujian'] ?: $completedTodayUjian['mapel_nama']) ?>
+                </h3>
+                <p style="color: #cbd5e1; font-size: 0.76rem;">
+                    Anda telah menyelesaikan asesmen untuk jadwal hari ini. Lembar jawaban telah tersimpan rapi.
+                </p>
+            </div>
+            <div style="font-size: 2.2rem; opacity: 0.4; margin-left: 14px; color: #34d399; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+    <?php elseif ($upcomingUjian): ?>
+        <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(245, 158, 11, 0.25);">
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+                    <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-hourglass-half" style="font-size: 0.65rem;"></i>
+                        JADWAL MENDATANG
+                    </span>
+                </div>
+                <h3 style="font-size: 1.05rem; font-weight: 900; color: #fde047; margin: 0 0 3px 0;">
+                    <?= htmlspecialchars($upcomingUjian['nama_ujian'] ?: $upcomingUjian['mapel_nama']) ?>
+                </h3>
+                <p style="color: #94a3b8; font-size: 0.76rem;">
+                    <?= htmlspecialchars($upcomingUjian['schedule_notice']) ?>
+                </p>
+            </div>
+            <div style="font-size: 2rem; opacity: 0.3; margin-left: 14px; color: #fbbf24; flex-shrink: 0;">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+        </div>
     <?php else: ?>
         <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(255, 255, 255, 0.08);">
             <div style="flex: 1; min-width: 0;">
@@ -662,11 +826,7 @@ include 'header.php';
                     Tidak Ada
                 </h3>
                 <p style="color: #64748b; font-size: 0.76rem;">
-                    <?php if ($upcomingUjian): ?>
-                        Sesi berikutnya: <b style="color: #94a3b8;"><?= htmlspecialchars($upcomingUjian['mapel_nama']) ?></b> (<?= htmlspecialchars($upcomingUjian['schedule_notice']) ?>)
-                    <?php else: ?>
-                        Tidak ada sesi asesmen yang aktif saat ini sesuai jadwal.
-                    <?php endif; ?>
+                    Tidak ada sesi asesmen aktif saat ini sesuai jadwal.
                 </p>
             </div>
             <div style="font-size: 2rem; opacity: 0.25; margin-left: 14px; color: #94a3b8; flex-shrink: 0;">
