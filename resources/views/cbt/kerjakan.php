@@ -1544,21 +1544,6 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     tbody.appendChild(row);
                 });
                 container.appendChild(table);
-                        userAnswers[idx] = { ...curAns };
-                        loadQuestion(idx);
-                        renderPalette();
-                        saveCurrentAnswers(true);
-                    };
-                    row.querySelectorAll('button')[1].onclick = () => {
-                        curAns[bIdx] = 'Salah';
-                        userAnswers[idx] = { ...curAns };
-                        loadQuestion(idx);
-                        renderPalette();
-                        saveCurrentAnswers(true);
-                    };
-                    tbody.appendChild(row);
-                });
-                container.appendChild(table);
 
             } else if (qType === 'sec_jodoh') {
                 // MODEL 4: Menjodohkan (Interaktif Tarik Garis Melengkung Berwarna)
@@ -1859,19 +1844,6 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     `;
                     container.appendChild(item);
                 });
-            }
-
-            // Update Nav Buttons
-            document.getElementById('btnPrev').style.visibility = (idx === 0) ? 'hidden' : 'visible';
-            document.getElementById('btnNext').style.display = (idx === totalSoal - 1) ? 'none' : 'inline-flex';
-            document.getElementById('btnSubmitModal').style.display = (idx === totalSoal - 1) ? 'inline-flex' : 'none';
-
-            // Update Status Tombol Ragu-Ragu
-            const btnRagu = document.getElementById('btnRagu');
-            if (raguState[idx]) {
-                btnRagu.classList.add('active');
-            } else {
-                btnRagu.classList.remove('active');
             }
 
             updatePaletteCurrent();
