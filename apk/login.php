@@ -45,14 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     FROM users u 
                     LEFT JOIN siswa s ON s.user_id = u.id 
                     LEFT JOIN guru g ON g.user_id = u.id 
-                    WHERE u.username = :login_id 
-                       OR s.nik = :login_id 
-                       OR s.nis = :login_id 
-                       OR g.nik = :login_id 
-                       OR g.nip = :login_id
+                    WHERE u.username = ? 
+                       OR s.nik = ? 
+                       OR s.nis = ? 
+                       OR g.nik = ? 
+                       OR g.nip = ?
                     LIMIT 1
                 ");
-                $stmt->execute(['login_id' => $username_input]);
+                $stmt->execute([$username_input, $username_input, $username_input, $username_input, $username_input]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 $pass_ok = false;

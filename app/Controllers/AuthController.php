@@ -40,14 +40,14 @@ class AuthController {
                 FROM users u 
                 LEFT JOIN siswa s ON s.user_id = u.id 
                 LEFT JOIN guru g ON g.user_id = u.id 
-                WHERE u.username = :login_id 
-                   OR s.nik = :login_id 
-                   OR s.nis = :login_id 
-                   OR g.nik = :login_id 
-                   OR g.nip = :login_id
+                WHERE u.username = ? 
+                   OR s.nik = ? 
+                   OR s.nis = ? 
+                   OR g.nik = ? 
+                   OR g.nip = ?
                 LIMIT 1
             ");
-            $stmt->execute(['login_id' => $loginInput]);
+            $stmt->execute([$loginInput, $loginInput, $loginInput, $loginInput, $loginInput]);
             $user = $stmt->fetch();
 
             $pass_ok = false;
