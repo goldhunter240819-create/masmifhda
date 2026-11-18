@@ -122,6 +122,22 @@ class CbtController {
                 INDEX (status)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+            // Pastikan kolom tambahan untuk foto, biodata, dan qr_token pada cbt_peserta_khusus
+            $colsKj = [
+                "ADD COLUMN foto VARCHAR(255) NULL AFTER nama_siswa",
+                "ADD COLUMN jenis_kelamin VARCHAR(10) NULL DEFAULT 'L' AFTER foto",
+                "ADD COLUMN tempat_lahir VARCHAR(100) NULL AFTER jenis_kelamin",
+                "ADD COLUMN tanggal_lahir DATE NULL AFTER tempat_lahir",
+                "ADD COLUMN no_hp VARCHAR(30) NULL AFTER tanggal_lahir",
+                "ADD COLUMN alamat TEXT NULL AFTER no_hp",
+                "ADD COLUMN qr_token VARCHAR(64) NULL AFTER password_hash"
+            ];
+            foreach ($colsKj as $colDef) {
+                try {
+                    $db->exec("ALTER TABLE cbt_peserta_khusus $colDef");
+                } catch (\Exception $e) {}
+            }
+
             // Seed default slots jika masih kosong
             $cntSlot = (int)$db->query("SELECT COUNT(*) FROM cbt_jam_slot")->fetchColumn();
             if ($cntSlot === 0) {
@@ -170,6 +186,24 @@ class CbtController {
             } catch (\Exception $e) {}
 
             try {
+                $db->exec("ALTER TABLE cbt_ujian ADD COLUMN token VARCHAR(20) NULL AFTER acak_opsi");
+            } catch (\Exception $e) {}
+
+            try {
+                $stmtNoToken = $db->query("SELECT id, mapel_nama, kelas_nama FROM cbt_ujian WHERE token IS NULL OR token = ''");
+                if ($stmtNoToken) {
+                    $uNoToken = $stmtNoToken->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($uNoToken as $un) {
+                        $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $un['mapel_nama'] ?: 'CBT'), 0, 3));
+                        if (strlen($prefix) < 3) $prefix = str_pad($prefix, 3, 'X');
+                        $genToken = $prefix . rand(100, 999);
+                        $db->prepare("UPDATE cbt_ujian SET token = ? WHERE id = ?")->execute([$genToken, $un['id']]);
+                        $db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, 240, 'Aktif', NOW())")->execute([$genToken, $un['id']]);
+                    }
+                }
+            } catch (\Exception $e) {}
+
+            try {
                 $db->exec("UPDATE bs_topik SET status = 'Arsip' WHERE jenis IN ('PAS', 'PTS') AND (tgl_mulai IS NULL OR tgl_mulai = '')");
             } catch (\Exception $e) {}
 
@@ -194,24 +228,26 @@ class CbtController {
 
             // Sinkronkan juga tabel bs_topik di database siakad jika ada
             try {
-                $dbS = Database::connect('siakad');
-                if ($dbS) {
-                    $dbS->exec("CREATE TABLE IF NOT EXISTS bs_topik (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        jenis VARCHAR(50) NOT NULL,
-                        nama_topik VARCHAR(255) NOT NULL,
-                        keterangan TEXT DEFAULT NULL,
-                        tahun_ajaran VARCHAR(50) DEFAULT '2026/2027',
-                        semester VARCHAR(20) DEFAULT 'Ganjil',
-                        tgl_mulai DATE DEFAULT NULL,
-                        tgl_selesai DATE DEFAULT NULL,
-                        status VARCHAR(30) DEFAULT 'Aktif',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-                    try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN semester VARCHAR(20) DEFAULT 'Ganjil' AFTER tahun_ajaran"); } catch (\Exception $e) {}
-                    try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN tgl_mulai DATE DEFAULT NULL AFTER semester"); } catch (\Exception $e) {}
-                    try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN tgl_selesai DATE DEFAULT NULL AFTER tgl_mulai"); } catch (\Exception $e) {}
-                    try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN status VARCHAR(30) DEFAULT 'Aktif' AFTER tgl_selesai"); } catch (\Exception $e) {}
+                if (class_exists('\App\Core\Database')) {
+                    $dbS = \App\Core\Database::connect('siakad');
+                    if ($dbS) {
+                        $dbS->exec("CREATE TABLE IF NOT EXISTS bs_topik (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            jenis VARCHAR(50) NOT NULL,
+                            nama_topik VARCHAR(255) NOT NULL,
+                            keterangan TEXT DEFAULT NULL,
+                            tahun_ajaran VARCHAR(50) DEFAULT '2026/2027',
+                            semester VARCHAR(20) DEFAULT 'Ganjil',
+                            tgl_mulai DATE DEFAULT NULL,
+                            tgl_selesai DATE DEFAULT NULL,
+                            status VARCHAR(30) DEFAULT 'Aktif',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                        try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN semester VARCHAR(20) DEFAULT 'Ganjil' AFTER tahun_ajaran"); } catch (\Exception $e) {}
+                        try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN tgl_mulai DATE DEFAULT NULL AFTER semester"); } catch (\Exception $e) {}
+                        try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN tgl_selesai DATE DEFAULT NULL AFTER tgl_mulai"); } catch (\Exception $e) {}
+                        try { $dbS->exec("ALTER TABLE bs_topik ADD COLUMN status VARCHAR(30) DEFAULT 'Aktif' AFTER tgl_selesai"); } catch (\Exception $e) {}
+                    }
                 }
             } catch (\Exception $e) {}
 
@@ -263,6 +299,7 @@ class CbtController {
                 ['allow_student_review', '1', 'ujian', 'Izinkan Siswa Cek Ulang Jawaban'],
                 ['token_mode', 'manual', 'ujian', 'Mode Perilisan Token Ujian (manual/auto)'],
                 ['token_refresh_interval', '120', 'ujian', 'Masa Berlaku Token (Menit)'],
+                ['lock_by_schedule_time', '1', 'aturan', 'Kunci Pengerjaan Sesuai Jadwal (Waktu Sesi)'],
                 ['institution_name', 'MAS MIFTAHUL HUDA', 'umum', 'Nama Institusi / Madrasah'],
                 ['cbt_app_title', 'CBT Online v2.5 Online', 'umum', 'Label Branding Sistem CBT']
             ];
@@ -941,10 +978,18 @@ class CbtController {
                         } catch (\Exception $e) {}
                     }
 
-                    $stmtIns = $db->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, status) VALUES (?, ?, ?, ?, ?, 90, 75, 1, 1, 'Aktif')");
-                    $stmtIns->execute([$tId, $kode, $namaUjian, $mapel, $kelasNama]);
+                    $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $mapel ?: 'CBT'), 0, 3));
+                    if (strlen($prefix) < 3) $prefix = str_pad($prefix, 3, 'X');
+                    $tokenUjian = $prefix . rand(100, 999);
+
+                    $stmtIns = $db->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, 90, 75, 1, 1, ?, 'Aktif')");
+                    $stmtIns->execute([$tId, $kode, $namaUjian, $mapel, $kelasNama, $tokenUjian]);
                     $newUjianId = (int)$db->lastInsertId();
-                    $existingUjian = ['id' => $newUjianId, 'topik_id' => $tId, 'mapel_nama' => $mapel, 'kelas_nama' => $kelasNama];
+                    $existingUjian = ['id' => $newUjianId, 'topik_id' => $tId, 'mapel_nama' => $mapel, 'kelas_nama' => $kelasNama, 'token' => $tokenUjian];
+
+                    try {
+                        $db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, 240, 'Aktif', NOW())")->execute([$tokenUjian, $newUjianId]);
+                    } catch (\Exception $e) {}
 
                     $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE id = ?")->execute([$newUjianId, $g['id']]);
                 } else {
@@ -2023,6 +2068,48 @@ class CbtController {
         $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
         $isCbtOnly = !empty($_SESSION['is_cbt_only']);
 
+        // Cek Kebijakan Kunci Jadwal (Schedule Window Guard)
+        $cbtSettings = self::getAllPengaturan($db);
+        $lockSchedule = ($cbtSettings['lock_by_schedule_time'] ?? '1') === '1';
+
+        if ($lockSchedule && ($roleId === 3 || $roleId === 7 || $isCbtOnly)) {
+            $nowTs = time();
+            $stmtG = $db->prepare("SELECT g.*, s.jam_mulai, s.jam_selesai 
+                                   FROM cbt_jadwal_grid g 
+                                   LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+                                   WHERE g.ujian_id = ? 
+                                   ORDER BY g.tanggal DESC, g.id DESC LIMIT 1");
+            $stmtG->execute([$ujian_id]);
+            $jGrid = $stmtG->fetch(PDO::FETCH_ASSOC);
+
+            if ($jGrid) {
+                $jStart = null;
+                $jEnd = null;
+                if (!empty($jGrid['tanggal']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
+                    $jStart = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_mulai']);
+                    $jEnd = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_selesai']);
+                } elseif (!empty($jGrid['hari']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
+                    $hariIndo = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'];
+                    $curHari = $hariIndo[date('l')] ?? '';
+                    if (strcasecmp($curHari, $jGrid['hari']) === 0) {
+                        $todayDate = date('Y-m-d');
+                        $jStart = strtotime($todayDate . ' ' . $jGrid['jam_mulai']);
+                        $jEnd = strtotime($todayDate . ' ' . $jGrid['jam_selesai']);
+                    }
+                }
+
+                if ($jStart && $jEnd) {
+                    if ($nowTs < $jStart) {
+                        echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai: " . date('d M Y, H:i', $jStart) . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                        exit;
+                    } elseif ($nowTs > $jEnd) {
+                        echo "<script>alert('Waktu sesi ujian ini telah berakhir pada " . date('d M Y, H:i', $jEnd) . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                        exit;
+                    }
+                }
+            }
+        }
+
         $pesertaInfo = null;
 
         if ($isCbtOnly || $roleId === 7) {
@@ -2333,6 +2420,9 @@ class CbtController {
             exit;
         }
 
+        $settings = self::getAllPengaturan($db);
+        $showScore = ($settings['show_score_to_student'] ?? '1') === '1';
+
         include __DIR__ . '/../../resources/views/cbt/selesai.php';
     }
 
@@ -2411,6 +2501,20 @@ class CbtController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $submitted = $_POST['settings'] ?? [];
             if (!empty($submitted) && is_array($submitted)) {
+                // Pastikan checkbox boolean yang unchecked tetap tersimpan sebagai 0
+                $booleanKeys = [
+                    'anti_cheat_mode', 'force_fullscreen', 'block_tab_switch',
+                    'disable_right_click', 'disable_copy_paste', 'lock_single_device',
+                    'watermark_student_nis', 'sound_alarm_on_violation', 'block_back_button',
+                    'lock_by_schedule_time', 'acak_soal_default', 'acak_opsi_default',
+                    'show_score_to_student', 'show_discussion_to_student', 'allow_student_review'
+                ];
+                foreach ($booleanKeys as $bk) {
+                    if (!isset($submitted[$bk])) {
+                        $submitted[$bk] = '0';
+                    }
+                }
+
                 $stmtUp = $db->prepare("INSERT INTO cbt_pengaturan (setting_key, setting_value) 
                                         VALUES (:k, :v) 
                                         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
@@ -2596,22 +2700,47 @@ class CbtController {
             $password_plain = trim($_POST['password_plain'] ?? '123456');
             $lokasi_cabang = trim($_POST['lokasi_cabang'] ?? 'Kelas Jauh');
             $status = trim($_POST['status'] ?? 'Aktif');
+            $jenis_kelamin = trim($_POST['jenis_kelamin'] ?? 'L');
+            $tempat_lahir = trim($_POST['tempat_lahir'] ?? '') ?: null;
+            $tanggal_lahir = !empty($_POST['tanggal_lahir']) ? trim($_POST['tanggal_lahir']) : null;
+            $no_hp = trim($_POST['no_hp'] ?? '') ?: null;
+            $alamat = trim($_POST['alamat'] ?? '') ?: null;
 
             if (empty($username)) {
                 $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $no_peserta));
             }
             $password_hash = password_hash($password_plain, PASSWORD_DEFAULT);
+            $qr_token = substr(hash('sha256', $no_peserta . $username . 'MASMIFHDA_CBT_KJ_SECURE_2026'), 0, 24);
+
+            // Handle Foto Upload
+            $fotoName = null;
+            if (isset($_FILES['foto']) && is_uploaded_file($_FILES['foto']['tmp_name'])) {
+                $ext = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                    $upDir = __DIR__ . '/../../public/uploads/siswa/';
+                    if (!is_dir($upDir)) @mkdir($upDir, 0777, true);
+                    $fotoName = 'cbt_kj_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                    @move_uploaded_file($_FILES['foto']['tmp_name'], $upDir . $fotoName);
+                }
+            }
 
             if ($id > 0) {
-                $stmt = $db->prepare("UPDATE cbt_peserta_khusus 
-                    SET no_peserta = ?, nis = ?, nama_siswa = ?, tingkat = ?, kelas_nama = ?, username = ?, password_plain = ?, password_hash = ?, lokasi_cabang = ?, status = ?
-                    WHERE id = ?");
-                $stmt->execute([$no_peserta, $nis, $nama_siswa, $tingkat, $kelas_nama, $username, $password_plain, $password_hash, $lokasi_cabang, $status, $id]);
+                if ($fotoName) {
+                    $stmt = $db->prepare("UPDATE cbt_peserta_khusus 
+                        SET no_peserta = ?, nis = ?, nama_siswa = ?, foto = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, no_hp = ?, alamat = ?, tingkat = ?, kelas_nama = ?, username = ?, password_plain = ?, password_hash = ?, qr_token = ?, lokasi_cabang = ?, status = ?
+                        WHERE id = ?");
+                    $stmt->execute([$no_peserta, $nis, $nama_siswa, $fotoName, $jenis_kelamin, $tempat_lahir, $tanggal_lahir, $no_hp, $alamat, $tingkat, $kelas_nama, $username, $password_plain, $password_hash, $qr_token, $lokasi_cabang, $status, $id]);
+                } else {
+                    $stmt = $db->prepare("UPDATE cbt_peserta_khusus 
+                        SET no_peserta = ?, nis = ?, nama_siswa = ?, jenis_kelamin = ?, tempat_lahir = ?, tanggal_lahir = ?, no_hp = ?, alamat = ?, tingkat = ?, kelas_nama = ?, username = ?, password_plain = ?, password_hash = ?, qr_token = ?, lokasi_cabang = ?, status = ?
+                        WHERE id = ?");
+                    $stmt->execute([$no_peserta, $nis, $nama_siswa, $jenis_kelamin, $tempat_lahir, $tanggal_lahir, $no_hp, $alamat, $tingkat, $kelas_nama, $username, $password_plain, $password_hash, $qr_token, $lokasi_cabang, $status, $id]);
+                }
             } else {
                 $stmt = $db->prepare("INSERT INTO cbt_peserta_khusus 
-                    (no_peserta, nis, nama_siswa, tingkat, kelas_nama, username, password_plain, password_hash, lokasi_cabang, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$no_peserta, $nis, $nama_siswa, $tingkat, $kelas_nama, $username, $password_plain, $password_hash, $lokasi_cabang, $status]);
+                    (no_peserta, nis, nama_siswa, foto, jenis_kelamin, tempat_lahir, tanggal_lahir, no_hp, alamat, tingkat, kelas_nama, username, password_plain, password_hash, qr_token, lokasi_cabang, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$no_peserta, $nis, $nama_siswa, $fotoName, $jenis_kelamin, $tempat_lahir, $tanggal_lahir, $no_hp, $alamat, $tingkat, $kelas_nama, $username, $password_plain, $password_hash, $qr_token, $lokasi_cabang, $status]);
             }
 
             redirect('/cbt/peserta_khusus?msg=saved');
@@ -2730,6 +2859,21 @@ class CbtController {
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $pesertaList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Pastikan setiap peserta punya qr_token unik
+        foreach ($pesertaList as &$p) {
+            if (empty($p['qr_token'])) {
+                $p['qr_token'] = substr(hash('sha256', $p['no_peserta'] . $p['username'] . 'MASMIFHDA_CBT_KJ_SECURE_2026'), 0, 24);
+                $db->prepare("UPDATE cbt_peserta_khusus SET qr_token = ? WHERE id = ?")->execute([$p['qr_token'], $p['id']]);
+            }
+        }
+        unset($p);
+
+        // Ambil data institusi untuk Kop dan TTD Kepala Madrasah
+        $inst = null;
+        try {
+            $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
 
         include __DIR__ . '/../../resources/views/cbt/peserta_khusus_cetak.php';
     }

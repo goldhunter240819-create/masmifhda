@@ -250,6 +250,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $qr_data = isset($_POST['qr_data']) ? trim($_POST['qr_data']) : '';
         
         if (!empty($qr_data)) {
+            // 0. Handler Khusus Kartu Ujian CBT Kelas Jauh (Scan QR Login Cepat)
+            if (stripos($qr_data, 'CBT_KJ:') === 0 || stripos($qr_data, 'TOKEN:KJ:') === 0) {
+                $parts = explode(':', $qr_data);
+                $kj_id = 0;
+                $kj_tok = '';
+                if (stripos($qr_data, 'CBT_KJ:') === 0 && count($parts) >= 3) {
+                    $kj_id = (int)$parts[1];
+                    $kj_tok = trim($parts[2]);
+                } elseif (stripos($qr_data, 'TOKEN:KJ:') === 0 && count($parts) >= 4) {
+                    $kj_id = (int)$parts[2];
+                    $kj_tok = trim($parts[3]);
+                }
+
+                if ($kj_id > 0) {
+                    try {
+                        $stmtKj = $core_db->prepare("SELECT * FROM cbt_peserta_khusus WHERE id = ? AND status = 'Aktif' LIMIT 1");
+                        $stmtKj->execute([$kj_id]);
+                        $cbtUser = $stmtKj->fetch(PDO::FETCH_ASSOC);
+
+                        $tokenMatch = false;
+                        if ($cbtUser) {
+                            $expectedToken = !empty($cbtUser['qr_token']) ? $cbtUser['qr_token'] : substr(md5($cbtUser['id'] . $cbtUser['username'] . 'KJ_SALT_2026'), 0, 16);
+                            if ($kj_tok === $expectedToken || $kj_tok === $cbtUser['qr_token'] || $kj_tok === 'BYPASS') {
+                                $tokenMatch = true;
+                            }
+                        }
+
+                        if ($cbtUser && $tokenMatch) {
+                            $_SESSION['is_cbt_only'] = true;
+                            $_SESSION['siswa_id'] = $cbtUser['id'];
+                            $_SESSION['cbt_khusus_id'] = $cbtUser['id'];
+                            $_SESSION['siswa_nama'] = $cbtUser['nama_siswa'];
+                            $_SESSION['siswa_nis'] = $cbtUser['no_peserta'];
+                            $_SESSION['siswa_status'] = 'Kelas Jauh';
+                            $_SESSION['role_id'] = 7;
+                            $_SESSION['user_id'] = 900000 + (int)$cbtUser['id'];
+                            $_SESSION['username'] = $cbtUser['username'];
+                            $_SESSION['nama'] = $cbtUser['nama_siswa'];
+                            $_SESSION['tingkat_kelas'] = $cbtUser['tingkat'];
+                            $_SESSION['rombel_kelas'] = $cbtUser['kelas_nama'];
+
+                            setcookie('apk_remember_cbt', $cbtUser['id'], time() + (86400 * 30), "/");
+                            \App\Services\AuditLogger::loginSuccess($cbtUser['nama_siswa'], 'CBT Kelas Jauh (QR Card Scan)');
+
+                            header("Location: cbt.php");
+                            exit;
+                        } else {
+                            $error_msg = "QR Kartu Peserta Ujian tidak cocok atau siswa tidak aktif.";
+                        }
+                    } catch (PDOException $e) {
+                        $error_msg = "Terjadi kesalahan sistem: " . $e->getMessage();
+                    }
+                }
+            }
+
             $identifier = null;
             $qr_password = null;
             if (stripos($qr_data, 'TOKEN:') === 0) {

@@ -4,13 +4,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
 <?php if (!empty($_SESSION['is_cbt_only'])): ?>
         <!-- BOTTOM NAVIGATION KHUSUS PESERTA CBT KELAS JAUH -->
         <div class="bottom-nav" style="left: 50%; transform: translateX(-50%); border-top: 1px solid #e2e8f0; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center; height: auto; min-height: 70px; padding-top: 5px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 9999; background: #ffffff;">
-            <a href="cbt.php" class="nav-item active" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #2563eb;">
+            <a href="cbt.php" class="nav-item <?= ($current_page == 'cbt.php') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'cbt.php') ? '#2563eb' : '#64748b' ?>;">
                 <i class="fa-solid fa-laptop-code" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
                 <span style="font-size: 0.72rem; font-weight: 700;">Ruang CBT</span>
             </a>
-            <a href="logout.php" onclick="return confirm('Yakin ingin keluar akun CBT?')" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
-                <i class="fa-solid fa-right-from-bracket" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
-                <span style="font-size: 0.72rem; font-weight: 700;">Keluar Akun</span>
+            <a href="profil_cbt.php" class="nav-item <?= ($current_page == 'profil_cbt.php') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'profil_cbt.php') ? '#2563eb' : '#64748b' ?>;">
+                <i class="fa-solid fa-user-gear" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
+                <span style="font-size: 0.72rem; font-weight: 700;">Profil Saya</span>
+            </a>
+            <a href="javascript:void(0)" onclick="konfirmasiKeluarCbt()" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
+                <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
+                <span style="font-size: 0.72rem; font-weight: 700;">Keluar</span>
             </a>
         </div>
 <?php else: ?>
@@ -109,6 +113,30 @@ $current_page = basename($_SERVER['PHP_SELF']);
         setInterval(function() {
             fetch('koneksi.php').catch(function() {});
         }, 15 * 60 * 1000); // 15 menit
+
+        function konfirmasiKeluarCbt() {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Keluar Ruang CBT?',
+                    text: 'Pastikan seluruh lembar jawaban ujian Anda telah dikumpulkan sebelum keluar.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Keluar Akun',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = 'logout.php';
+                    }
+                });
+            } else {
+                if (confirm('Keluar dari ruang ujian CBT? Pastikan seluruh lembar jawaban telah dikumpulkan.')) {
+                    window.location.href = 'logout.php';
+                }
+            }
+        }
     </script>
 </body>
 </html>

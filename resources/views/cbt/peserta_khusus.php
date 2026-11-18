@@ -168,11 +168,22 @@ $active_menu = 'peserta_khusus';
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div style="font-weight: 800; color: #0f172a; font-size: 0.92rem;">
-                                            <?php echo htmlspecialchars($p['nama_siswa']); ?>
-                                        </div>
-                                        <div style="font-size: 0.72rem; color: #64748b;">
-                                            Lokasi: <?php echo htmlspecialchars($p['lokasi_cabang'] ?: 'Kelas Jauh'); ?>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div style="width: 38px; height: 38px; border-radius: 10px; overflow: hidden; background: #e0e7ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #c7d2fe;">
+                                                <?php if (!empty($p['foto'])): ?>
+                                                    <img src="/public/uploads/siswa/<?php echo htmlspecialchars($p['foto']); ?>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<i data-lucide=\'user\' style=\'width: 18px; height: 18px; color: #4f46e5;\'></i>';">
+                                                <?php else: ?>
+                                                    <i data-lucide="user" style="width: 18px; height: 18px; color: #4f46e5;"></i>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 800; color: #0f172a; font-size: 0.92rem;">
+                                                    <?php echo htmlspecialchars($p['nama_siswa']); ?>
+                                                </div>
+                                                <div style="font-size: 0.72rem; color: #64748b;">
+                                                    Lokasi: <?php echo htmlspecialchars($p['lokasi_cabang'] ?: 'Kelas Jauh'); ?>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td style="text-align: center;">
@@ -243,7 +254,7 @@ $active_menu = 'peserta_khusus';
             </button>
         </div>
 
-        <form method="POST" action="<?php echo base_url('cbt/peserta_khusus/save'); ?>">
+        <form method="POST" action="<?php echo base_url('cbt/peserta_khusus/save'); ?>" enctype="multipart/form-data">
             <input type="hidden" name="id" id="inpId" value="0">
 
             <div style="margin-bottom: 12px;">
@@ -277,7 +288,7 @@ $active_menu = 'peserta_khusus';
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <div>
                     <label style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block;">Username Login *</label>
                     <input type="text" name="username" id="inpUsername" required placeholder="User untuk login" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.88rem; font-family: monospace;">
@@ -286,6 +297,25 @@ $active_menu = 'peserta_khusus';
                     <label style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block;">Password Login *</label>
                     <input type="text" name="password_plain" id="inpPassword" required value="123456" placeholder="Password siswa" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.88rem; font-family: monospace;">
                 </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block;">Jenis Kelamin</label>
+                    <select name="jenis_kelamin" id="inpJk" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.88rem;">
+                        <option value="L">Laki-laki</option>
+                        <option value="P">Perempuan</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block;">No. HP / WA</label>
+                    <input type="text" name="no_hp" id="inpNoHp" placeholder="08xxxxxxxxxx" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.88rem;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block;">Unggah Foto Siswa (3x4 Resmi)</label>
+                <input type="file" name="foto" accept="image/*" style="width: 100%; padding: 8px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.82rem;">
             </div>
 
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem;">
@@ -353,6 +383,8 @@ function bukaModalTambah() {
     document.getElementById('inpKelasNama').value = 'X - Kelas Jauh';
     document.getElementById('inpUsername').value = '';
     document.getElementById('inpPassword').value = '123456';
+    if (document.getElementById('inpJk')) document.getElementById('inpJk').value = 'L';
+    if (document.getElementById('inpNoHp')) document.getElementById('inpNoHp').value = '';
     document.getElementById('modalFormPeserta').classList.add('open');
     if (window.lucide) lucide.createIcons();
 }
@@ -367,6 +399,8 @@ function bukaModalEdit(p) {
     document.getElementById('inpKelasNama').value = p.kelas_nama;
     document.getElementById('inpUsername').value = p.username;
     document.getElementById('inpPassword').value = p.password_plain || '';
+    if (document.getElementById('inpJk')) document.getElementById('inpJk').value = p.jenis_kelamin || 'L';
+    if (document.getElementById('inpNoHp')) document.getElementById('inpNoHp').value = p.no_hp || '';
     document.getElementById('modalFormPeserta').classList.add('open');
     if (window.lucide) lucide.createIcons();
 }

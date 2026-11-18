@@ -31,7 +31,7 @@ if ($is_cbt_only) {
         'nama_kelas' => $cbtStudent['kelas_nama'],
         'tingkat' => $cbtStudent['tingkat'],
         'status' => 'Kelas Jauh',
-        'foto' => ''
+        'foto' => $cbtStudent['foto'] ?? ''
     ];
 
     $tingkat_kelas = $cbtStudent['tingkat'];
@@ -60,7 +60,7 @@ if ($is_cbt_only) {
         exit;
     }
 
-    // Tentukan tingkat kelas (misal: 'Kelas X', 'Kelas XI', 'Kelas XII')
+    // Tentukan tingkat kelas
     $tingkat_kelas = 'Kelas X';
     $short_tingkat = 'X';
     if (stripos($siswa['nama_kelas'], 'XII') !== false || stripos($siswa['nama_kelas'], '12') !== false) {
@@ -79,20 +79,20 @@ try {
     }
 } catch (\Exception $e) {}
 
-// 2. Token Ujian Aktif (Jamin selalu ada token aktif untuk kemudahan siswa)
-$tokenAktif = null;
+// 2. Ambil Pengaturan CBT Terpusat
+$cbtSettings = [];
 try {
-    $stmtTok = $core_db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
-    if ($stmtTok) {
-        $tokenAktif = $stmtTok->fetch(PDO::FETCH_ASSOC);
-    }
-    if (!$tokenAktif) {
-        // Auto-aktifkan token jika belum ada
-        $tokCode = 'MAS' . rand(100, 999);
-        $core_db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, 240, 'Aktif', NOW())")->execute([$tokCode]);
-        $tokenAktif = ['token' => $tokCode, 'status' => 'Aktif'];
+    $stmtSt = $core_db->query("SELECT setting_key, setting_value FROM cbt_pengaturan");
+    if ($stmtSt) {
+        while ($stRow = $stmtSt->fetch(PDO::FETCH_ASSOC)) {
+            $cbtSettings[$stRow['setting_key']] = $stRow['setting_value'];
+        }
     }
 } catch (\Exception $e) {}
+
+$lockSchedule = ($cbtSettings['lock_by_schedule_time'] ?? '1') === '1';
+$showScoreToStudent = ($cbtSettings['show_score_to_student'] ?? '1') === '1';
+$maxTabViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
 
 // 3. Ambil Info Topik Aktif
 $topikAktif = null;
@@ -110,7 +110,7 @@ try {
 } catch (\Exception $e) {}
 
 // 4. Daftar Ujian CBT yang Aktif untuk Siswa
-$ujianList = [];
+$ujianListRaw = [];
 try {
     $allowedKelas = ['Semua Kelas', '', $siswa['nama_kelas'], $tingkat_kelas, $short_tingkat];
     if ($short_tingkat === 'XII') {
@@ -124,7 +124,6 @@ try {
         $allowedKelas[] = '10';
     }
 
-    // Tambahkan seluruh rombel kelas di madrasah yang setingkat agar siswa kelas jauh otomatis dapat mengakses soal ujian paralel
     try {
         $numTingkat = ($short_tingkat === 'XII') ? 12 : (($short_tingkat === 'XI') ? 11 : 10);
         $stmtK = $core_db->prepare("SELECT nama_kelas FROM kelas WHERE tingkat = ?");
@@ -155,29 +154,97 @@ try {
     $params = array_merge([$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')], $allowedKelas);
     $stmtUjian = $core_db->prepare($sqlUjian);
     $stmtUjian->execute($params);
-    $ujianList = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
-
-    // Auto-heal: Jika belum ada di cbt_ujian tapi ada di cbt_jadwal_grid, buatkan langsung!
-    if (empty($ujianList)) {
-        $stmtJadwal = $core_db->prepare("
-            SELECT * FROM cbt_jadwal_grid 
-            WHERE mapel_nama IS NOT NULL AND mapel_nama != '' 
-              AND (kelas_nama IS NULL OR kelas_nama = '' OR kelas_nama IN ($inPlaceholders))
-        ");
-        $stmtJadwal->execute($allowedKelas);
-        $jadwalRows = $stmtJadwal->fetchAll(PDO::FETCH_ASSOC);
-
-        if (!empty($jadwalRows) && class_exists('\App\Controllers\CbtController')) {
-            \App\Controllers\CbtController::syncJadwalWithUjian($core_db, $siakad_db);
-            // Query ulang
-            $stmtUjian = $core_db->prepare($sqlUjian);
-            $stmtUjian->execute($params);
-            $ujianList = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
-        }
-    }
+    $ujianListRaw = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
 } catch (\Exception $e) {}
 
-// Riwayat Ujian yang Sudah Selesai
+// Filter & Validasi Paket Ujian Tersedia (Sembunyikan yang sudah selesai)
+$ujianTersedia = [];
+$hariIndo = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'];
+$curHari = $hariIndo[date('l')] ?? '';
+$nowTs = time();
+
+foreach ($ujianListRaw as $u) {
+    // 1. Sembunyikan ujian yang sudah selesai dari daftar paket tersedia!
+    if ($u['status_pengerjaan'] === 'Selesai') {
+        continue;
+    }
+
+    // 2. Jamin Token Spesifik per Mapel & Kelas
+    if (empty($u['token'])) {
+        $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $u['mapel_nama'] ?: 'CBT'), 0, 3));
+        if (strlen($prefix) < 3) $prefix = str_pad($prefix, 3, 'X');
+        $u['token'] = $prefix . rand(100, 999);
+        try {
+            $core_db->prepare("UPDATE cbt_ujian SET token = ? WHERE id = ?")->execute([$u['token'], $u['id']]);
+            $core_db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, 240, 'Aktif', NOW())")->execute([$u['token'], $u['id']]);
+        } catch (\Exception $e) {}
+    }
+
+    // 3. Evaluasi Aturan Jadwal (Strict Schedule vs Mode Susulan)
+    $canTake = true;
+    $scheduleState = 'open'; // 'open', 'early', 'expired'
+    $scheduleNotice = '';
+    $jadwalSlotLabel = '';
+
+    if ($lockSchedule) {
+        try {
+            $stmtJ = $core_db->prepare("
+                SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
+                FROM cbt_jadwal_grid g 
+                LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+                WHERE g.ujian_id = ? 
+                ORDER BY g.tanggal DESC, g.id DESC LIMIT 1
+            ");
+            $stmtJ->execute([$u['id']]);
+            $jGrid = $stmtJ->fetch(PDO::FETCH_ASSOC);
+
+            $jStart = null;
+            $jEnd = null;
+
+            if ($jGrid && !empty($jGrid['tanggal']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
+                $jStart = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_mulai']);
+                $jEnd = strtotime($jGrid['tanggal'] . ' ' . $jGrid['jam_selesai']);
+                $jadwalSlotLabel = ($jGrid['label_sesi'] ?: $jGrid['jam_slot']) . ' (' . $jGrid['jam_mulai'] . ' - ' . $jGrid['jam_selesai'] . ')';
+            } elseif ($jGrid && !empty($jGrid['hari']) && !empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) {
+                if (strcasecmp($curHari, $jGrid['hari']) === 0) {
+                    $jStart = strtotime(date('Y-m-d') . ' ' . $jGrid['jam_mulai']);
+                    $jEnd = strtotime(date('Y-m-d') . ' ' . $jGrid['jam_selesai']);
+                } else {
+                    $scheduleState = 'early';
+                    $canTake = false;
+                    $scheduleNotice = 'Jadwal: Hari ' . $jGrid['hari'] . ' (' . $jGrid['jam_mulai'] . ' WIB)';
+                }
+                $jadwalSlotLabel = ($jGrid['label_sesi'] ?: $jGrid['jam_slot']) . ' (' . $jGrid['jam_mulai'] . ' - ' . $jGrid['jam_selesai'] . ')';
+            } elseif (!empty($u['tgl_mulai']) && !empty($u['tgl_selesai'])) {
+                $jStart = strtotime($u['tgl_mulai']);
+                $jEnd = strtotime($u['tgl_selesai']);
+                $jadwalSlotLabel = date('H:i', $jStart) . ' - ' . date('H:i', $jEnd);
+            }
+
+            if ($jStart && $jEnd) {
+                if ($nowTs < $jStart) {
+                    $scheduleState = 'early';
+                    $canTake = false;
+                    $scheduleNotice = 'Sesi dimulai: ' . date('d M, H:i', $jStart) . ' WIB';
+                } elseif ($nowTs > $jEnd) {
+                    $scheduleState = 'expired';
+                    $canTake = false;
+                    $scheduleNotice = 'Sesi berakhir pada ' . date('d M, H:i', $jEnd) . ' WIB';
+                }
+            }
+        } catch (\Exception $e) {}
+    } else {
+        $scheduleNotice = 'Mode Ujian Susulan';
+    }
+
+    $u['can_take'] = $canTake;
+    $u['schedule_state'] = $scheduleState;
+    $u['schedule_notice'] = $scheduleNotice;
+    $u['jadwal_slot_label'] = $jadwalSlotLabel;
+    $ujianTersedia[] = $u;
+}
+
+// 5. Riwayat Ujian yang Sudah Selesai
 $riwayatUjian = [];
 try {
     $stmtRiw = $core_db->prepare("
@@ -195,78 +262,216 @@ try {
     $riwayatUjian = $stmtRiw->fetchAll(PDO::FETCH_ASSOC);
 } catch (\Exception $e) {}
 
-$page_title = 'CBT Ujian Online';
+$page_title = 'CBT Ujian Siswa';
 include 'header.php';
 ?>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <style>
-    .cbt-banner {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #4338ca 100%);
-        border-radius: 20px;
-        padding: 22px 20px;
+    /* Header Pro */
+    .cbt-header-pro {
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0284c7 100%);
+        padding: 24px 20px 48px;
         color: white;
-        margin-bottom: 20px;
+        border-bottom-left-radius: 28px;
+        border-bottom-right-radius: 28px;
+        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.35);
         position: relative;
-        overflow: hidden;
-        box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.35);
     }
-    .cbt-banner::after {
-        content: '\f108';
-        font-family: 'Font Awesome 6 Free';
+    .cbt-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .cbt-brand-sub {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #93c5fd;
+        margin: 0 0 2px 0;
+    }
+    .cbt-brand-title {
+        font-size: 1.35rem;
         font-weight: 900;
-        position: absolute;
-        right: -15px;
-        bottom: -25px;
-        font-size: 130px;
-        opacity: 0.12;
-        pointer-events: none;
+        margin: 0;
+        letter-spacing: -0.3px;
     }
-    .cbt-badge-live {
+
+    /* Student Profile Card (Clean - Only Name & Class) */
+    .cbt-user-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 14px 16px;
+        margin: -32px 16px 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: relative;
+        z-index: 10;
+    }
+    .cbt-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: #2563eb;
+        font-size: 1.4rem;
+        border: 2px solid #bfdbfe;
+    }
+    .cbt-user-meta {
+        flex: 1;
+        min-width: 0;
+    }
+    .cbt-user-name {
+        font-weight: 900;
+        font-size: 1rem;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+    }
+    .cbt-user-badges {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .cbt-badge-class {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .cbt-badge-kj {
+        background: #fdf2f8;
+        color: #db2777;
+        border: 1px solid #fbcfe8;
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 6px;
+    }
+    .cbt-btn-logout {
+        background: #fee2e2;
+        color: #dc2626;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: 0.2s;
+    }
+    .cbt-btn-logout:hover {
+        background: #fecaca;
+    }
+
+    /* Action bar & Top Tata Tertib Button */
+    .cbt-actions-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 16px;
+        margin-bottom: 16px;
+    }
+    .btn-tatatertib-top {
+        background: #ffffff;
+        color: #0f172a;
+        border: 1.5px solid #cbd5e1;
+        padding: 9px 14px;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 800;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 4px 10px;
-        border-radius: 30px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        backdrop-filter: blur(4px);
-        margin-bottom: 8px;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        transition: all 0.2s;
+        flex: 1;
     }
+    .btn-tatatertib-top:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+    .badge-sched-mode {
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 6px 10px;
+        border-radius: 10px;
+        white-space: nowrap;
+    }
+    .badge-sched-mode.mode-normal {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+    .badge-sched-mode.mode-susulan {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+
+    /* Banner CBT Info */
+    .cbt-banner-pro {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 18px;
+        padding: 16px 18px;
+        color: white;
+        margin: 0 16px 18px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .cbt-banner-pro h3 {
+        margin: 0 0 4px 0;
+        font-size: 0.95rem;
+        font-weight: 900;
+        color: #38bdf8;
+    }
+    .cbt-banner-pro p {
+        margin: 0;
+        font-size: 0.76rem;
+        color: #94a3b8;
+        line-height: 1.4;
+    }
+
+    /* Exam Cards */
     .cbt-card {
         background: #ffffff;
         border-radius: 16px;
         padding: 16px;
-        margin-bottom: 14px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        margin: 0 16px 14px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
         border: 1px solid #e2e8f0;
         transition: transform 0.2s, box-shadow 0.2s;
     }
     .cbt-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
-    }
-    .token-card {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: white;
-        border-radius: 16px;
-        padding: 16px;
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 6px 15px rgba(15, 23, 42, 0.15);
-    }
-    .token-display {
-        font-family: 'JetBrains Mono', monospace, monospace;
-        font-size: 1.35rem;
-        font-weight: 900;
-        letter-spacing: 3px;
-        color: #38bdf8;
-        background: rgba(255, 255, 255, 0.08);
-        padding: 6px 12px;
-        border-radius: 8px;
-        border: 1px dashed rgba(56, 189, 248, 0.4);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
     }
     .btn-ujian {
         display: flex;
@@ -276,309 +481,474 @@ include 'header.php';
         width: 100%;
         padding: 12px;
         border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.9rem;
+        font-weight: 800;
+        font-size: 0.88rem;
         text-decoration: none;
         cursor: pointer;
         transition: 0.2s;
         border: none;
+        box-sizing: border-box;
     }
     .btn-ujian-start {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         color: white;
         box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     }
-    .btn-ujian-start:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-    }
     .btn-ujian-continue {
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: white;
         box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
     }
-    .btn-ujian-done {
+    .btn-ujian-locked {
         background: #f1f5f9;
-        color: #059669;
-        border: 1px solid #a7f3d0;
-        cursor: default;
+        color: #64748b;
+        border: 1px solid #cbd5e1;
+        cursor: not-allowed;
+    }
+    .btn-ujian-expired {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        cursor: not-allowed;
+    }
+
+    /* Modal Popup Modern */
+    .cbt-modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        z-index: 99999;
+        justify-content: center;
+        align-items: center;
+        padding: 16px;
+    }
+    .cbt-modal-box {
+        background: #ffffff;
+        border-radius: 22px;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+    }
+    @keyframes popInModal {
+        0% { transform: scale(0.92); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
     }
 </style>
 
-<div class="header" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-    <div class="header-top">
-        <div class="greeting">
-            <p style="margin-bottom: 2px;">Evaluasi Akademik Online</p>
-            <h1 style="margin: 0; font-size: 1.3rem;">CBT Ujian Siswa</h1>
+<div class="cbt-header-pro">
+    <div class="cbt-topbar">
+        <div>
+            <div class="cbt-brand-sub">MADRASAH ALIYAH MIFTAHUL HUDA</div>
+            <h1 class="cbt-brand-title">CBT Ujian Siswa</h1>
         </div>
-        <div class="avatar" style="color: #2563eb; background: white;">
+        <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
             <i class="fa-solid fa-laptop-code"></i>
         </div>
     </div>
 </div>
 
-<div class="main-content" style="padding-bottom: 85px;">
+<div class="main-content" style="padding: 0 0 90px 0;">
 
-    <!-- Card Identitas Siswa -->
-    <div style="background: #ffffff; border-radius: 16px; padding: 14px 16px; margin-top: -2.2rem; margin-bottom: 16px; box-shadow: 0 6px 15px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; position: relative; z-index: 10;">
-        <div style="width: 48px; height: 48px; border-radius: 12px; overflow: hidden; background: #e0e7ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #4338ca; font-size: 1.3rem;">
+    <!-- Card Identitas Siswa: HANYA NAMA & KELAS -->
+    <div class="cbt-user-card">
+        <div class="cbt-avatar">
             <?php if (!empty($siswa['foto'])): ?>
                 <img src="/public/uploads/siswa/<?= htmlspecialchars($siswa['foto']) ?>" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<i class=\'fa-solid fa-user-graduate\'></i>';">
             <?php else: ?>
                 <i class="fa-solid fa-user-graduate"></i>
             <?php endif; ?>
         </div>
-        <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;">
-                <span><?= htmlspecialchars($siswa['nama']) ?></span>
-                <?php if ($is_cbt_only): ?>
-                    <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.65rem; padding: 2px 7px; border-radius: 6px; font-weight: 800;">Kelas Jauh</span>
-                <?php endif; ?>
+        <div class="cbt-user-meta">
+            <div class="cbt-user-name">
+                <?= htmlspecialchars($siswa['nama']) ?>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; font-size: 0.72rem; color: #64748b;">
-                <span><i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars($siswa['nama_kelas']) ?></span>
-                <span>•</span>
-                <span>No. Peserta: <b><?= htmlspecialchars($siswa['nis'] ?: '-') ?></b></span>
-                <?php if (!empty($siswa['nik'])): ?>
-                <span>•</span>
-                <span>NIK: <b><?= htmlspecialchars($siswa['nik']) ?></b></span>
+            <div class="cbt-user-badges">
+                <span class="cbt-badge-class">
+                    <i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars($siswa['nama_kelas']) ?>
+                </span>
+                <?php if ($is_cbt_only): ?>
+                    <span class="cbt-badge-kj">Peserta Khusus CBT</span>
                 <?php endif; ?>
             </div>
         </div>
         <?php if ($is_cbt_only): ?>
-            <a href="logout.php" onclick="return confirm('Keluar dari ruang ujian CBT?')" style="background: #fee2e2; color: #dc2626; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-decoration: none; flex-shrink: 0;" title="Keluar Akun">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </a>
+            <button type="button" onclick="konfirmasiKeluarCbt()" class="cbt-btn-logout" title="Keluar Akun">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </button>
+        <?php endif; ?>
+    </div>
+
+    <!-- Action Bar: Tombol Tata Tertib & Mode Jadwal -->
+    <div class="cbt-actions-bar">
+        <button type="button" onclick="bukaModalTataTertib()" class="btn-tatatertib-top">
+            <i class="fa-solid fa-file-shield" style="color: #2563eb; font-size: 1rem;"></i>
+            <span>Tata Tertib & Larangan Ujian</span>
+        </button>
+        <?php if ($lockSchedule): ?>
+            <span class="badge-sched-mode mode-normal">
+                <i class="fa-solid fa-calendar-check"></i> Sesuai Jadwal
+            </span>
+        <?php else: ?>
+            <span class="badge-sched-mode mode-susulan">
+                <i class="fa-solid fa-clock-rotate-left"></i> Mode Susulan
+            </span>
         <?php endif; ?>
     </div>
 
     <!-- Banner CBT Info -->
-    <div class="cbt-banner">
-        <div class="cbt-badge-live">
-            <i class="fa-solid fa-circle" style="color: #4ade80; font-size: 0.55rem; animation: pulse 1.5s infinite;"></i> CBT Engine v2.5 Online
-        </div>
-        <h2 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 800; line-height: 1.3;">
-            <?= htmlspecialchars($topikAktif['nama_topik'] ?? 'Ujian Berbasis Komputer Madrasah') ?>
-        </h2>
-        <p style="margin: 0; font-size: 0.8rem; opacity: 0.9; line-height: 1.4;">
-            Pastikan Anda memiliki jaringan internet yang stabil sebelum menekan tombol Mulai Ujian.
-        </p>
-    </div>
-
-    <!-- Info Token Ujian -->
-    <div class="token-card">
+    <div class="cbt-banner-pro">
         <div>
-            <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Token Ujian Hari Ini</div>
-            <div style="font-size: 0.82rem; font-weight: 600; margin-top: 2px;">
-                <?= $tokenAktif ? 'Status: <span style="color: #4ade80;">Aktif</span>' : 'Status: <span style="color: #94a3b8;">Menunggu Rilis</span>' ?>
-            </div>
+            <h3><i class="fa-solid fa-layer-group"></i> <?= htmlspecialchars($topikAktif['nama_topik'] ?? 'Asesmen CBT Madrasah') ?></h3>
+            <p>Pastikan koneksi internet stabil & baterai gawai Anda mencukupi.</p>
         </div>
-        <div>
-            <div class="token-display">
-                <?= htmlspecialchars($tokenAktif['token'] ?? '------') ?>
-            </div>
+        <div style="font-size: 1.8rem; opacity: 0.3; margin-left: 10px;">
+            <i class="fa-solid fa-shield-halved"></i>
         </div>
     </div>
 
-    <!-- Section Daftar Ujian Aktif -->
-    <h3 class="section-title" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-        <span><i class="fa-solid fa-clipboard-list" style="color: #2563eb; margin-right: 6px;"></i> Paket Ujian Tersedia</span>
-        <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;"><?= count($ujianList) ?> Paket</span>
-    </h3>
+    <!-- Section Daftar Ujian Tersedia (Yang Belum Selesai) -->
+    <div style="padding: 0 16px 10px; display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="margin: 0; font-size: 0.95rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-clipboard-list" style="color: #2563eb;"></i> Paket Ujian Tersedia
+        </h3>
+        <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;"><?= count($ujianTersedia) ?> Paket</span>
+    </div>
 
-    <?php if (empty($ujianList)): ?>
-        <div style="background: white; border-radius: 16px; padding: 25px 20px; text-align: center; border: 1px dashed #cbd5e1; margin-bottom: 20px;">
+    <?php if (empty($ujianTersedia)): ?>
+        <div style="background: white; border-radius: 16px; padding: 25px 20px; text-align: center; border: 1px dashed #cbd5e1; margin: 0 16px 20px;">
             <div style="width: 55px; height: 55px; border-radius: 50%; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 12px;">
                 <i class="fa-solid fa-mug-hot"></i>
             </div>
-            <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; color: #1e293b;">Belum Ada Ujian Aktif</h4>
+            <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; color: #1e293b; font-weight: 800;">Tidak Ada Paket Ujian Aktif</h4>
             <p style="margin: 0; font-size: 0.8rem; color: #64748b; line-height: 1.4;">
-                Saat ini belum ada paket ujian yang dirilis untuk kelas <b><?= htmlspecialchars($siswa['nama_kelas']) ?></b>. Jadwal ujian berikutnya akan diumumkan oleh guru atau panitia CBT.
+                Seluruh paket ujian untuk kelas <b><?= htmlspecialchars($siswa['nama_kelas']) ?></b> telah selesai dikerjakan atau belum dijadwalkan oleh proktor.
             </p>
         </div>
     <?php else: ?>
-        <?php foreach ($ujianList as $u): ?>
+        <?php foreach ($ujianTersedia as $u): ?>
             <?php
-            $isSelesai = ($u['status_pengerjaan'] === 'Selesai');
             $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']);
             $durasi = (int)($u['durasi_menit'] ?? 90);
             $totalSoal = (int)($u['total_soal'] ?? 0);
             $kkm = (int)($u['kkm'] ?? 75);
+            $tokenUjian = $u['token'] ?? '';
             ?>
             <div class="cbt-card">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div>
-                        <div style="font-size: 0.72rem; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 0.7rem; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="fa-solid fa-book-bookmark"></i> <?= htmlspecialchars($u['kode_ujian']) ?>
                         </div>
-                        <h4 style="margin: 3px 0 0; font-size: 1rem; color: #0f172a; font-weight: 800;">
+                        <h4 style="margin: 2px 0 0; font-size: 0.98rem; color: #0f172a; font-weight: 800; line-height: 1.35;">
                             <?= htmlspecialchars($u['nama_ujian']) ?>
                         </h4>
                     </div>
-                    <?php if ($isSelesai): ?>
-                        <span style="background: #ecfdf5; color: #059669; font-size: 0.7rem; font-weight: 800; padding: 4px 8px; border-radius: 20px; border: 1px solid #a7f3d0;">
-                            ✓ Selesai
-                        </span>
-                    <?php elseif ($isMengerjakan): ?>
-                        <span style="background: #fffbeb; color: #d97706; font-size: 0.7rem; font-weight: 800; padding: 4px 8px; border-radius: 20px; border: 1px solid #fde68a;">
+                    <?php if ($isMengerjakan): ?>
+                        <span style="background: #fffbeb; color: #d97706; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #fde68a; white-space: nowrap;">
                             ⏳ Mengerjakan
                         </span>
-                    <?php else: ?>
-                        <span style="background: #eff6ff; color: #2563eb; font-size: 0.7rem; font-weight: 800; padding: 4px 8px; border-radius: 20px; border: 1px solid #bfdbfe;">
+                    <?php elseif ($u['can_take']): ?>
+                        <span style="background: #eff6ff; color: #2563eb; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #bfdbfe; white-space: nowrap;">
                             Siap
+                        </span>
+                    <?php elseif ($u['schedule_state'] === 'early'): ?>
+                        <span style="background: #f1f5f9; color: #475569; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #cbd5e1; white-space: nowrap;">
+                            🔒 Belum Waktu
+                        </span>
+                    <?php else: ?>
+                        <span style="background: #fee2e2; color: #dc2626; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #fecaca; white-space: nowrap;">
+                            ⛔ Berakhir
                         </span>
                     <?php endif; ?>
                 </div>
 
-                <!-- Info Meta Ujian -->
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f8fafc; border-radius: 10px; padding: 10px; margin-bottom: 14px; text-align: center; border: 1px solid #f1f5f9;">
+                <!-- Info Grid -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f8fafc; border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; text-align: center; border: 1px solid #f1f5f9;">
                     <div>
-                        <div style="font-size: 0.68rem; color: #64748b; font-weight: 600;">Mata Pelajaran</div>
-                        <div style="font-size: 0.8rem; font-weight: 800; color: #1e293b;"><?= htmlspecialchars($u['mapel_nama']) ?></div>
+                        <div style="font-size: 0.65rem; color: #64748b; font-weight: 600;">Mata Pelajaran</div>
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #1e293b;"><?= htmlspecialchars($u['mapel_nama']) ?></div>
                     </div>
                     <div>
-                        <div style="font-size: 0.68rem; color: #64748b; font-weight: 600;">Waktu</div>
-                        <div style="font-size: 0.8rem; font-weight: 800; color: #1e293b;"><?= $durasi ?> Menit</div>
+                        <div style="font-size: 0.65rem; color: #64748b; font-weight: 600;">Alokasi Waktu</div>
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #1e293b;"><?= $durasi ?> Menit</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.68rem; color: #64748b; font-weight: 600;">Total Soal</div>
-                        <div style="font-size: 0.8rem; font-weight: 800; color: #1e293b;"><?= $totalSoal > 0 ? $totalSoal . ' Butir' : 'Tersusun' ?></div>
+                        <div style="font-size: 0.65rem; color: #64748b; font-weight: 600;">Jumlah Soal</div>
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #1e293b;"><?= $totalSoal > 0 ? $totalSoal . ' Butir' : 'Tersusun' ?></div>
                     </div>
                 </div>
 
-                <!-- Action Button -->
-                <?php if ($isSelesai): ?>
-                    <div style="display: flex; gap: 8px;">
-                        <div class="btn-ujian btn-ujian-done" style="flex: 1;">
-                            <i class="fa-solid fa-check-circle"></i> Skor Anda: <b><?= number_format((float)$u['nilai_akhir'], 1) ?></b>
-                        </div>
-                        <a href="/cbt/kerjakan/selesai?peserta_id=<?= (int)$u['peserta_id'] ?>&ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-start" style="width: auto; padding: 10px 14px; font-size: 0.8rem;">
-                            <i class="fa-solid fa-file-lines"></i> Detail
-                        </a>
+                <?php if (!empty($u['jadwal_slot_label'])): ?>
+                    <div style="font-size: 0.72rem; color: #475569; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 5px;">
+                        <i class="fa-solid fa-clock" style="color: #0284c7;"></i> Sesi Jadwal: <b><?= htmlspecialchars($u['jadwal_slot_label']) ?></b>
                     </div>
-                <?php elseif ($isMengerjakan): ?>
+                <?php endif; ?>
+
+                <!-- Action Button -->
+                <?php if ($isMengerjakan): ?>
                     <a href="/cbt/kerjakan?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
-                <?php else: ?>
-                    <button type="button" class="btn-ujian btn-ujian-start" style="width: 100%; border: none; cursor: pointer;" onclick="konfirmasiMulaiUjian(<?= (int)$u['id'] ?>, '<?= htmlspecialchars(addslashes($u['nama_ujian'])) ?>', '<?= htmlspecialchars(addslashes($u['mapel_nama'])) ?>', <?= $durasi ?>, <?= $totalSoal ?>)">
-                        <i class="fa-solid fa-arrow-right"></i> Mulai Kerjakan Ujian Sekarang
+                <?php elseif ($u['can_take']): ?>
+                    <button type="button" class="btn-ujian btn-ujian-start" onclick="konfirmasiMulaiUjian(<?= (int)$u['id'] ?>, '<?= htmlspecialchars(addslashes($u['nama_ujian'])) ?>', '<?= htmlspecialchars(addslashes($u['mapel_nama'])) ?>', <?= $durasi ?>, <?= $totalSoal ?>, '<?= htmlspecialchars(addslashes($tokenUjian)) ?>', <?= $kkm ?>)">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Mulai Kerjakan Ujian
                     </button>
+                <?php elseif ($u['schedule_state'] === 'early'): ?>
+                    <div class="btn-ujian btn-ujian-locked">
+                        <i class="fa-solid fa-lock"></i> <?= htmlspecialchars($u['schedule_notice'] ?: 'Belum Masuk Waktu Ujian') ?>
+                    </div>
+                <?php else: ?>
+                    <div class="btn-ujian btn-ujian-expired">
+                        <i class="fa-solid fa-ban"></i> Sesi Ujian Telah Berakhir
+                    </div>
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- Riwayat Ujian Siswa -->
+    <!-- Riwayat Hasil Ujian CBT -->
     <?php if (!empty($riwayatUjian)): ?>
-        <h3 class="section-title" style="margin-top: 20px; margin-bottom: 12px;">
-            <i class="fa-solid fa-clock-rotate-left" style="color: #10b981; margin-right: 6px;"></i> Riwayat Hasil Ujian CBT
-        </h3>
-        <div style="margin-bottom: 20px;">
+        <div style="padding: 10px 16px 8px; display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-clock-rotate-left" style="color: #10b981;"></i> Riwayat Hasil Ujian CBT
+            </h3>
+            <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;"><?= count($riwayatUjian) ?> Selesai</span>
+        </div>
+
+        <div style="padding: 0 16px;">
             <?php foreach ($riwayatUjian as $r): ?>
                 <?php
                 $isTuntas = ((float)$r['nilai_akhir'] >= (float)($r['kkm'] ?? 75));
                 ?>
-                <div style="background: white; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: 800; font-size: 0.88rem; color: #1e293b;"><?= htmlspecialchars($r['nama_ujian']) ?></div>
+                <div style="background: white; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div style="min-width: 0; flex: 1; padding-right: 10px;">
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= htmlspecialchars($r['nama_ujian']) ?></div>
                         <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">
                             <span><?= htmlspecialchars($r['mapel_nama']) ?></span> • 
                             <span><?= date('d M Y, H:i', strtotime($r['waktu_selesai'])) ?></span>
                         </div>
                     </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 1.1rem; font-weight: 900; color: <?= $isTuntas ? '#10b981' : '#ef4444' ?>;">
-                            <?= number_format((float)$r['nilai_akhir'], 1) ?>
-                        </div>
-                        <span style="font-size: 0.65rem; font-weight: 700; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>;">
-                            <?= $isTuntas ? 'TUNTAS' : 'REMEDIAL' ?>
-                        </span>
+                    <div style="text-align: right; flex-shrink: 0;">
+                        <?php if ($showScoreToStudent): ?>
+                            <div style="font-size: 1.15rem; font-weight: 900; color: <?= $isTuntas ? '#10b981' : '#ef4444' ?>; line-height: 1;">
+                                <?= number_format((float)$r['nilai_akhir'], 1) ?>
+                            </div>
+                            <span style="font-size: 0.65rem; font-weight: 800; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>;">
+                                <?= $isTuntas ? 'TUNTAS' : 'REMEDIAL' ?>
+                            </span>
+                        <?php else: ?>
+                            <div style="font-size: 0.85rem; font-weight: 900; color: <?= $isTuntas ? '#10b981' : '#ef4444' ?>;">
+                                <?= $isTuntas ? '✓ TUNTAS' : '✕ REMEDIAL' ?>
+                            </div>
+                            <span style="font-size: 0.65rem; color: #64748b; font-weight: 700;">
+                                KKM: <?= (int)($r['kkm'] ?? 75) ?>
+                            </span>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 
-    <!-- Panduan Ujian -->
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; margin-top: 15px;">
-        <h4 style="margin: 0 0 6px 0; font-size: 0.85rem; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-            <i class="fa-solid fa-shield-halved" style="color: #3b82f6;"></i> Tata Tertib Ujian CBT
-        </h4>
-        <ul style="margin: 0; padding-left: 18px; font-size: 0.75rem; color: #64748b; line-height: 1.6;">
-            <li>Gunakan koneksi internet yang stabil selama ujian berlangsung.</li>
-            <li>Dilarang keluar aplikasi atau berpindah tab saat waktu ujian berjalan.</li>
-            <li>Jawaban Anda tersimpan otomatis setiap kali memilih opsi.</li>
-            <li>Jika ada kendala soal atau token, segera hubungi Pengawas Ruang / Proktor.</li>
-        </ul>
+    <!-- MODAL 1: TATA TERTIB & LARANGAN UJIAN CBT -->
+    <div id="modalTataTertib" class="cbt-modal-backdrop">
+        <div class="cbt-modal-box">
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 18px 20px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-file-shield" style="font-size: 1.2rem; color: #93c5fd;"></i>
+                    <h3 style="margin: 0; font-size: 1rem; font-weight: 800;">Tata Tertib Ujian CBT</h3>
+                </div>
+                <button type="button" onclick="tutupModalTataTertib()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 0.9rem;">
+                    ✕
+                </button>
+            </div>
+            <div style="padding: 18px 20px; overflow-y: auto; font-size: 0.82rem; color: #334155; line-height: 1.6;">
+                <div style="margin-bottom: 14px;">
+                    <b style="color: #1e3a8a; display: block; margin-bottom: 4px; font-size: 0.88rem;">1. Ketentuan Umum & Kesiapan</b>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li>Peserta wajib hadir dan mengaktifkan lembar ujian tepat waktu sesuai jadwal sesi.</li>
+                        <li>Pastikan daya baterai gawai Anda minimal 50% dan memiliki koneksi internet yang lancar.</li>
+                    </ul>
+                </div>
+                <div style="margin-bottom: 14px;">
+                    <b style="color: #dc2626; display: block; margin-bottom: 4px; font-size: 0.88rem;">2. Larangan Keras & Sistem Anti-Cheat</b>
+                    <ul style="margin: 0; padding-left: 18px; color: #991b1b;">
+                        <li><b>Dilarang keluar aplikasi atau berpindah tab browser</b> selama ujian berlangsung. Toleransi sistem maksimal <b><?= $maxTabViolations ?> kali</b> sebelum lembar jawaban Anda <b>dikumpulkan paksa (Auto-Submit)</b>!</li>
+                        <li>Dilarang menekan tombol kembali (back button). Menekan tombol kembali akan memicu alarm bahaya.</li>
+                        <li>Dilarang mengambil tangkapan layar (screenshot), merekam layar, atau menyalin (copy-paste) soal ujian.</li>
+                        <li>Dilarang membuka mesin pencari, bantuan AI, ataupun membuka catatan dalam bentuk apapun.</li>
+                    </ul>
+                </div>
+                <div style="margin-bottom: 14px;">
+                    <b style="color: #1e3a8a; display: block; margin-bottom: 4px; font-size: 0.88rem;">3. Mekanisme Pengerjaan & Waktu</b>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li>Jawaban tersimpan otomatis setiap kali opsi dipilih.</li>
+                        <li>Hitungan waktu berjalan mundur di server. Jika waktu habis, jawaban otomatis tersimpan.</li>
+                    </ul>
+                </div>
+                <div>
+                    <b style="color: #1e3a8a; display: block; margin-bottom: 4px; font-size: 0.88rem;">4. Kelulusan & Remedial</b>
+                    <p style="margin: 0;">
+                        Peserta yang memperoleh perolehan nilai di bawah standar KKM wajib mengikuti program remedial sesuai instruksi guru mata pelajaran.
+                    </p>
+                </div>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid #e2e8f0; background: #f8fafc; text-align: right;">
+                <button type="button" onclick="tutupModalTataTertib()" style="padding: 9px 20px; border-radius: 10px; background: #2563eb; color: white; border: none; font-weight: 800; font-size: 0.82rem; cursor: pointer;">
+                    Saya Paham & Patuh
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Modal Konfirmasi Mulai Ujian Modern -->
-    <div id="modalStartExam" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 18px;">
-        <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 390px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden; animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+    <!-- MODAL 2: KONFIRMASI MULAI UJIAN + TOKEN INPUT -->
+    <div id="modalStartExam" class="cbt-modal-backdrop">
+        <div class="cbt-modal-box">
             <!-- Modal Header -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 22px 20px 18px; text-align: center; color: #ffffff;">
-                <div style="width: 56px; height: 56px; margin: 0 auto 12px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; border: 2px solid rgba(255, 255, 255, 0.3);">
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 20px 20px 16px; text-align: center; color: #ffffff;">
+                <div style="width: 52px; height: 52px; margin: 0 auto 10px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 2px solid rgba(255, 255, 255, 0.3);">
                     🚀
                 </div>
-                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px;">Mulai Pengerjaan Ujian?</h3>
-                <p style="margin: 4px 0 0; font-size: 0.78rem; color: #bfdbfe;">Waktu pengerjaan akan segera dihitung mundur</p>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 900; letter-spacing: -0.3px;">Konfirmasi Pelaksanaan Ujian</h3>
+                <p style="margin: 3px 0 0; font-size: 0.76rem; color: #bfdbfe;">Masukkan token ujian untuk membuka lembar soal</p>
             </div>
 
             <!-- Modal Body -->
-            <div style="padding: 18px 20px 14px;">
+            <div style="padding: 16px 20px; overflow-y: auto;">
+                <!-- Info Paket Ujian -->
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;">
-                    <div id="modalExamTitle" style="font-size: 0.92rem; font-weight: 800; color: #0f172a; line-height: 1.4; margin-bottom: 6px;">-</div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.75rem; color: #475569; font-weight: 600;">
+                    <div id="modalExamTitle" style="font-size: 0.95rem; font-weight: 900; color: #0f172a; line-height: 1.35; margin-bottom: 6px;">-</div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.72rem; font-weight: 700;">
                         <span id="modalExamMapel" style="background: #eff6ff; color: #2563eb; padding: 3px 8px; border-radius: 6px; border: 1px solid #dbeafe;">-</span>
                         <span id="modalExamDurasi" style="background: #f0fdf4; color: #16a34a; padding: 3px 8px; border-radius: 6px; border: 1px solid #dcfce7;">-</span>
                         <span id="modalExamSoal" style="background: #faf5ff; color: #7c3aed; padding: 3px 8px; border-radius: 6px; border: 1px solid #f3e8ff;">-</span>
                     </div>
                 </div>
 
-                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px; font-size: 0.74rem; color: #92400e; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.95rem; margin-top: 2px; flex-shrink: 0; color: #d97706;"></i>
+                <!-- Box Token Ujian Resmi -->
+                <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; text-align: center; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);">
+                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">KODE TOKEN UJIAN RESMI</div>
+                    <div id="modalExamToken" style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 900; letter-spacing: 4px; color: #38bdf8; margin: 4px 0 2px;">
+                        ------
+                    </div>
+                    <div style="font-size: 0.68rem; color: #94a3b8;">Token ini berlaku khusus untuk mata pelajaran ini.</div>
+                </div>
+
+                <!-- Form Input Token Siswa -->
+                <div style="margin-bottom: 12px;">
+                    <label for="inputTokenUjian" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 6px;">
+                        Ketikkan Kode Token Ujian di Bawah:
+                    </label>
+                    <input type="text" id="inputTokenUjian" placeholder="Contoh: MAT267" maxlength="10" autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 2px solid #cbd5e1; text-align: center; text-transform: uppercase; font-family: monospace; font-size: 1.25rem; font-weight: 900; letter-spacing: 4px; color: #0f172a; outline: none; transition: border-color 0.2s;">
+                    <div id="tokenErrorMsg" style="display: none; color: #dc2626; font-size: 0.72rem; font-weight: 800; margin-top: 4px; text-align: center;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Token tidak cocok! Silakan cek kembali.
+                    </div>
+                </div>
+
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 8px 10px; font-size: 0.72rem; color: #92400e; line-height: 1.4; display: flex; gap: 6px; align-items: flex-start;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.85rem; margin-top: 1px; flex-shrink: 0; color: #d97706;"></i>
                     <div>
-                        <b>Perhatian Proktor:</b> Jangan menutup aplikasi, berpindah tab, atau keluar dari ruang ujian. Pelanggaran sistem dapat mengunci lembar jawaban Anda.
+                        <b>Peringatan:</b> Waktu akan langsung dihitung mundur setelah Anda menekan tombol Mulai.
                     </div>
                 </div>
             </div>
 
             <!-- Modal Footer Buttons -->
-            <div style="padding: 0 20px 20px; display: flex; gap: 10px;">
-                <button type="button" onclick="tutupModalMulai()" style="flex: 1; padding: 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+            <div style="padding: 12px 20px 18px; display: flex; gap: 10px;">
+                <button type="button" onclick="tutupModalMulai()" style="flex: 1; padding: 11px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 800; font-size: 0.84rem; cursor: pointer;">
                     Batal
                 </button>
-                <a id="modalStartLink" href="#" style="flex: 1.4; padding: 12px; border-radius: 10px; border: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 800; font-size: 0.85rem; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); transition: all 0.2s;">
-                    <span>Mulai Sekarang</span> <i class="fa-solid fa-arrow-right"></i>
-                </a>
+                <button type="button" onclick="verifikasiDanMulaiUjian()" style="flex: 1.4; padding: 11px; border-radius: 10px; border: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 900; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
+                    <span>Mulai Ujian</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
             </div>
         </div>
     </div>
 
-    <style>
-    @keyframes popInModal {
-        0% { transform: scale(0.92); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-    </style>
-
-    <script>
-    function konfirmasiMulaiUjian(ujianId, namaUjian, mapelNama, durasi, totalSoal) {
-        document.getElementById('modalExamTitle').textContent = namaUjian;
-        document.getElementById('modalExamMapel').textContent = mapelNama || 'CBT Online';
-        document.getElementById('modalExamDurasi').textContent = durasi + ' Menit';
-        document.getElementById('modalExamSoal').textContent = (totalSoal > 0 ? totalSoal + ' Soal' : '50 Soal');
-        document.getElementById('modalStartLink').href = '/cbt/kerjakan?ujian_id=' + ujianId;
-        
-        const modal = document.getElementById('modalStartExam');
-        modal.style.display = 'flex';
-    }
-
-    function tutupModalMulai() {
-        const modal = document.getElementById('modalStartExam');
-        modal.style.display = 'none';
-    }
-    </script>
 </div>
+
+<script>
+let curUjianId = 0;
+let curExpectedToken = '';
+
+function bukaModalTataTertib() {
+    document.getElementById('modalTataTertib').style.display = 'flex';
+}
+function tutupModalTataTertib() {
+    document.getElementById('modalTataTertib').style.display = 'none';
+}
+
+function konfirmasiMulaiUjian(ujianId, namaUjian, mapelNama, durasi, totalSoal, tokenResmi, kkm) {
+    curUjianId = ujianId;
+    curExpectedToken = (tokenResmi || '').trim().toUpperCase();
+
+    document.getElementById('modalExamTitle').textContent = namaUjian;
+    document.getElementById('modalExamMapel').textContent = mapelNama || 'CBT Online';
+    document.getElementById('modalExamDurasi').textContent = durasi + ' Menit';
+    document.getElementById('modalExamSoal').textContent = (totalSoal > 0 ? totalSoal + ' Soal' : '50 Soal');
+    document.getElementById('modalExamToken').textContent = curExpectedToken || '------';
+    
+    const inp = document.getElementById('inputTokenUjian');
+    inp.value = '';
+    inp.style.borderColor = '#cbd5e1';
+    document.getElementById('tokenErrorMsg').style.display = 'none';
+
+    document.getElementById('modalStartExam').style.display = 'flex';
+    setTimeout(() => inp.focus(), 250);
+}
+
+function tutupModalMulai() {
+    document.getElementById('modalStartExam').style.display = 'none';
+}
+
+function verifikasiDanMulaiUjian() {
+    const inp = document.getElementById('inputTokenUjian');
+    const entered = inp.value.trim().toUpperCase();
+
+    if (!entered) {
+        inp.style.borderColor = '#dc2626';
+        inp.focus();
+        document.getElementById('tokenErrorMsg').textContent = 'Ketikkan token ujian terlebih dahulu!';
+        document.getElementById('tokenErrorMsg').style.display = 'block';
+        return;
+    }
+
+    if (entered !== curExpectedToken) {
+        inp.style.borderColor = '#dc2626';
+        inp.focus();
+        document.getElementById('tokenErrorMsg').textContent = 'Token tidak cocok! Ketikkan persis sesuai token di atas.';
+        document.getElementById('tokenErrorMsg').style.display = 'block';
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Token Tidak Sesuai!',
+                text: 'Kode token yang Anda masukkan salah. Periksa kembali kode token resmi di atas.',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+        return;
+    }
+
+    // Token cocok -> Redirect ke kerjakan ujian!
+    window.location.href = '/cbt/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(entered);
+}
+
+// Enter key submit on input token
+document.getElementById('inputTokenUjian')?.addEventListener('keyup', function(e) {
+    if (e.key === 'Enter') {
+        verifikasiDanMulaiUjian();
+    }
+});
+</script>
 
 <?php include 'footer.php'; ?>

@@ -1,7 +1,8 @@
 <?php
 $pageTitle = 'Ujian Selesai - Hasil Perolehan';
 $logoUrl = \App\Core\Branding::getInstitusiLogo();
-$isTuntas = ($pesertaInfo['nilai_akhir'] >= ($ujianInfo['kkm'] ?? 75));
+$isTuntas = ((float)$pesertaInfo['nilai_akhir'] >= (float)($ujianInfo['kkm'] ?? 75));
+$showScore = isset($showScore) ? (bool)$showScore : true;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -90,17 +91,25 @@ $isTuntas = ($pesertaInfo['nilai_akhir'] >= ($ujianInfo['kkm'] ?? 75));
             <?php echo htmlspecialchars($ujianInfo['nama_ujian']); ?> &bull; <?php echo htmlspecialchars($ujianInfo['mapel_nama']); ?>
         </div>
 
+        <?php if ($showScore): ?>
         <div class="score-circle">
             <div class="score-num"><?php echo number_format($pesertaInfo['nilai_akhir'], 0); ?></div>
             <div class="score-label">Nilai Akhir</div>
         </div>
+        <?php else: ?>
+        <div class="score-circle" style="width: 110px; height: 110px; margin: 1.25rem auto;">
+            <i data-lucide="<?php echo $isTuntas ? 'check-circle-2' : 'alert-circle'; ?>" style="width: 44px; height: 44px;"></i>
+            <div class="score-label" style="margin-top: 6px;"><?php echo $isTuntas ? 'TUNTAS' : 'REMEDIAL'; ?></div>
+        </div>
+        <?php endif; ?>
 
         <div style="margin-bottom: 1.5rem;">
             <span style="display: inline-block; padding: 6px 18px; border-radius: 100px; font-weight: 800; font-size: 0.85rem; <?php echo $isTuntas ? 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;' : 'background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;'; ?>">
-                <?php echo $isTuntas ? '✓ TUNTAS (Memenuhi KKM: ' . $ujianInfo['kkm'] . ')' : '✕ PERLU REMEDIAL (KKM: ' . $ujianInfo['kkm'] . ')'; ?>
+                <?php echo $isTuntas ? '✓ TUNTAS (Memenuhi KKM: ' . ($ujianInfo['kkm'] ?? 75) . ')' : '✕ PERLU REMEDIAL (KKM: ' . ($ujianInfo['kkm'] ?? 75) . ')'; ?>
             </span>
         </div>
 
+        <?php if ($showScore): ?>
         <div class="stats-grid">
             <div class="stat-box">
                 <div class="val" style="color: #16a34a;"><?php echo $pesertaInfo['jumlah_benar']; ?></div>
@@ -111,6 +120,14 @@ $isTuntas = ($pesertaInfo['nilai_akhir'] >= ($ujianInfo['kkm'] ?? 75));
                 <div class="lab">Jawaban Salah</div>
             </div>
         </div>
+        <?php else: ?>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin: 1.25rem 0; font-size: 0.8rem; color: #475569; line-height: 1.5; display: flex; align-items: center; gap: 10px; text-align: left;">
+            <i data-lucide="shield-check" style="width: 22px; height: 22px; color: #0ea5e9; flex-shrink: 0;"></i>
+            <div>
+                <b>Skor Numerik Disembunyikan:</b> Lembar jawaban telah tersimpan rapi. Nilai numerik resmi dan arahan pelaksanaan remedial akan disampaikan oleh guru pengampu mapel.
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 1.5rem; text-align: left; font-size: 0.82rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">

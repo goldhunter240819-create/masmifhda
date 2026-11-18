@@ -17,6 +17,7 @@ $blockBackButton = ($settings['block_back_button'] ?? '1') === '1';
 
 $durasiMenit = (int)($settings['default_durasi_menit'] ?? 90);
 $defaultKkm = (int)($settings['default_kkm'] ?? 75);
+$lockBySchedule = ($settings['lock_by_schedule_time'] ?? '1') === '1';
 $acakSoal = ($settings['acak_soal_default'] ?? '1') === '1';
 $acakOpsi = ($settings['acak_opsi_default'] ?? '1') === '1';
 $showScore = ($settings['show_score_to_student'] ?? '1') === '1';
@@ -421,9 +422,9 @@ $listTerkunci = $listTerkunci ?? [];
                                     </div>
                                     <p class="setting-desc">Waktu pengerjaan standar (dalam menit) saat membuat paket ujian baru.</p>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 6px; width: 130px;">
-                                    <input type="number" name="settings[default_durasi_menit]" value="<?php echo $durasiMenit; ?>" min="15" max="300" class="input-sm" style="font-size: 0.95rem; font-weight: 800; text-align: center;">
-                                    <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">Mnt</span>
+                                <div style="display: flex; align-items: center; gap: 8px; min-width: 140px; justify-content: flex-end; flex-shrink: 0;">
+                                    <input type="number" name="settings[default_durasi_menit]" value="<?php echo $durasiMenit; ?>" min="15" max="300" class="input-sm" style="width: 85px; text-align: center;">
+                                    <span style="font-size: 0.85rem; font-weight: 800; color: #475569; white-space: nowrap;">Mnt</span>
                                 </div>
                             </div>
                         </div>
@@ -438,10 +439,31 @@ $listTerkunci = $listTerkunci ?? [];
                                     </div>
                                     <p class="setting-desc">Batas nilai KKM acuan kelulusan dan penentuan status Tuntas / Remedial.</p>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 6px; width: 130px;">
-                                    <input type="number" name="settings[default_kkm]" value="<?php echo $defaultKkm; ?>" min="0" max="100" class="input-sm" style="font-size: 0.95rem; font-weight: 800; text-align: center;">
-                                    <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">Poin</span>
+                                <div style="display: flex; align-items: center; gap: 8px; min-width: 140px; justify-content: flex-end; flex-shrink: 0;">
+                                    <input type="number" name="settings[default_kkm]" value="<?php echo $defaultKkm; ?>" min="0" max="100" class="input-sm" style="width: 85px; text-align: center;">
+                                    <span style="font-size: 0.85rem; font-weight: 800; color: #475569; white-space: nowrap;">Poin</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- 2b. Kunci Sesuai Jadwal (Mode Normal vs Susulan) -->
+                        <div class="card setting-card" style="border-left: 4px solid #0ea5e9;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-cyan"><i data-lucide="calendar-clock"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Kunci Pengerjaan Sesuai Jadwal</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        <b>Jika AKTIF (Mode Normal):</b> Siswa hanya dapat membuka lembar ujian pada tanggal & jam slot sesi ujian yang telah ditentukan di Jadwal Ujian. Tombol dan Token otomatis terkunci sebelum waktu mulai dan sesudah sesi berakhir.<br>
+                                        <b>Jika NONAKTIF (Mode Susulan):</b> Siswa yang izin/sakit dapat mengerjakan ujian di luar jadwal resmi. <i>(Catatan: Siswa yang sudah menyelesaikan ujian tetap tidak dapat mengulang).</i>
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[lock_by_schedule_time]" value="0">
+                                    <input type="checkbox" name="settings[lock_by_schedule_time]" value="1" <?php echo $lockBySchedule ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
                             </div>
                         </div>
 
@@ -853,6 +875,27 @@ $listTerkunci = $listTerkunci ?? [];
 .cbt-tab-btn.active {
     color: #0ea5e9;
     border-bottom-color: #0ea5e9;
+}
+
+/* Modern Input Controls */
+.input-sm {
+    width: 100%;
+    min-width: 75px;
+    padding: 8px 12px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    background: #ffffff;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    line-height: 1.4;
+}
+.input-sm:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
 }
 </style>
 
