@@ -29,6 +29,11 @@ if (!isset($_SESSION['siswa_id'])) {
     exit;
 }
 
+if (!empty($_SESSION['is_cbt_only'])) {
+    header("Location: cbt.php");
+    exit;
+}
+
 $siswa_id = $_SESSION['siswa_id'];
 
 // Ambil data siswa

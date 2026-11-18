@@ -1,6 +1,19 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
+<?php if (!empty($_SESSION['is_cbt_only'])): ?>
+        <!-- BOTTOM NAVIGATION KHUSUS PESERTA CBT KELAS JAUH -->
+        <div class="bottom-nav" style="left: 50%; transform: translateX(-50%); border-top: 1px solid #e2e8f0; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center; height: auto; min-height: 70px; padding-top: 5px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 9999; background: #ffffff;">
+            <a href="cbt.php" class="nav-item active" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #2563eb;">
+                <i class="fa-solid fa-laptop-code" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
+                <span style="font-size: 0.72rem; font-weight: 700;">Ruang CBT</span>
+            </a>
+            <a href="logout.php" onclick="return confirm('Yakin ingin keluar akun CBT?')" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
+                <i class="fa-solid fa-right-from-bracket" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
+                <span style="font-size: 0.72rem; font-weight: 700;">Keluar Akun</span>
+            </a>
+        </div>
+<?php else: ?>
         <!-- BOTTOM NAVIGATION -->
         <div class="bottom-nav" style="left: 50%; transform: translateX(-50%); border-top: 1px solid #e2e8f0; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center; height: auto; min-height: 75px; padding-top: 5px; padding-bottom: calc(25px + env(safe-area-inset-bottom)); z-index: 9999;">
             <a href="index.php" class="nav-item <?= ($current_page == 'index.php') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; height: 100%;">
@@ -29,6 +42,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <span style="font-size: 0.65rem; font-weight: 500;">Profil</span>
             </a>
         </div>
+<?php endif; ?>
     </div> <!-- .mobile-wrapper -->
 
     <style>
@@ -51,7 +65,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     </style>
-    <?php if (isset($_SESSION['siswa_id'])): ?>
+    <?php if (isset($_SESSION['siswa_id']) && empty($_SESSION['is_cbt_only'])): ?>
     <script>
         function checkUnreadChat() {
             fetch('api_chat.php?action=check_unread')

@@ -13,6 +13,7 @@ if (isset($_SESSION['role_id']) && in_array($_SESSION['role_id'], [1, 99])) {
 // Hapus cookie remember me untuk siswa dan guru
 setcookie('apk_remember_siswa', '', time() - 3600, "/");
 setcookie('apk_remember_guru', '', time() - 3600, "/");
+setcookie('apk_remember_cbt', '', time() - 3600, "/");
 
 // Redirect kembali ke halaman login APK
 header("Location: login.php");

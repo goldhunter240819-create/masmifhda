@@ -102,6 +102,26 @@ class CbtController {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+            // 6. Tabel Peserta Khusus / Kelas Jauh (Terisolasi 100% dari SIAKAD & Keuangan)
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_peserta_khusus (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                no_peserta VARCHAR(50) NOT NULL UNIQUE,
+                nis VARCHAR(50) DEFAULT NULL,
+                nama_siswa VARCHAR(150) NOT NULL,
+                tingkat VARCHAR(20) NOT NULL DEFAULT 'Kelas X',
+                kelas_nama VARCHAR(100) NOT NULL DEFAULT 'X - Kelas Jauh',
+                username VARCHAR(50) NOT NULL UNIQUE,
+                password_plain VARCHAR(100) DEFAULT '123456',
+                password_hash VARCHAR(255) DEFAULT NULL,
+                lokasi_cabang VARCHAR(100) DEFAULT 'Kelas Jauh',
+                status VARCHAR(20) DEFAULT 'Aktif',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (no_peserta),
+                INDEX (username),
+                INDEX (tingkat),
+                INDEX (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
             // Seed default slots jika masih kosong
             $cntSlot = (int)$db->query("SELECT COUNT(*) FROM cbt_jam_slot")->fetchColumn();
             if ($cntSlot === 0) {
@@ -1694,10 +1714,14 @@ class CbtController {
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 
-        // Daftar kelas real dari database kelas
+        // Daftar kelas real dari database kelas + kelas jauh
         $kelasList = [];
         try {
-            $kelasList = $db->query("SELECT DISTINCT nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_COLUMN);
+            $k1 = $db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
+            $k2 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+            $k3 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+            $kelasList = array_unique(array_filter(array_merge($k1, $k2, $k3)));
+            sort($kelasList);
         } catch (\Exception $e) {}
 
         // Query Peserta Real
@@ -1997,10 +2021,44 @@ class CbtController {
         $userId = (int)($_SESSION['user_id'] ?? 0);
         $roleId = (int)($_SESSION['role_id'] ?? 0);
         $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
+        $isCbtOnly = !empty($_SESSION['is_cbt_only']);
 
         $pesertaInfo = null;
 
-        if ($roleId === 3 || $siswaSessionId > 0) {
+        if ($isCbtOnly || $roleId === 7) {
+            // Siswa Khusus / Kelas Jauh (CBT Only)
+            $stmtK = $db->prepare("SELECT * FROM cbt_peserta_khusus WHERE id = ? LIMIT 1");
+            $stmtK->execute([$siswaSessionId]);
+            $kSiswa = $stmtK->fetch(PDO::FETCH_ASSOC);
+
+            if ($kSiswa) {
+                $noPeserta = $kSiswa['no_peserta'] ?: ($kSiswa['nis'] ?: ('KJ-' . $kSiswa['id']));
+                $stmtP = $db->prepare("SELECT * FROM cbt_peserta WHERE ujian_id = ? AND nis = ? LIMIT 1");
+                $stmtP->execute([$ujian_id, $noPeserta]);
+                $pesertaInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
+
+                if (!$pesertaInfo) {
+                    $nowStr = date('Y-m-d H:i:s');
+                    $stmtIns = $db->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, status_pengerjaan) 
+                                             VALUES (?, NULL, ?, ?, ?, NOW(), 'Mengerjakan')");
+                    $stmtIns->execute([$ujian_id, $noPeserta, $kSiswa['nama_siswa'], $kSiswa['kelas_nama']]);
+                    $pesertaInfo = [
+                        'id' => (int)$db->lastInsertId(),
+                        'ujian_id' => $ujian_id,
+                        'siswa_id' => null,
+                        'nis' => $noPeserta,
+                        'nama_siswa' => $kSiswa['nama_siswa'],
+                        'kelas_nama' => $kSiswa['kelas_nama'],
+                        'waktu_mulai' => $nowStr,
+                        'status_pengerjaan' => 'Mengerjakan',
+                        'jawaban_json' => null
+                    ];
+                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai') {
+                    redirect("/cbt/kerjakan/selesai?peserta_id={$pesertaInfo['id']}&ujian_id={$ujian_id}");
+                    exit;
+                }
+            }
+        } elseif ($roleId === 3 || $siswaSessionId > 0) {
             // Role Siswa: Cari data siswa di database core
             $stmtSiswa = $db->prepare("SELECT s.id, s.nis, s.nama, COALESCE(k.nama_kelas, 'Umum') as kelas_nama 
                                        FROM siswa s 
@@ -2470,5 +2528,203 @@ class CbtController {
             exit;
         }
         redirect('/cbt/pengaturan');
+    }
+
+    /**
+     * Manajemen Peserta CBT Kelas Jauh (Terisolasi dari SIAKAD)
+     */
+    public static function pesertaKhusus() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $selectedTingkat = trim($_GET['tingkat'] ?? '');
+        $search = trim($_GET['q'] ?? '');
+
+        $sql = "SELECT * FROM cbt_peserta_khusus WHERE 1=1";
+        $params = [];
+
+        if ($selectedTingkat !== '') {
+            $sql .= " AND tingkat = ?";
+            $params[] = $selectedTingkat;
+        }
+
+        if ($search !== '') {
+            $sql .= " AND (nama_siswa LIKE ? OR no_peserta LIKE ? OR username LIKE ? OR nis LIKE ?)";
+            $wildcard = "%{$search}%";
+            $params[] = $wildcard;
+            $params[] = $wildcard;
+            $params[] = $wildcard;
+            $params[] = $wildcard;
+        }
+
+        $sql .= " ORDER BY tingkat ASC, nama_siswa ASC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $pesertaList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Hitung statistik tingkat
+        $countX = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta_khusus WHERE tingkat = 'Kelas X'")->fetchColumn();
+        $countXI = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta_khusus WHERE tingkat = 'Kelas XI'")->fetchColumn();
+        $countXII = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta_khusus WHERE tingkat = 'Kelas XII'")->fetchColumn();
+
+        include __DIR__ . '/../../resources/views/cbt/peserta_khusus.php';
+    }
+
+    /**
+     * Simpan / Perbarui Peserta CBT Kelas Jauh
+     */
+    public static function savePesertaKhusus() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            $nama_siswa = trim($_POST['nama_siswa'] ?? '');
+            $no_peserta = trim($_POST['no_peserta'] ?? '');
+            $nis = trim($_POST['nis'] ?? '') ?: null;
+            $tingkat = trim($_POST['tingkat'] ?? 'Kelas X');
+            $kelas_nama = trim($_POST['kelas_nama'] ?? 'X - Kelas Jauh');
+            $username = trim($_POST['username'] ?? '');
+            $password_plain = trim($_POST['password_plain'] ?? '123456');
+            $lokasi_cabang = trim($_POST['lokasi_cabang'] ?? 'Kelas Jauh');
+            $status = trim($_POST['status'] ?? 'Aktif');
+
+            if (empty($username)) {
+                $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $no_peserta));
+            }
+            $password_hash = password_hash($password_plain, PASSWORD_DEFAULT);
+
+            if ($id > 0) {
+                $stmt = $db->prepare("UPDATE cbt_peserta_khusus 
+                    SET no_peserta = ?, nis = ?, nama_siswa = ?, tingkat = ?, kelas_nama = ?, username = ?, password_plain = ?, password_hash = ?, lokasi_cabang = ?, status = ?
+                    WHERE id = ?");
+                $stmt->execute([$no_peserta, $nis, $nama_siswa, $tingkat, $kelas_nama, $username, $password_plain, $password_hash, $lokasi_cabang, $status, $id]);
+            } else {
+                $stmt = $db->prepare("INSERT INTO cbt_peserta_khusus 
+                    (no_peserta, nis, nama_siswa, tingkat, kelas_nama, username, password_plain, password_hash, lokasi_cabang, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$no_peserta, $nis, $nama_siswa, $tingkat, $kelas_nama, $username, $password_plain, $password_hash, $lokasi_cabang, $status]);
+            }
+
+            redirect('/cbt/peserta_khusus?msg=saved');
+            exit;
+        }
+        redirect('/cbt/peserta_khusus');
+    }
+
+    /**
+     * Hapus Peserta CBT Kelas Jauh
+     */
+    public static function deletePesertaKhusus() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            if ($id > 0) {
+                $stmt = $db->prepare("DELETE FROM cbt_peserta_khusus WHERE id = ?");
+                $stmt->execute([$id]);
+            }
+            redirect('/cbt/peserta_khusus?msg=deleted');
+            exit;
+        }
+        redirect('/cbt/peserta_khusus');
+    }
+
+    /**
+     * Import Massal Peserta Kelas Jauh dari CSV
+     */
+    public static function importPesertaKhusus() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file_csv']) && is_uploaded_file($_FILES['file_csv']['tmp_name'])) {
+            $handle = fopen($_FILES['file_csv']['tmp_name'], 'r');
+            $count = 0;
+            $header = true;
+
+            while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+                if ($header) {
+                    $header = false;
+                    // Skip header jika baris pertama adalah judul kolom
+                    if (isset($row[0]) && stripos($row[0], 'Peserta') !== false) {
+                        continue;
+                    }
+                }
+
+                $no_peserta = trim($row[0] ?? '');
+                $nama_siswa = trim($row[1] ?? '');
+                $tingkat = trim($row[2] ?? 'Kelas X');
+                $kelas_nama = trim($row[3] ?? 'X - Kelas Jauh');
+                $username = trim($row[4] ?? '');
+                $password_plain = trim($row[5] ?? '123456');
+
+                if (empty($nama_siswa) || empty($no_peserta)) {
+                    continue;
+                }
+
+                if (empty($username)) {
+                    $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $no_peserta));
+                }
+                $password_hash = password_hash($password_plain, PASSWORD_DEFAULT);
+
+                // Cek apakah no_peserta atau username sudah ada
+                $check = $db->prepare("SELECT id FROM cbt_peserta_khusus WHERE no_peserta = ? OR username = ?");
+                $check->execute([$no_peserta, $username]);
+                $existingId = $check->fetchColumn();
+
+                if ($existingId) {
+                    $stmt = $db->prepare("UPDATE cbt_peserta_khusus 
+                        SET nama_siswa = ?, tingkat = ?, kelas_nama = ?, password_plain = ?, password_hash = ?
+                        WHERE id = ?");
+                    $stmt->execute([$nama_siswa, $tingkat, $kelas_nama, $password_plain, $password_hash, $existingId]);
+                } else {
+                    $stmt = $db->prepare("INSERT INTO cbt_peserta_khusus 
+                        (no_peserta, nama_siswa, tingkat, kelas_nama, username, password_plain, password_hash, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 'Aktif')");
+                    $stmt->execute([$no_peserta, $nama_siswa, $tingkat, $kelas_nama, $username, $password_plain, $password_hash]);
+                }
+                $count++;
+            }
+            fclose($handle);
+
+            redirect('/cbt/peserta_khusus?msg=imported&count=' . $count);
+            exit;
+        }
+        redirect('/cbt/peserta_khusus');
+    }
+
+    /**
+     * Cetak Kartu Peserta Kelas Jauh
+     */
+    public static function cetakKartuPesertaKhusus() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $tingkat = trim($_GET['tingkat'] ?? '');
+        $id = (int)($_GET['id'] ?? 0);
+
+        $sql = "SELECT * FROM cbt_peserta_khusus WHERE status = 'Aktif'";
+        $params = [];
+
+        if ($id > 0) {
+            $sql .= " AND id = ?";
+            $params[] = $id;
+        } elseif ($tingkat !== '') {
+            $sql .= " AND tingkat = ?";
+            $params[] = $tingkat;
+        }
+
+        $sql .= " ORDER BY tingkat ASC, nama_siswa ASC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $pesertaList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        include __DIR__ . '/../../resources/views/cbt/peserta_khusus_cetak.php';
     }
 }

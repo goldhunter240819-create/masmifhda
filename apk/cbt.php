@@ -10,30 +10,66 @@ if (!isset($_SESSION['siswa_id'])) {
 }
 
 $siswa_id = (int)$_SESSION['siswa_id'];
+$is_cbt_only = !empty($_SESSION['is_cbt_only']);
 
-// Ambil data siswa
-$stmt = $core_db->prepare("SELECT s.*, COALESCE(k.nama_kelas, 'Umum') as nama_kelas 
-                           FROM siswa s 
-                           LEFT JOIN kelas k ON s.kelas_id = k.id 
-                           WHERE s.id = :id LIMIT 1");
-$stmt->execute(['id' => $siswa_id]);
-$siswa = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($is_cbt_only) {
+    $stmt = $core_db->prepare("SELECT * FROM cbt_peserta_khusus WHERE id = :id AND status = 'Aktif' LIMIT 1");
+    $stmt->execute(['id' => $siswa_id]);
+    $cbtStudent = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$siswa) {
-    session_destroy();
-    header("Location: login.php");
-    exit;
-}
+    if (!$cbtStudent) {
+        session_destroy();
+        header("Location: login.php");
+        exit;
+    }
 
-// Tentukan tingkat kelas (misal: 'Kelas X', 'Kelas XI', 'Kelas XII')
-$tingkat_kelas = 'Kelas X';
-$short_tingkat = 'X';
-if (stripos($siswa['nama_kelas'], 'XII') !== false || stripos($siswa['nama_kelas'], '12') !== false) {
-    $tingkat_kelas = 'Kelas XII';
-    $short_tingkat = 'XII';
-} elseif (stripos($siswa['nama_kelas'], 'XI') !== false || stripos($siswa['nama_kelas'], '11') !== false) {
-    $tingkat_kelas = 'Kelas XI';
-    $short_tingkat = 'XI';
+    $siswa = [
+        'id' => $cbtStudent['id'],
+        'nama' => $cbtStudent['nama_siswa'],
+        'nis' => $cbtStudent['no_peserta'],
+        'nik' => $cbtStudent['nis'] ?? '',
+        'nama_kelas' => $cbtStudent['kelas_nama'],
+        'tingkat' => $cbtStudent['tingkat'],
+        'status' => 'Kelas Jauh',
+        'foto' => ''
+    ];
+
+    $tingkat_kelas = $cbtStudent['tingkat'];
+    if (stripos($tingkat_kelas, 'XII') !== false || stripos($tingkat_kelas, '12') !== false) {
+        $tingkat_kelas = 'Kelas XII';
+        $short_tingkat = 'XII';
+    } elseif (stripos($tingkat_kelas, 'XI') !== false || stripos($tingkat_kelas, '11') !== false) {
+        $tingkat_kelas = 'Kelas XI';
+        $short_tingkat = 'XI';
+    } else {
+        $tingkat_kelas = 'Kelas X';
+        $short_tingkat = 'X';
+    }
+} else {
+    // Ambil data siswa
+    $stmt = $core_db->prepare("SELECT s.*, COALESCE(k.nama_kelas, 'Umum') as nama_kelas 
+                               FROM siswa s 
+                               LEFT JOIN kelas k ON s.kelas_id = k.id 
+                               WHERE s.id = :id LIMIT 1");
+    $stmt->execute(['id' => $siswa_id]);
+    $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$siswa) {
+        session_destroy();
+        header("Location: login.php");
+        exit;
+    }
+
+    // Tentukan tingkat kelas (misal: 'Kelas X', 'Kelas XI', 'Kelas XII')
+    $tingkat_kelas = 'Kelas X';
+    $short_tingkat = 'X';
+    if (stripos($siswa['nama_kelas'], 'XII') !== false || stripos($siswa['nama_kelas'], '12') !== false) {
+        $tingkat_kelas = 'Kelas XII';
+        $short_tingkat = 'XII';
+    } elseif (stripos($siswa['nama_kelas'], 'XI') !== false || stripos($siswa['nama_kelas'], '11') !== false) {
+        $tingkat_kelas = 'Kelas XI';
+        $short_tingkat = 'XI';
+    }
 }
 
 // 1. Jalankan Auto-Sync Matriks Jadwal ke CBT Ujian
@@ -87,6 +123,18 @@ try {
         $allowedKelas[] = 'Kelas 10';
         $allowedKelas[] = '10';
     }
+
+    // Tambahkan seluruh rombel kelas di madrasah yang setingkat agar siswa kelas jauh otomatis dapat mengakses soal ujian paralel
+    try {
+        $numTingkat = ($short_tingkat === 'XII') ? 12 : (($short_tingkat === 'XI') ? 11 : 10);
+        $stmtK = $core_db->prepare("SELECT nama_kelas FROM kelas WHERE tingkat = ?");
+        $stmtK->execute([$numTingkat]);
+        $rombelNames = $stmtK->fetchAll(PDO::FETCH_COLUMN);
+        if (!empty($rombelNames)) {
+            $allowedKelas = array_merge($allowedKelas, $rombelNames);
+        }
+    } catch (\Exception $e) {}
+
     $allowedKelas = array_values(array_unique(array_filter($allowedKelas)));
     $inPlaceholders = implode(',', array_fill(0, count($allowedKelas), '?'));
 
@@ -280,19 +328,27 @@ include 'header.php';
             <?php endif; ?>
         </div>
         <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <?= htmlspecialchars($siswa['nama']) ?>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;">
+                <span><?= htmlspecialchars($siswa['nama']) ?></span>
+                <?php if ($is_cbt_only): ?>
+                    <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.65rem; padding: 2px 7px; border-radius: 6px; font-weight: 800;">Kelas Jauh</span>
+                <?php endif; ?>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; font-size: 0.72rem; color: #64748b;">
                 <span><i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars($siswa['nama_kelas']) ?></span>
                 <span>•</span>
-                <span>NIS: <b><?= htmlspecialchars($siswa['nis'] ?: '-') ?></b></span>
+                <span>No. Peserta: <b><?= htmlspecialchars($siswa['nis'] ?: '-') ?></b></span>
                 <?php if (!empty($siswa['nik'])): ?>
                 <span>•</span>
                 <span>NIK: <b><?= htmlspecialchars($siswa['nik']) ?></b></span>
                 <?php endif; ?>
             </div>
         </div>
+        <?php if ($is_cbt_only): ?>
+            <a href="logout.php" onclick="return confirm('Keluar dari ruang ujian CBT?')" style="background: #fee2e2; color: #dc2626; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-decoration: none; flex-shrink: 0;" title="Keluar Akun">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </a>
+        <?php endif; ?>
     </div>
 
     <!-- Banner CBT Info -->

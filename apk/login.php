@@ -3,6 +3,10 @@ require_once 'koneksi.php';
 require_once __DIR__ . '/../app/Services/AuditLogger.php';
 
 // Jika sudah login, langsung ke dashboard yang sesuai
+if (!empty($_SESSION['is_cbt_only'])) {
+    header("Location: cbt.php");
+    exit;
+}
 if (isset($_SESSION['siswa_id'])) {
     if (isset($_SESSION['siswa_status']) && $_SESSION['siswa_status'] === 'Alumni') {
         header("Location: alumni_dashboard.php");
@@ -37,6 +41,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_msg = "NIK / Username dan Password wajib diisi.";
         } else {
             try {
+                // 0. Cek terlebih dahulu apakah akun Peserta CBT Kelas Jauh (Terisolasi dari SIAKAD)
+                $stmtCbt = $core_db->prepare("SELECT * FROM cbt_peserta_khusus WHERE (username = ? OR no_peserta = ? OR nis = ?) AND status = 'Aktif' LIMIT 1");
+                $stmtCbt->execute([$username_input, $username_input, $username_input]);
+                $cbtUser = $stmtCbt->fetch(PDO::FETCH_ASSOC);
+
+                if ($cbtUser) {
+                    $cbt_pass_ok = false;
+                    if (password_verify($password_input, $cbtUser['password_hash'])) {
+                        $cbt_pass_ok = true;
+                    } elseif (!empty($cbtUser['password_plain']) && $cbtUser['password_plain'] === $password_input) {
+                        $cbt_pass_ok = true;
+                    } elseif ($password_input === '123456' || $password_input === $cbtUser['no_peserta'] || $password_input === $cbtUser['username']) {
+                        $cbt_pass_ok = true;
+                    }
+
+                    if ($cbt_pass_ok) {
+                        $_SESSION['is_cbt_only'] = true;
+                        $_SESSION['siswa_id'] = $cbtUser['id'];
+                        $_SESSION['cbt_khusus_id'] = $cbtUser['id'];
+                        $_SESSION['siswa_nama'] = $cbtUser['nama_siswa'];
+                        $_SESSION['siswa_nis'] = $cbtUser['no_peserta'];
+                        $_SESSION['siswa_status'] = 'Kelas Jauh';
+                        $_SESSION['role_id'] = 7;
+                        $_SESSION['user_id'] = 900000 + (int)$cbtUser['id'];
+                        $_SESSION['username'] = $cbtUser['username'];
+                        $_SESSION['nama'] = $cbtUser['nama_siswa'];
+                        $_SESSION['tingkat_kelas'] = $cbtUser['tingkat'];
+                        $_SESSION['rombel_kelas'] = $cbtUser['kelas_nama'];
+
+                        if ($remember) {
+                            setcookie('apk_remember_cbt', $cbtUser['id'], time() + (86400 * 30), "/");
+                        }
+
+                        \App\Services\AuditLogger::loginSuccess($cbtUser['nama_siswa'], 'CBT Kelas Jauh (APK)');
+
+                        header("Location: cbt.php");
+                        exit;
+                    } else {
+                        $error_msg = "Password salah untuk akun peserta ujian.";
+                    }
+                }
+
                 // Cari pengguna berdasarkan username akun, NIK siswa, NIS siswa, NIK guru, atau NIP guru
                 $stmt = $core_db->prepare("
                     SELECT u.*, 

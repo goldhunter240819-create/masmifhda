@@ -26,6 +26,31 @@ try {
 }
 
 // Auto-Login mechanism (Remember Me / Sesi Awet)
+if (!isset($_SESSION['siswa_id']) && isset($_COOKIE['apk_remember_cbt'])) {
+    $cbt_id = $_COOKIE['apk_remember_cbt'];
+    try {
+        $stmt_c = $core_db->prepare("SELECT * FROM cbt_peserta_khusus WHERE id = :id AND status = 'Aktif' LIMIT 1");
+        $stmt_c->execute(['id' => $cbt_id]);
+        $c_cookie = $stmt_c->fetch(PDO::FETCH_ASSOC);
+        if ($c_cookie) {
+            $_SESSION['is_cbt_only'] = true;
+            $_SESSION['siswa_id'] = $c_cookie['id'];
+            $_SESSION['cbt_khusus_id'] = $c_cookie['id'];
+            $_SESSION['siswa_nama'] = $c_cookie['nama_siswa'];
+            $_SESSION['siswa_nis'] = $c_cookie['no_peserta'];
+            $_SESSION['siswa_status'] = 'Kelas Jauh';
+            $_SESSION['role_id'] = 7;
+            $_SESSION['user_id'] = 900000 + (int)$c_cookie['id'];
+            $_SESSION['username'] = $c_cookie['username'];
+            $_SESSION['nama'] = $c_cookie['nama_siswa'];
+            $_SESSION['tingkat_kelas'] = $c_cookie['tingkat'];
+            $_SESSION['rombel_kelas'] = $c_cookie['kelas_nama'];
+        } else {
+            setcookie('apk_remember_cbt', '', time() - 3600, "/");
+        }
+    } catch (Exception $e) {}
+}
+
 if (!isset($_SESSION['siswa_id']) && isset($_COOKIE['apk_remember_siswa'])) {
     $cookie_id = $_COOKIE['apk_remember_siswa'];
     try {

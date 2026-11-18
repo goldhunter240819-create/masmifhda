@@ -74,6 +74,12 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 <span>Token Ujian</span>
             </a>
 
+            <!-- Peserta Kelas Jauh -->
+            <a href="<?php echo base_url('cbt/peserta_khusus'); ?>" class="z-nav-item <?php echo $active_menu === 'peserta_khusus' ? 'active' : ''; ?>">
+                <i data-lucide="users-2"></i>
+                <span>Peserta Kelas Jauh</span>
+            </a>
+
             <!-- Hasil Ujian -->
             <a href="<?php echo base_url('cbt/hasil'); ?>" class="z-nav-item <?php echo $active_menu === 'hasil' ? 'active' : ''; ?>">
                 <i data-lucide="award"></i>

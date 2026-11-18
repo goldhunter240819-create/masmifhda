@@ -2477,6 +2477,11 @@ $router->add('GET', '/cbt/pengaturan', [\App\Controllers\CbtController::class, '
 $router->add('POST', '/cbt/pengaturan/save', [\App\Controllers\CbtController::class, 'savePengaturan']);
 $router->add('POST', '/cbt/pengaturan/reset-siswa', [\App\Controllers\CbtController::class, 'resetSiswaTerkunci']);
 $router->add('POST', '/cbt/pengaturan/reset-default', [\App\Controllers\CbtController::class, 'resetDefaultPengaturan']);
+$router->add('GET', '/cbt/peserta_khusus', [\App\Controllers\CbtController::class, 'pesertaKhusus']);
+$router->add('POST', '/cbt/peserta_khusus/save', [\App\Controllers\CbtController::class, 'savePesertaKhusus']);
+$router->add('POST', '/cbt/peserta_khusus/delete', [\App\Controllers\CbtController::class, 'deletePesertaKhusus']);
+$router->add('POST', '/cbt/peserta_khusus/import', [\App\Controllers\CbtController::class, 'importPesertaKhusus']);
+$router->add('GET', '/cbt/peserta_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPesertaKhusus']);
 
 
 // ─── Kurikulum & Supervisi Suite (Full Port from Mismifhda) ─────────────────
