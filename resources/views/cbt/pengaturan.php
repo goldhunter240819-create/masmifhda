@@ -12,6 +12,7 @@ $disableRightClick = ($settings['disable_right_click'] ?? '1') === '1';
 $disableCopyPaste = ($settings['disable_copy_paste'] ?? '1') === '1';
 $lockDevice = ($settings['lock_single_device'] ?? '1') === '1';
 $watermark = ($settings['watermark_student_nis'] ?? '1') === '1';
+$soundAlarm = ($settings['sound_alarm_on_violation'] ?? '1') === '1';
 
 $durasiMenit = (int)($settings['default_durasi_menit'] ?? 90);
 $defaultKkm = (int)($settings['default_kkm'] ?? 75);
@@ -343,6 +344,32 @@ $listTerkunci = $listTerkunci ?? [];
                                 <label class="cbt-switch">
                                     <input type="hidden" name="settings[watermark_student_nis]" value="0">
                                     <input type="checkbox" name="settings[watermark_student_nis]" value="1" <?php echo $watermark ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 9. Danger Alarm Sound Effect Meme -->
+                        <div class="card setting-card" style="border-left: 4px solid #ef4444;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-red"><i data-lucide="volume-2"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Suara Alarm Bahaya Keluar Tab (Danger Meme)</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Memutar efek suara alarm bahaya (*Danger Alarm Meme*) saat siswa terdeteksi keluar dari tab ujian atau berpindah aplikasi untuk efek kejut peringatan.
+                                    </p>
+                                    <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px;">
+                                        <button type="button" onclick="testAlarmSound()" id="btnTestAlarm" class="e-btn" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 14px; font-size: 0.8rem; font-weight: 800; border-radius: 8px;">
+                                            <i data-lucide="volume-2" style="width: 14px; height: 14px;"></i> <span id="lblTestAlarm">Tes Putar Suara Alarm</span>
+                                        </button>
+                                        <audio id="audioPreviewDanger" src="<?php echo base_url('assets/sounds/alarm-danger.mp3'); ?>" preload="none"></audio>
+                                    </div>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[sound_alarm_on_violation]" value="0">
+                                    <input type="checkbox" name="settings[sound_alarm_on_violation]" value="1" <?php echo $soundAlarm ? 'checked' : ''; ?>>
                                     <span class="cbt-slider"></span>
                                 </label>
                             </div>
@@ -776,4 +803,29 @@ document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
     }
 });
+
+let isTestingSound = false;
+function testAlarmSound() {
+    const audio = document.getElementById('audioPreviewDanger');
+    const lbl = document.getElementById('lblTestAlarm');
+    if (!audio) return;
+    if (!isTestingSound) {
+        audio.currentTime = 0;
+        audio.play().then(() => {
+            isTestingSound = true;
+            lbl.textContent = 'Hentikan Alarm';
+        }).catch(err => {
+            console.log(err);
+        });
+        audio.onended = () => {
+            isTestingSound = false;
+            lbl.textContent = 'Tes Putar Suara Alarm';
+        };
+    } else {
+        audio.pause();
+        audio.currentTime = 0;
+        isTestingSound = false;
+        lbl.textContent = 'Tes Putar Suara Alarm';
+    }
+}
 </script>

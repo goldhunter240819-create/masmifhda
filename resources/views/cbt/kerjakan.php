@@ -2,6 +2,18 @@
 $pageTitle = 'Ruang Ujian CBT: ' . htmlspecialchars($ujianInfo['nama_ujian']);
 $durasiDetik = ($ujianInfo['durasi_menit'] ?? 90) * 60;
 $logoUrl = \App\Core\Branding::getInstitusiLogo();
+
+$cbtSettings = $cbtSettings ?? [];
+$isAntiCheat = ($cbtSettings['anti_cheat_mode'] ?? '1') === '1';
+$forceFullscreen = ($cbtSettings['force_fullscreen'] ?? '1') === '1';
+$blockTab = ($cbtSettings['block_tab_switch'] ?? '1') === '1';
+$maxViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
+$actionViolation = $cbtSettings['action_on_violation'] ?? 'submit';
+$disableRightClick = ($cbtSettings['disable_right_click'] ?? '1') === '1';
+$disableCopyPaste = ($cbtSettings['disable_copy_paste'] ?? '1') === '1';
+$soundAlarm = ($cbtSettings['sound_alarm_on_violation'] ?? '1') === '1';
+$watermark = ($cbtSettings['watermark_student_nis'] ?? '1') === '1';
+$alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -401,6 +413,40 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             text-align: center;
         }
 
+        @keyframes pulseBorder {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 22px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        @keyframes shakeIcon {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            20% { transform: scale(1.15) rotate(-10deg); }
+            40% { transform: scale(1.15) rotate(10deg); }
+            60% { transform: scale(1.1) rotate(-6deg); }
+            80% { transform: scale(1.1) rotate(6deg); }
+        }
+        .cbt-watermark-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            align-content: space-around;
+            overflow: hidden;
+            opacity: 0.045;
+            user-select: none;
+        }
+        .cbt-watermark-overlay span {
+            font-size: 1.15rem;
+            font-weight: 800;
+            transform: rotate(-25deg);
+            padding: 28px;
+            color: #000000;
+            white-space: nowrap;
+        }
+
         @media (max-width: 960px) {
             .cbt-workspace {
                 grid-template-columns: 1fr;
@@ -546,6 +592,18 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
 </head>
 <body>
 
+    <?php if ($watermark): ?>
+    <!-- Watermark Identitas Siswa -->
+    <div class="cbt-watermark-overlay">
+        <?php for ($w = 0; $w < 24; $w++): ?>
+            <span><?php echo htmlspecialchars(($pesertaInfo['nama_siswa'] ?? '') . ' • ' . ($pesertaInfo['nis'] ?? '')); ?></span>
+        <?php endfor; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Audio Element Danger Alarm Meme -->
+    <audio id="cbtAlarmAudio" src="<?php echo $alarmSoundUrl; ?>" preload="auto" loop></audio>
+
     <!-- Header Topbar -->
     <header class="cbt-topbar">
         <div class="cbt-brand">
@@ -687,6 +745,60 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Peringatan Pelanggaran Keluar Tab (Danger Alarm Meme) -->
+    <div id="modalViolation" class="cbt-modal-backdrop" style="z-index: 99999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px);">
+        <div class="cbt-modal-box" style="border: 3px solid #ef4444; box-shadow: 0 25px 60px rgba(239, 68, 68, 0.45); text-align: center; max-width: 500px; animation: pulseBorder 1.5s infinite;">
+            
+            <!-- Pulsing Hazard Icon -->
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; animation: shakeIcon 0.8s infinite; box-shadow: 0 8px 24px rgba(220,38,38,0.25);">
+                <i data-lucide="alert-triangle" style="width: 46px; height: 46px;"></i>
+            </div>
+
+            <div style="display: inline-block; background: #dc2626; color: white; font-weight: 900; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; padding: 5px 16px; border-radius: 99px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(220,38,38,0.3);">
+                🚨 PERINGATAN PELANGGARAN CBT!
+            </div>
+
+            <h3 style="font-size: 1.4rem; font-weight: 900; color: #991b1b; margin-bottom: 8px;">
+                Terdeteksi Keluar dari Lembar Ujian!
+            </h3>
+
+            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-bottom: 1.25rem;">
+                Anda terdeteksi berpindah tab browser, membuka aplikasi lain, atau meninggalkan layar ujian. Tindakan ini telah dicatat oleh sistem pengawas!
+            </p>
+
+            <!-- Violation Badge Progress -->
+            <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 12px; padding: 14px; margin-bottom: 1.5rem;">
+                <div style="font-size: 0.88rem; font-weight: 800; color: #b91c1c;">
+                    Pelanggaran Ke: <strong id="lblViolationCount" style="font-size: 1.35rem; color: #dc2626;">1</strong> dari Maksimal <strong><?php echo $maxViolations; ?>x</strong>
+                </div>
+                <div style="font-size: 0.78rem; color: #7f1d1d; margin-top: 6px; font-weight: 600;">
+                    Jika mencapai <?php echo $maxViolations; ?>x pelanggaran, sistem akan otomatis <strong><?php echo $actionViolation === 'submit' ? 'MENGUMPULKAN UJIAN ANDA' : 'MENGUNCI LAYAR UJIAN'; ?></strong>!
+                </div>
+            </div>
+
+            <button type="button" id="btnAcknowledgeViolation" onclick="closeViolationModal()" class="btn-cbt" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; font-weight: 800; border-radius: 12px; box-shadow: 0 6px 18px rgba(220, 38, 38, 0.4); border: none; cursor: pointer;">
+                <i data-lucide="volume-x" style="width: 18px; height: 18px;"></i> Matikan Alarm & Lanjutkan Ujian
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Sesi Terkunci Permanen (Must be unlocked by proctor) -->
+    <div id="modalLocked" class="cbt-modal-backdrop" style="z-index: 999999; background: #0f172a;">
+        <div class="cbt-modal-box" style="border: 2px solid #ef4444; background: #1e293b; color: white; text-align: center; max-width: 500px; padding: 2.5rem 2rem;">
+            <div style="width: 84px; height: 84px; border-radius: 50%; background: #450a0a; color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; border: 2px solid #ef4444;">
+                <i data-lucide="lock" style="width: 46px; height: 46px;"></i>
+            </div>
+            <h2 style="font-size: 1.6rem; font-weight: 900; color: #f87171; margin-bottom: 10px;">SESI UJIAN TERKUNCI!</h2>
+            <p style="font-size: 0.94rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1.5rem;">
+                Anda telah melampaui batas toleransi pelanggaran keluar tab (<strong><?php echo $maxViolations; ?>x</strong>).<br>
+                Sesi ujian Anda telah dibekukan secara otomatis. Harap segera melapor kepada <strong>Pengawas / Proktor Ruangan</strong> untuk membuka kunci pengerjaan Anda.
+            </p>
+            <div style="background: #0f172a; padding: 14px; border-radius: 12px; border: 1px solid #334155; font-size: 0.85rem; color: #94a3b8;">
+                ID Peserta: <strong style="color: #38bdf8;"><?php echo htmlspecialchars($pesertaInfo['nis'] ?? '-'); ?></strong> — <strong style="color: #f1f5f9;"><?php echo htmlspecialchars($pesertaInfo['nama_siswa'] ?? ''); ?></strong>
+            </div>
         </div>
     </div>
 
@@ -1442,15 +1554,20 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
 
         // Hapus cache lokal setelah ujian resmi dikirim
         document.getElementById('formSubmitUjian').onsubmit = function() {
+            stopDangerAlarm();
+            isExamSubmitted = true;
             try {
                 localStorage.removeItem(storageKeyAns);
                 localStorage.removeItem(storageKeyRagu);
                 localStorage.removeItem(storageKeyIdx);
+                localStorage.removeItem(storageKeyViol);
             } catch(e) {}
         };
 
-        function autoSubmit() {
-            alert('Waktu ujian telah habis! Jawaban Anda akan otomatis dikumpulkan.');
+        function autoSubmit(reason = 'Waktu ujian telah habis!') {
+            stopDangerAlarm();
+            isExamSubmitted = true;
+            alert(reason + ' Jawaban Anda akan otomatis dikumpulkan.');
             const payload = {};
             for (let i = 0; i < totalSoal; i++) {
                 payload[soalList[i].id] = userAnswers[i] !== undefined ? userAnswers[i] : '';
@@ -1460,8 +1577,182 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 localStorage.removeItem(storageKeyAns);
                 localStorage.removeItem(storageKeyRagu);
                 localStorage.removeItem(storageKeyIdx);
+                localStorage.removeItem(storageKeyViol);
             } catch(e) {}
             document.getElementById('formSubmitUjian').submit();
+        }
+
+        // ─── ANTI-CHEAT & DANGER ALARM SYSTEM (MEME AUDIO) ───────────────────
+        const isAntiCheat = <?php echo $isAntiCheat ? 'true' : 'false'; ?>;
+        const blockTab = <?php echo $blockTab ? 'true' : 'false'; ?>;
+        const forceFullscreen = <?php echo $forceFullscreen ? 'true' : 'false'; ?>;
+        const disableRightClick = <?php echo $disableRightClick ? 'true' : 'false'; ?>;
+        const disableCopyPaste = <?php echo $disableCopyPaste ? 'true' : 'false'; ?>;
+        const soundAlarm = <?php echo $soundAlarm ? 'true' : 'false'; ?>;
+        const maxViolations = <?php echo $maxViolations; ?>;
+        const actionViolation = '<?php echo $actionViolation; ?>';
+
+        const storageKeyViol = `cbt_viol_${ujianId}_${pesertaId}`;
+        let violationCount = parseInt(localStorage.getItem(storageKeyViol) || '0', 10);
+        let isExamSubmitted = false;
+        let isViolationModalOpen = false;
+        let lastViolationTime = 0;
+
+        const alarmAudio = document.getElementById('cbtAlarmAudio');
+        let audioUnlocked = false;
+
+        function unlockAudio() {
+            if (!audioUnlocked && alarmAudio) {
+                alarmAudio.play().then(() => {
+                    alarmAudio.pause();
+                    alarmAudio.currentTime = 0;
+                    audioUnlocked = true;
+                }).catch(() => {});
+            }
+        }
+        document.addEventListener('click', unlockAudio, { once: true });
+        document.addEventListener('keydown', unlockAudio, { once: true });
+        document.addEventListener('touchstart', unlockAudio, { once: true });
+
+        function playDangerAlarm() {
+            if (!soundAlarm || !alarmAudio) return;
+            try {
+                alarmAudio.currentTime = 0;
+                alarmAudio.play().catch(e => console.log('Audio autoplay note:', e));
+            } catch(e) {}
+        }
+
+        function stopDangerAlarm() {
+            if (!alarmAudio) return;
+            try {
+                alarmAudio.pause();
+                alarmAudio.currentTime = 0;
+            } catch(e) {}
+        }
+
+        function handleTabViolation(reason = 'Keluar Tab') {
+            if (!isAntiCheat || !blockTab || isExamSubmitted) return;
+
+            const now = Date.now();
+            if (now - lastViolationTime < 1800) {
+                // Debounce duplicate events within 1.8s
+                return;
+            }
+            lastViolationTime = now;
+
+            violationCount++;
+            localStorage.setItem(storageKeyViol, violationCount);
+
+            // Putar sound effect meme danger alarm!
+            playDangerAlarm();
+
+            // Tampilkan modal peringatan
+            showViolationModal();
+        }
+
+        function showViolationModal() {
+            if (isExamSubmitted) return;
+            isViolationModalOpen = true;
+
+            const modal = document.getElementById('modalViolation');
+            const lblCount = document.getElementById('lblViolationCount');
+            if (lblCount) lblCount.textContent = violationCount;
+
+            if (violationCount >= maxViolations) {
+                stopDangerAlarm();
+                if (actionViolation === 'submit') {
+                    autoSubmit(`🚨 BATAS PELANGGARAN TERLAMPAUI (${violationCount}x)!`);
+                    return;
+                } else {
+                    // Kunci sesi ujian
+                    modal.classList.remove('open');
+                    document.getElementById('modalLocked').classList.add('open');
+                    fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `peserta_id=${pesertaId}&status=Terkunci`
+                    });
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+            }
+
+            modal.classList.add('open');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeViolationModal() {
+            stopDangerAlarm();
+            isViolationModalOpen = false;
+            document.getElementById('modalViolation').classList.remove('open');
+
+            if (forceFullscreen && !document.fullscreenElement) {
+                requestFullscreenMode();
+            }
+        }
+
+        function requestFullscreenMode() {
+            const el = document.documentElement;
+            if (el.requestFullscreen) {
+                el.requestFullscreen().catch(() => {});
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
+            }
+        }
+
+        // Listener pindah tab & keluar layar
+        if (isAntiCheat && blockTab) {
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    handleTabViolation('Tab Berpindah');
+                } else {
+                    // Siswa kembali ke tab ujian
+                    if (violationCount > 0 && !isExamSubmitted) {
+                        playDangerAlarm();
+                        showViolationModal();
+                    }
+                }
+            });
+
+            window.addEventListener('blur', function() {
+                if (!isViolationModalOpen && !isExamSubmitted) {
+                    handleTabViolation('Fokus Hilang');
+                }
+            });
+        }
+
+        // Blokir klik kanan & inspect element / shortcut
+        if (isAntiCheat && disableRightClick) {
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            document.addEventListener('keydown', function(e) {
+                // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S, Ctrl+P
+                if (e.keyCode === 123 ||
+                    (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
+                    (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 80))) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        // Blokir copy, cut, paste
+        if (isAntiCheat && disableCopyPaste) {
+            document.addEventListener('copy', function(e) { e.preventDefault(); return false; });
+            document.addEventListener('cut', function(e) { e.preventDefault(); return false; });
+            document.addEventListener('paste', function(e) { e.preventDefault(); return false; });
+        }
+
+        // Listener keluar fullscreen
+        if (isAntiCheat && forceFullscreen) {
+            document.addEventListener('fullscreenchange', function() {
+                if (!document.fullscreenElement && !isExamSubmitted && !isViolationModalOpen) {
+                    handleTabViolation('Keluar Fullscreen');
+                }
+            });
         }
 
         window.addEventListener('resize', () => {
@@ -1470,7 +1761,13 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
             }
         });
 
-        window.onload = initCbt;
+        window.onload = function() {
+            initCbt();
+            if (isAntiCheat && violationCount >= maxViolations && actionViolation === 'lock') {
+                document.getElementById('modalLocked').classList.add('open');
+                if (window.lucide) lucide.createIcons();
+            }
+        };
     </script>
 </body>
 </html>

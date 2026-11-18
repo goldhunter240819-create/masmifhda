@@ -229,6 +229,7 @@ class CbtController {
                 ['disable_copy_paste', '1', 'keamanan', 'Blokir Copy-Paste & Seleksi Teks'],
                 ['lock_single_device', '1', 'keamanan', 'Kunci 1 Akun 1 Perangkat (Cegah Multi-Login)'],
                 ['watermark_student_nis', '1', 'keamanan', 'Watermark Transparan Nama & NIS Siswa di Layar'],
+                ['sound_alarm_on_violation', '1', 'keamanan', 'Bunyikan Alarm Suara Bahaya Saat Keluar Tab'],
                 ['default_durasi_menit', '90', 'ujian', 'Durasi Ujian Default (Menit)'],
                 ['default_kkm', '75', 'ujian', 'Standar KKM Default Madrasah'],
                 ['acak_soal_default', '1', 'ujian', 'Acak Urutan Soal Ujian Default'],
@@ -2063,7 +2064,28 @@ class CbtController {
             }
         }
 
+        $cbtSettings = self::getAllPengaturan($db);
+
         include __DIR__ . '/../../resources/views/cbt/kerjakan.php';
+    }
+
+    /**
+     * Catat Pelanggaran Anti-Cheat Siswa (AJAX)
+     */
+    public static function ajaxCatatPelanggaran() {
+        header('Content-Type: application/json; charset=utf-8');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+
+        $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
+        $status = $_POST['status'] ?? ''; // 'Terkunci' jika melampaui batas
+
+        if ($peserta_id > 0 && $status === 'Terkunci') {
+            $stmt = $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Terkunci' WHERE id = ?");
+            $stmt->execute([$peserta_id]);
+        }
+        echo json_encode(['status' => 'success']);
+        exit;
     }
 
     /**
