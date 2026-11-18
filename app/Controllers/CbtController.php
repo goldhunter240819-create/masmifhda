@@ -2016,16 +2016,20 @@ class CbtController {
                 $pesertaInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
 
                 if (!$pesertaInfo) {
+                    $nowStr = date('Y-m-d H:i:s');
                     $stmtIns = $db->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, status_pengerjaan) 
                                              VALUES (?, ?, ?, ?, ?, NOW(), 'Mengerjakan')");
                     $stmtIns->execute([$ujian_id, $realSiswa['id'], $realSiswa['nis'], $realSiswa['nama'], $realSiswa['kelas_nama']]);
                     $pesertaInfo = [
-                        'id' => $db->lastInsertId(),
+                        'id' => (int)$db->lastInsertId(),
                         'ujian_id' => $ujian_id,
                         'siswa_id' => $realSiswa['id'],
                         'nis' => $realSiswa['nis'],
                         'nama_siswa' => $realSiswa['nama'],
-                        'kelas_nama' => $realSiswa['kelas_nama']
+                        'kelas_nama' => $realSiswa['kelas_nama'],
+                        'waktu_mulai' => $nowStr,
+                        'status_pengerjaan' => 'Mengerjakan',
+                        'jawaban_json' => null
                     ];
                 } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai') {
                     redirect("/cbt/kerjakan/selesai?peserta_id={$pesertaInfo['id']}&ujian_id={$ujian_id}");
@@ -2042,7 +2046,10 @@ class CbtController {
                 'siswa_id' => null,
                 'nis' => 'GURU-TRIAL',
                 'nama_siswa' => ($_SESSION['nama'] ?? 'Pengawas / Guru (Simulasi)'),
-                'kelas_nama' => ($ujianInfo['kelas_nama'] ?: 'Simulasi')
+                'kelas_nama' => ($ujianInfo['kelas_nama'] ?: 'Simulasi'),
+                'waktu_mulai' => date('Y-m-d H:i:s'),
+                'status_pengerjaan' => 'Mengerjakan',
+                'jawaban_json' => null
             ];
         }
 
@@ -2058,13 +2065,16 @@ class CbtController {
         $durasiDetik = $totalDetik;
         if (!empty($pesertaInfo['waktu_mulai'])) {
             $wMulai = strtotime($pesertaInfo['waktu_mulai']);
-            if ($wMulai > 0) {
-                $elapsed = time() - $wMulai;
-                if ($elapsed > 0 && $elapsed < $totalDetik) {
-                    $durasiDetik = $totalDetik - $elapsed;
-                } elseif ($elapsed >= $totalDetik) {
-                    $durasiDetik = 60; // Waktu habis atau toleransi 1 menit
-                }
+            $now = time();
+            $elapsed = $now - $wMulai;
+            if ($elapsed < 0) {
+                // Toleransi jika ada selisih jam server atau clock skew
+                $elapsed = 0;
+            }
+            if ($elapsed >= 0 && $elapsed < $totalDetik) {
+                $durasiDetik = $totalDetik - $elapsed;
+            } elseif ($elapsed >= $totalDetik) {
+                $durasiDetik = 0; // Waktu habis
             }
         }
 
@@ -2211,17 +2221,27 @@ class CbtController {
 
             // Simpan ke database jika peserta terdaftar
             if ($peserta_id > 0) {
+                $payloadToSave = [
+                    'answers' => $answers,
+                    'answers_by_index' => $answers,
+                    'submitted_at' => date('Y-m-d H:i:s')
+                ];
                 $stmtUp = $db->prepare("UPDATE cbt_peserta 
                                         SET waktu_selesai = NOW(), status_pengerjaan = 'Selesai', 
                                             jumlah_benar = ?, jumlah_salah = ?, nilai_akhir = ?, jawaban_json = ? 
                                         WHERE id = ?");
-                $stmtUp->execute([$jumlahBenar, $jumlahSalah, $nilaiAkhir, json_encode($answers), $peserta_id]);
+                $stmtUp->execute([$jumlahBenar, $jumlahSalah, $nilaiAkhir, json_encode($payloadToSave), $peserta_id]);
             } else {
                 // Untuk sesi trial pengawas/guru, simpan sebagai sesi percobaan
+                $payloadToSave = [
+                    'answers' => $answers,
+                    'answers_by_index' => $answers,
+                    'submitted_at' => date('Y-m-d H:i:s')
+                ];
                 $namaPengawas = $_SESSION['nama'] ?? 'Guru (Trial)';
                 $stmtIns = $db->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json) 
                                          VALUES (?, NULL, 'TRIAL', ?, 'Simulasi', NOW() - INTERVAL 15 MINUTE, NOW(), 'Selesai', ?, ?, ?, ?)");
-                $stmtIns->execute([$ujian_id, $namaPengawas, $jumlahBenar, $jumlahSalah, $nilaiAkhir, json_encode($answers)]);
+                $stmtIns->execute([$ujian_id, $namaPengawas, $jumlahBenar, $jumlahSalah, $nilaiAkhir, json_encode($payloadToSave)]);
                 $peserta_id = (int)$db->lastInsertId();
             }
 
@@ -2398,7 +2418,7 @@ class CbtController {
             if ($peserta_id > 0) {
                 if ($mode === 'ulang') {
                     $stmt = $db->prepare("UPDATE cbt_peserta 
-                                            SET status_pengerjaan = 'Sedang Mengerjakan', 
+                                            SET status_pengerjaan = 'Mengerjakan', 
                                                 waktu_selesai = NULL, 
                                                 waktu_mulai = NOW(), 
                                                 nilai_akhir = 0.00, 
@@ -2412,7 +2432,7 @@ class CbtController {
                 } else {
                     // Default: Lanjutkan ujian (mempertahankan jawaban yang sudah tersimpan)
                     $stmt = $db->prepare("UPDATE cbt_peserta 
-                                            SET status_pengerjaan = 'Sedang Mengerjakan', 
+                                            SET status_pengerjaan = 'Mengerjakan', 
                                                 waktu_selesai = NULL, 
                                                 waktu_mulai = NOW(),
                                                 reset_count = COALESCE(reset_count, 0) + 1,
@@ -2422,11 +2442,13 @@ class CbtController {
                 }
             }
 
-            $ref = $_SERVER['HTTP_REFERER'] ?? base_url('cbt/hasil');
-            $cleanRef = preg_replace('/([?&])reopened=[^&]+(&|$)/', '$1', $ref);
-            $cleanRef = rtrim($cleanRef, '?&');
-            $join = (strpos($cleanRef, '?') !== false) ? '&' : '?';
-            redirect($cleanRef . $join . 'reopened=1');
+            $ref = $_SERVER['HTTP_REFERER'] ?? '/cbt/hasil';
+            $parsedPath = parse_url($ref, PHP_URL_PATH) ?: '/cbt/hasil';
+            $parsedQuery = parse_url($ref, PHP_URL_QUERY) ?: '';
+            parse_str($parsedQuery, $queryParams);
+            $queryParams['reopened'] = '1';
+            $cleanRedirect = $parsedPath . '?' . http_build_query($queryParams);
+            redirect($cleanRedirect);
             exit;
         }
         redirect('/cbt/hasil');

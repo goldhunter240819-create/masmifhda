@@ -343,7 +343,7 @@ include 'header.php';
         <?php foreach ($ujianList as $u): ?>
             <?php
             $isSelesai = ($u['status_pengerjaan'] === 'Selesai');
-            $isMengerjakan = ($u['status_pengerjaan'] === 'Mengerjakan');
+            $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']);
             $durasi = (int)($u['durasi_menit'] ?? 90);
             $totalSoal = (int)($u['total_soal'] ?? 0);
             $kkm = (int)($u['kkm'] ?? 75);
@@ -404,9 +404,9 @@ include 'header.php';
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
                 <?php else: ?>
-                    <a href="/cbt/kerjakan?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-start" onclick="return confirm('Mulai mengerjakan ujian <?= htmlspecialchars(addslashes($u['nama_ujian'])) ?>? Waktu pengerjaan akan segera berjalan.');">
+                    <button type="button" class="btn-ujian btn-ujian-start" style="width: 100%; border: none; cursor: pointer;" onclick="konfirmasiMulaiUjian(<?= (int)$u['id'] ?>, '<?= htmlspecialchars(addslashes($u['nama_ujian'])) ?>', '<?= htmlspecialchars(addslashes($u['mapel_nama'])) ?>', <?= $durasi ?>, <?= $totalSoal ?>)">
                         <i class="fa-solid fa-arrow-right"></i> Mulai Kerjakan Ujian Sekarang
-                    </a>
+                    </button>
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
@@ -456,6 +456,73 @@ include 'header.php';
         </ul>
     </div>
 
+    <!-- Modal Konfirmasi Mulai Ujian Modern -->
+    <div id="modalStartExam" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 18px;">
+        <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 390px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden; animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+            <!-- Modal Header -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 22px 20px 18px; text-align: center; color: #ffffff;">
+                <div style="width: 56px; height: 56px; margin: 0 auto 12px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; border: 2px solid rgba(255, 255, 255, 0.3);">
+                    🚀
+                </div>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px;">Mulai Pengerjaan Ujian?</h3>
+                <p style="margin: 4px 0 0; font-size: 0.78rem; color: #bfdbfe;">Waktu pengerjaan akan segera dihitung mundur</p>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding: 18px 20px 14px;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;">
+                    <div id="modalExamTitle" style="font-size: 0.92rem; font-weight: 800; color: #0f172a; line-height: 1.4; margin-bottom: 6px;">-</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.75rem; color: #475569; font-weight: 600;">
+                        <span id="modalExamMapel" style="background: #eff6ff; color: #2563eb; padding: 3px 8px; border-radius: 6px; border: 1px solid #dbeafe;">-</span>
+                        <span id="modalExamDurasi" style="background: #f0fdf4; color: #16a34a; padding: 3px 8px; border-radius: 6px; border: 1px solid #dcfce7;">-</span>
+                        <span id="modalExamSoal" style="background: #faf5ff; color: #7c3aed; padding: 3px 8px; border-radius: 6px; border: 1px solid #f3e8ff;">-</span>
+                    </div>
+                </div>
+
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px; font-size: 0.74rem; color: #92400e; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.95rem; margin-top: 2px; flex-shrink: 0; color: #d97706;"></i>
+                    <div>
+                        <b>Perhatian Proktor:</b> Jangan menutup aplikasi, berpindah tab, atau keluar dari ruang ujian. Pelanggaran sistem dapat mengunci lembar jawaban Anda.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer Buttons -->
+            <div style="padding: 0 20px 20px; display: flex; gap: 10px;">
+                <button type="button" onclick="tutupModalMulai()" style="flex: 1; padding: 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                    Batal
+                </button>
+                <a id="modalStartLink" href="#" style="flex: 1.4; padding: 12px; border-radius: 10px; border: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 800; font-size: 0.85rem; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); transition: all 0.2s;">
+                    <span>Mulai Sekarang</span> <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    @keyframes popInModal {
+        0% { transform: scale(0.92); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    </style>
+
+    <script>
+    function konfirmasiMulaiUjian(ujianId, namaUjian, mapelNama, durasi, totalSoal) {
+        document.getElementById('modalExamTitle').textContent = namaUjian;
+        document.getElementById('modalExamMapel').textContent = mapelNama || 'CBT Online';
+        document.getElementById('modalExamDurasi').textContent = durasi + ' Menit';
+        document.getElementById('modalExamSoal').textContent = (totalSoal > 0 ? totalSoal + ' Soal' : '50 Soal');
+        document.getElementById('modalStartLink').href = '/cbt/kerjakan?ujian_id=' + ujianId;
+        
+        const modal = document.getElementById('modalStartExam');
+        modal.style.display = 'flex';
+    }
+
+    function tutupModalMulai() {
+        const modal = document.getElementById('modalStartExam');
+        modal.style.display = 'none';
+    }
+    </script>
 </div>
 
 <?php include 'footer.php'; ?>

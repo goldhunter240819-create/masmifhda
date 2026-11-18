@@ -28,6 +28,8 @@ session_name("AULA_SYSTEM_PORTAL");
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+date_default_timezone_set('Asia/Jakarta');
+
 if (!function_exists('base_url')) {
     function base_url($path = '') {
         $base = dirname($_SERVER['SCRIPT_NAME']);
@@ -41,7 +43,11 @@ if (!function_exists('base_url')) {
 
 if (!function_exists('redirect')) {
     function redirect($path) {
-        header('Location: ' . base_url($path));
+        if (preg_match('#^https?://#i', $path)) {
+            header('Location: ' . $path);
+        } else {
+            header('Location: ' . base_url($path));
+        }
         exit;
     }
 }

@@ -448,9 +448,244 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             white-space: nowrap;
         }
 
+        /* Mobile Palette Drawer & Bottom Nav Bar Styles */
+        .cbt-mobile-palette-toggle {
+            display: none;
+        }
+
+        .cbt-mobile-bottom-bar {
+            display: none;
+        }
+
+        .cbt-palette-drawer-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .cbt-palette-drawer-content {
+            background: #ffffff;
+            width: 100%;
+            max-width: 540px;
+            max-height: 80vh;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            padding: 18px 20px 24px;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            animation: slideUpDrawer 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 12px;
+        }
+
+        .drawer-close-btn {
+            background: #f1f5f9;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #64748b;
+            cursor: pointer;
+            font-weight: 800;
+        }
+
+        .drawer-legend {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: #475569;
+            font-weight: 600;
+            margin-bottom: 14px;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 10px;
+        }
+        .drawer-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .drawer-legend i {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        @keyframes slideUpDrawer {
+            0% { transform: translateY(100%); }
+            100% { transform: translateY(0); }
+        }
+
         @media (max-width: 960px) {
+            .cbt-topbar {
+                padding: 10px 14px;
+                gap: 8px;
+            }
+            .cbt-brand img {
+                width: 32px;
+                height: 32px;
+            }
+            .cbt-exam-title {
+                font-size: 0.88rem;
+                max-width: 160px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .cbt-exam-sub {
+                display: none;
+            }
+            .cbt-timer-box {
+                padding: 6px 12px;
+                border-radius: 10px;
+                gap: 6px;
+            }
+            .cbt-timer-val {
+                font-size: 1.05rem;
+                letter-spacing: 0.5px;
+            }
+            .cbt-timer-label {
+                display: none;
+            }
+            #saveIndicator {
+                display: none !important;
+            }
+            .cbt-mobile-palette-toggle {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: #eff6ff;
+                color: #2563eb;
+                border: 1.5px solid #bfdbfe;
+                padding: 6px 12px;
+                border-radius: 10px;
+                font-size: 0.78rem;
+                font-weight: 800;
+                cursor: pointer;
+            }
+
             .cbt-workspace {
                 grid-template-columns: 1fr;
+                padding: 10px;
+                margin-bottom: 76px; /* Clearance for fixed bottom bar */
+                gap: 0;
+            }
+            .cbt-main-card {
+                padding: 14px 16px;
+                border-radius: 14px;
+                min-height: auto;
+            }
+            .q-header {
+                margin-bottom: 1rem;
+                padding-bottom: 0.75rem;
+            }
+            .q-badge-num {
+                font-size: 0.82rem;
+                padding: 4px 10px;
+            }
+            .q-text {
+                font-size: 0.96rem;
+                margin-bottom: 1.25rem;
+                line-height: 1.6;
+            }
+            .opt-label {
+                padding: 10px 14px;
+                gap: 10px;
+                border-radius: 12px;
+            }
+            .opt-key {
+                width: 28px;
+                height: 28px;
+                font-size: 0.82rem;
+            }
+            .opt-text {
+                font-size: 0.88rem;
+            }
+
+            /* Hide inline nav footer on mobile, replace with fixed bottom bar */
+            .q-nav-footer {
+                display: none;
+            }
+
+            /* Hide desktop palette sidebar on mobile, opened via drawer */
+            .cbt-side-card {
+                display: none;
+            }
+
+            /* Fixed Bottom Navigation Bar on Mobile */
+            .cbt-mobile-bottom-bar {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 64px;
+                background: #ffffff;
+                border-top: 1px solid #e2e8f0;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+                z-index: 1000;
+                padding: 8px 12px;
+                gap: 8px;
+                align-items: center;
+            }
+            .m-nav-btn {
+                height: 48px;
+                border-radius: 12px;
+                font-weight: 800;
+                font-size: 0.85rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .m-prev {
+                background: #f1f5f9;
+                color: #475569;
+                flex: 0.9;
+            }
+            .m-ragu {
+                background: #fef3c7;
+                color: #b45309;
+                border: 1.5px solid #fde68a;
+                flex: 0.8;
+            }
+            .m-ragu.active {
+                background: #f59e0b;
+                color: #ffffff;
+                border-color: #d97706;
+            }
+            .m-next {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+                color: #ffffff;
+                flex: 1.3;
+                box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+            }
+            .m-finish {
+                background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+                color: #ffffff;
+                flex: 1.3;
+                box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
             }
         }
 
@@ -615,7 +850,13 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <!-- Tombol Buka Daftar Nomor Soal Khusus Mobile / APK -->
+            <button type="button" class="cbt-mobile-palette-toggle" onclick="toggleMobilePalette()" title="Daftar Nomor Soal">
+                <i data-lucide="layout-grid" style="width: 15px; height: 15px;"></i>
+                <span id="mobileQBadge">1/<?php echo count($soalList); ?> Soal ▾</span>
+            </button>
+
             <div id="saveIndicator" style="font-size: 0.78rem; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 14px; border-radius: 20px; display: inline-flex; align-items: center; gap: 7px; transition: opacity 0.3s; opacity: 0;">
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
                 <span id="saveIndicatorText">Tersimpan Otomatis</span>
@@ -721,6 +962,76 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
     </main>
 
+    <!-- Fixed Mobile Bottom Navigation Bar (Model APK Modern) -->
+    <nav class="cbt-mobile-bottom-bar" aria-label="Navigasi Soal CBT Mobile">
+        <button type="button" class="m-nav-btn m-prev" id="btnPrevMobile" onclick="navigateQuestion(-1)">
+            <i data-lucide="chevron-left" style="width: 18px; height: 18px;"></i>
+            <span>Sebelumnya</span>
+        </button>
+
+        <button type="button" class="m-nav-btn m-ragu" id="btnRaguMobile" onclick="toggleRagu()">
+            <i data-lucide="help-circle" style="width: 18px; height: 18px;"></i>
+            <span>Ragu</span>
+        </button>
+
+        <button type="button" class="m-nav-btn m-next" id="btnNextMobile" onclick="navigateQuestion(1)">
+            <span>Selanjutnya</span>
+            <i data-lucide="chevron-right" style="width: 18px; height: 18px;"></i>
+        </button>
+
+        <button type="button" class="m-nav-btn m-finish" id="btnSubmitMobile" onclick="openConfirmModal()" style="display: none;">
+            <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
+            <span>Selesai Ujian</span>
+        </button>
+    </nav>
+
+    <!-- Slide-Up Bottom Sheet Drawer untuk Daftar Nomor Soal Mobile -->
+    <div id="mobilePaletteDrawer" class="cbt-palette-drawer-backdrop" onclick="closeMobilePalette(event)">
+        <div class="cbt-palette-drawer-content" onclick="event.stopPropagation()">
+            <div class="drawer-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="layout-grid" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">Daftar Nomor Soal</div>
+                        <div id="drawerAnsweredSummary" style="font-size: 0.72rem; color: #64748b; font-weight: 600;">0 / <?php echo count($soalList); ?> Terjawab</div>
+                    </div>
+                </div>
+                <button type="button" class="drawer-close-btn" onclick="toggleMobilePalette()">✕</button>
+            </div>
+
+            <!-- Legend Status -->
+            <div class="drawer-legend">
+                <span><i style="background: #16a34a;"></i> Sudah Dijawab</span>
+                <span><i style="background: #f59e0b;"></i> Ragu-Ragu</span>
+                <span><i style="background: #ffffff; border: 1.5px solid #cbd5e1;"></i> Belum</span>
+            </div>
+
+            <!-- Grid Nomor Soal Mobile -->
+            <div class="palette-grid" id="paletteGridMobile" style="max-height: 48vh; overflow-y: auto;">
+                <!-- Populated via Javascript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Auto-Submit Notice (Menggantikan Browser Alert Jadul) -->
+    <div id="modalAutoSubmitNotice" class="cbt-modal-backdrop" style="z-index: 999999;">
+        <div class="cbt-modal-box" style="text-align: center; max-width: 420px; border: 2px solid #38bdf8; box-shadow: 0 25px 60px rgba(0,0,0,0.35); animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div style="width: 68px; height: 68px; border-radius: 50%; background: #eff6ff; color: #0284c7; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+                <i data-lucide="clock" style="width: 36px; height: 36px;"></i>
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Waktu Pengerjaan Selesai</h3>
+            <p id="autoSubmitReasonText" style="font-size: 0.88rem; color: #475569; line-height: 1.5; margin-bottom: 1.5rem;">
+                Waktu ujian telah berakhir. Lembar jawaban Anda sedang dikumpulkan secara otomatis ke server...
+            </p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; font-size: 0.82rem; color: #0284c7; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span style="width: 14px; height: 14px; border: 2px solid #bae6fd; border-top-color: #0284c7; border-radius: 50%; display: inline-block; animation: spinSave 0.8s linear infinite;"></span>
+                <span>Mengirim Jawaban ke Server...</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Konfirmasi Selesai Ujian -->
     <div id="modalConfirm" class="cbt-modal-backdrop">
         <div class="cbt-modal-box">
@@ -813,12 +1124,35 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         const storageKeyAns = `cbt_ans_${ujianId}_${pesertaId}`;
         const storageKeyRagu = `cbt_ragu_${ujianId}_${pesertaId}`;
         const storageKeyIdx = `cbt_idx_${ujianId}_${pesertaId}`;
+        const storageKeyDeadline = `cbt_deadline_${ujianId}_${pesertaId}`;
 
         let currentIndex = 0;
         let userAnswers = {}; // { index: answerValue }
         let raguState = {};   // { index: true/false }
-        let timeLeft = <?php echo (int)$durasiDetik; ?>;
+        const serverDurationSeconds = <?php echo (int)$durasiDetik; ?>;
+        let timeLeft = serverDurationSeconds;
         let autoSaveTimer = null;
+
+        // Persistensi Timer saat Refresh Halaman Ujian
+        try {
+            const savedDeadline = localStorage.getItem(storageKeyDeadline);
+            const now = Date.now();
+            if (savedDeadline) {
+                const parsedDeadline = parseInt(savedDeadline, 10);
+                const localRemaining = Math.max(0, Math.floor((parsedDeadline - now) / 1000));
+                // Jika sisa waktu di localStorage masih valid dan tidak melebihi durasi server + toleransi
+                if (localRemaining > 0 && localRemaining <= serverDurationSeconds + 30) {
+                    timeLeft = localRemaining;
+                } else if (serverDurationSeconds > 0) {
+                    // Re-sync batas akhir ujian
+                    localStorage.setItem(storageKeyDeadline, String(now + serverDurationSeconds * 1000));
+                    timeLeft = serverDurationSeconds;
+                }
+            } else if (serverDurationSeconds > 0) {
+                localStorage.setItem(storageKeyDeadline, String(now + serverDurationSeconds * 1000));
+                timeLeft = serverDurationSeconds;
+            }
+        } catch(e) {}
 
         // Palet warna garis melengkung untuk setiap pasangan soal menjodohkan
         const MATCH_COLORS = [
@@ -837,19 +1171,28 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             if (serverSavedData && typeof serverSavedData === 'object') {
                 if (serverSavedData.answers_by_index) {
                     userAnswers = { ...serverSavedData.answers_by_index };
-                } else if (serverSavedData.answers) {
+                }
+                if (serverSavedData.answers) {
                     // Map soal_id ke index urutan
                     soalList.forEach((s, idx) => {
-                        if (serverSavedData.answers[s.id] !== undefined && serverSavedData.answers[s.id] !== null) {
+                        if (serverSavedData.answers[s.id] !== undefined && serverSavedData.answers[s.id] !== null && serverSavedData.answers[s.id] !== '') {
                             userAnswers[idx] = serverSavedData.answers[s.id];
                         }
                     });
                 }
+                // Jika formatnya langsung { soal_id: jawaban } atau { index: jawaban }
+                soalList.forEach((s, idx) => {
+                    if (serverSavedData[s.id] !== undefined && serverSavedData[s.id] !== null && serverSavedData[s.id] !== '') {
+                        userAnswers[idx] = serverSavedData[s.id];
+                    } else if (serverSavedData[idx] !== undefined && serverSavedData[idx] !== null && serverSavedData[idx] !== '') {
+                        userAnswers[idx] = serverSavedData[idx];
+                    }
+                });
                 if (serverSavedData.ragu) {
                     raguState = { ...serverSavedData.ragu };
                 }
                 if (serverSavedData.last_index !== undefined) {
-                    const lIdx = parseInt(serverSavedData.last_index);
+                    const lIdx = parseInt(serverSavedData.last_index, 10);
                     if (!isNaN(lIdx) && lIdx >= 0 && lIdx < totalSoal) {
                         currentIndex = lIdx;
                     }
@@ -874,7 +1217,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
                 const localIdx = localStorage.getItem(storageKeyIdx);
                 if (localIdx !== null) {
-                    const pIdx = parseInt(localIdx);
+                    const pIdx = parseInt(localIdx, 10);
                     if (!isNaN(pIdx) && pIdx >= 0 && pIdx < totalSoal) {
                         currentIndex = pIdx;
                     }
@@ -884,7 +1227,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             renderPalette();
             loadQuestion(currentIndex);
             startTimer();
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
             showSaveIndicator('Sesi Siap', false);
         }
 
@@ -962,7 +1305,41 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
             const q = soalList[idx];
             document.getElementById('currentQBadge').textContent = `Soal Nomor ${idx + 1} dari ${totalSoal}`;
+            const mobBadge = document.getElementById('mobileQBadge');
+            if (mobBadge) mobBadge.textContent = `${idx + 1}/${totalSoal} Soal ▾`;
             
+            // Sinkronisasi status tombol Previous / Next / Selesai (Desktop & Mobile)
+            const isFirst = (idx === 0);
+            const isLast = (idx === totalSoal - 1);
+
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+            const btnSubmitModal = document.getElementById('btnSubmitModal');
+            if (btnPrev) btnPrev.style.visibility = isFirst ? 'hidden' : 'visible';
+            if (btnNext) btnNext.style.display = isLast ? 'none' : 'inline-flex';
+            if (btnSubmitModal) btnSubmitModal.style.display = isLast ? 'inline-flex' : 'none';
+
+            const btnPrevMob = document.getElementById('btnPrevMobile');
+            const btnNextMob = document.getElementById('btnNextMobile');
+            const btnSubmitMob = document.getElementById('btnSubmitMobile');
+            if (btnPrevMob) {
+                btnPrevMob.style.opacity = isFirst ? '0.35' : '1';
+                btnPrevMob.style.pointerEvents = isFirst ? 'none' : 'auto';
+            }
+            if (btnNextMob) btnNextMob.style.display = isLast ? 'none' : 'inline-flex';
+            if (btnSubmitMob) btnSubmitMob.style.display = isLast ? 'inline-flex' : 'none';
+
+            // Sinkronisasi status Ragu-Ragu
+            const isRagu = !!raguState[idx];
+            const btnRagu = document.getElementById('btnRagu');
+            const btnRaguMob = document.getElementById('btnRaguMobile');
+            if (btnRagu) {
+                if (isRagu) btnRagu.classList.add('active'); else btnRagu.classList.remove('active');
+            }
+            if (btnRaguMob) {
+                if (isRagu) btnRaguMob.classList.add('active'); else btnRaguMob.classList.remove('active');
+            }
+
             // Render Teks Pertanyaan (Mendukung HTML Rich Text, Underline, dan Diagram SVG)
             const qEl = document.getElementById('questionText');
             if (q.pertanyaan.includes('<div') || q.pertanyaan.includes('<p') || q.pertanyaan.includes('<svg')) {
@@ -975,6 +1352,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             container.innerHTML = '';
 
             const qType = q.tipe_soal || 'sec_pg';
+            const isBsType = ['sec_bs', 'bs', 'benar_salah', 'tabel_bs', 'tabel_benar_salah'].includes(qType) 
+                || (q.pertanyaan && (q.pertanyaan.includes('TABEL BENAR / SALAH') || q.pertanyaan.includes('BENAR / SALAH') || q.pertanyaan.includes('Benar / Salah')));
             
             if (qType === 'sec_pgk') {
                 // MODEL 2: Pilihan Ganda Kompleks (Multi-Select Checkboxes)
@@ -1027,11 +1406,37 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     container.appendChild(item);
                 });
 
-            } else if (qType === 'sec_bs') {
-                // MODEL 3: Tabel Pernyataan Benar / Salah
+            } else if (isBsType) {
+                // MODEL 3: Tabel Pernyataan Benar / Salah (Akurat & Tidak Pernah Kosong)
                 let kData = {};
-                try { kData = JSON.parse(q.konten_tambahan || '{}'); } catch(e) {}
-                const butir = kData.butir || [];
+                try { 
+                    kData = typeof q.konten_tambahan === 'string' ? JSON.parse(q.konten_tambahan || '{}') : (q.konten_tambahan || {}); 
+                } catch(e) {}
+                
+                let butir = kData.butir || kData.pernyataan || kData.items || (Array.isArray(kData) ? kData : []);
+
+                // Fallback jika butir kosong: ekstrak dari kunci_jawaban JSON jika ada
+                if (!Array.isArray(butir) || butir.length === 0) {
+                    try {
+                        const kArr = JSON.parse(q.kunci_jawaban || '[]');
+                        if (Array.isArray(kArr) && kArr.length > 0) {
+                            butir = kArr.map((k, kI) => ({
+                                teks: `Pernyataan materi ke-${kI + 1}`,
+                                kunci: String(k)
+                            }));
+                        }
+                    } catch(e) {}
+                }
+
+                // Fallback darurat jika tetap kosong agar tabel pernyataan selalu tampil
+                if (!Array.isArray(butir) || butir.length === 0) {
+                    butir = [
+                        { teks: 'Pernyataan materi ke-1' },
+                        { teks: 'Pernyataan materi ke-2' },
+                        { teks: 'Pernyataan materi ke-3' }
+                    ];
+                }
+
                 let curAns = {};
                 try {
                     if (typeof userAnswers[idx] === 'object' && userAnswers[idx] !== null) {
@@ -1043,13 +1448,13 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 if (typeof curAns !== 'object' || curAns === null) curAns = {};
 
                 const table = document.createElement('table');
-                table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:12px; font-size:0.92rem; background:#ffffff; border-radius:12px; overflow:hidden; border:1.5px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
+                table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:14px; font-size:0.92rem; background:#ffffff; border-radius:12px; overflow:hidden; border:1.5px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
                 table.innerHTML = `
                     <thead>
                         <tr style="background:#f8fafc; color:#334155; border-bottom:2px solid #cbd5e1;">
-                            <th style="padding:12px 16px; text-align:left; font-weight:800;">Pernyataan Materi</th>
-                            <th style="padding:12px 14px; text-align:center; width:95px; font-weight:800; border-left:1px solid #e2e8f0;">Benar</th>
-                            <th style="padding:12px 14px; text-align:center; width:95px; font-weight:800; border-left:1px solid #e2e8f0;">Salah</th>
+                            <th style="padding:12px 14px; text-align:left; font-weight:800;">Pernyataan Materi</th>
+                            <th style="padding:12px 10px; text-align:center; width:90px; font-weight:800; border-left:1px solid #e2e8f0;">Benar</th>
+                            <th style="padding:12px 10px; text-align:center; width:90px; font-weight:800; border-left:1px solid #e2e8f0;">Salah</th>
                         </tr>
                     </thead>
                     <tbody id="bsTbody_${idx}"></tbody>
@@ -1058,23 +1463,39 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 butir.forEach((b, bIdx) => {
                     const row = document.createElement('tr');
                     row.style.borderBottom = '1px solid #e2e8f0';
+                    const bTeks = (typeof b === 'object' && b !== null) ? (b.teks || b.pernyataan || b.text || b.label || `Pernyataan ${bIdx + 1}`) : String(b);
                     const isB = (curAns[bIdx] === 'Benar');
                     const isS = (curAns[bIdx] === 'Salah');
                     row.innerHTML = `
-                        <td style="padding:12px 16px; color:#1e293b; font-weight:600; line-height:1.5;">${b.teks}</td>
-                        <td style="padding:10px 14px; text-align:center; border-left:1px solid #e2e8f0;">
-                            <button type="button" class="btn" style="padding:7px 16px; font-size:0.85rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isB ? '#16a34a' : '#ffffff'}; color:${isB ? '#ffffff' : '#16a34a'}; border:1.5px solid #86efac; box-shadow:${isB ? '0 2px 4px rgba(22,163,74,0.3)' : 'none'};">
+                        <td style="padding:12px 14px; color:#1e293b; font-weight:600; line-height:1.5;">${bTeks}</td>
+                        <td style="padding:8px 10px; text-align:center; border-left:1px solid #e2e8f0;">
+                            <button type="button" class="btn" style="padding:7px 14px; font-size:0.82rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isB ? '#16a34a' : '#ffffff'}; color:${isB ? '#ffffff' : '#16a34a'}; border:1.5px solid #86efac; box-shadow:${isB ? '0 2px 4px rgba(22,163,74,0.3)' : 'none'};">
                                 ${isB ? '✓ Benar' : 'Benar'}
                             </button>
                         </td>
-                        <td style="padding:10px 14px; text-align:center; border-left:1px solid #e2e8f0;">
-                            <button type="button" class="btn" style="padding:7px 16px; font-size:0.85rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isS ? '#dc2626' : '#ffffff'}; color:${isS ? '#ffffff' : '#dc2626'}; border:1.5px solid #fca5a5; box-shadow:${isS ? '0 2px 4px rgba(220,38,38,0.3)' : 'none'};">
+                        <td style="padding:8px 10px; text-align:center; border-left:1px solid #e2e8f0;">
+                            <button type="button" class="btn" style="padding:7px 14px; font-size:0.82rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isS ? '#dc2626' : '#ffffff'}; color:${isS ? '#ffffff' : '#dc2626'}; border:1.5px solid #fca5a5; box-shadow:${isS ? '0 2px 4px rgba(220,38,38,0.3)' : 'none'};">
                                 ${isS ? '✕ Salah' : 'Salah'}
                             </button>
                         </td>
                     `;
                     row.querySelectorAll('button')[0].onclick = () => {
                         curAns[bIdx] = 'Benar';
+                        userAnswers[idx] = { ...curAns };
+                        loadQuestion(idx);
+                        renderPalette();
+                        saveCurrentAnswers(true);
+                    };
+                    row.querySelectorAll('button')[1].onclick = () => {
+                        curAns[bIdx] = 'Salah';
+                        userAnswers[idx] = { ...curAns };
+                        loadQuestion(idx);
+                        renderPalette();
+                        saveCurrentAnswers(true);
+                    };
+                    tbody.appendChild(row);
+                });
+                container.appendChild(table);
                         userAnswers[idx] = { ...curAns };
                         loadQuestion(idx);
                         renderPalette();
@@ -1435,56 +1856,91 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         }
 
         function renderPalette() {
-            const grid = document.getElementById('paletteGrid');
-            grid.innerHTML = '';
+            const gridDesktop = document.getElementById('paletteGrid');
+            const gridMobile = document.getElementById('paletteGridMobile');
+            if (gridDesktop) gridDesktop.innerHTML = '';
+            if (gridMobile) gridMobile.innerHTML = '';
 
             let answeredCount = 0;
 
             for (let i = 0; i < totalSoal; i++) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'pal-btn';
-                if (i === currentIndex) btn.classList.add('current');
-
                 let ansTag = '';
                 const ans = userAnswers[i];
+                let isAnswered = false;
                 if (ans !== undefined && ans !== null && ans !== '') {
                     if (typeof ans === 'object') {
                         if (Object.keys(ans).length > 0) {
                             answeredCount++;
-                            btn.classList.add('answered');
+                            isAnswered = true;
                             ansTag = '✓';
                         }
                     } else {
                         const str = String(ans).trim();
                         if (str.length > 0) {
                             answeredCount++;
-                            btn.classList.add('answered');
+                            isAnswered = true;
                             ansTag = str.length > 3 ? '✓' : str;
                         }
                     }
                 }
 
-                if (raguState[i]) {
-                    btn.classList.remove('answered');
-                    btn.classList.add('doubt');
+                const isCurrent = (i === currentIndex);
+                const isRagu = !!raguState[i];
+
+                function createPalButton(isForMobile = false) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'pal-btn';
+                    if (isCurrent) btn.classList.add('current');
+                    if (isAnswered) btn.classList.add('answered');
+                    if (isRagu) {
+                        btn.classList.remove('answered');
+                        btn.classList.add('doubt');
+                    }
+                    btn.onclick = () => {
+                        loadQuestion(i);
+                        if (isForMobile) closeMobilePalette();
+                    };
+                    btn.innerHTML = `
+                        <span>${i + 1}</span>
+                        ${ansTag ? `<span class="pal-ans-tag">${ansTag}</span>` : ''}
+                    `;
+                    return btn;
                 }
 
-                btn.onclick = () => loadQuestion(i);
-                btn.innerHTML = `
-                    <span>${i + 1}</span>
-                    ${ansTag ? `<span class="pal-ans-tag">${ansTag}</span>` : ''}
-                `;
-                grid.appendChild(btn);
+                if (gridDesktop) gridDesktop.appendChild(createPalButton(false));
+                if (gridMobile) gridMobile.appendChild(createPalButton(true));
             }
 
-            document.getElementById('answeredCountLabel').textContent = `${answeredCount} / ${totalSoal} Terjawab`;
+            const answeredLabel = `${answeredCount} / ${totalSoal} Terjawab`;
+            const countLabel = document.getElementById('answeredCountLabel');
+            if (countLabel) countLabel.textContent = answeredLabel;
+            const mobSummary = document.getElementById('drawerAnsweredSummary');
+            if (mobSummary) mobSummary.textContent = answeredLabel;
+        }
+
+        function toggleMobilePalette() {
+            const drawer = document.getElementById('mobilePaletteDrawer');
+            if (!drawer) return;
+            if (drawer.style.display === 'flex') {
+                drawer.style.display = 'none';
+            } else {
+                drawer.style.display = 'flex';
+                renderPalette();
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function closeMobilePalette(event) {
+            const drawer = document.getElementById('mobilePaletteDrawer');
+            if (drawer) drawer.style.display = 'none';
         }
 
         function updatePaletteCurrent() {
             const btns = document.querySelectorAll('.pal-btn');
             btns.forEach((b, i) => {
-                if (i === currentIndex) {
+                const num = parseInt(b.querySelector('span')?.textContent || '0', 10) - 1;
+                if (num === currentIndex) {
                     b.classList.add('current');
                 } else {
                     b.classList.remove('current');
@@ -1505,22 +1961,42 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
         function startTimer() {
             const display = document.getElementById('timerDisplay');
-            const interval = setInterval(() => {
+            
+            function updateTimerDisplay() {
                 if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    autoSubmit();
-                    return;
+                    if (display) display.textContent = '00:00:00';
+                    autoSubmit('Waktu ujian telah habis!');
+                    return false;
                 }
-                timeLeft--;
-
                 const hours = Math.floor(timeLeft / 3600);
                 const minutes = Math.floor((timeLeft % 3600) / 60);
                 const seconds = timeLeft % 60;
-
-                display.textContent = 
+                const formatted = 
                     String(hours).padStart(2, '0') + ':' +
                     String(minutes).padStart(2, '0') + ':' +
                     String(seconds).padStart(2, '0');
+                if (display) display.textContent = formatted;
+                return true;
+            }
+
+            updateTimerDisplay();
+
+            const interval = setInterval(() => {
+                try {
+                    const savedDl = localStorage.getItem(storageKeyDeadline);
+                    if (savedDl) {
+                        const dl = parseInt(savedDl, 10);
+                        timeLeft = Math.max(0, Math.floor((dl - Date.now()) / 1000));
+                    } else {
+                        timeLeft--;
+                    }
+                } catch(e) {
+                    timeLeft--;
+                }
+
+                if (!updateTimerDisplay()) {
+                    clearInterval(interval);
+                }
             }, 1000);
         }
 
@@ -1550,7 +2026,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
             document.getElementById('jawabanPayloadInput').value = JSON.stringify(payload);
             document.getElementById('modalConfirm').classList.add('open');
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         // Hapus cache lokal setelah ujian resmi dikirim
@@ -1562,13 +2038,23 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 localStorage.removeItem(storageKeyRagu);
                 localStorage.removeItem(storageKeyIdx);
                 localStorage.removeItem(storageKeyViol);
+                localStorage.removeItem(storageKeyDeadline);
             } catch(e) {}
         };
 
         function autoSubmit(reason = 'Waktu ujian telah habis!') {
             stopDangerAlarm();
             isExamSubmitted = true;
-            alert(reason + ' Jawaban Anda akan otomatis dikumpulkan.');
+
+            // Tampilkan Modal Peringatan Modern (bukan alert bawaan browser jadul)
+            const modalNotice = document.getElementById('modalAutoSubmitNotice');
+            if (modalNotice) {
+                const txt = document.getElementById('autoSubmitReasonText');
+                if (txt) txt.innerHTML = `${reason}<br>Sistem sedang mengamankan lembar jawaban Anda ke database server...`;
+                modalNotice.classList.add('open');
+                if (window.lucide) lucide.createIcons();
+            }
+
             const payload = {};
             for (let i = 0; i < totalSoal; i++) {
                 payload[soalList[i].id] = userAnswers[i] !== undefined ? userAnswers[i] : '';
@@ -1579,8 +2065,12 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 localStorage.removeItem(storageKeyRagu);
                 localStorage.removeItem(storageKeyIdx);
                 localStorage.removeItem(storageKeyViol);
+                localStorage.removeItem(storageKeyDeadline);
             } catch(e) {}
-            document.getElementById('formSubmitUjian').submit();
+
+            setTimeout(() => {
+                document.getElementById('formSubmitUjian').submit();
+            }, 1200);
         }
 
         // ─── ANTI-CHEAT & DANGER ALARM SYSTEM (MEME AUDIO) ───────────────────

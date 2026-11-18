@@ -706,13 +706,9 @@ $listTerkunci = $listTerkunci ?? [];
                                             </span>
                                         </td>
                                         <td style="text-align: right;">
-                                            <form method="POST" action="<?php echo base_url('cbt/hasil/buka-ujian'); ?>" onsubmit="return confirm('Buka ujian kembali untuk <?php echo addslashes($ls['nama_siswa']); ?>?\nSiswa dapat langsung masuk kembali ke ruang ujian dan melanjutkan.')" style="display: inline-block;">
-                                                <input type="hidden" name="peserta_id" value="<?php echo $ls['id']; ?>">
-                                                <input type="hidden" name="mode" value="lanjutkan">
-                                                <button type="submit" class="e-btn e-btn-primary" style="background: #0ea5e9; padding: 6px 14px; font-size: 0.78rem;">
-                                                    <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Buka Ujian
-                                                </button>
-                                            </form>
+                                            <button type="button" class="e-btn e-btn-primary" style="background: #0ea5e9; padding: 6px 14px; font-size: 0.78rem; cursor: pointer;" onclick="bukaModalReopenPengaturan(<?php echo $ls['id']; ?>, '<?php echo htmlspecialchars(addslashes($ls['nama_siswa'])); ?>', '<?php echo htmlspecialchars(addslashes($ls['nama_ujian'])); ?>')">
+                                                <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Buka Ujian
+                                            </button>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -910,4 +906,70 @@ function testAlarmSound() {
         lbl.textContent = 'Tes Putar Suara Alarm';
     }
 }
+
+function bukaModalReopenPengaturan(pesertaId, namaSiswa, namaUjian) {
+    document.getElementById('reopenPengaturanPesertaId').value = pesertaId;
+    document.getElementById('reopenPengaturanNamaSiswa').textContent = namaSiswa;
+    document.getElementById('reopenPengaturanNamaUjian').textContent = namaUjian || 'Ujian CBT';
+    document.getElementById('modalReopenPengaturan').style.display = 'flex';
+}
+
+function tutupModalReopenPengaturan() {
+    document.getElementById('modalReopenPengaturan').style.display = 'none';
+}
+</script>
+
+<!-- Modal Buka Ujian Modern untuk Tab Pengaturan -->
+<div id="modalReopenPengaturan" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 18px;">
+    <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden; animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        <form method="POST" action="<?php echo base_url('cbt/hasil/buka-ujian'); ?>" style="margin: 0;">
+            <input type="hidden" name="peserta_id" id="reopenPengaturanPesertaId" value="0">
+            
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 22px 24px; color: #ffffff; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                    🔓
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800;">Buka Ujian Kembali</h3>
+                    <p style="margin: 3px 0 0; font-size: 0.78rem; color: #bae6fd;">Izinkan siswa melanjutkan atau mengulang sesi ujian</p>
+                </div>
+            </div>
+
+            <div style="padding: 20px 24px;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
+                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Nama Siswa:</div>
+                    <div id="reopenPengaturanNamaSiswa" style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-top: 2px;">-</div>
+                    <div id="reopenPengaturanNamaUjian" style="font-size: 0.78rem; color: #0284c7; font-weight: 600; margin-top: 4px;">-</div>
+                </div>
+
+                <div style="font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 10px;">Pilih Metode Pembukaan Ujian:</div>
+
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 2px solid #0ea5e9; background: #f0f9ff; border-radius: 12px; margin-bottom: 10px; cursor: pointer;">
+                    <input type="radio" name="mode" value="lanjutkan" checked style="margin-top: 3px; accent-color: #0ea5e9;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #0369a1;">Lanjutkan Pengerjaan (Direkomendasikan)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; line-height: 1.4;">Jawaban yang sudah dijawab siswa tetap tersimpan. Siswa dapat melanjutkan pengerjaan soal.</div>
+                    </div>
+                </label>
+
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; cursor: pointer;">
+                    <input type="radio" name="mode" value="ulang" style="margin-top: 3px; accent-color: #ef4444;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #dc2626;">Ulang dari Awal (Reset Jawaban)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; line-height: 1.4;">Seluruh jawaban sebelumnya akan dihapus dan waktu pengerjaan diulang dari awal.</div>
+                    </div>
+                </label>
+            </div>
+
+            <div style="padding: 0 24px 24px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="tutupModalReopenPengaturan()" style="padding: 10px 18px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" style="padding: 10px 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);">
+                    Buka Akses Ujian
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 </script>

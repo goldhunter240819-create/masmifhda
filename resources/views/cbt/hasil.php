@@ -217,13 +217,9 @@ $active_menu = 'hasil';
                                     </td>
                                     <td style="text-align: right; white-space: nowrap;">
                                         <?php if ($isSelesai || in_array($p['status_pengerjaan'] ?? '', ['Sedang Mengerjakan', 'Mengerjakan', 'Terkunci', 'Pelanggaran'])): ?>
-                                            <form method="POST" action="<?php echo base_url('cbt/hasil/buka-ujian'); ?>" onsubmit="return confirm('Buka ujian kembali untuk <?php echo addslashes($p['nama_siswa']); ?>?\nSiswa dapat langsung masuk kembali ke ruang ujian dan melanjutkan pengerjaan.')" style="display:inline-block;">
-                                                <input type="hidden" name="peserta_id" value="<?php echo $p['id']; ?>">
-                                                <input type="hidden" name="mode" value="lanjutkan">
-                                                <button type="submit" class="e-btn" style="background: #0ea5e9; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 5px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(14,165,233,0.25);" title="Buka Sesi Ujian Kembali">
-                                                    <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i> Buka Ujian
-                                                </button>
-                                            </form>
+                                            <button type="button" class="e-btn" style="background: #0ea5e9; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 6px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(14,165,233,0.25); cursor: pointer;" title="Buka Sesi Ujian Kembali" onclick="bukaModalReopen(<?php echo $p['id']; ?>, '<?php echo htmlspecialchars(addslashes($p['nama_siswa'])); ?>', '<?php echo htmlspecialchars(addslashes($p['paket_judul'])); ?>')">
+                                                <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i> Buka Ujian
+                                            </button>
                                         <?php else: ?>
                                             <span style="color: #cbd5e1; font-size: 0.8rem; font-weight: 700;">-</span>
                                         <?php endif; ?>
@@ -239,4 +235,84 @@ $active_menu = 'hasil';
         </div>
     </div>
 </div>
+
+<!-- Modal Buka Ujian Kembali Modern -->
+<div id="modalReopenExam" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 18px;">
+    <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden; animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        <form method="POST" action="<?php echo base_url('cbt/hasil/buka-ujian'); ?>" id="formReopenExam" style="margin: 0;">
+            <input type="hidden" name="peserta_id" id="reopenPesertaId" value="0">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 22px 24px; color: #ffffff; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                    🔓
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800;">Buka Ujian Kembali</h3>
+                    <p style="margin: 3px 0 0; font-size: 0.78rem; color: #bae6fd;">Izinkan siswa melanjutkan atau mengulang sesi ujian</p>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 20px 24px;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
+                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Nama Siswa:</div>
+                    <div id="reopenNamaSiswa" style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-top: 2px;">-</div>
+                    <div id="reopenPaketJudul" style="font-size: 0.78rem; color: #0284c7; font-weight: 600; margin-top: 4px;">-</div>
+                </div>
+
+                <div style="font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 10px;">Pilih Metode Pembukaan Ujian:</div>
+
+                <!-- Opsi 1: Lanjutkan -->
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 2px solid #0ea5e9; background: #f0f9ff; border-radius: 12px; margin-bottom: 10px; cursor: pointer;">
+                    <input type="radio" name="mode" value="lanjutkan" checked style="margin-top: 3px; accent-color: #0ea5e9;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #0369a1;">Lanjutkan Pengerjaan (Direkomendasikan)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; line-height: 1.4;">Jawaban yang sudah dijawab siswa tetap tersimpan. Siswa dapat melanjutkan soal yang belum selesai.</div>
+                    </div>
+                </label>
+
+                <!-- Opsi 2: Ulang dari Awal -->
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; cursor: pointer;">
+                    <input type="radio" name="mode" value="ulang" style="margin-top: 3px; accent-color: #ef4444;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #dc2626;">Ulang dari Awal (Reset Jawaban)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; line-height: 1.4;">Seluruh jawaban sebelumnya akan dihapus dan lembar ujian dimulai dari nomor 1.</div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 0 24px 24px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="tutupModalReopen()" style="padding: 10px 18px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" style="padding: 10px 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);">
+                    Buka Akses Ujian
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+@keyframes popInModal {
+    0% { transform: scale(0.92); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+</style>
+
+<script>
+function bukaModalReopen(pesertaId, namaSiswa, paketJudul) {
+    document.getElementById('reopenPesertaId').value = pesertaId;
+    document.getElementById('reopenNamaSiswa').textContent = namaSiswa;
+    document.getElementById('reopenPaketJudul').textContent = paketJudul || 'Paket Ujian CBT';
+    document.getElementById('modalReopenExam').style.display = 'flex';
+}
+
+function tutupModalReopen() {
+    document.getElementById('modalReopenExam').style.display = 'none';
+}
+</script>
+
 

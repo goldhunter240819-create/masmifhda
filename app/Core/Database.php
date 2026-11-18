@@ -24,6 +24,9 @@ class Database {
                     PDO::ATTR_EMULATE_PREPARES => false,
                 ];
                 self::$instances[$name] = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], $options);
+                try {
+                    self::$instances[$name]->exec("SET time_zone = '+07:00'");
+                } catch (\Exception $tzEx) {}
             } catch (PDOException $e) {
                 die("Connection failed for '$name': " . $e->getMessage());
             }
