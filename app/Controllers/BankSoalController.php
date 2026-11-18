@@ -174,33 +174,24 @@ class BankSoalController {
     public static function cleanMILeftovers($db) {
         if (!$db) return;
         try {
-            // 1. Hapus paket yang guru atau mapelnya merupakan data MI lama
+            // 1. Hapus paket yang guru atau mapelnya merupakan data MI lama (SD/MI)
+            // Catatan: ARI ROMADLON, S.Pd adalah guru resmi MA Miftahul Huda (Akidah Akhlak & Dirosah)
             $db->exec("DELETE FROM bs_paket WHERE 
                 guru_nama LIKE '%Marlena%' OR 
-                guru_nama LIKE '%ROMADLON%' OR 
-                guru_nama LIKE '%Romadlon%' OR 
                 guru_nama LIKE '%Zuli%' OR 
                 guru_nama LIKE '%Astutik%' OR 
                 guru_nama LIKE '%Lilis%' OR 
                 guru_nama LIKE '%Samsul%' OR 
-                guru_nama LIKE '%Putri Nur Anisa%' OR 
                 guru_nama LIKE '%Roqaiyah%' OR 
                 guru_nama LIKE '%Shoha%' OR 
-                guru_nama LIKE '%Ari %' OR 
-                guru_nama LIKE '%ARI %' OR 
                 guru_nama LIKE '%Asatidz%' OR 
                 guru_nama LIKE '%Okta Kusuma%' OR 
-                mapel_nama LIKE '%Aqidah Akhlak%' OR 
-                mapel_nama LIKE '%Al-Qur\'an Hadist%' OR 
                 mapel_nama LIKE '%Baca Tulis Qur\'an%' OR 
                 mapel_nama LIKE '%BTQ%' OR 
                 mapel_nama LIKE '%Ilmu Pengetahuan Alam Sosial%' OR 
                 mapel_nama LIKE '%IPAS%' OR 
                 mapel_nama LIKE '%Seni Budaya dan Prakarya%' OR 
                 mapel_nama LIKE '%SBdP%' OR 
-                mapel_nama LIKE '%Al Qur\'an Hadits%' OR 
-                mapel_nama LIKE '%Pendidikan Kewarganegaraan%' OR 
-                mapel_nama = 'Sejarah Kebudayaan Islam' OR
                 kelas_nama = 'Semua Kelas' OR
                 kelas_nama IS NULL OR
                 kelas_nama = ''
@@ -208,17 +199,12 @@ class BankSoalController {
 
             // 2. Hapus butir soal yang mapelnya data MI lama
             $db->exec("DELETE FROM bs_soal WHERE 
-                mapel_nama LIKE '%Aqidah Akhlak%' OR 
-                mapel_nama LIKE '%Al-Qur\'an Hadist%' OR 
                 mapel_nama LIKE '%Baca Tulis Qur\'an%' OR 
                 mapel_nama LIKE '%BTQ%' OR 
                 mapel_nama LIKE '%Ilmu Pengetahuan Alam Sosial%' OR 
                 mapel_nama LIKE '%IPAS%' OR 
                 mapel_nama LIKE '%Seni Budaya dan Prakarya%' OR 
                 mapel_nama LIKE '%SBdP%' OR 
-                mapel_nama LIKE '%Al Qur\'an Hadits%' OR 
-                mapel_nama LIKE '%Pendidikan Kewarganegaraan%' OR 
-                mapel_nama = 'Sejarah Kebudayaan Islam' OR
                 kelas_nama = 'Semua Kelas' OR
                 kelas_nama IS NULL OR
                 kelas_nama = ''
@@ -253,8 +239,9 @@ class BankSoalController {
      */
     public static function getOfficialMasMapelList() {
         return [
-            'Al-Qur\'an Hadits' => ['guru_id' => 14, 'guru_nama' => 'M AZIZ SULAIMAN, S.Pd'],
-            'Akidah Akhlak' => ['guru_id' => 7, 'guru_nama' => 'SITI AISAH, S.Pd.I'],
+            'Al-Qur\'an Hadits' => ['guru_id' => 39, 'guru_nama' => 'Drs. Hamim Hasyim'],
+            'Akidah Akhlak' => ['guru_id' => 10, 'guru_nama' => 'ARI ROMADLON, S.Pd'],
+            'Aqidah Akhlak' => ['guru_id' => 10, 'guru_nama' => 'ARI ROMADLON, S.Pd'],
             'Fikih' => ['guru_id' => 7, 'guru_nama' => 'SITI AISAH, S.Pd.I'],
             'Sejarah Kebudayaan Islam (SKI)' => ['guru_id' => 48, 'guru_nama' => 'SHOBIRIN'],
             'Bahasa Arab' => ['guru_id' => 37, 'guru_nama' => 'DIDI HARTONO, S.Pd.I'],
@@ -436,8 +423,17 @@ class BankSoalController {
                     }
                 }
 
-                // JIKA BELUM ADA PAKET MAPEL / MASIH ADA PAKET ROMBEL LAMA, OTOMATIS LANGSUNG SINKRONKAN BERBASIS TINGKAT!
-                if (empty($paketList) || $hasLegacyPaket) {
+                // Cek apakah Akidah Akhlak / Aqidah Akhlak sudah ada di paketList
+                $hasAkidah = false;
+                foreach ($paketList as $p) {
+                    if (stripos($p['mapel_nama'], 'akidah') !== false || stripos($p['mapel_nama'], 'aqidah') !== false) {
+                        $hasAkidah = true;
+                        break;
+                    }
+                }
+
+                // JIKA BELUM ADA PAKET MAPEL / MASIH ADA PAKET ROMBEL LAMA / AKIDAH BELUM TERSINKRON, OTOMATIS LANGSUNG SINKRONKAN!
+                if (empty($paketList) || $hasLegacyPaket || !$hasAkidah) {
                     $this->syncFromPengampu($topikId, true);
                     $stmtP->execute([$topikId]);
                     $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
@@ -652,7 +648,24 @@ class BankSoalController {
             $this->db_core->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '')")->execute([$topikId]);
         }
 
-        // 2. Ambil penugasan mengajar riil dari tabel mengajar
+        // 2. Ambil referensi nama guru dari database core & siakad
+        $guruMap = [];
+        try {
+            $gRows = $this->db_core->query("SELECT id, nama FROM guru")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($gRows as $gr) {
+                if (!empty($gr['nama'])) $guruMap[(int)$gr['id']] = trim($gr['nama']);
+            }
+        } catch (\Exception $e) {}
+        try {
+            $gSiakadRows = $this->db->query("SELECT id, COALESCE(nama_lengkap, nama) as nama FROM guru")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($gSiakadRows as $gr) {
+                if (empty($guruMap[(int)$gr['id']]) && !empty($gr['nama'])) {
+                    $guruMap[(int)$gr['id']] = trim($gr['nama']);
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // Ambil penugasan mengajar riil dari tabel mengajar
         $assignments = [];
         try {
             $thn_id = 2;
@@ -664,12 +677,10 @@ class BankSoalController {
             }
 
             $sql = "
-                SELECT DISTINCT mp.nama_mapel, k.nama_kelas, m.guru_id, COALESCE(g.nama, g_siakad.nama_lengkap) as guru_nama
+                SELECT DISTINCT mp.nama_mapel, k.nama_kelas, m.guru_id
                 FROM mengajar m
                 JOIN kelas k ON m.kelas_id = k.id
                 JOIN mapel mp ON m.mapel_id = mp.id
-                LEFT JOIN aula_db.guru g ON m.guru_id = g.id
-                LEFT JOIN guru g_siakad ON m.guru_id = g_siakad.id
                 WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
                   AND (m.tahun_ajaran_id = :thn_id OR m.tahun_ajaran_id IS NULL)
                   AND (m.semester = :smt OR m.semester IS NULL OR m.semester = 0)
@@ -683,12 +694,10 @@ class BankSoalController {
             // Jika kosong dengan filter TA/Semester, ambil tanpa filter TA/Semester
             if (empty($assignments)) {
                 $sqlFallback = "
-                    SELECT DISTINCT mp.nama_mapel, k.nama_kelas, m.guru_id, COALESCE(g.nama, g_siakad.nama_lengkap) as guru_nama
+                    SELECT DISTINCT mp.nama_mapel, k.nama_kelas, m.guru_id
                     FROM mengajar m
                     JOIN kelas k ON m.kelas_id = k.id
                     JOIN mapel mp ON m.mapel_id = mp.id
-                    LEFT JOIN aula_db.guru g ON m.guru_id = g.id
-                    LEFT JOIN guru g_siakad ON m.guru_id = g_siakad.id
                     WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
                       AND mp.nama_mapel NOT IN ('Upacara', 'Senam', 'Pramuka', 'Sholat Dhuha', 'Juz Amma - Asmaul Husna', 'BTQ', 'IPAS', 'SBdP', 'Baca Tulis Qur\'an', 'Ilmu Pengetahuan Alam Sosial', 'Seni Budaya dan Prakarya')
                     ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
@@ -732,17 +741,42 @@ class BankSoalController {
 
                 $key = $mName . '||' . $tingkatLabel;
                 if (!isset($grouped[$key])) {
+                    $gId = (int)$asg['guru_id'];
+                    $gNama = $guruMap[$gId] ?? '';
+                    if (empty($gNama) && (stripos($mName, 'akidah') !== false || stripos($mName, 'aqidah') !== false)) {
+                        $gNama = 'ARI ROMADLON, S.Pd';
+                        $gId = 10;
+                    }
                     $grouped[$key] = [
                         'mapel_nama' => $mName,
                         'kelas_nama' => $tingkatLabel,
                         'sasaran_list' => [],
-                        'guru_id' => (int)$asg['guru_id'],
-                        'guru_nama' => trim($asg['guru_nama'] ?? '')
+                        'guru_id' => $gId,
+                        'guru_nama' => $gNama
                     ];
                 }
                 if (!empty($kName) && !in_array($kName, $grouped[$key]['sasaran_list'])) {
                     $grouped[$key]['sasaran_list'][] = $kName;
                 }
+            }
+        }
+
+        // Pastikan Akidah Akhlak terdaftar untuk setiap tingkat sasaran MAS Miftahul Huda
+        $tingkatAkidahList = [
+            'Kelas X' => ['X E.1'],
+            'Kelas XI' => ['XI F.1'],
+            'Kelas XII' => ['XII F.1', 'XII F.2']
+        ];
+        foreach ($tingkatAkidahList as $tKls => $sasList) {
+            $key = 'Akidah Akhlak||' . $tKls;
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'mapel_nama' => 'Akidah Akhlak',
+                    'kelas_nama' => $tKls,
+                    'sasaran_list' => $sasList,
+                    'guru_id' => 10,
+                    'guru_nama' => 'ARI ROMADLON, S.Pd'
+                ];
             }
         }
 

@@ -127,18 +127,13 @@ $isTuntas = ($pesertaInfo['nilai_akhir'] >= ($ujianInfo['kkm'] ?? 75));
             </div>
         </div>
 
-        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <?php if (!empty($_SESSION['siswa_id'])): ?>
-            <a href="/apk/cbt.php" style="padding: 10px 20px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #0284c7); color: white; text-decoration: none; font-weight: 800; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(16,185,129,0.3);">
-                <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i> Kembali ke APK Siswa
+        <div style="display: flex; gap: 10px; justify-content: center; flex-direction: column; align-items: stretch; margin-top: 1rem;">
+            <a href="/apk/cbt.php" style="padding: 12px 20px; border-radius: 14px; background: linear-gradient(135deg, #10b981, #0284c7); color: white; text-decoration: none; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
+                <i data-lucide="smartphone" style="width: 18px; height: 18px;"></i> Kembali ke APK Siswa
             </a>
-            <?php endif; ?>
-            <a href="<?php echo base_url('cbt/hasil?ujian_id=' . $ujianInfo['id']); ?>" style="padding: 10px 20px; border-radius: 12px; background: #4f46e5; color: white; text-decoration: none; font-weight: 800; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 8px;">
-                <i data-lucide="award" style="width: 16px; height: 16px;"></i> Rekap Nilai
-            </a>
-            <a href="<?php echo base_url('cbt/dashboard'); ?>" style="padding: 10px 20px; border-radius: 12px; background: #f1f5f9; color: #475569; text-decoration: none; font-weight: 800; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 8px;">
-                <i data-lucide="home" style="width: 16px; height: 16px;"></i> Portal CBT
-            </a>
+            <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: #94a3b8; text-align: center;">
+                Jawaban Anda telah tersimpan dengan aman di server CBT MAS MIFTAHUL HUDA.
+            </p>
         </div>
     </div>
     <script>

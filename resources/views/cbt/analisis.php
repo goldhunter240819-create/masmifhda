@@ -1,6 +1,67 @@
 <?php
 $pageTitle = 'Analisis Butir Soal CBT';
 $active_menu = 'analisis';
+
+if (!function_exists('renderAnalisisKunci')) {
+    function renderAnalisisKunci($tipe, $rawKunci) {
+        $tipe = $tipe ?? 'sec_pg';
+        $rawKunci = trim((string)$rawKunci);
+        if ($rawKunci === '') return '<span style="color:#94a3b8; font-weight:700;">-</span>';
+
+        // 1. Pilihan Ganda Biasa
+        if ($tipe === 'sec_pg') {
+            return '<span style="font-weight:900; font-size:0.85rem; background:#e0e7ff; color:#4338ca; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; box-shadow:0 1px 3px rgba(67,56,202,0.15);">' . htmlspecialchars($rawKunci) . '</span>';
+        }
+
+        // 2. PG Kompleks (A, B atau ["A","B"])
+        if ($tipe === 'sec_pgk') {
+            $keys = [];
+            if (strpos($rawKunci, '[') === 0) {
+                $p = json_decode($rawKunci, true);
+                if (is_array($p)) $keys = $p;
+            }
+            if (empty($keys)) {
+                $keys = array_filter(array_map('trim', explode(',', $rawKunci)));
+            }
+            $out = '<div style="display:inline-flex; gap:3px; flex-wrap:wrap; justify-content:center; max-width:105px;">';
+            foreach ($keys as $k) {
+                $out .= '<span style="padding:2px 6px; background:#f5f3ff; color:#7c3aed; font-weight:800; border-radius:6px; font-size:0.75rem; border:1px solid #ddd6fe;">' . htmlspecialchars($k) . '</span>';
+            }
+            $out .= '</div>';
+            return $out;
+        }
+
+        // 3. Benar / Salah (["Benar","Benar","Salah"] dsb)
+        if (in_array($tipe, ['sec_bs', 'bs', 'benar_salah'])) {
+            $arr = json_decode($rawKunci, true);
+            if (is_array($arr) && !empty($arr)) {
+                $out = '<div style="display:inline-flex; gap:3px; flex-wrap:wrap; justify-content:center; max-width:115px;">';
+                foreach ($arr as $idx => $v) {
+                    $isB = (stripos($v, 'benar') !== false || strtoupper(trim($v)) === 'B');
+                    $char = $isB ? 'B' : 'S';
+                    $style = $isB ? 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;' : 'background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;';
+                    $out .= '<span title="Pernyataan ' . ($idx + 1) . ': ' . htmlspecialchars($v) . '" style="padding:2px 5px; border-radius:5px; font-size:0.7rem; font-weight:800; ' . $style . '">' . ($idx + 1) . ':' . $char . '</span>';
+                }
+                $out .= '</div>';
+                return $out;
+            }
+        }
+
+        // 4. Menjodohkan
+        if (in_array($tipe, ['sec_jodoh', 'jodoh'])) {
+            $arr = json_decode($rawKunci, true);
+            $cnt = is_array($arr) ? count($arr) : 0;
+            return '<span title="Pasangan Menjodohkan" style="padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:800; background:#fffbeb; color:#b45309; border:1px solid #fde68a; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;">🔗 ' . ($cnt > 0 ? $cnt . ' Pasang' : 'Menjodohkan') . '</span>';
+        }
+
+        // 5. Isian Singkat
+        if (in_array($tipe, ['sec_isian', 'isian'])) {
+            return '<span style="padding:2px 7px; border-radius:6px; font-size:0.72rem; font-weight:800; background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; display:inline-block; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' . htmlspecialchars($rawKunci) . '">"' . htmlspecialchars(mb_strimwidth($rawKunci, 0, 12, '..')) . '"</span>';
+        }
+
+        return '<span style="font-weight:800; font-size:0.78rem; color:#475569;">' . htmlspecialchars(mb_strimwidth($rawKunci, 0, 14, '..')) . '</span>';
+    }
+}
 ?>
 <div class="siakad-container">
     <?php include __DIR__ . '/sidebar.php'; ?>
@@ -185,14 +246,14 @@ $active_menu = 'analisis';
                         <thead>
                             <tr>
                                 <th style="width: 45px; text-align: center;">No</th>
-                                <th style="min-width: 220px;">Pertanyaan Soal</th>
-                                <th style="width: 60px; text-align: center;">Kunci</th>
-                                <th style="width: 80px; text-align: center;">Benar / Salah</th>
+                                <th style="min-width: 240px;">Pertanyaan Soal</th>
+                                <th style="width: 110px; text-align: center;">Kunci</th>
+                                <th style="width: 95px; text-align: center; white-space: nowrap;">Benar / Salah</th>
                                 <th style="width: 120px; text-align: center;">Tingkat Kesukaran</th>
                                 <th style="width: 120px; text-align: center;">Daya Pembeda</th>
-                                <th style="min-width: 180px; text-align: center;">Sebaran Opsi (A - E)</th>
+                                <th style="min-width: 180px; text-align: center;">Sebaran Opsi</th>
                                 <th style="width: 130px; text-align: center;">Rekomendasi</th>
-                                <th style="width: 70px; text-align: right;">Aksi</th>
+                                <th style="width: 60px; text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -208,6 +269,24 @@ $active_menu = 'analisis';
                                 <?php foreach($analisisSoal as $s): 
                                     $pVal = $s['tingkat_kesukaran'];
                                     $dVal = $s['daya_beda'];
+                                    $tipe = $s['tipe_soal'] ?? 'sec_pg';
+
+                                    // Badge Tipe Soal
+                                    $badgeTipeText = 'Pilihan Ganda';
+                                    $badgeTipeStyle = 'background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe;';
+                                    if ($tipe === 'sec_pgk') {
+                                        $badgeTipeText = 'PG Kompleks';
+                                        $badgeTipeStyle = 'background:#f5f3ff; color:#7c3aed; border:1px solid #ddd6fe;';
+                                    } elseif (in_array($tipe, ['sec_bs', 'bs', 'benar_salah'])) {
+                                        $badgeTipeText = 'Benar / Salah';
+                                        $badgeTipeStyle = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
+                                    } elseif (in_array($tipe, ['sec_jodoh', 'jodoh'])) {
+                                        $badgeTipeText = 'Menjodohkan';
+                                        $badgeTipeStyle = 'background:#fffbeb; color:#b45309; border:1px solid #fde68a;';
+                                    } elseif (in_array($tipe, ['sec_isian', 'isian'])) {
+                                        $badgeTipeText = 'Isian Singkat';
+                                        $badgeTipeStyle = 'background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc;';
+                                    }
 
                                     // Klasifikasi Tingkat Kesukaran & Daya Pembeda
                                     if ($totalPesertaUjian == 0) {
@@ -257,19 +336,27 @@ $active_menu = 'analisis';
                                         <?php echo $s['nomor_urut']; ?>
                                     </td>
                                     <td>
-                                        <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem; line-height: 1.4;">
-                                            <?php echo htmlspecialchars(mb_strimwidth(strip_tags($s['pertanyaan']), 0, 75, '...')); ?>
+                                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;">
+                                            <span style="font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; <?php echo $badgeTipeStyle; ?>">
+                                                <?php echo $badgeTipeText; ?>
+                                            </span>
+                                            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+                                                Bobot: <?php echo $s['bobot']; ?> poin
+                                            </span>
                                         </div>
-                                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">
-                                            Bobot: <?php echo $s['bobot']; ?> poin
+                                        <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem; line-height: 1.45;">
+                                            <?php 
+                                            $cleanText = preg_replace('/<[^>]+>/', ' ', $s['pertanyaan']);
+                                            $cleanText = preg_replace('/\s+/', ' ', $cleanText);
+                                            $cleanText = trim(html_entity_decode($cleanText, ENT_QUOTES, 'UTF-8'));
+                                            echo htmlspecialchars(mb_strimwidth($cleanText, 0, 95, '...')); 
+                                            ?>
                                         </div>
                                     </td>
-                                    <td style="text-align: center;">
-                                        <span style="font-weight: 900; font-size: 0.9rem; background: #e0e7ff; color: #4338ca; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;">
-                                            <?php echo htmlspecialchars($s['kunci_jawaban']); ?>
-                                        </span>
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <?php echo renderAnalisisKunci($tipe, $s['kunci_jawaban']); ?>
                                     </td>
-                                    <td style="text-align: center; font-size: 0.82rem;">
+                                    <td style="text-align: center; font-size: 0.82rem; white-space: nowrap;">
                                         <span style="color: #16a34a; font-weight: 800;"><?php echo $s['jumlah_benar']; ?> B</span>
                                         <span style="color: #cbd5e1; margin: 0 4px;">/</span>
                                         <span style="color: #dc2626; font-weight: 800;"><?php echo $s['jumlah_salah']; ?> S</span>
@@ -287,12 +374,13 @@ $active_menu = 'analisis';
                                         </span>
                                     </td>
                                     <td>
+                                        <?php if (in_array($tipe, ['sec_pg', 'sec_pgk'])): ?>
                                         <!-- Mini Distribution Bars / Badges -->
                                         <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
                                             <?php 
                                             foreach (['A', 'B', 'C', 'D', 'E'] as $opt): 
                                                 $countOpt = $s['sebaran'][$opt] ?? 0;
-                                                $isKey = ($opt === $s['kunci_jawaban']);
+                                                $isKey = (strpos((string)$s['kunci_jawaban'], $opt) !== false);
                                             ?>
                                                 <div title="Opsi <?php echo $opt; ?>: <?php echo $countOpt; ?> siswa" style="display: flex; flex-direction: column; align-items: center; font-size: 0.68rem; min-width: 28px; padding: 2px 4px; border-radius: 6px; <?php echo $isKey ? 'background:#dcfce7; border:1px solid #16a34a; color:#15803d; font-weight:800;' : 'background:#f1f5f9; color:#475569; font-weight:600;'; ?>">
                                                     <span><?php echo $opt; ?></span>
@@ -300,6 +388,25 @@ $active_menu = 'analisis';
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
+                                        <?php elseif (in_array($tipe, ['sec_bs', 'bs', 'benar_salah'])): ?>
+                                            <div style="text-align: center;">
+                                                <span style="font-size: 0.72rem; font-weight: 700; color: #15803d; background: #dcfce7; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i data-lucide="check-square" style="width: 12px; height: 12px;"></i> Model Benar / Salah
+                                                </span>
+                                            </div>
+                                        <?php elseif (in_array($tipe, ['sec_jodoh', 'jodoh'])): ?>
+                                            <div style="text-align: center;">
+                                                <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i data-lucide="shuffle" style="width: 12px; height: 12px;"></i> Model Menjodohkan
+                                                </span>
+                                            </div>
+                                        <?php else: ?>
+                                            <div style="text-align: center;">
+                                                <span style="font-size: 0.72rem; font-weight: 700; color: #0e7490; background: #ecfeff; border: 1px solid #a5f3fc; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i data-lucide="type" style="width: 12px; height: 12px;"></i> Isian Bebas
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
                                     </td>
                                     <td style="text-align: center;">
                                         <span style="display: inline-block; font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 8px; <?php echo $rekBadge; ?>">
@@ -371,6 +478,38 @@ function bukaModalDetail(s) {
 
     const total = (s.jumlah_benar + s.jumlah_salah) || 1;
     const opts = ['A', 'B', 'C', 'D', 'E'];
+    let hasOpts = false;
+
+    opts.forEach(k => {
+        if (s['opsi_' + k.toLowerCase()]) hasOpts = true;
+    });
+
+    if (!hasOpts) {
+        let kunciTeks = s.kunci_jawaban || '-';
+        try {
+            const parsed = JSON.parse(s.kunci_jawaban);
+            if (Array.isArray(parsed)) {
+                if (typeof parsed[0] === 'object' && parsed[0] !== null) {
+                    kunciTeks = parsed.map((p, i) => `<div><span style="font-weight:700; color:#1e293b;">${p.premis || ('Premis ' + (i+1))}</span> <span style="color:#6366f1;">➔</span> <span style="font-weight:800; color:#4338ca;">${p.respon || '-'}</span></div>`).join('');
+                } else {
+                    kunciTeks = parsed.map((v, i) => `<div>Pernyataan ${i+1}: <b style="color:${(v+'').toLowerCase().includes('benar') ? '#16a34a':'#dc2626'}">${v}</b></div>`).join('');
+                }
+            }
+        } catch(e) {}
+
+        const row = document.createElement('div');
+        row.style.padding = '12px 14px';
+        row.style.borderRadius = '10px';
+        row.style.border = '1px solid #e2e8f0';
+        row.style.background = '#f8fafc';
+        row.style.fontSize = '0.88rem';
+        row.style.lineHeight = '1.6';
+        row.innerHTML = `<div style="font-weight:800; color:#475569; margin-bottom:6px; font-size:0.75rem; text-transform:uppercase;">Kunci Jawaban Instrumen:</div><div>${kunciTeks}</div>`;
+        listContainer.appendChild(row);
+        document.getElementById('modalDetailSoal').classList.add('open');
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
 
     opts.forEach(k => {
         const val = s['opsi_' + k.toLowerCase()];
