@@ -2568,7 +2568,13 @@ class CbtController {
         $countXI = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta_khusus WHERE tingkat = 'Kelas XI'")->fetchColumn();
         $countXII = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta_khusus WHERE tingkat = 'Kelas XII'")->fetchColumn();
 
+        $title = "Peserta CBT Kelas Jauh - MAS MIFTAHUL HUDA";
+        $active_menu = 'peserta_khusus';
+
+        ob_start();
         include __DIR__ . '/../../resources/views/cbt/peserta_khusus.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
     }
 
     /**
