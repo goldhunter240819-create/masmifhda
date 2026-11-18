@@ -93,6 +93,8 @@ try {
 $lockSchedule = ($cbtSettings['lock_by_schedule_time'] ?? '1') === '1';
 $showScoreToStudent = ($cbtSettings['show_score_to_student'] ?? '1') === '1';
 $maxTabViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
+$tokenMasaBerlaku = (int)($cbtSettings['token_refresh_interval'] ?? 120);
+if ($tokenMasaBerlaku <= 0) $tokenMasaBerlaku = 120;
 
 // 3. Ambil Info Topik Aktif
 $topikAktif = null;
@@ -176,7 +178,7 @@ foreach ($ujianListRaw as $u) {
         $u['token'] = $prefix . rand(100, 999);
         try {
             $core_db->prepare("UPDATE cbt_ujian SET token = ? WHERE id = ?")->execute([$u['token'], $u['id']]);
-            $core_db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, 240, 'Aktif', NOW())")->execute([$u['token'], $u['id']]);
+            $core_db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, ?, 'Aktif', NOW())")->execute([$u['token'], $u['id'], $tokenMasaBerlaku]);
         } catch (\Exception $e) {}
     }
 
@@ -273,7 +275,7 @@ include 'header.php';
     /* Header Pro */
     .cbt-header-pro {
         background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0284c7 100%);
-        padding: 24px 20px 48px;
+        padding: 72px 20px 42px;
         color: white;
         border-bottom-left-radius: 28px;
         border-bottom-right-radius: 28px;
@@ -547,8 +549,8 @@ include 'header.php';
 <div class="cbt-header-pro">
     <div class="cbt-topbar">
         <div>
-            <div class="cbt-brand-sub">MADRASAH ALIYAH MIFTAHUL HUDA</div>
-            <h1 class="cbt-brand-title">CBT Ujian Siswa</h1>
+            <div class="cbt-brand-sub">PORTAL EVALUASI AKADEMIK</div>
+            <h1 class="cbt-brand-title">Ruang Asesmen Siswa</h1>
         </div>
         <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
             <i class="fa-solid fa-laptop-code"></i>
@@ -607,10 +609,15 @@ include 'header.php';
     <!-- Banner CBT Info -->
     <div class="cbt-banner-pro">
         <div>
-            <h3><i class="fa-solid fa-layer-group"></i> <?= htmlspecialchars($topikAktif['nama_topik'] ?? 'Asesmen CBT Madrasah') ?></h3>
-            <p>Pastikan koneksi internet stabil & baterai gawai Anda mencukupi.</p>
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; color: #38bdf8; font-weight: 800; margin-bottom: 2px;">
+                <i class="fa-solid fa-calendar-day"></i> Agenda Asesmen Terjadwal
+            </div>
+            <h3 style="font-size: 1.05rem; font-weight: 900; color: #ffffff; margin: 0 0 4px 0;">
+                <?= htmlspecialchars(!empty($topikAktif['nama_topik']) && stripos($topikAktif['nama_topik'], 'SIMULASI') === false ? $topikAktif['nama_topik'] : 'Sumatif Akhir Semester (SAS) Ganjil') ?>
+            </h3>
+            <p>Pastikan koneksi internet stabil & gawai terisi baterai sebelum memulai.</p>
         </div>
-        <div style="font-size: 1.8rem; opacity: 0.3; margin-left: 10px;">
+        <div style="font-size: 2rem; opacity: 0.35; margin-left: 12px; color: #38bdf8;">
             <i class="fa-solid fa-shield-halved"></i>
         </div>
     </div>

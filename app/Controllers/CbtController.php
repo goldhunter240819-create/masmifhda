@@ -190,6 +190,9 @@ class CbtController {
             } catch (\Exception $e) {}
 
             try {
+                $intervalSetting = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'token_refresh_interval'")->fetchColumn() ?: 120);
+                if ($intervalSetting <= 0) $intervalSetting = 120;
+
                 $stmtNoToken = $db->query("SELECT id, mapel_nama, kelas_nama FROM cbt_ujian WHERE token IS NULL OR token = ''");
                 if ($stmtNoToken) {
                     $uNoToken = $stmtNoToken->fetchAll(PDO::FETCH_ASSOC);
@@ -198,7 +201,7 @@ class CbtController {
                         if (strlen($prefix) < 3) $prefix = str_pad($prefix, 3, 'X');
                         $genToken = $prefix . rand(100, 999);
                         $db->prepare("UPDATE cbt_ujian SET token = ? WHERE id = ?")->execute([$genToken, $un['id']]);
-                        $db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, 240, 'Aktif', NOW())")->execute([$genToken, $un['id']]);
+                        $db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, ?, 'Aktif', NOW())")->execute([$genToken, $un['id'], $intervalSetting]);
                     }
                 }
             } catch (\Exception $e) {}
@@ -988,7 +991,9 @@ class CbtController {
                     $existingUjian = ['id' => $newUjianId, 'topik_id' => $tId, 'mapel_nama' => $mapel, 'kelas_nama' => $kelasNama, 'token' => $tokenUjian];
 
                     try {
-                        $db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, 240, 'Aktif', NOW())")->execute([$tokenUjian, $newUjianId]);
+                        $intervalSetting = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'token_refresh_interval'")->fetchColumn() ?: 120);
+                        if ($intervalSetting <= 0) $intervalSetting = 120;
+                        $db->prepare("INSERT INTO cbt_token (token, ujian_id, masa_berlaku_menit, status, created_at) VALUES (?, ?, ?, 'Aktif', NOW())")->execute([$tokenUjian, $newUjianId, $intervalSetting]);
                     } catch (\Exception $e) {}
 
                     $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE id = ?")->execute([$newUjianId, $g['id']]);
@@ -1083,8 +1088,10 @@ class CbtController {
             // Pastikan Token Ujian Aktif
             $tokAktif = $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
             if (!$tokAktif) {
+                $intervalSetting = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'token_refresh_interval'")->fetchColumn() ?: 120);
+                if ($intervalSetting <= 0) $intervalSetting = 120;
                 $tokenStr = 'MAS' . rand(100, 999);
-                $db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, 240, 'Aktif', NOW())")->execute([$tokenStr]);
+                $db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, ?, 'Aktif', NOW())")->execute([$tokenStr, $intervalSetting]);
             }
         } catch (\Exception $e) {}
     }
@@ -1686,6 +1693,13 @@ class CbtController {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
 
+        // Sinkronkan masa_berlaku_menit token aktif dengan pengaturan terkini
+        try {
+            $intervalSetting = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'token_refresh_interval'")->fetchColumn() ?: 120);
+            if ($intervalSetting <= 0) $intervalSetting = 120;
+            $db->prepare("UPDATE cbt_token SET masa_berlaku_menit = ? WHERE status = 'Aktif' OR masa_berlaku_menit = 240")->execute([$intervalSetting]);
+        } catch (\Exception $e) {}
+
         $stmtTok = $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
         $tokenAktif = $stmtTok->fetch(PDO::FETCH_ASSOC) ?: null;
 
@@ -1708,14 +1722,17 @@ class CbtController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->exec("UPDATE cbt_token SET status = 'Expired' WHERE status = 'Aktif'");
 
+            $intervalSetting = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'token_refresh_interval'")->fetchColumn() ?: 120);
+            if ($intervalSetting <= 0) $intervalSetting = 120;
+
             $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             $tokenStr = '';
             for ($i = 0; $i < 6; $i++) {
                 $tokenStr .= $chars[rand(0, strlen($chars) - 1)];
             }
 
-            $stmt = $db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, 120, 'Aktif', NOW())");
-            $stmt->execute([$tokenStr]);
+            $stmt = $db->prepare("INSERT INTO cbt_token (token, masa_berlaku_menit, status, created_at) VALUES (?, ?, 'Aktif', NOW())");
+            $stmt->execute([$tokenStr, $intervalSetting]);
 
             redirect('/cbt/token?msg=generated&success=1');
             exit;
@@ -2524,6 +2541,16 @@ class CbtController {
                         ':v' => trim((string)$v)
                     ]);
                 }
+
+                // Sinkronkan langsung ke token aktif jika masa berlaku diubah
+                if (isset($submitted['token_refresh_interval'])) {
+                    $newInterval = (int)$submitted['token_refresh_interval'];
+                    if ($newInterval > 0) {
+                        try {
+                            $db->prepare("UPDATE cbt_token SET masa_berlaku_menit = ? WHERE status = 'Aktif' OR masa_berlaku_menit = 240")->execute([$newInterval]);
+                        } catch (\Exception $e) {}
+                    }
+                }
             }
             redirect('/cbt/pengaturan?saved=1');
             exit;
@@ -2874,6 +2901,22 @@ class CbtController {
         try {
             $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
+
+        if (!$inst) {
+            $inst = [];
+        }
+        if (empty($inst['nama_kepala']) || stripos($inst['nama_kepala'], 'Ulfah') !== false) {
+            $inst['nama_kepala'] = 'Drs. Hamim Hasyim';
+        }
+        if (empty($inst['nip_kepala'])) {
+            $inst['nip_kepala'] = '-';
+        }
+        if (empty($inst['kota'])) {
+            $inst['kota'] = 'Lampung Barat';
+        }
+        if (empty($inst['nama']) && empty($inst['nama_institusi'])) {
+            $inst['nama'] = 'MAS MIFTAHUL HUDA';
+        }
 
         include __DIR__ . '/../../resources/views/cbt/peserta_khusus_cetak.php';
     }
