@@ -12,6 +12,7 @@ $actionViolation = $cbtSettings['action_on_violation'] ?? 'submit';
 $disableRightClick = ($cbtSettings['disable_right_click'] ?? '1') === '1';
 $disableCopyPaste = ($cbtSettings['disable_copy_paste'] ?? '1') === '1';
 $soundAlarm = ($cbtSettings['sound_alarm_on_violation'] ?? '1') === '1';
+$blockBackButton = ($cbtSettings['block_back_button'] ?? '1') === '1';
 $watermark = ($cbtSettings['watermark_student_nis'] ?? '1') === '1';
 $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 ?>
@@ -761,11 +762,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 🚨 PERINGATAN PELANGGARAN CBT!
             </div>
 
-            <h3 style="font-size: 1.4rem; font-weight: 900; color: #991b1b; margin-bottom: 8px;">
+            <h3 id="violationTitle" style="font-size: 1.4rem; font-weight: 900; color: #991b1b; margin-bottom: 8px;">
                 Terdeteksi Keluar dari Lembar Ujian!
             </h3>
 
-            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-bottom: 1.25rem;">
+            <p id="violationDesc" style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-bottom: 1.25rem;">
                 Anda terdeteksi berpindah tab browser, membuka aplikasi lain, atau meninggalkan layar ujian. Tindakan ini telah dicatat oleh sistem pengawas!
             </p>
 
@@ -1585,6 +1586,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         // ─── ANTI-CHEAT & DANGER ALARM SYSTEM (MEME AUDIO) ───────────────────
         const isAntiCheat = <?php echo $isAntiCheat ? 'true' : 'false'; ?>;
         const blockTab = <?php echo $blockTab ? 'true' : 'false'; ?>;
+        const blockBackButton = <?php echo $blockBackButton ? 'true' : 'false'; ?>;
         const forceFullscreen = <?php echo $forceFullscreen ? 'true' : 'false'; ?>;
         const disableRightClick = <?php echo $disableRightClick ? 'true' : 'false'; ?>;
         const disableCopyPaste = <?php echo $disableCopyPaste ? 'true' : 'false'; ?>;
@@ -1631,7 +1633,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         }
 
         function handleTabViolation(reason = 'Keluar Tab') {
-            if (!isAntiCheat || !blockTab || isExamSubmitted) return;
+            if (!isAntiCheat || isExamSubmitted) return;
 
             const now = Date.now();
             if (now - lastViolationTime < 1800) {
@@ -1647,16 +1649,30 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             playDangerAlarm();
 
             // Tampilkan modal peringatan
-            showViolationModal();
+            showViolationModal(reason);
         }
 
-        function showViolationModal() {
+        function showViolationModal(reason = '') {
             if (isExamSubmitted) return;
             isViolationModalOpen = true;
 
             const modal = document.getElementById('modalViolation');
             const lblCount = document.getElementById('lblViolationCount');
+            const titleEl = document.getElementById('violationTitle');
+            const descEl = document.getElementById('violationDesc');
+
             if (lblCount) lblCount.textContent = violationCount;
+
+            if (reason.includes('Kembali')) {
+                if (titleEl) titleEl.textContent = 'Dilarang Menekan Tombol Kembali!';
+                if (descEl) descEl.textContent = 'Anda terdeteksi menekan tombol kembali (Back) pada browser atau gawai. Selama ujian berlangsung, dilarang kembali ke menu atau aplikasi lain!';
+            } else if (reason.includes('Fullscreen')) {
+                if (titleEl) titleEl.textContent = 'Terdeteksi Keluar dari Layar Penuh!';
+                if (descEl) descEl.textContent = 'Anda wajib mengerjakan ujian dalam mode layar penuh (Fullscreen) tanpa meminimalkan jendela.';
+            } else {
+                if (titleEl) titleEl.textContent = 'Terdeteksi Keluar dari Lembar Ujian!';
+                if (descEl) descEl.textContent = 'Anda terdeteksi berpindah tab browser, membuka aplikasi lain, atau meninggalkan layar ujian. Tindakan ini telah dicatat oleh sistem pengawas!';
+            }
 
             if (violationCount >= maxViolations) {
                 stopDangerAlarm();
@@ -1686,6 +1702,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             isViolationModalOpen = false;
             document.getElementById('modalViolation').classList.remove('open');
 
+            // Kunci kembali history gawai
+            try {
+                window.history.pushState({ cbt_session: 'active' }, document.title, window.location.href);
+            } catch(e) {}
+
             if (forceFullscreen && !document.fullscreenElement) {
                 requestFullscreenMode();
             }
@@ -1698,6 +1719,35 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             } else if (el.webkitRequestFullscreen) {
                 el.webkitRequestFullscreen();
             }
+        }
+
+        // ─── BLOKIR TOMBOL KEMBALI GAWAI / BROWSER (ANTI-BACK) ────────────────
+        if (isAntiCheat && blockBackButton) {
+            try {
+                window.history.pushState({ cbt_session: 'active' }, document.title, window.location.href);
+            } catch(e) {}
+
+            window.addEventListener('popstate', function(event) {
+                if (isExamSubmitted) return;
+
+                // Segera tahan posisi history agar tidak kembali ke APK / halaman sebelumnya
+                try {
+                    window.history.pushState({ cbt_session: 'active' }, document.title, window.location.href);
+                } catch(e) {}
+
+                // Picu pelanggaran & alarm bahaya meme!
+                handleTabViolation('Mencoba Menekan Tombol Kembali');
+            });
+
+            // Cegah penutupan / reload tab browser tanpa konfirmasi
+            window.addEventListener('beforeunload', function(e) {
+                if (!isExamSubmitted) {
+                    const msg = 'Ujian sedang berlangsung! Anda tidak boleh meninggalkan halaman ini.';
+                    e.preventDefault();
+                    e.returnValue = msg;
+                    return msg;
+                }
+            });
         }
 
         // Listener pindah tab & keluar layar

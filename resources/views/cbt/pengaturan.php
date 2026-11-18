@@ -13,6 +13,7 @@ $disableCopyPaste = ($settings['disable_copy_paste'] ?? '1') === '1';
 $lockDevice = ($settings['lock_single_device'] ?? '1') === '1';
 $watermark = ($settings['watermark_student_nis'] ?? '1') === '1';
 $soundAlarm = ($settings['sound_alarm_on_violation'] ?? '1') === '1';
+$blockBackButton = ($settings['block_back_button'] ?? '1') === '1';
 
 $durasiMenit = (int)($settings['default_durasi_menit'] ?? 90);
 $defaultKkm = (int)($settings['default_kkm'] ?? 75);
@@ -370,6 +371,26 @@ $listTerkunci = $listTerkunci ?? [];
                                 <label class="cbt-switch">
                                     <input type="hidden" name="settings[sound_alarm_on_violation]" value="0">
                                     <input type="checkbox" name="settings[sound_alarm_on_violation]" value="1" <?php echo $soundAlarm ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 10. Anti Back Button Lock -->
+                        <div class="card setting-card" style="border-left: 4px solid #f59e0b;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-amber"><i data-lucide="arrow-left-circle"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Kunci & Blokir Tombol Kembali (Anti-Back)</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Mengunci tombol kembali (*browser / hardware back button*) pada gawai dan browser siswa. Jika ditekan, siswa dicegat tidak bisa keluar dan sistem langsung memicu peringatan/alarm.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[block_back_button]" value="0">
+                                    <input type="checkbox" name="settings[block_back_button]" value="1" <?php echo $blockBackButton ? 'checked' : ''; ?>>
                                     <span class="cbt-slider"></span>
                                 </label>
                             </div>

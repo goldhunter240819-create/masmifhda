@@ -230,6 +230,7 @@ class CbtController {
                 ['lock_single_device', '1', 'keamanan', 'Kunci 1 Akun 1 Perangkat (Cegah Multi-Login)'],
                 ['watermark_student_nis', '1', 'keamanan', 'Watermark Transparan Nama & NIS Siswa di Layar'],
                 ['sound_alarm_on_violation', '1', 'keamanan', 'Bunyikan Alarm Suara Bahaya Saat Keluar Tab'],
+                ['block_back_button', '1', 'keamanan', 'Kunci & Blokir Tombol Kembali Browser / Gawai (Anti-Back)'],
                 ['default_durasi_menit', '90', 'ujian', 'Durasi Ujian Default (Menit)'],
                 ['default_kkm', '75', 'ujian', 'Standar KKM Default Madrasah'],
                 ['acak_soal_default', '1', 'ujian', 'Acak Urutan Soal Ujian Default'],
