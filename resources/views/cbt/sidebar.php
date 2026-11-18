@@ -86,6 +86,12 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 <span>Analisis Butir Soal</span>
             </a>
 
+            <!-- Pengaturan CBT & Keamanan -->
+            <a href="<?php echo base_url('cbt/pengaturan'); ?>" class="z-nav-item <?php echo $active_menu === 'pengaturan' ? 'active' : ''; ?>">
+                <i data-lucide="shield-check"></i>
+                <span>Pengaturan CBT</span>
+            </a>
+
             <div class="z-nav-label" style="margin-top: 1rem;">Integrasi</div>
 
             <!-- Portal Utama -->

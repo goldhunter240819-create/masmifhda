@@ -2464,6 +2464,10 @@ $router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::cla
 $router->add('POST', '/cbt/token/expire', [\App\Controllers\CbtController::class, 'expireToken']);
 $router->add('GET', '/cbt/hasil', [\App\Controllers\CbtController::class, 'hasil']);
 $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'analisis']);
+$router->add('GET', '/cbt/pengaturan', [\App\Controllers\CbtController::class, 'pengaturan']);
+$router->add('POST', '/cbt/pengaturan/save', [\App\Controllers\CbtController::class, 'savePengaturan']);
+$router->add('POST', '/cbt/pengaturan/reset-siswa', [\App\Controllers\CbtController::class, 'resetSiswaTerkunci']);
+$router->add('POST', '/cbt/pengaturan/reset-default', [\App\Controllers\CbtController::class, 'resetDefaultPengaturan']);
 
 
 // ─── Kurikulum & Supervisi Suite (Full Port from Mismifhda) ─────────────────

@@ -208,6 +208,45 @@ class CbtController {
                 }
             } catch (\Exception $e) {}
 
+            // 8. Tabel Pengaturan CBT & Keamanan
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_pengaturan (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                setting_key VARCHAR(100) NOT NULL UNIQUE,
+                setting_value LONGTEXT DEFAULT NULL,
+                kategori VARCHAR(50) DEFAULT 'keamanan',
+                keterangan VARCHAR(255) DEFAULT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Seed default pengaturan jika belum ada
+            $defaults = [
+                ['anti_cheat_mode', '1', 'keamanan', 'Mode Anti-Cheat Utama'],
+                ['force_fullscreen', '1', 'keamanan', 'Kunci Layar Penuh (Force Fullscreen)'],
+                ['block_tab_switch', '1', 'keamanan', 'Deteksi Pindah Tab & Buka Aplikasi Lain'],
+                ['max_tab_violations', '3', 'keamanan', 'Batas Toleransi Pelanggaran Pindah Tab'],
+                ['action_on_violation', 'submit', 'keamanan', 'Tindakan Pelanggaran Batas (submit/lock)'],
+                ['disable_right_click', '1', 'keamanan', 'Blokir Klik Kanan & Inspect Element'],
+                ['disable_copy_paste', '1', 'keamanan', 'Blokir Copy-Paste & Seleksi Teks'],
+                ['lock_single_device', '1', 'keamanan', 'Kunci 1 Akun 1 Perangkat (Cegah Multi-Login)'],
+                ['watermark_student_nis', '1', 'keamanan', 'Watermark Transparan Nama & NIS Siswa di Layar'],
+                ['default_durasi_menit', '90', 'ujian', 'Durasi Ujian Default (Menit)'],
+                ['default_kkm', '75', 'ujian', 'Standar KKM Default Madrasah'],
+                ['acak_soal_default', '1', 'ujian', 'Acak Urutan Soal Ujian Default'],
+                ['acak_opsi_default', '1', 'ujian', 'Acak Urutan Opsi Jawaban Default'],
+                ['show_score_to_student', '1', 'ujian', 'Tampilkan Skor ke Siswa setelah Ujian'],
+                ['show_discussion_to_student', '0', 'ujian', 'Tampilkan Kunci/Pembahasan ke Siswa'],
+                ['allow_student_review', '1', 'ujian', 'Izinkan Siswa Cek Ulang Jawaban'],
+                ['token_mode', 'manual', 'ujian', 'Mode Perilisan Token Ujian (manual/auto)'],
+                ['token_refresh_interval', '120', 'ujian', 'Masa Berlaku Token (Menit)'],
+                ['institution_name', 'MAS MIFTAHUL HUDA', 'umum', 'Nama Institusi / Madrasah'],
+                ['cbt_app_title', 'CBT Online v2.5 Online', 'umum', 'Label Branding Sistem CBT']
+            ];
+
+            $stmtInsSetting = $db->prepare("INSERT IGNORE INTO cbt_pengaturan (setting_key, setting_value, kategori, keterangan) VALUES (?, ?, ?, ?)");
+            foreach ($defaults as $df) {
+                $stmtInsSetting->execute($df);
+            }
+
             // Bersihkan data dummy awal (seperti UJN-MAT-01, UJN-FIQ-02, MAS982, nis dummy)
             $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02'))");
             $db->exec("DELETE FROM cbt_peserta WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02')) OR nis LIKE '2024100%'");
@@ -2190,5 +2229,127 @@ class CbtController {
         }
 
         include __DIR__ . '/../../resources/views/cbt/selesai.php';
+    }
+
+    /**
+     * Dapatkan semua pengaturan CBT sebagai key-value map
+     */
+    public static function getAllPengaturan($db = null) {
+        if (!$db) {
+            $db = Database::connect('core');
+        }
+        self::ensureTables($db);
+        try {
+            $stmt = $db->query("SELECT setting_key, setting_value FROM cbt_pengaturan");
+            return $stmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Halaman Pengaturan CBT & Keamanan Anti-Cheat
+     */
+    public static function pengaturan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        // Ambil semua pengaturan
+        $stmt = $db->query("SELECT setting_key, setting_value, kategori, keterangan FROM cbt_pengaturan ORDER BY id ASC");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $settings = [];
+        foreach ($rows as $r) {
+            $settings[$r['setting_key']] = $r['setting_value'];
+        }
+
+        // Statistik ringkas keamanan & pengerjaan peserta saat ini
+        $totalPeserta = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta")->fetchColumn();
+        $pesertaMengerjakan = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE status_pengerjaan = 'Sedang Mengerjakan'")->fetchColumn();
+        $pesertaSelesai = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE status_pengerjaan = 'Selesai'")->fetchColumn();
+        $pesertaTerkunci = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE status_pengerjaan IN ('Terkunci', 'Pelanggaran')")->fetchColumn();
+
+        // Daftar peserta yang terblokir / terkunci (jika ada)
+        $stmtTerkunci = $db->query("SELECT p.*, u.nama_ujian, u.mapel_nama 
+                                   FROM cbt_peserta p 
+                                   LEFT JOIN cbt_ujian u ON p.ujian_id = u.id 
+                                   WHERE p.status_pengerjaan IN ('Terkunci', 'Pelanggaran') 
+                                   ORDER BY p.id DESC LIMIT 50");
+        $listTerkunci = $stmtTerkunci->fetchAll(PDO::FETCH_ASSOC);
+
+        $title = "Pengaturan & Keamanan CBT - MAS MIFTAHUL HUDA";
+        $active_menu = 'pengaturan';
+
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/pengaturan.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Simpan Pengaturan CBT & Keamanan
+     */
+    public static function savePengaturan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $submitted = $_POST['settings'] ?? [];
+            if (!empty($submitted) && is_array($submitted)) {
+                $stmtUp = $db->prepare("INSERT INTO cbt_pengaturan (setting_key, setting_value) 
+                                        VALUES (:k, :v) 
+                                        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+                foreach ($submitted as $k => $v) {
+                    $stmtUp->execute([
+                        ':k' => trim((string)$k),
+                        ':v' => trim((string)$v)
+                    ]);
+                }
+            }
+            redirect('/cbt/pengaturan?saved=1');
+            exit;
+        }
+        redirect('/cbt/pengaturan');
+    }
+
+    /**
+     * Buka Kunci Siswa yang Terblokir / Mengalami Pelanggaran Sesi
+     */
+    public static function resetSiswaTerkunci() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
+            if ($peserta_id > 0) {
+                $stmt = $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Sedang Mengerjakan' WHERE id = ?");
+                $stmt->execute([$peserta_id]);
+            } else {
+                $db->exec("UPDATE cbt_peserta SET status_pengerjaan = 'Sedang Mengerjakan' WHERE status_pengerjaan IN ('Terkunci', 'Pelanggaran')");
+            }
+            redirect('/cbt/pengaturan?unlocked=1');
+            exit;
+        }
+        redirect('/cbt/pengaturan');
+    }
+
+    /**
+     * Reset Seluruh Pengaturan CBT ke Standar Pabrik
+     */
+    public static function resetDefaultPengaturan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db->exec("TRUNCATE TABLE cbt_pengaturan");
+            self::ensureTables($db);
+            redirect('/cbt/pengaturan?reset=1');
+            exit;
+        }
+        redirect('/cbt/pengaturan');
     }
 }

@@ -1,0 +1,779 @@
+<?php
+$pageTitle = 'Pengaturan CBT & Keamanan';
+$active_menu = 'pengaturan';
+
+$settings = $settings ?? [];
+$isAntiCheatActive = ($settings['anti_cheat_mode'] ?? '1') === '1';
+$forceFullscreen = ($settings['force_fullscreen'] ?? '1') === '1';
+$blockTab = ($settings['block_tab_switch'] ?? '1') === '1';
+$maxViolations = (int)($settings['max_tab_violations'] ?? 3);
+$actionViolation = $settings['action_on_violation'] ?? 'submit';
+$disableRightClick = ($settings['disable_right_click'] ?? '1') === '1';
+$disableCopyPaste = ($settings['disable_copy_paste'] ?? '1') === '1';
+$lockDevice = ($settings['lock_single_device'] ?? '1') === '1';
+$watermark = ($settings['watermark_student_nis'] ?? '1') === '1';
+
+$durasiMenit = (int)($settings['default_durasi_menit'] ?? 90);
+$defaultKkm = (int)($settings['default_kkm'] ?? 75);
+$acakSoal = ($settings['acak_soal_default'] ?? '1') === '1';
+$acakOpsi = ($settings['acak_opsi_default'] ?? '1') === '1';
+$showScore = ($settings['show_score_to_student'] ?? '1') === '1';
+$showDiscussion = ($settings['show_discussion_to_student'] ?? '0') === '1';
+$allowReview = ($settings['allow_student_review'] ?? '1') === '1';
+$tokenMode = $settings['token_mode'] ?? 'manual';
+$tokenInterval = (int)($settings['token_refresh_interval'] ?? 120);
+
+$totalPeserta = $totalPeserta ?? 0;
+$pesertaMengerjakan = $pesertaMengerjakan ?? 0;
+$pesertaSelesai = $pesertaSelesai ?? 0;
+$pesertaTerkunci = $pesertaTerkunci ?? 0;
+$listTerkunci = $listTerkunci ?? [];
+?>
+<div class="siakad-container">
+    <?php include __DIR__ . '/sidebar.php'; ?>
+
+    <div class="z-main">
+        <?php include __DIR__ . '/header.php'; ?>
+
+        <div class="z-scroll" style="padding: 0 0 3rem 0;">
+
+            <!-- Alerts -->
+            <?php if (isset($_GET['saved'])): ?>
+            <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(34,197,94,0.1);">
+                <i data-lucide="check-circle" style="width: 22px; height: 22px; color: #22c55e; flex-shrink: 0;"></i>
+                <div>
+                    <div style="font-size: 0.95rem;">Pengaturan CBT Berhasil Disimpan!</div>
+                    <div style="font-size: 0.82rem; font-weight: 500; color: #15803d; margin-top: 2px;">Seluruh parameter keamanan anti-cheat dan aturan pelaksanaan ujian telah diperbarui secara terpusat.</div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['unlocked'])): ?>
+            <div style="background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(59,130,246,0.1);">
+                <i data-lucide="unlock" style="width: 22px; height: 22px; color: #3b82f6; flex-shrink: 0;"></i>
+                <div>
+                    <div style="font-size: 0.95rem;">Status Siswa Berhasil Dipulihkan!</div>
+                    <div style="font-size: 0.82rem; font-weight: 500; color: #2563eb; margin-top: 2px;">Siswa yang sebelumnya terkunci kini dapat melanjutkan ujian kembali.</div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['reset'])): ?>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700;">
+                <i data-lucide="refresh-cw" style="width: 22px; height: 22px; color: #ef4444; flex-shrink: 0;"></i>
+                <div>
+                    <div style="font-size: 0.95rem;">Pengaturan Dikembalikan ke Default Pabrik!</div>
+                    <div style="font-size: 0.82rem; font-weight: 500; color: #b91c1c; margin-top: 2px;">Parameter standar keamanan dan evaluasi telah direset ke rekomendasi madrasah.</div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Elite Page Header Banner -->
+            <div class="elite-page-header">
+                <div class="header-bg-shapes"></div>
+                <div class="header-content-inner">
+                    <div class="header-text-premium">
+                        <div class="header-badge">SECURITY PROTOCOL & ENGINE SETTINGS</div>
+                        <h1><i data-lucide="shield-check"></i> Pengaturan & Keamanan CBT Online</h1>
+                        <p>Pusat kendali proteksi anti-cheat, integritas pelaksanaan ujian, kunci layar penuh, pembatasan gawai, dan kebijakan pengerjaan siswa.</p>
+                    </div>
+                    <div class="header-actions-premium" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" onclick="document.getElementById('formPengaturan').submit()" class="e-btn e-btn-primary" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); border: none; padding: 10px 22px; box-shadow: 0 4px 14px rgba(14,165,233,0.35);">
+                            <i data-lucide="save"></i> Simpan Semua Pengaturan
+                        </button>
+                        <button type="button" onclick="switchTab('darurat')" class="e-btn e-btn-glass">
+                            <i data-lucide="unlock"></i> Buka Kunci Siswa (<?php echo $pesertaTerkunci; ?>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Status Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
+                <!-- Anti-Cheat Status -->
+                <div class="card" style="padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1rem; background: #ffffff;">
+                    <div style="width: 50px; height: 50px; border-radius: 14px; background: <?php echo $isAntiCheatActive ? '#f0fdf4' : '#fef2f2'; ?>; color: <?php echo $isAntiCheatActive ? '#16a34a' : '#ef4444'; ?>; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="<?php echo $isAntiCheatActive ? 'shield-check' : 'shield-alert'; ?>" style="width: 26px; height: 26px;"></i>
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">Anti-Cheat</span>
+                            <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: <?php echo $isAntiCheatActive ? '#dcfce7' : '#fee2e2'; ?>; color: <?php echo $isAntiCheatActive ? '#15803d' : '#991b1b'; ?>;">
+                                <?php echo $isAntiCheatActive ? 'AKTIF' : 'NONAKTIF'; ?>
+                            </span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 4px;">Proteksi berlapis terpusat</div>
+                    </div>
+                </div>
+
+                <!-- Tab Switch Violation -->
+                <div class="card" style="padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1rem; background: #ffffff;">
+                    <div style="width: 50px; height: 50px; border-radius: 14px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="monitor-x" style="width: 26px; height: 26px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;"><?php echo $maxViolations; ?>x Peringatan</div>
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 4px;">Toleransi keluar tab / aplikasi</div>
+                    </div>
+                </div>
+
+                <!-- Mode Sanksi -->
+                <div class="card" style="padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1rem; background: #ffffff;">
+                    <div style="width: 50px; height: 50px; border-radius: 14px; background: #fdf4ff; color: #c026d3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="alert-octagon" style="width: 26px; height: 26px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; text-transform: capitalize;">
+                            <?php echo $actionViolation === 'submit' ? 'Auto-Submit' : 'Kunci Pengerjaan'; ?>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 4px;">Sanksi jika melanggar batas</div>
+                    </div>
+                </div>
+
+                <!-- Peserta Terkunci -->
+                <div class="card" style="padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1rem; background: #ffffff;">
+                    <div style="width: 50px; height: 50px; border-radius: 14px; background: <?php echo $pesertaTerkunci > 0 ? '#fff1f2' : '#f0fdf4'; ?>; color: <?php echo $pesertaTerkunci > 0 ? '#e11d48' : '#16a34a'; ?>; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="<?php echo $pesertaTerkunci > 0 ? 'lock' : 'users'; ?>" style="width: 26px; height: 26px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">
+                            <?php echo $pesertaTerkunci; ?> <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Siswa Terkunci</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 4px;">
+                            <?php echo $pesertaMengerjakan; ?> Sedang Ujian
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Tabs Navigation -->
+            <div style="display: flex; gap: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.75rem; overflow-x: auto; padding-bottom: 2px;">
+                <button type="button" class="cbt-tab-btn active" id="tabBtn-keamanan" onclick="switchTab('keamanan')">
+                    <i data-lucide="shield-check" style="width: 18px; height: 18px;"></i>
+                    <span>Keamanan & Anti-Cheat</span>
+                </button>
+                <button type="button" class="cbt-tab-btn" id="tabBtn-aturan" onclick="switchTab('aturan')">
+                    <i data-lucide="sliders" style="width: 18px; height: 18px;"></i>
+                    <span>Aturan & Pelaksanaan Ujian</span>
+                </button>
+                <button type="button" class="cbt-tab-btn" id="tabBtn-darurat" onclick="switchTab('darurat')">
+                    <i data-lucide="unlock" style="width: 18px; height: 18px;"></i>
+                    <span>Buka Kunci Siswa & Pemulihan</span>
+                    <?php if ($pesertaTerkunci > 0): ?>
+                        <span style="background: #ef4444; color: white; border-radius: 99px; padding: 2px 7px; font-size: 0.7rem; font-weight: 800;"><?php echo $pesertaTerkunci; ?></span>
+                    <?php endif; ?>
+                </button>
+            </div>
+
+            <!-- Settings Form -->
+            <form id="formPengaturan" method="POST" action="<?php echo base_url('cbt/pengaturan/save'); ?>">
+
+                <!-- TAB 1: KEAMANAN & ANTI-CHEAT -->
+                <div id="tabContent-keamanan" class="cbt-tab-pane">
+                    
+                    <div style="margin-bottom: 1.25rem;">
+                        <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="shield" style="width: 20px; height: 20px; color: #0ea5e9;"></i> Modul Perlindungan Anti-Cheat
+                        </h2>
+                        <p style="font-size: 0.84rem; color: #64748b; margin: 0;">Konfigurasi proteksi integritas ujian untuk mencegah kecurangan, contek-mencontek, dan kebocoran soal.</p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                        
+                        <!-- 1. Master Anti-Cheat Switch -->
+                        <div class="card setting-card" style="border-left: 4px solid #0ea5e9;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-blue"><i data-lucide="shield-check"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Mode Anti-Cheat Terpusat</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Saklar utama sistem proteksi CBT. Mengaktifkan seluruh lapisan keamanan di browser siswa secara menyeluruh.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[anti_cheat_mode]" value="0">
+                                    <input type="checkbox" name="settings[anti_cheat_mode]" value="1" <?php echo $isAntiCheatActive ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 2. Force Fullscreen -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-indigo"><i data-lucide="maximize-2"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Kunci Layar Penuh (Force Fullscreen)</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Mewajibkan siswa masuk mode layar penuh saat mulai ujian. Jika keluar fullscreen, layar ujian diblokir oleh dialog peringatan seketika.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[force_fullscreen]" value="0">
+                                    <input type="checkbox" name="settings[force_fullscreen]" value="1" <?php echo $forceFullscreen ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 3. Block Tab Switching -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-amber"><i data-lucide="monitor-x"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Deteksi Pindah Tab & Minimize</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Mendeteksi jika siswa berpindah jendela browser, membuka tab baru, atau meminimalkan aplikasi untuk mencari jawaban.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[block_tab_switch]" value="0">
+                                    <input type="checkbox" name="settings[block_tab_switch]" value="1" <?php echo $blockTab ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 4. Limit & Penalty Configuration -->
+                        <div class="card setting-card" style="background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                <div class="setting-icon bg-red"><i data-lucide="alert-octagon"></i></div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Toleransi & Tindakan Pelanggaran</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;">
+                                <div>
+                                    <label class="label-sm" style="font-weight: 700; color: #475569; margin-bottom: 4px; display: block; font-size: 0.78rem;">
+                                        Batas Peringatan (Kali)
+                                    </label>
+                                    <input type="number" name="settings[max_tab_violations]" value="<?php echo $maxViolations; ?>" min="1" max="10" class="input-sm" style="font-size: 0.95rem; font-weight: 800; text-align: center;">
+                                </div>
+                                <div>
+                                    <label class="label-sm" style="font-weight: 700; color: #475569; margin-bottom: 4px; display: block; font-size: 0.78rem;">
+                                        Tindakan Saat Melewati Batas
+                                    </label>
+                                    <select name="settings[action_on_violation]" class="input-sm" style="font-size: 0.85rem; font-weight: 700;">
+                                        <option value="submit" <?php echo $actionViolation === 'submit' ? 'selected' : ''; ?>>Submit Otomatis (Selesai)</option>
+                                        <option value="lock" <?php echo $actionViolation === 'lock' ? 'selected' : ''; ?>>Kunci Layar (Butuh Pengawas)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <p style="font-size: 0.75rem; color: #64748b; margin-top: 8px;">
+                                Siswa diberi peringatan bertahap 1x, 2x. Pada pelanggaran ke-<?php echo $maxViolations; ?>, sistem langsung mengeksekusi tindakan terpilih.
+                            </p>
+                        </div>
+
+                        <!-- 5. Disable Right Click & DevTools -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-emerald"><i data-lucide="code-2"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Blokir Klik Kanan & Inspect Element</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Mematikan context menu (klik kanan), shortcut F12, Ctrl+Shift+I, dan Ctrl+U untuk mencegah siswa mengintip jawaban atau source code.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[disable_right_click]" value="0">
+                                    <input type="checkbox" name="settings[disable_right_click]" value="1" <?php echo $disableRightClick ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 6. Disable Copy-Paste & Text Select -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-purple"><i data-lucide="clipboard-x"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Blokir Copy, Cut, & Paste Soal</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Mencegah siswa menyalin teks soal untuk dilempar ke AI (ChatGPT/Gemini) atau mesin pencari Google.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[disable_copy_paste]" value="0">
+                                    <input type="checkbox" name="settings[disable_copy_paste]" value="1" <?php echo $disableCopyPaste ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 7. Single Device Lock -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-cyan"><i data-lucide="smartphone"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Kunci 1 Akun 1 Perangkat</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Mencegah akun siswa yang sama dibuka di lebih dari 1 HP / Komputer secara bersamaan. Sesi lain otomatis ditolak.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[lock_single_device]" value="0">
+                                    <input type="checkbox" name="settings[lock_single_device]" value="1" <?php echo $lockDevice ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 8. Watermark Identity -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-teal"><i data-lucide="fingerprint"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Watermark Identitas Siswa</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Menampilkan watermark transparan Nama & NIS siswa berulang di latar belakang lembar soal untuk mencegah soal difoto dan dibagikan ke media sosial/grup WA.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[watermark_student_nis]" value="0">
+                                    <input type="checkbox" name="settings[watermark_student_nis]" value="1" <?php echo $watermark ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- TAB 2: ATURAN & PELAKSANAAN UJIAN -->
+                <div id="tabContent-aturan" class="cbt-tab-pane" style="display: none;">
+                    
+                    <div style="margin-bottom: 1.25rem;">
+                        <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="sliders" style="width: 20px; height: 20px; color: #0ea5e9;"></i> Parameter Baku Pelaksanaan Ujian
+                        </h2>
+                        <p style="font-size: 0.84rem; color: #64748b; margin: 0;">Nilai default untuk paket soal baru, aturan pengacakan, kebijakan nilai, dan mekanisme token ujian.</p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                        
+                        <!-- 1. Durasi Ujian Default -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-blue"><i data-lucide="clock"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Durasi Ujian Default</div>
+                                    </div>
+                                    <p class="setting-desc">Waktu pengerjaan standar (dalam menit) saat membuat paket ujian baru.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; width: 130px;">
+                                    <input type="number" name="settings[default_durasi_menit]" value="<?php echo $durasiMenit; ?>" min="15" max="300" class="input-sm" style="font-size: 0.95rem; font-weight: 800; text-align: center;">
+                                    <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">Mnt</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. KKM Default -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-emerald"><i data-lucide="award"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Standar KKM Default</div>
+                                    </div>
+                                    <p class="setting-desc">Batas nilai KKM acuan kelulusan dan penentuan status Tuntas / Remedial.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; width: 130px;">
+                                    <input type="number" name="settings[default_kkm]" value="<?php echo $defaultKkm; ?>" min="0" max="100" class="input-sm" style="font-size: 0.95rem; font-weight: 800; text-align: center;">
+                                    <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">Poin</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Acak Soal Default -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-indigo"><i data-lucide="shuffle"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Acak Nomor Urut Soal</div>
+                                    </div>
+                                    <p class="setting-desc">Nomor soal diacak secara dinamis per peserta agar urutan soal tidak sama antar siswa.</p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[acak_soal_default]" value="0">
+                                    <input type="checkbox" name="settings[acak_soal_default]" value="1" <?php echo $acakSoal ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 4. Acak Opsi Jawaban Default -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-cyan"><i data-lucide="list-ordered"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Acak Opsi Pilihan Jawaban</div>
+                                    </div>
+                                    <p class="setting-desc">Urutan pilihan A, B, C, D, E diacak secara otomatis sehingga posisi kunci jawaban berbeda.</p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[acak_opsi_default]" value="0">
+                                    <input type="checkbox" name="settings[acak_opsi_default]" value="1" <?php echo $acakOpsi ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 5. Tampilkan Skor Akhir -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-teal"><i data-lucide="eye"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Tampilkan Skor ke Siswa</div>
+                                    </div>
+                                    <p class="setting-desc">Siswa langsung dapat melihat perolehan skor dan status KKM begitu mengklik tombol Selesai Ujian.</p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[show_score_to_student]" value="0">
+                                    <input type="checkbox" name="settings[show_score_to_student]" value="1" <?php echo $showScore ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 6. Tampilkan Kunci & Pembahasan -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-amber"><i data-lucide="check-square"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Tampilkan Kunci & Pembahasan</div>
+                                    </div>
+                                    <p class="setting-desc">Izinkan siswa melihat kunci jawaban setelah ujian dikumpulkan. (Direkomendasikan NONAKTIF saat ujian resmi).</p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[show_discussion_to_student]" value="0">
+                                    <input type="checkbox" name="settings[show_discussion_to_student]" value="1" <?php echo $showDiscussion ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 7. Izinkan Siswa Cek Ulang Jawaban -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-purple"><i data-lucide="check-circle-2"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Izinkan Review & Ragu-Ragu</div>
+                                    </div>
+                                    <p class="setting-desc">Siswa bebas bernavigasi bolak-balik memeriksa dan mengubah jawaban sebelum menekan konfirmasi Selesai Ujian.</p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[allow_student_review]" value="0">
+                                    <input type="checkbox" name="settings[allow_student_review]" value="1" <?php echo $allowReview ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 8. Mode & Interval Token -->
+                        <div class="card setting-card" style="background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                <div class="setting-icon bg-blue"><i data-lucide="key-round"></i></div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Kebijakan Token Ujian</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                                <div>
+                                    <label class="label-sm" style="font-weight: 700; color: #475569; margin-bottom: 4px; display: block; font-size: 0.78rem;">
+                                        Mode Perilisan Token
+                                    </label>
+                                    <select name="settings[token_mode]" class="input-sm" style="font-size: 0.85rem; font-weight: 700;">
+                                        <option value="manual" <?php echo $tokenMode === 'manual' ? 'selected' : ''; ?>>Manual (Oleh Proktor)</option>
+                                        <option value="auto" <?php echo $tokenMode === 'auto' ? 'selected' : ''; ?>>Otomatis (Sesuai Jam Ujian)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label-sm" style="font-weight: 700; color: #475569; margin-bottom: 4px; display: block; font-size: 0.78rem;">
+                                        Masa Berlaku (Menit)
+                                    </label>
+                                    <input type="number" name="settings[token_refresh_interval]" value="<?php echo $tokenInterval; ?>" min="5" max="480" class="input-sm" style="font-size: 0.95rem; font-weight: 800; text-align: center;">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- SAVE BUTTON BAR -->
+                <div style="background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 38px; height: 38px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="check-check" style="width: 20px; height: 20px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.9rem; font-weight: 800; color: #0f172a;">Simpan Konfigurasi CBT</div>
+                            <div style="font-size: 0.75rem; color: #64748b;">Perubahan akan langsung diterapkan ke sistem CBT dan pengerjaan siswa.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="e-btn e-btn-primary" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); border: none; padding: 10px 24px;">
+                            <i data-lucide="save"></i> Simpan Pengaturan
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+            <!-- TAB 3: BUKA KUNCI SISWA & STATUS DARURAT -->
+            <div id="tabContent-darurat" class="cbt-tab-pane" style="display: none; margin-top: 1.75rem;">
+                
+                <div style="margin-bottom: 1.25rem;">
+                    <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="unlock" style="width: 20px; height: 20px; color: #ef4444;"></i> Pemulihan Sesi & Buka Kunci Siswa
+                    </h2>
+                    <p style="font-size: 0.84rem; color: #64748b; margin: 0;">Tangani siswa yang terblokir akibat batas toleransi keluar tab terlampaui, listrik padam, atau kendala jaringan.</p>
+                </div>
+
+                <div class="card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 2px 0;">Daftar Siswa Terkunci / Pelanggaran</h3>
+                            <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Siswa yang pengerjaannya dibekukan oleh sistem anti-cheat.</p>
+                        </div>
+
+                        <?php if (!empty($listTerkunci)): ?>
+                        <form method="POST" action="<?php echo base_url('cbt/pengaturan/reset-siswa'); ?>" onsubmit="return confirm('Buka kunci untuk SEMUA siswa yang terkunci?')">
+                            <input type="hidden" name="peserta_id" value="0">
+                            <button type="submit" class="e-btn e-btn-primary" style="background: #22c55e; border: none; padding: 8px 18px;">
+                                <i data-lucide="unlock"></i> Buka Kunci Semua Siswa
+                            </button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!empty($listTerkunci)): ?>
+                        <div class="table-responsive">
+                            <table class="table-custom" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">NO</th>
+                                        <th>NIS & NAMA SISWA</th>
+                                        <th>KELAS</th>
+                                        <th>PAKET UJIAN</th>
+                                        <th>STATUS</th>
+                                        <th style="text-align: right;">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php $no = 1; foreach ($listTerkunci as $lk): ?>
+                                    <tr>
+                                        <td style="font-weight: 700; color: #64748b;"><?php echo $no++; ?></td>
+                                        <td>
+                                            <div style="font-weight: 800; color: #0f172a;"><?php echo htmlspecialchars($lk['nama_siswa']); ?></div>
+                                            <div style="font-size: 0.75rem; color: #64748b;">NIS: <?php echo htmlspecialchars($lk['nis']); ?></div>
+                                        </td>
+                                        <td><span class="badge badge-subtle"><?php echo htmlspecialchars($lk['kelas_nama'] ?: '-'); ?></span></td>
+                                        <td>
+                                            <div style="font-weight: 700; font-size: 0.85rem; color: #1e293b;"><?php echo htmlspecialchars($lk['nama_ujian'] ?: 'Ujian'); ?></div>
+                                            <div style="font-size: 0.75rem; color: #64748b;"><?php echo htmlspecialchars($lk['mapel_nama'] ?: '-'); ?></div>
+                                        </td>
+                                        <td>
+                                            <span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
+                                                <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Terkunci
+                                            </span>
+                                        </td>
+                                        <td style="text-align: right;">
+                                            <form method="POST" action="<?php echo base_url('cbt/pengaturan/reset-siswa'); ?>" style="display: inline-block;">
+                                                <input type="hidden" name="peserta_id" value="<?php echo $lk['id']; ?>">
+                                                <button type="submit" class="e-btn e-btn-primary" style="background: #0ea5e9; padding: 6px 14px; font-size: 0.78rem;">
+                                                    <i data-lucide="unlock" style="width: 14px; height: 14px;"></i> Buka Kunci
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div style="padding: 2.5rem; text-align: center; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto;">
+                                <i data-lucide="check" style="width: 24px; height: 24px;"></i>
+                            </div>
+                            <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Tidak Ada Siswa yang Terkunci</div>
+                            <div style="font-size: 0.82rem; color: #64748b; margin-top: 4px;">Seluruh peserta ujian saat ini berstatus normal atau belum memulai sesi.</div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Emergency Factory Reset Card -->
+                <div class="card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid #fecaca; background: #fff5f5;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: #dc2626;"></i>
+                                <span style="font-weight: 800; font-size: 1rem; color: #991b1b;">Reset Pengaturan ke Standar Awal Pabrik</span>
+                            </div>
+                            <p style="font-size: 0.8rem; color: #7f1d1d; margin: 4px 0 0 0;">
+                                Tindakan ini akan mengembalikan seluruh nilai parameter keamanan dan ujian ke konfigurasi rekomendasi madrasah awal.
+                            </p>
+                        </div>
+                        <form method="POST" action="<?php echo base_url('cbt/pengaturan/reset-default'); ?>" onsubmit="return confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh pengaturan CBT ke pengaturan awal rekomendasi madrasah?')">
+                            <button type="submit" class="e-btn" style="background: #dc2626; color: white; border: none; padding: 10px 20px; font-weight: 800;">
+                                <i data-lucide="refresh-cw"></i> Reset ke Pengaturan Default
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+/* CBT Toggle Switch */
+.cbt-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+}
+.cbt-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.cbt-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .25s ease-in-out;
+    border-radius: 34px;
+}
+.cbt-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .25s ease-in-out;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.cbt-switch input:checked + .cbt-slider {
+    background-color: #0ea5e9;
+}
+.cbt-switch input:checked + .cbt-slider:before {
+    transform: translateX(22px);
+}
+
+/* Card & Tabs */
+.setting-card {
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.setting-card:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.04);
+}
+.setting-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.setting-icon svg {
+    width: 18px;
+    height: 18px;
+}
+.setting-desc {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin: 8px 0 0 0;
+    line-height: 1.45;
+}
+
+/* Icon Backgrounds */
+.bg-blue { background: #e0f2fe; color: #0284c7; }
+.bg-indigo { background: #e0e7ff; color: #4338ca; }
+.bg-emerald { background: #dcfce7; color: #15803d; }
+.bg-amber { background: #fef3c7; color: #b45309; }
+.bg-purple { background: #f3e8ff; color: #7e22ce; }
+.bg-cyan { background: #cffafe; color: #0e7490; }
+.bg-teal { background: #ccfbf1; color: #0f766e; }
+.bg-red { background: #fee2e2; color: #b91c1c; }
+
+/* Tab Buttons */
+.cbt-tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 3px solid transparent;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+.cbt-tab-btn:hover {
+    color: #0ea5e9;
+}
+.cbt-tab-btn.active {
+    color: #0ea5e9;
+    border-bottom-color: #0ea5e9;
+}
+</style>
+
+<script>
+function switchTab(tabId) {
+    const tabs = ['keamanan', 'aturan', 'darurat'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('tabBtn-' + t);
+        const pane = document.getElementById('tabContent-' + t);
+        if (btn) btn.classList.remove('active');
+        if (pane) pane.style.display = 'none';
+    });
+
+    const activeBtn = document.getElementById('tabBtn-' + tabId);
+    const activePane = document.getElementById('tabContent-' + tabId);
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activePane) activePane.style.display = 'block';
+
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+});
+</script>
