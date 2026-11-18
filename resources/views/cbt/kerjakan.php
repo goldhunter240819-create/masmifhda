@@ -1475,11 +1475,20 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     });
                 }
 
+                // Petunjuk Centang PG Kompleks (Multi-Select)
+                const hintEl = document.createElement('div');
+                hintEl.style.cssText = 'font-size:0.78rem; color:#4f46e5; font-weight:700; background:#eef2ff; border:1px solid #c7d2fe; padding:8px 12px; border-radius:10px; margin-bottom:12px; display:inline-flex; align-items:center; gap:6px;';
+                hintEl.innerHTML = '<i data-lucide="check-square" style="width:15px; height:15px; color:#4f46e5;"></i> Petunjuk: Centang kotak pada satu atau beberapa pilihan yang menurut Anda benar.';
+                container.appendChild(hintEl);
+
                 pgkOptions.forEach(opt => {
                     const isChecked = curAns.includes(opt.key);
                     const item = document.createElement('div');
                     item.className = 'opt-label' + (isChecked ? ' selected' : '');
                     item.style.cursor = 'pointer';
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.gap = '12px';
                     item.onclick = () => {
                         let updated = [...curAns];
                         if (updated.includes(opt.key)) {
@@ -1495,11 +1504,12 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     };
 
                     item.innerHTML = `
-                        <div class="opt-key" style="border-radius:6px; background:${isChecked ? '#0284c7' : '#f1f5f9'}; color:${isChecked ? '#fff' : '#0f172a'};">${isChecked ? '✓' : opt.key}</div>
-                        <div class="opt-text" style="flex:1;">${opt.text}</div>
+                        <div style="width:24px; height:24px; min-width:24px; border-radius:6px; border:2px solid ${isChecked ? '#4f46e5' : '#94a3b8'}; background:${isChecked ? '#4f46e5' : '#ffffff'}; color:${isChecked ? '#ffffff' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; box-shadow:${isChecked ? '0 2px 6px rgba(79,70,229,0.35)' : 'none'}; transition:all 0.15s ease;">✓</div>
+                        <div class="opt-text" style="flex:1; font-weight:${isChecked ? '700' : '600'}; color:${isChecked ? '#1e1b4b' : '#334155'};">${opt.text}</div>
                     `;
                     container.appendChild(item);
                 });
+                if (window.lucide) lucide.createIcons();
 
             } else if (isBsType) {
                 // MODEL 3: Tabel Pernyataan Benar / Salah (Akurat & Tidak Pernah Kosong)
@@ -1934,6 +1944,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 let ansTag = '';
                 const ans = userAnswers[i];
                 let isAnswered = false;
+                const qType = (Array.isArray(soalList) && soalList[i]) ? (soalList[i].tipe_soal || 'sec_pg') : 'sec_pg';
                 if (ans !== undefined && ans !== null && ans !== '') {
                     if (typeof ans === 'object') {
                         if (Object.keys(ans).length > 0) {
@@ -1946,7 +1957,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         if (str.length > 0) {
                             answeredCount++;
                             isAnswered = true;
-                            ansTag = str.length > 3 ? '✓' : str;
+                            ansTag = (qType !== 'sec_pg' || str.length > 2) ? '✓' : str;
                         }
                     }
                 }
