@@ -2074,7 +2074,8 @@ class CbtController {
             if ($elapsed >= 0 && $elapsed < $totalDetik) {
                 $durasiDetik = $totalDetik - $elapsed;
             } elseif ($elapsed >= $totalDetik) {
-                $durasiDetik = 0; // Waktu habis
+                // Beri toleransi darurat 300 detik (5 menit) jika masih berstatus Mengerjakan
+                $durasiDetik = 300;
             }
         }
 

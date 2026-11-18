@@ -217,7 +217,7 @@ $active_menu = 'hasil';
                                     </td>
                                     <td style="text-align: right; white-space: nowrap;">
                                         <?php if ($isSelesai || in_array($p['status_pengerjaan'] ?? '', ['Sedang Mengerjakan', 'Mengerjakan', 'Terkunci', 'Pelanggaran'])): ?>
-                                            <button type="button" class="e-btn" style="background: #0ea5e9; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 6px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(14,165,233,0.25); cursor: pointer;" title="Buka Sesi Ujian Kembali" onclick="bukaModalReopen(<?php echo $p['id']; ?>, '<?php echo htmlspecialchars(addslashes($p['nama_siswa'])); ?>', '<?php echo htmlspecialchars(addslashes($p['paket_judul'])); ?>')">
+                                            <button type="button" class="e-btn" style="background: #0ea5e9; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 6px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(14,165,233,0.25); cursor: pointer;" title="Buka Sesi Ujian Kembali" onclick="bukaModalReopen(<?php echo (int)($p['id'] ?? 0); ?>, '<?php echo htmlspecialchars(addslashes($p['nama_siswa'] ?? 'Siswa')); ?>', '<?php echo htmlspecialchars(addslashes($p['nama_ujian'] ?? 'Paket Ujian')); ?>')">
                                                 <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i> Buka Ujian
                                             </button>
                                         <?php else: ?>

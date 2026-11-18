@@ -1,6 +1,6 @@
 <?php
 $pageTitle = 'Ruang Ujian CBT: ' . htmlspecialchars($ujianInfo['nama_ujian']);
-$durasiDetik = ($ujianInfo['durasi_menit'] ?? 90) * 60;
+$durasiDetik = isset($durasiDetik) ? (int)$durasiDetik : (($ujianInfo['durasi_menit'] ?? 90) * 60);
 $logoUrl = \App\Core\Branding::getInstitusiLogo();
 
 $cbtSettings = $cbtSettings ?? [];
@@ -536,31 +536,45 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
         @media (max-width: 960px) {
             .cbt-topbar {
-                padding: 10px 14px;
-                gap: 8px;
+                padding: 8px 10px;
+                gap: 6px;
+                flex-wrap: nowrap;
+            }
+            .cbt-brand {
+                gap: 6px;
+                min-width: 0;
+                flex: 1 1 auto;
+                overflow: hidden;
             }
             .cbt-brand img {
-                width: 32px;
-                height: 32px;
+                width: 28px;
+                height: 28px;
+                flex-shrink: 0;
             }
             .cbt-exam-title {
-                font-size: 0.88rem;
-                max-width: 160px;
+                font-size: 0.8rem;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                max-width: 140px;
             }
             .cbt-exam-sub {
                 display: none;
             }
             .cbt-timer-box {
-                padding: 6px 12px;
-                border-radius: 10px;
-                gap: 6px;
+                padding: 5px 8px;
+                border-radius: 8px;
+                gap: 4px;
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
+            .cbt-timer-box i, .cbt-timer-box svg {
+                display: none !important;
             }
             .cbt-timer-val {
-                font-size: 1.05rem;
+                font-size: 0.88rem;
                 letter-spacing: 0.5px;
+                white-space: nowrap;
             }
             .cbt-timer-label {
                 display: none;
@@ -571,15 +585,17 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             .cbt-mobile-palette-toggle {
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
+                gap: 4px;
                 background: #eff6ff;
                 color: #2563eb;
                 border: 1.5px solid #bfdbfe;
-                padding: 6px 12px;
-                border-radius: 10px;
-                font-size: 0.78rem;
+                padding: 5px 8px;
+                border-radius: 8px;
+                font-size: 0.72rem;
                 font-weight: 800;
                 cursor: pointer;
+                flex-shrink: 0;
+                white-space: nowrap;
             }
 
             .cbt-workspace {
@@ -838,7 +854,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
     <?php endif; ?>
 
     <!-- Audio Element Danger Alarm Meme -->
-    <audio id="cbtAlarmAudio" src="<?php echo $alarmSoundUrl; ?>" preload="auto" loop></audio>
+    <audio id="cbtAlarmAudio" src="<?php echo $alarmSoundUrl; ?>" preload="none" loop></audio>
 
     <!-- Header Topbar -->
     <header class="cbt-topbar">
@@ -1125,6 +1141,22 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         const storageKeyRagu = `cbt_ragu_${ujianId}_${pesertaId}`;
         const storageKeyIdx = `cbt_idx_${ujianId}_${pesertaId}`;
         const storageKeyDeadline = `cbt_deadline_${ujianId}_${pesertaId}`;
+        const storageKeyViol = `cbt_viol_${ujianId}_${pesertaId}`;
+        const storageKeyReset = `cbt_reset_${ujianId}_${pesertaId}`;
+        const serverResetCount = <?php echo (int)($pesertaInfo['reset_count'] ?? 0); ?>;
+        const localResetCount = parseInt(localStorage.getItem(storageKeyReset) || '0', 10);
+
+        let violationCount = parseInt(localStorage.getItem(storageKeyViol) || '0', 10);
+
+        // Jika ujian dibuka kembali oleh proktor / guru:
+        if (serverResetCount > localResetCount) {
+            try {
+                localStorage.removeItem(storageKeyViol);
+                localStorage.removeItem(storageKeyDeadline);
+                localStorage.setItem(storageKeyReset, String(serverResetCount));
+            } catch(e) {}
+            violationCount = 0;
+        }
 
         let currentIndex = 0;
         let userAnswers = {}; // { index: answerValue }
@@ -1168,35 +1200,41 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
         function initCbt() {
             // 1. Pulihkan data tersimpan dari Cloud Server (jika ada)
-            if (serverSavedData && typeof serverSavedData === 'object') {
-                if (serverSavedData.answers_by_index) {
-                    userAnswers = { ...serverSavedData.answers_by_index };
-                }
-                if (serverSavedData.answers) {
-                    // Map soal_id ke index urutan
-                    soalList.forEach((s, idx) => {
-                        if (serverSavedData.answers[s.id] !== undefined && serverSavedData.answers[s.id] !== null && serverSavedData.answers[s.id] !== '') {
-                            userAnswers[idx] = serverSavedData.answers[s.id];
+            try {
+                if (serverSavedData && typeof serverSavedData === 'object') {
+                    if (serverSavedData.answers_by_index) {
+                        userAnswers = Object.assign({}, serverSavedData.answers_by_index);
+                    }
+                    if (serverSavedData.answers && Array.isArray(soalList)) {
+                        // Map soal_id ke index urutan
+                        soalList.forEach((s, idx) => {
+                            if (s && serverSavedData.answers[s.id] !== undefined && serverSavedData.answers[s.id] !== null && serverSavedData.answers[s.id] !== '') {
+                                userAnswers[idx] = serverSavedData.answers[s.id];
+                            }
+                        });
+                    }
+                    // Jika formatnya langsung { soal_id: jawaban } atau { index: jawaban }
+                    if (Array.isArray(soalList)) {
+                        soalList.forEach((s, idx) => {
+                            if (s && serverSavedData[s.id] !== undefined && serverSavedData[s.id] !== null && serverSavedData[s.id] !== '') {
+                                userAnswers[idx] = serverSavedData[s.id];
+                            } else if (serverSavedData[idx] !== undefined && serverSavedData[idx] !== null && serverSavedData[idx] !== '') {
+                                userAnswers[idx] = serverSavedData[idx];
+                            }
+                        });
+                    }
+                    if (serverSavedData.ragu) {
+                        raguState = Object.assign({}, serverSavedData.ragu);
+                    }
+                    if (serverSavedData.last_index !== undefined) {
+                        const lIdx = parseInt(serverSavedData.last_index, 10);
+                        if (!isNaN(lIdx) && lIdx >= 0 && lIdx < totalSoal) {
+                            currentIndex = lIdx;
                         }
-                    });
-                }
-                // Jika formatnya langsung { soal_id: jawaban } atau { index: jawaban }
-                soalList.forEach((s, idx) => {
-                    if (serverSavedData[s.id] !== undefined && serverSavedData[s.id] !== null && serverSavedData[s.id] !== '') {
-                        userAnswers[idx] = serverSavedData[s.id];
-                    } else if (serverSavedData[idx] !== undefined && serverSavedData[idx] !== null && serverSavedData[idx] !== '') {
-                        userAnswers[idx] = serverSavedData[idx];
-                    }
-                });
-                if (serverSavedData.ragu) {
-                    raguState = { ...serverSavedData.ragu };
-                }
-                if (serverSavedData.last_index !== undefined) {
-                    const lIdx = parseInt(serverSavedData.last_index, 10);
-                    if (!isNaN(lIdx) && lIdx >= 0 && lIdx < totalSoal) {
-                        currentIndex = lIdx;
                     }
                 }
+            } catch(e) {
+                console.error('Server data restore error:', e);
             }
 
             // 2. Pulihkan dari LocalStorage (jika lebih baru atau server baru dibuka kembali)
@@ -1205,14 +1243,14 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 if (localAns) {
                     const parsed = JSON.parse(localAns);
                     if (parsed && typeof parsed === 'object') {
-                        userAnswers = { ...userAnswers, ...parsed };
+                        userAnswers = Object.assign({}, userAnswers, parsed);
                     }
                 }
                 const localRagu = localStorage.getItem(storageKeyRagu);
                 if (localRagu) {
                     const parsedR = JSON.parse(localRagu);
                     if (parsedR && typeof parsedR === 'object') {
-                        raguState = { ...raguState, ...parsedR };
+                        raguState = Object.assign({}, raguState, parsedR);
                     }
                 }
                 const localIdx = localStorage.getItem(storageKeyIdx);
@@ -1222,13 +1260,15 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         currentIndex = pIdx;
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('LocalStorage restore error:', e);
+            }
 
-            renderPalette();
-            loadQuestion(currentIndex);
-            startTimer();
-            if (window.lucide) lucide.createIcons();
-            showSaveIndicator('Sesi Siap', false);
+            try { renderPalette(); } catch(e) { console.error('renderPalette error:', e); }
+            try { loadQuestion(currentIndex); } catch(e) { console.error('loadQuestion error:', e); }
+            try { startTimer(); } catch(e) { console.error('startTimer error:', e); }
+            try { if (window.lucide) lucide.createIcons(); } catch(e) {}
+            try { showSaveIndicator('Sesi Siap', false); } catch(e) {}
         }
 
         // Simpan jawaban siswa secara otomatis (LocalStorage + Cloud Sync)
@@ -1300,11 +1340,17 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
         function loadQuestion(idx) {
             if (idx < 0 || idx >= totalSoal) return;
+            const q = (Array.isArray(soalList) && soalList[idx]) ? soalList[idx] : null;
+            if (!q) {
+                const qEl = document.getElementById('questionText');
+                if (qEl) qEl.innerHTML = 'Butir pertanyaan belum tersedia atau gagal dimuat.';
+                return;
+            }
             currentIndex = idx;
             saveCurrentAnswers(false); // Simpan nomor soal terakhir yang dibuka
 
-            const q = soalList[idx];
-            document.getElementById('currentQBadge').textContent = `Soal Nomor ${idx + 1} dari ${totalSoal}`;
+            const qBadge = document.getElementById('currentQBadge');
+            if (qBadge) qBadge.textContent = `Soal Nomor ${idx + 1} dari ${totalSoal}`;
             const mobBadge = document.getElementById('mobileQBadge');
             if (mobBadge) mobBadge.textContent = `${idx + 1}/${totalSoal} Soal ▾`;
             
@@ -1342,18 +1388,20 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
             // Render Teks Pertanyaan (Mendukung HTML Rich Text, Underline, dan Diagram SVG)
             const qEl = document.getElementById('questionText');
-            if (q.pertanyaan.includes('<div') || q.pertanyaan.includes('<p') || q.pertanyaan.includes('<svg')) {
-                qEl.innerHTML = q.pertanyaan;
+            const pText = (q && q.pertanyaan) ? String(q.pertanyaan) : '';
+            if (pText.includes('<div') || pText.includes('<p') || pText.includes('<svg') || pText.includes('<table')) {
+                if (qEl) qEl.innerHTML = pText;
             } else {
-                qEl.innerHTML = q.pertanyaan.replace(/\n/g, '<br>');
+                if (qEl) qEl.innerHTML = pText ? pText.replace(/\n/g, '<br>') : 'Tidak ada teks pertanyaan.';
             }
 
             const container = document.getElementById('optionsContainer');
+            if (!container) return;
             container.innerHTML = '';
 
             const qType = q.tipe_soal || 'sec_pg';
             const isBsType = ['sec_bs', 'bs', 'benar_salah', 'tabel_bs', 'tabel_benar_salah'].includes(qType) 
-                || (q.pertanyaan && (q.pertanyaan.includes('TABEL BENAR / SALAH') || q.pertanyaan.includes('BENAR / SALAH') || q.pertanyaan.includes('Benar / Salah')));
+                || (pText && (pText.includes('TABEL BENAR / SALAH') || pText.includes('BENAR / SALAH') || pText.includes('Benar / Salah')));
             
             if (qType === 'sec_pgk') {
                 // MODEL 2: Pilihan Ganda Kompleks (Multi-Select Checkboxes)
@@ -1939,7 +1987,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         function updatePaletteCurrent() {
             const btns = document.querySelectorAll('.pal-btn');
             btns.forEach((b, i) => {
-                const num = parseInt(b.querySelector('span')?.textContent || '0', 10) - 1;
+                const sEl = b.querySelector('span');
+                const num = parseInt((sEl ? sEl.textContent : '0'), 10) - 1;
                 if (num === currentIndex) {
                     b.classList.add('current');
                 } else {
@@ -2084,21 +2133,6 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         const maxViolations = <?php echo $maxViolations; ?>;
         const actionViolation = '<?php echo $actionViolation; ?>';
 
-        const storageKeyViol = `cbt_viol_${ujianId}_${pesertaId}`;
-        const storageKeyReset = `cbt_reset_${ujianId}_${pesertaId}`;
-        const serverResetCount = <?php echo (int)($pesertaInfo['reset_count'] ?? 0); ?>;
-        const localResetCount = parseInt(localStorage.getItem(storageKeyReset) || '0', 10);
-
-        let violationCount = parseInt(localStorage.getItem(storageKeyViol) || '0', 10);
-
-        // Jika ujian dibuka kembali oleh proktor / guru:
-        if (serverResetCount > localResetCount) {
-            try {
-                localStorage.removeItem(storageKeyViol);
-                localStorage.setItem(storageKeyReset, serverResetCount);
-            } catch(e) {}
-            violationCount = 0;
-        }
         let isExamSubmitted = false;
         let isViolationModalOpen = false;
         let lastViolationTime = 0;
@@ -2314,13 +2348,27 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
         });
 
-        window.onload = function() {
-            initCbt();
-            if (isAntiCheat && violationCount >= maxViolations && actionViolation === 'lock') {
-                document.getElementById('modalLocked').classList.add('open');
+        function runCbtApp() {
+            try { initCbt(); } catch(e) { console.error('Init error:', e); }
+            try {
+                if (typeof isAntiCheat !== 'undefined' && isAntiCheat && violationCount >= maxViolations && actionViolation === 'lock') {
+                    const lModal = document.getElementById('modalLocked');
+                    if (lModal) lModal.classList.add('open');
+                }
+            } catch(e) {}
+            try {
                 if (window.lucide) lucide.createIcons();
-            }
-        };
+            } catch(e) {}
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runCbtApp);
+        } else {
+            runCbtApp();
+        }
+        window.addEventListener('load', () => {
+            try { if (window.lucide) lucide.createIcons(); } catch(e) {}
+        });
     </script>
 </body>
 </html>
