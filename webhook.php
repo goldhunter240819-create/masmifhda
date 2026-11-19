@@ -138,6 +138,21 @@ try {
           AND u.topik_id IS NOT NULL AND u.topik_id > 0
     ");
 
+    // Pastikan siswa reguler seperti Faiz (id 414) memiliki kursi di Ruang 01 jika belum diatur
+    try {
+        $cekFaiz = (int)$dbCore->query("SELECT COUNT(*) FROM cbt_denah_peserta WHERE siswa_id = 414")->fetchColumn();
+        if ($cekFaiz === 0) {
+            $slotFaiz = (int)$dbCore->query("SELECT id FROM cbt_denah_peserta WHERE ruang_id = 1 AND (siswa_id IS NULL OR siswa_id = 0) ORDER BY nomor_meja ASC LIMIT 1")->fetchColumn();
+            if ($slotFaiz > 0) {
+                $dbCore->exec("
+                    UPDATE cbt_denah_peserta 
+                    SET siswa_id = 414, nis = '414', nama_siswa = 'M. Faiz Al Majid', kelas_id = 3, kelas_nama = 'XII F.2', tingkat = 12
+                    WHERE id = {$slotFaiz}
+                ");
+            }
+        }
+    } catch (\Throwable $e) {}
+
     // Sinkronkan jadwal topik aktif
     $tpRow = $dbCore->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     if ($tpRow) {

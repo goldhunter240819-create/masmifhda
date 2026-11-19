@@ -86,6 +86,27 @@ if ($is_cbt_only) {
     }
 }
 
+// Ambil informasi Ruang & Nomor Tempat Duduk Ujian (Khusus Siswa Reguler Siakad)
+$seatingInfo = null;
+if (!$is_cbt_only && !empty($siswa['id'])) {
+    try {
+        $stmtSeat = $core_db->prepare("
+            SELECT dp.nomor_meja, dp.posisi_baris, dp.posisi_kolom, dp.posisi_sisi,
+                   r.nama_ruang, r.kode_ruang, r.lokasi
+            FROM cbt_denah_peserta dp
+            JOIN cbt_ruang r ON dp.ruang_id = r.id
+            WHERE dp.siswa_id = :sid OR (dp.nis = :nis AND :nis != '')
+            ORDER BY dp.id DESC
+            LIMIT 1
+        ");
+        $stmtSeat->execute([
+            ':sid' => $siswa['id'],
+            ':nis' => (string)($siswa['nis'] ?? '')
+        ]);
+        $seatingInfo = $stmtSeat->fetch(PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {}
+}
+
 // 1. Jalankan Auto-Sync Matriks Jadwal ke CBT Ujian
 try {
     if (class_exists('\App\Controllers\CbtController')) {
@@ -858,6 +879,14 @@ include 'header.php';
                 <span class="cbt-badge-class">
                     <i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars($siswa['nama_kelas']) ?>
                 </span>
+                <?php if (!$is_cbt_only && !empty($seatingInfo)): ?>
+                    <span class="cbt-badge-room" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Ruang Ujian">
+                        <i class="fa-solid fa-door-open" style="color: #16a34a;"></i> <?= htmlspecialchars($seatingInfo['nama_ruang']) ?>
+                    </span>
+                    <span class="cbt-badge-seat" style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Nomor Tempat Duduk / Meja">
+                        <i class="fa-solid fa-chair" style="color: #d97706;"></i> Meja <?= htmlspecialchars(str_pad($seatingInfo['nomor_meja'], 2, '0', STR_PAD_LEFT)) ?>
+                    </span>
+                <?php endif; ?>
                 <?php if ($is_cbt_only): ?>
                     <span class="cbt-badge-kj">Peserta Khusus CBT</span>
                 <?php endif; ?>
@@ -1111,61 +1140,7 @@ include 'header.php';
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- Section 2: Mata Pelajaran Lain (Belum Masuk Jadwal Hari Ini) -->
-    <?php if ($lockSchedule && !empty($ujianLainnya)): ?>
-        <div style="padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between;">
-            <h4 style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #64748b; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-calendar-xmark" style="color: #94a3b8;"></i> Mapel Lain (Belum Masuk Jadwal Hari Ini)
-            </h4>
-            <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;"><?= count($ujianLainnya) ?> Paket</span>
-        </div>
-        <div style="opacity: 0.82;">
-            <?php foreach ($ujianLainnya as $u): ?>
-                <?php
-                $durasi = (int)($u['durasi_menit'] ?? 90);
-                $totalSoal = (int)($u['total_soal'] ?? 0);
-                ?>
-                <div class="cbt-card" style="border: 1.5px dashed #cbd5e1; background: #fbfcfe;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                        <div>
-                            <div style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="fa-solid fa-book-bookmark"></i> <?= htmlspecialchars($u['kode_ujian']) ?>
-                            </div>
-                            <h4 style="margin: 2px 0 0; font-size: 0.98rem; color: #334155; font-weight: 800; line-height: 1.35;">
-                                <?= htmlspecialchars($u['nama_ujian']) ?>
-                            </h4>
-                        </div>
-                        <span style="background: #f1f5f9; color: #64748b; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #cbd5e1; white-space: nowrap;">
-                            🚫 Tidak Ada Jadwal Hari Ini
-                        </span>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f8fafc; border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; text-align: center; border: 1px solid #f1f5f9;">
-                        <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">Mata Pelajaran</div>
-                            <div style="font-size: 0.78rem; font-weight: 800; color: #475569;"><?= htmlspecialchars($u['mapel_nama']) ?></div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">Alokasi Waktu</div>
-                            <div style="font-size: 0.78rem; font-weight: 800; color: #475569;"><?= $durasi ?> Menit</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">Jumlah Soal</div>
-                            <div style="font-size: 0.78rem; font-weight: 800; color: #475569;"><?= $totalSoal > 0 ? $totalSoal . ' Butir' : 'Tersusun' ?></div>
-                        </div>
-                    </div>
-
-                    <div style="font-size: 0.73rem; color: #64748b; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 7px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <i class="fa-solid fa-circle-info" style="color: #64748b;"></i> Mata pelajaran ini tidak dijadwalkan pada hari ini (<?= htmlspecialchars($u['jadwal_slot_label'] ?: 'Belum Terjadwal') ?>).
-                    </div>
-
-                    <div class="btn-ujian btn-ujian-locked" style="background: #f8fafc; color: #94a3b8; border: 1px dashed #cbd5e1; cursor: not-allowed;">
-                        <i class="fa-solid fa-calendar-xmark"></i> Tidak Dijadwalkan Hari Ini
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
+    <!-- Section 2: Mata Pelajaran Lain (Disembunyikan agar tampilan APK siswa bersih dan fokus pada jadwal hari ini) -->
 
     <!-- Riwayat Hasil Ujian CBT -->
     <?php if (!empty($riwayatUjian)): ?>
