@@ -42,7 +42,7 @@ $active_menu = 'token';
                 </div>
 
                 <?php if (!empty($tokenAktif)): ?>
-                    <div style="display: inline-block; padding: 1rem 3rem; background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 3.5rem; font-weight: 900; letter-spacing: 8px; border-radius: 18px; box-shadow: 0 15px 30px rgba(15,23,42,0.25); border: 2px solid #38bdf8; margin-bottom: 1.25rem;">
+                    <div style="display: inline-block; padding: 1rem 3rem; background: #0f172a; color: #38bdf8; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-variant-numeric: slashed-zero; font-size: 3.5rem; font-weight: 900; letter-spacing: 8px; border-radius: 18px; box-shadow: 0 15px 30px rgba(15,23,42,0.25); border: 2px solid #38bdf8; margin-bottom: 1.25rem;">
                         <?php echo htmlspecialchars($tokenAktif['token']); ?>
                     </div>
                     

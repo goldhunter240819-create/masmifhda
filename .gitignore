@@ -16,6 +16,7 @@
 *.rar
 *.tar.gz
 *.apk
+!masmifhda.apk
 
 # User uploads (too large for GitHub, stay local only)
 /public/uploads/

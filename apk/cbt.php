@@ -1078,12 +1078,15 @@ include 'header.php';
                 </div>
 
                 <!-- Box Token Ujian Resmi -->
-                <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; text-align: center; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);">
-                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">KODE TOKEN UJIAN RESMI</div>
-                    <div id="modalExamToken" style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 900; letter-spacing: 4px; color: #38bdf8; margin: 4px 0 2px;">
+                <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; text-align: center; box-shadow: 0 4px 15px rgba(15, 23, 42, 0.18); border: 1.5px solid #334155;">
+                    <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;">KODE TOKEN UJIAN RESMI</div>
+                    <div id="modalExamToken" style="font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; font-size: 1.95rem; font-weight: 900; letter-spacing: 6px; color: #38bdf8; margin: 6px 0 2px; text-shadow: 0 2px 10px rgba(56, 189, 248, 0.35); font-variant-numeric: slashed-zero;">
                         ------
                     </div>
-                    <div style="font-size: 0.68rem; color: #94a3b8;">Token ini berlaku khusus untuk mata pelajaran ini.</div>
+                    <div id="tokenCharHint" style="display: none; font-size: 0.72rem; font-weight: 800; color: #facc15; margin: 4px auto 2px; background: rgba(234, 179, 8, 0.15); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(234, 179, 8, 0.3);">
+                        <i class="fa-solid fa-circle-info"></i> Memakai Huruf <b>O</b> (Bukan angka Nol 0)
+                    </div>
+                    <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 5px;">Token ini berlaku khusus untuk mata pelajaran ini.</div>
                 </div>
 
                 <!-- Form Input Token Siswa -->
@@ -1091,7 +1094,7 @@ include 'header.php';
                     <label for="inputTokenUjian" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 6px;">
                         Ketikkan Kode Token Ujian di Bawah:
                     </label>
-                    <input type="text" id="inputTokenUjian" placeholder="Contoh: MAT267" maxlength="10" autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 2px solid #cbd5e1; text-align: center; text-transform: uppercase; font-family: monospace; font-size: 1.25rem; font-weight: 900; letter-spacing: 4px; color: #0f172a; outline: none; transition: border-color 0.2s;">
+                    <input type="text" id="inputTokenUjian" placeholder="Contoh: MAT267" maxlength="10" autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 13px; border-radius: 14px; border: 2px solid #cbd5e1; text-align: center; text-transform: uppercase; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 1.35rem; font-weight: 900; letter-spacing: 6px; color: #0f172a; outline: none; transition: border-color 0.2s; font-variant-numeric: slashed-zero;">
                     <div id="tokenErrorMsg" style="display: none; color: #dc2626; font-size: 0.72rem; font-weight: 800; margin-top: 4px; text-align: center;">
                         <i class="fa-solid fa-circle-exclamation"></i> Token tidak cocok! Silakan cek kembali.
                     </div>
@@ -1140,6 +1143,20 @@ function konfirmasiMulaiUjian(ujianId, namaUjian, mapelNama, durasi, totalSoal, 
     document.getElementById('modalExamSoal').textContent = (totalSoal > 0 ? totalSoal + ' Soal' : '50 Soal');
     document.getElementById('modalExamToken').textContent = curExpectedToken || '------';
     
+    // Hint cerdas untuk membedakan Huruf O vs Angka 0
+    const hintEl = document.getElementById('tokenCharHint');
+    if (hintEl) {
+        if (curExpectedToken.indexOf('O') !== -1) {
+            hintEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> Memakai <b>HURUF O</b> (Bukan angka nol 0)';
+            hintEl.style.display = 'inline-block';
+        } else if (curExpectedToken.indexOf('0') !== -1) {
+            hintEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> Memakai <b>ANGKA 0 (NOL)</b>';
+            hintEl.style.display = 'inline-block';
+        } else {
+            hintEl.style.display = 'none';
+        }
+    }
+
     const inp = document.getElementById('inputTokenUjian');
     inp.value = '';
     inp.style.borderColor = '#cbd5e1';
@@ -1165,10 +1182,14 @@ function verifikasiDanMulaiUjian() {
         return;
     }
 
-    if (entered !== curExpectedToken) {
+    // Toleransi Cerdas O dan 0: Siswa tidak akan gagal hanya karena salah mengetik huruf O / angka 0
+    const normEntered = entered.replace(/0/g, 'O');
+    const normExpected = curExpectedToken.replace(/0/g, 'O');
+
+    if (normEntered !== normExpected) {
         inp.style.borderColor = '#dc2626';
         inp.focus();
-        document.getElementById('tokenErrorMsg').textContent = 'Token tidak cocok! Ketikkan persis sesuai token di atas.';
+        document.getElementById('tokenErrorMsg').textContent = 'Token tidak cocok! Silakan cek kembali.';
         document.getElementById('tokenErrorMsg').style.display = 'block';
 
         if (typeof Swal !== 'undefined') {
@@ -1182,8 +1203,8 @@ function verifikasiDanMulaiUjian() {
         return;
     }
 
-    // Token cocok -> Redirect ke kerjakan ujian!
-    window.location.href = '/cbt/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(entered);
+    // Token cocok -> Redirect ke kerjakan ujian dengan token resmi yang valid!
+    window.location.href = '/cbt/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken);
 }
 
 // Enter key submit on input token

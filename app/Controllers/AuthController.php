@@ -179,6 +179,12 @@ class AuthController {
                 <div style="margin-top: 2rem; text-align: center; font-size: 0.8rem; color: #999;">
                     Lupa password? Hubungi Administrator.
                 </div>
+
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="/download.php" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: #059669; text-decoration: none; background: #ecfdf5; padding: 6px 14px; border-radius: 20px; border: 1px solid #a7f3d0;">
+                        <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i> Download Aplikasi Android (.APK)
+                    </a>
+                </div>
             </div>
         </div>
 

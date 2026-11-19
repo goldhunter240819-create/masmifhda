@@ -869,6 +869,26 @@ $router->add('GET', '/changelog', function() {
     exit;
 });
 
+// Public: Download Center Aplikasi Android (.APK)
+$router->add('GET', '/download', function() {
+    include __DIR__ . '/../download.php';
+    exit;
+});
+$router->add('GET', '/download-apk', function() {
+    include __DIR__ . '/../download.php';
+    exit;
+});
+$router->add('GET', '/app.apk', function() {
+    $_GET['action'] = 'file';
+    include __DIR__ . '/../download.php';
+    exit;
+});
+$router->add('GET', '/masmifhda.apk', function() {
+    $_GET['action'] = 'file';
+    include __DIR__ . '/../download.php';
+    exit;
+});
+
 // --- ROUTES ---
 $router->add('GET', '/switch-role', [\App\Controllers\AuthController::class, 'switchRole']);
 

@@ -412,10 +412,10 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Login - MAS Mifhda</title>
     <link rel="icon" type="image/png" href="<?= htmlspecialchars($favicon_url) ?>">
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Quicksand', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         html, body {
             width: 100%;
             min-height: 100vh;
@@ -423,22 +423,22 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
             overflow-y: auto;
         }
         body { 
-            background: linear-gradient(135deg, #020617 0%, #0f172a 100%); 
-            color: #f8fafc; 
+            background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 50%, #f8fafc 100%); 
+            color: #0f172a; 
             display: flex; 
             justify-content: center; 
             align-items: center;
-            padding: 20px 10px;
+            padding: 24px 12px;
             position: relative;
         }
         
-        /* Dekorasi orb glowing melengkung di background */
+        /* Dekorasi orb cerah di background */
         body::before {
             content: '';
             position: fixed;
-            top: -150px; left: -100px;
-            width: 450px; height: 450px;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+            top: -120px; left: -80px;
+            width: 440px; height: 440px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, transparent 70%);
             border-radius: 50%;
             z-index: 0;
             filter: blur(50px);
@@ -447,64 +447,78 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
         body::after {
             content: '';
             position: fixed;
-            bottom: -150px; right: -150px;
-            width: 550px; height: 550px;
-            background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+            bottom: -120px; right: -80px;
+            width: 480px; height: 480px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.16) 0%, transparent 70%);
             border-radius: 50%;
             z-index: 0;
-            filter: blur(60px);
+            filter: blur(50px);
             pointer-events: none;
         }
 
         .mobile-wrapper { 
             width: 100%; max-width: 420px; position: relative; z-index: 10;
             display: flex; flex-direction: column; 
-            padding: 10px;
+            padding: 6px;
         }
         
         .login-card {
-            background: rgba(15, 23, 42, 0.55);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
-            border-radius: 35px;
-            padding: 2rem 1.4rem;
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 32px;
+            padding: 2.2rem 1.6rem;
+            box-shadow: 0 25px 60px -15px rgba(16, 185, 129, 0.16), 0 0 25px rgba(15, 23, 42, 0.05);
+            border: 1.5px solid rgba(226, 232, 240, 0.9);
             text-align: center;
             display: flex; flex-direction: column; align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #10b981, #06b6d4, #3b82f6);
         }
 
         .logo-box {
-            width: 70px; height: 70px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%); 
-            border-radius: 20px;
+            width: 76px; height: 76px;
+            background: #ffffff;
+            border-radius: 22px;
             display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 15px 25px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.22);
             margin-bottom: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 2px solid #a7f3d0;
             padding: 8px;
         }
-        .logo-box img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); }
+        .logo-box img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
 
-        .title-school { font-size: 1.1rem; font-weight: 800; color: #f8fafc; text-transform: uppercase; margin-bottom: 1.1rem; letter-spacing: 1.5px; opacity: 0.95; }
-
-        .greeting-box { margin-bottom: 1rem; }
-        .greeting-box h2 { 
-            color: transparent; 
-            background: linear-gradient(90deg, #34d399, #38bdf8); 
-            -webkit-background-clip: text; 
-            background-clip: text; 
-            font-weight: 800; 
-            font-size: 1.4rem; 
-            margin-bottom: 4px; 
+        .title-school { 
+            font-size: 1.15rem; 
+            font-weight: 900; 
+            color: #065f46; 
+            text-transform: uppercase; 
+            margin-bottom: 0.9rem; 
+            letter-spacing: 1.2px; 
         }
-        .greeting-box p { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; font-weight: 500; padding: 0 10px; }
+
+        .greeting-box { margin-bottom: 1.1rem; }
+        .greeting-box h2 { 
+            color: #0f172a; 
+            font-weight: 900; 
+            font-size: 1.45rem; 
+            margin-bottom: 4px; 
+            letter-spacing: -0.3px;
+        }
+        .greeting-box p { font-size: 0.86rem; color: #64748b; line-height: 1.5; font-weight: 600; padding: 0 8px; }
 
         .error-msg {
-            background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; 
-            padding: 10px 14px; border-radius: 14px; margin-bottom: 14px; 
-            width: 100%; font-weight: 700; font-size: 0.82rem;
-            backdrop-filter: blur(10px);
+            background: #fef2f2; border: 1.5px solid #fecaca; color: #b91c1c; 
+            padding: 11px 16px; border-radius: 14px; margin-bottom: 14px; 
+            width: 100%; font-weight: 800; font-size: 0.84rem;
             display: flex; align-items: center; justify-content: center; gap: 8px;
             animation: shake 0.3s ease;
         }
@@ -518,21 +532,21 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
         /* Tab Switcher Mode */
         .login-tab-switch {
             display: flex;
-            background: rgba(0, 0, 0, 0.4);
+            background: #f1f5f9;
             padding: 4px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1.5px solid #e2e8f0;
             margin-bottom: 1.3rem;
             width: 100%;
             max-width: 330px;
         }
         .tab-btn {
             flex: 1;
-            padding: 9px 12px;
+            padding: 10px 14px;
             border: none;
             background: transparent;
-            color: #94a3b8;
-            font-size: 0.82rem;
+            color: #64748b;
+            font-size: 0.84rem;
             font-weight: 700;
             border-radius: 16px;
             cursor: pointer;
@@ -543,10 +557,11 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
             gap: 7px;
         }
         .tab-btn.active {
-            background: linear-gradient(135deg, rgba(52, 211, 153, 0.25) 0%, rgba(56, 189, 248, 0.25) 100%);
-            color: #f8fafc;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(52, 211, 153, 0.45);
+            background: #ffffff;
+            color: #059669;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid #d1fae5;
         }
 
         /* Section Container */
@@ -562,28 +577,95 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* QR Scanner */
+        /* QR Scanner - Fixed Container No Shift / Anti-Geser */
         .scanner-wrapper {
-            width: 100%; max-width: 220px;
-            border-radius: 25px; overflow: hidden;
-            background: rgba(0, 0, 0, 0.4);
-            border: 2px solid rgba(52, 211, 153, 0.3);
-            box-shadow: 0 15px 40px rgba(52, 211, 153, 0.15);
+            width: 100%;
+            max-width: 250px;
+            height: 250px;
+            border-radius: 26px;
+            overflow: hidden !important;
+            background: #020617;
+            border: 3px solid #10b981;
+            box-shadow: 0 15px 35px rgba(16, 185, 129, 0.25);
             position: relative;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #qr-reader video, #qr-reader canvas { border-radius: 26px; }
+        #qr-reader {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            border-radius: 22px !important;
+            background: transparent !important;
+            position: relative !important;
+        }
+        #qr-reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            border-radius: 22px !important;
+            display: block !important;
+            margin: 0 auto !important;
+            transform: none !important;
+        }
+        #qr-reader canvas {
+            display: none !important;
+        }
+        #qr-reader img[alt="Info icon"] {
+            display: none !important;
+        }
+        #qr-reader__scan_region {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+            border-radius: 22px !important;
+        }
+        #qr-reader__scan_region video {
+            border-radius: 22px !important;
+        }
+        #qr-shaded-region {
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+
+        .laser-scanner-line {
+            position: absolute;
+            top: 15px;
+            left: 8%;
+            width: 84%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #22c55e, #10b981, transparent);
+            box-shadow: 0 0 12px #22c55e;
+            border-radius: 3px;
+            animation: laserSweep 2.2s ease-in-out infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+        @keyframes laserSweep {
+            0%, 100% { top: 15px; opacity: 0.3; }
+            50% { top: 230px; opacity: 1; }
+        }
 
         #qr-status {
-            margin-top: 1rem; font-weight: 700; color: #34d399; font-size: 0.85rem;
-            min-height: 2rem; background: rgba(52, 211, 153, 0.1); padding: 8px 18px; border-radius: 30px;
-            border: 1px solid rgba(52, 211, 153, 0.2);
-            display: inline-block; animation: pulse 2.5s infinite; letter-spacing: 0.5px;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.3); }
-            50% { transform: scale(1.02); box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+            margin-top: 1rem;
+            font-weight: 800;
+            color: #047857;
+            font-size: 0.85rem;
+            min-height: 2rem;
+            background: #ecfdf5;
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: 1.5px solid #a7f3d0;
+            display: inline-block;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
         }
 
         /* Form Manual Input */
@@ -597,9 +679,9 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
         }
         .input-group-custom label {
             display: block;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #94a3b8;
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #334155;
             margin-bottom: 6px;
             letter-spacing: 0.3px;
         }
@@ -611,52 +693,52 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
         .input-wrapper .input-icon {
             position: absolute;
             left: 14px;
-            color: #38bdf8;
+            color: #059669;
             font-size: 0.95rem;
             pointer-events: none;
         }
         .input-wrapper input {
             width: 100%;
-            padding: 12px 40px 12px 42px;
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 13px 40px 13px 42px;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
             border-radius: 14px;
-            color: #f8fafc;
-            font-size: 0.9rem;
+            color: #0f172a;
+            font-size: 0.95rem;
             font-weight: 600;
             outline: none;
             transition: all 0.25s ease;
         }
         .input-wrapper input:focus {
-            border-color: #34d399;
-            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
-            background: rgba(15, 23, 42, 0.9);
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+            background: #ffffff;
         }
         .input-wrapper .toggle-pw {
             position: absolute;
             right: 14px;
-            color: #64748b;
+            color: #94a3b8;
             cursor: pointer;
             font-size: 0.95rem;
             padding: 4px;
             transition: color 0.2s;
         }
         .input-wrapper .toggle-pw:hover {
-            color: #38bdf8;
+            color: #059669;
         }
 
         .btn-submit-manual {
             width: 100%;
-            padding: 13px;
-            background: linear-gradient(135deg, #10b981 0%, #0284c7 100%);
+            padding: 14px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: #ffffff;
             border: none;
             border-radius: 14px;
-            font-size: 0.95rem;
+            font-size: 0.98rem;
             font-weight: 800;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             cursor: pointer;
-            box-shadow: 0 8px 20px -4px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
             transition: all 0.25s ease;
             display: flex;
             align-items: center;
@@ -666,8 +748,8 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
         }
         .btn-submit-manual:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 25px -4px rgba(56, 189, 248, 0.5);
-            background: linear-gradient(135deg, #059669 0%, #0369a1 100%);
+            box-shadow: 0 12px 25px rgba(16, 185, 129, 0.45);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
         }
         .btn-submit-manual:active {
             transform: translateY(0);
@@ -675,13 +757,13 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
 
         .btn-switch-mode {
             margin-top: 1.1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #cbd5e1;
-            padding: 9px 18px;
+            background: #f1f5f9;
+            border: 1.5px solid #cbd5e1;
+            color: #334155;
+            padding: 10px 20px;
             border-radius: 25px;
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 0.82rem;
+            font-weight: 800;
             cursor: pointer;
             transition: all 0.2s ease;
             display: inline-flex;
@@ -690,9 +772,9 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
             text-decoration: none;
         }
         .btn-switch-mode:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #38bdf8;
-            border-color: rgba(56, 189, 248, 0.3);
+            background: #e2e8f0;
+            color: #0f172a;
+            border-color: #94a3b8;
         }
     </style>
 </head>
@@ -734,6 +816,7 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
             <!-- ============================================================= -->
             <div id="section-qr" class="login-section" style="<?= $active_tab === 'qr' ? '' : 'display: none;' ?>">
                 <div class="scanner-wrapper">
+                    <div class="laser-scanner-line"></div>
                     <div id="qr-reader"></div>
                 </div>
                 
@@ -794,6 +877,14 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
                 </button>
             </div>
 
+            <!-- Download APK Banner -->
+            <div style="margin-top: 22px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.12); text-align: center;">
+                <a href="/download.php" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 14px; color: #34d399; font-size: 0.84rem; font-weight: 700; text-decoration: none; transition: all 0.2s;">
+                    <i class="fa-brands fa-android" style="font-size: 1.15rem; color: #10b981;"></i>
+                    <span>Download Aplikasi Android (.APK Resmi)</span>
+                </a>
+            </div>
+
         </div>
     </div>
 
@@ -821,19 +912,27 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
                 }
                 const statusEl = document.getElementById('qr-status');
                 if (statusEl) {
-                    statusEl.style.color = '#34d399';
+                    statusEl.style.color = '#047857';
                     statusEl.innerText = 'Memulai kamera...';
                 }
 
-                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                const config = { 
+                    fps: 15, 
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        const edge = Math.min(viewfinderWidth, viewfinderHeight);
+                        const boxSize = Math.max(160, Math.floor(edge * 0.75));
+                        return { width: boxSize, height: boxSize };
+                    },
+                    aspectRatio: 1.0
+                };
                 await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
                 isScannerRunning = true;
-                if (statusEl) statusEl.innerText = 'Siap memindai...';
+                if (statusEl) statusEl.innerText = 'Kamera siap, arahkan kartu QR...';
             } catch (err) {
                 const statusEl = document.getElementById('qr-status');
                 if (statusEl) {
-                    statusEl.style.color = '#fca5a5';
-                    statusEl.innerHTML = 'Kamera tidak aktif: ' + err;
+                    statusEl.style.color = '#b91c1c';
+                    statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Kamera tidak aktif / izin belum diberikan';
                 }
             }
         }
