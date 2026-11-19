@@ -3908,8 +3908,8 @@ class CbtController {
             exit;
         }
 
-        $code = trim($_POST['code'] ?? ($_POST['nis'] ?? ''));
-        if (empty($code)) {
+        $rawCode = trim($_POST['code'] ?? ($_POST['nis'] ?? ''));
+        if (empty($rawCode)) {
             echo json_encode(['success' => false, 'message' => 'Barcode / NIS tidak boleh kosong!']);
             exit;
         }
@@ -3918,40 +3918,114 @@ class CbtController {
         $curTime = date('H:i:s');
         $curHari = self::getIndoDayName(date('w'));
 
-        // 1. Cari siswa: Apakah siswa reguler atau peserta khusus kelas jauh?
+        // 1. Ekstraksi cerdas dari berbagai format barcode / QR kartu
+        $cleanCode = $rawCode;
+        $extractedUserId = null;
+        $extractedKjId = null;
+
+        // A. Format QR Kartu Pelajar Siakad: TOKEN:<user_id>:<hash>
+        if (preg_match('/^TOKEN:(\d+):([a-f0-9]+)$/i', $rawCode, $m)) {
+            $extractedUserId = (int)$m[1];
+        }
+        // B. Format Kartu CBT Kelas Jauh: CBT_KJ:<id>:<token> atau TOKEN:KJ:<id>:<token>
+        elseif (preg_match('/^(?:CBT_KJ|TOKEN:KJ):(\d+)(?::(.*))?$/i', $rawCode, $m)) {
+            $extractedKjId = (int)$m[1];
+        }
+        // C. Format prefix scanner: "NIS: 240001", "ID: 414", "NO: ..."
+        elseif (preg_match('/^(?:NIS|NISN|ID|NO|KODE):\s*(.+)$/i', $rawCode, $m)) {
+            $cleanCode = trim($m[1]);
+            if (ctype_digit($cleanCode)) {
+                $extractedUserId = (int)$cleanCode;
+            }
+        }
+
         $siswa = null;
         $tipePeserta = 'reguler';
 
-        // Cek siswa reguler Siakad
-        $stmtS = $db->prepare("
-            SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
-            FROM siswa s
-            LEFT JOIN kelas k ON s.kelas_id = k.id
-            WHERE s.nis = ? OR s.nisn = ? OR s.id = ?
-            LIMIT 1
-        ");
-        $stmtS->execute([$code, $code, $code]);
-        $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+        // 1a. Cari jika terdeteksi User ID / Siswa ID dari TOKEN Siakad (misal TOKEN:414:...)
+        if ($extractedUserId) {
+            $stmtS = $db->prepare("
+                SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                WHERE s.user_id = ? OR s.id = ?
+                LIMIT 1
+            ");
+            $stmtS->execute([$extractedUserId, $extractedUserId]);
+            $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+            if ($sRow) {
+                $siswa = [
+                    'id' => (int)$sRow['id'],
+                    'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
+                    'nama' => $sRow['nama'],
+                    'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                    'tingkat' => $sRow['tingkat'],
+                    'foto' => $sRow['foto'],
+                    'tipe' => 'reguler'
+                ];
+            }
+        }
 
-        if ($sRow) {
-            $siswa = [
-                'id' => (int)$sRow['id'],
-                'nis' => $sRow['nis'],
-                'nama' => $sRow['nama'],
-                'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
-                'tingkat' => $sRow['tingkat'],
-                'foto' => $sRow['foto'],
-                'tipe' => 'reguler'
-            ];
-        } else {
-            // Cek di cbt_peserta_khusus (Kelas Jauh)
+        // 1b. Cari jika terdeteksi ID dari Kartu Kelas Jauh (misal CBT_KJ:1:...)
+        if (!$siswa && $extractedKjId) {
             $stmtK = $db->prepare("
                 SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
                 FROM cbt_peserta_khusus
-                WHERE no_peserta = ? OR username = ? OR id = ?
+                WHERE id = ?
                 LIMIT 1
             ");
-            $stmtK->execute([$code, $code, $code]);
+            $stmtK->execute([$extractedKjId]);
+            $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+            if ($kRow) {
+                $siswa = [
+                    'id' => (int)$kRow['id'],
+                    'nis' => $kRow['nis'],
+                    'nama' => $kRow['nama'],
+                    'kelas_nama' => $kRow['kelas_nama'] ?: 'Kelas Jauh',
+                    'tingkat' => $kRow['tingkat'],
+                    'foto' => null,
+                    'tipe' => 'khusus'
+                ];
+                $tipePeserta = 'khusus';
+            }
+        }
+
+        // 1c. Cari di tabel siswa berdasarkan NIS, NISN, ID, user_id, username, atau qr_token users
+        if (!$siswa) {
+            $stmtS = $db->prepare("
+                SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN users u ON s.user_id = u.id
+                WHERE s.nis = ? OR s.nisn = ? OR s.id = ? OR s.user_id = ? OR u.username = ? OR u.qr_token = ?
+                   OR s.nis = ? OR s.id = ? OR u.qr_token = ?
+                LIMIT 1
+            ");
+            $stmtS->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode, $rawCode]);
+            $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+            if ($sRow) {
+                $siswa = [
+                    'id' => (int)$sRow['id'],
+                    'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
+                    'nama' => $sRow['nama'],
+                    'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                    'tingkat' => $sRow['tingkat'],
+                    'foto' => $sRow['foto'],
+                    'tipe' => 'reguler'
+                ];
+            }
+        }
+
+        // 1d. Cari di tabel cbt_peserta_khusus (Kelas Jauh)
+        if (!$siswa) {
+            $stmtK = $db->prepare("
+                SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
+                FROM cbt_peserta_khusus
+                WHERE no_peserta = ? OR username = ? OR id = ? OR qr_token = ?
+                   OR no_peserta = ? OR username = ?
+                LIMIT 1
+            ");
+            $stmtK->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode]);
             $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
             if ($kRow) {
                 $siswa = [
@@ -3970,7 +4044,7 @@ class CbtController {
         if (!$siswa) {
             echo json_encode([
                 'success' => false,
-                'message' => "Siswa dengan ID/NIS '{$code}' tidak ditemukan di sistem!"
+                'message' => "Siswa dengan kartu/kode '{$rawCode}' tidak terdaftar di sistem Siakad maupun CBT!"
             ]);
             exit;
         }
@@ -3998,11 +4072,33 @@ class CbtController {
         $stmtJadwal->execute([$todayDate, $curHari, $targetKelas, $targetKelas, $curTime, $curTime]);
         $jadwal = $stmtJadwal->fetch(PDO::FETCH_ASSOC);
 
-        $mapelNama = $jadwal['mapel_nama'] ?? ($jadwal['nama_ujian'] ?? 'Asesmen CBT Harian');
-        $jamSlot = $jadwal['jam_slot'] ?? ($jadwal['label_sesi'] ?? 'Sesi 1');
-        $topikId = (int)($jadwal['topik_id'] ?? 0);
-        $ujianId = (int)($jadwal['ujian_id'] ?? 0);
-        $ruangNama = trim($_POST['ruang_nama'] ?? ($jadwal['ruang'] ?? ''));
+        if (!$jadwal || empty($jadwal['nama_ujian'])) {
+            $stmtUjianAktif = $db->prepare("
+                SELECT id, nama_ujian, kode_ujian, durasi_menit 
+                FROM cbt_ujian 
+                WHERE status = 'aktif'
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmtUjianAktif->execute();
+            $ujianAktif = $stmtUjianAktif->fetch(PDO::FETCH_ASSOC);
+            if ($ujianAktif) {
+                $mapelNama = $ujianAktif['nama_ujian'];
+                $ujianId = (int)$ujianAktif['id'];
+                $jamSlot = 'Sesi CBT';
+            } else {
+                $mapelNama = 'Asesmen CBT Harian';
+                $ujianId = 0;
+                $jamSlot = 'Sesi 1';
+            }
+            $topikId = 0;
+        } else {
+            $mapelNama = $jadwal['mapel_nama'] ?? ($jadwal['nama_ujian'] ?? 'Asesmen CBT Harian');
+            $jamSlot = $jadwal['jam_slot'] ?? ($jadwal['label_sesi'] ?? 'Sesi 1');
+            $topikId = (int)($jadwal['topik_id'] ?? 0);
+            $ujianId = (int)($jadwal['ujian_id'] ?? 0);
+        }
+
+        $ruangNama = trim($_POST['ruang_nama'] ?? ($jadwal['ruang'] ?? 'Gerbang / 1 Pintu'));
 
         // 3. Cek apakah sudah absen untuk mapel & tanggal ini
         $stmtCheck = $db->prepare("
@@ -4019,7 +4115,10 @@ class CbtController {
                 'message' => "Siswa {$siswa['nama']} sudah terabsen sebelumnya pada pukul " . date('H:i', strtotime($exist['waktu_scan'])) . " WIB.",
                 'siswa' => $siswa,
                 'mapel' => $mapelNama,
+                'mapel_nama' => $mapelNama,
                 'sesi' => $jamSlot,
+                'jam_slot' => $jamSlot,
+                'status' => 'Hadir',
                 'waktu' => date('H:i:s', strtotime($exist['waktu_scan']))
             ]);
             exit;
@@ -4061,10 +4160,12 @@ class CbtController {
 
         echo json_encode([
             'success' => true,
-            'message' => "Absensi Berhasil! {$siswa['nama']} tercatat {$statusAbsen}.",
+            'message' => "Absensi Berhasil! {$siswa['nama']} ({$siswa['kelas_nama']}) tercatat {$statusAbsen}.",
             'siswa' => $siswa,
             'mapel' => $mapelNama,
+            'mapel_nama' => $mapelNama,
             'sesi' => $jamSlot,
+            'jam_slot' => $jamSlot,
             'status' => $statusAbsen,
             'waktu' => date('H:i:s')
         ]);
