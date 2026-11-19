@@ -326,21 +326,11 @@ class CbtBiologiArabGenerator {
                 );
                 $totalInserted += $inserted;
 
-                // Jika nama paket aslinya Bahasa Arab dan ada juga Bahasa Arab Peminatan, kita sync dua-duanya
-                if ($chosenMapel === 'Bahasa Arab Peminatan') {
-                    // Juga pastikan jika ada paket "Bahasa Arab" biasa terisi soalnya
-                    $stmtCek2 = $db_siakad->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = 'Bahasa Arab' AND kelas_nama = ? LIMIT 1");
-                    $stmtCek2->execute([$tId, $lvl['tingkat']]);
-                    if ($stmtCek2->fetchColumn()) {
-                        self::insertSubjectPackage(
-                            $db_siakad, $db_core, $tId, 'Bahasa Arab',
-                            $lvl['tingkat'], $lvl['rombel'], $lvl['kode'] . '-REG', $lvl['guru'],
-                            'Simulasi Bahasa Arab Reguler - ' . $lvl['tingkat'], $lvl['dataset']
-                        );
-                    }
-                }
             }
         }
+
+        // Deduplikasi cbt_ujian agar bersih tanpa ada ujian ganda
+        self::deduplicateCbtUjian($db_core, $db_siakad);
 
         // Pastikan Token Ujian Tersedia & Aktif
         try {
@@ -429,5 +419,131 @@ class CbtBiologiArabGenerator {
         }
 
         return $count;
+    }
+
+    /**
+     * Membersihkan dan mendeduplikasi cbt_ujian agar setiap Mapel & Tingkat Kelas hanya memiliki tepat 1 Ujian Aktif
+     */
+    public static function deduplicateCbtUjian($db_core, $db_siakad = null) {
+        if (!$db_siakad) {
+            $db_siakad = Database::connect('siakad');
+        }
+
+        // 1. Dapatkan daftar ID topik yang sah di bs_topik
+        $validTopikIds = [];
+        try {
+            $validTopikIds = $db_siakad->query("SELECT id FROM bs_topik")->fetchAll(PDO::FETCH_COLUMN);
+            $validTopikIds = array_map('intval', $validTopikIds);
+        } catch (\Exception $e) {}
+
+        // Cari ID topik SIMULASI
+        $simTopikId = 7;
+        try {
+            $sId = $db_siakad->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetchColumn();
+            if ($sId) $simTopikId = (int)$sId;
+        } catch (\Exception $e) {}
+
+        // 2. Ambil semua ujian dari cbt_ujian
+        try {
+            $allUjian = $db_core->query("
+                SELECT u.id, u.topik_id, u.kode_ujian, u.nama_ujian, u.mapel_nama, u.kelas_nama, u.status,
+                       (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as cnt_soal
+                FROM cbt_ujian u
+                ORDER BY u.id ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            // Grouping berdasarkan Normalisasi Kelas + Mapel
+            $grouped = [];
+            foreach ($allUjian as $u) {
+                // Normalisasi Kelas
+                $k = strtolower(trim($u['kelas_nama'] ?? ''));
+                if (strpos($k, 'xii') !== false || strpos($k, '12') !== false) {
+                    $normKelas = 'XII';
+                } elseif (strpos($k, 'xi') !== false || strpos($k, '11') !== false) {
+                    $normKelas = 'XI';
+                } elseif (strpos($k, 'x') !== false || strpos($k, '10') !== false) {
+                    $normKelas = 'X';
+                } else {
+                    $normKelas = 'Semua';
+                }
+
+                // Normalisasi Mapel
+                $m = strtolower(trim($u['mapel_nama'] ?? ''));
+                if (strpos($m, 'arab') !== false) {
+                    $normMapel = 'arab';
+                } elseif (strpos($m, 'biologi') !== false) {
+                    $normMapel = 'biologi';
+                } elseif (strpos($m, 'matematika') !== false) {
+                    $normMapel = 'matematika';
+                } else {
+                    $normMapel = $m;
+                }
+
+                $key = $normKelas . '_' . $normMapel;
+                $grouped[$key][] = $u;
+            }
+
+            $toDeleteUjianIds = [];
+            $toKeepUjianIds = [];
+
+            foreach ($grouped as $key => $items) {
+                if (count($items) === 1) {
+                    $keepItem = $items[0];
+                    $toKeepUjianIds[] = (int)$keepItem['id'];
+                } else {
+                    // Sorting item terbaik yang akan dipertahankan:
+                    // 1. Topik SIMULASI (topik_id == $simTopikId atau nama_ujian memuat SIMULASI)
+                    // 2. Jumlah butir soal terbanyak
+                    // 3. ID topik valid di bs_topik
+                    // 4. ID ujian terbesar
+                    usort($items, function($a, $b) use ($simTopikId, $validTopikIds) {
+                        $isSimA = ((int)$a['topik_id'] === $simTopikId || stripos($a['nama_ujian'], 'SIMULASI') !== false) ? 1 : 0;
+                        $isSimB = ((int)$b['topik_id'] === $simTopikId || stripos($b['nama_ujian'], 'SIMULASI') !== false) ? 1 : 0;
+                        if ($isSimA !== $isSimB) return $isSimB - $isSimA;
+
+                        $soalA = (int)$a['cnt_soal'];
+                        $soalB = (int)$b['cnt_soal'];
+                        if ($soalA !== $soalB) return $soalB - $soalA;
+
+                        $validA = in_array((int)$a['topik_id'], $validTopikIds) ? 1 : 0;
+                        $validB = in_array((int)$b['topik_id'], $validTopikIds) ? 1 : 0;
+                        if ($validA !== $validB) return $validB - $validA;
+
+                        return (int)$b['id'] - (int)$a['id'];
+                    });
+
+                    // Item pertama dipertahankan
+                    $winner = array_shift($items);
+                    $toKeepUjianIds[] = (int)$winner['id'];
+
+                    // Sisanya dihapus
+                    foreach ($items as $loser) {
+                        $toDeleteUjianIds[] = (int)$loser['id'];
+                    }
+                }
+            }
+
+            // Hapus duplikat cbt_ujian dan relasinya
+            if (!empty($toDeleteUjianIds)) {
+                $delStr = implode(',', $toDeleteUjianIds);
+                try { $db_core->exec("DELETE FROM cbt_peserta_jawaban WHERE ujian_id IN ({$delStr})"); } catch (\Exception $e) {}
+                try { $db_core->exec("DELETE FROM cbt_jawaban WHERE ujian_id IN ({$delStr})"); } catch (\Exception $e) {}
+                try { $db_core->exec("DELETE FROM cbt_peserta WHERE ujian_id IN ({$delStr})"); } catch (\Exception $e) {}
+                try { $db_core->exec("DELETE FROM cbt_soal WHERE ujian_id IN ({$delStr})"); } catch (\Exception $e) {}
+                try { $db_core->exec("DELETE FROM cbt_ujian WHERE id IN ({$delStr})"); } catch (\Exception $e) {}
+            }
+
+            // Untuk ujian yang dipertahankan dan bertipe Simulasi, pastikan topik_id diset ke $simTopikId
+            if (!empty($toKeepUjianIds) && $simTopikId > 0) {
+                $keepStr = implode(',', $toKeepUjianIds);
+                try {
+                    $db_core->exec("UPDATE cbt_ujian SET topik_id = {$simTopikId}, status = 'Aktif' WHERE id IN ({$keepStr}) AND nama_ujian LIKE '%Simulasi%'");
+                } catch (\Exception $e) {}
+            }
+
+            return count($toDeleteUjianIds);
+        } catch (\Exception $e) {
+            return 0;
+        }
     }
 }

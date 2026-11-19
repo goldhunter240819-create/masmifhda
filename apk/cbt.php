@@ -151,12 +151,35 @@ try {
         LEFT JOIN cbt_peserta p ON p.ujian_id = u.id AND (p.siswa_id = ? OR (p.nis = ? AND ? != ''))
         WHERE u.status = 'Aktif'
           AND (u.kelas_nama IS NULL OR u.kelas_nama = '' OR u.kelas_nama IN ($inPlaceholders))
-        ORDER BY u.id DESC
+        ORDER BY (u.topik_id = 7 OR u.nama_ujian LIKE '%SIMULASI%') DESC, (total_soal > 0) DESC, u.id DESC
     ";
     $params = array_merge([$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')], $allowedKelas);
     $stmtUjian = $core_db->prepare($sqlUjian);
     $stmtUjian->execute($params);
     $ujianListRaw = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
+
+    // Deduplikasi Ujian per Mapel: Cegah kartu dobel/ganda di HP siswa
+    $seenMapelKeys = [];
+    $dedupedList = [];
+    foreach ($ujianListRaw as $uRaw) {
+        $mRaw = strtolower(trim($uRaw['mapel_nama'] ?? ''));
+        if (strpos($mRaw, 'arab') !== false) {
+            $mKey = 'bahasa arab';
+        } elseif (strpos($mRaw, 'biologi') !== false) {
+            $mKey = 'biologi';
+        } elseif (strpos($mRaw, 'matematika') !== false) {
+            $mKey = 'matematika';
+        } else {
+            $mKey = $mRaw;
+        }
+
+        if (isset($seenMapelKeys[$mKey])) {
+            continue; // Lewati duplikat mapel yang sama
+        }
+        $seenMapelKeys[$mKey] = true;
+        $dedupedList[] = $uRaw;
+    }
+    $ujianListRaw = $dedupedList;
 } catch (\Exception $e) {}
 
 // Filter & Validasi Paket Ujian Tersedia (Sembunyikan yang sudah selesai)
