@@ -335,7 +335,7 @@ $active_menu = "bank_soal";
                     </div>
                 <?php elseif($_GET['msg'] === 'dummy_created'): ?>
                     <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
-                        <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Contoh paket Matematika 50 soal (40 PG, 5 PG Kompleks, 5 Essay) berhasil dibuat lengkap dengan kunci jawaban!
+                        <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Sukses! Contoh 50 Soal ber-stimulus untuk 3 Mapel (Matematika, Biologi, Bahasa Arab) di semua tingkat (Kelas X, XI, XII) berhasil dibuat lengkap dengan kunci jawaban!
                     </div>
                 <?php elseif($_GET['msg'] === 'bank_reset' || $_GET['msg'] === 'bank_reset_all'): ?>
                     <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
@@ -617,10 +617,10 @@ $active_menu = "bank_soal";
                         </button>
                     </form>
 
-                    <form method="POST" action="<?php echo base_url('bank_soal/generate-dummy'); ?>" style="display: inline;" onsubmit="return confirm('Generate otomatis 50 Soal Simulasi Matematika (5 Model Soal: PG, PGK, B/S, Jodoh, Isian) ber-Stimulus untuk Kelas 10, 11, dan 12?')">
+                    <form method="POST" action="<?php echo base_url('bank_soal/generate-dummy'); ?>" style="display: inline;" onsubmit="return confirm('Generate otomatis 50 Soal per mapel untuk 3 Mapel (Matematika, Biologi, Bahasa Arab) di semua tingkat Kelas X, XI, XII (Total 450 Butir Soal AKM ber-Stimulus)?')">
                         <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
-                        <button type="submit" class="btn btn-outline" style="background: #fdf4ff; border-color: #f5d0fe; color: #9333ea; font-weight: 800;" title="Contoh data dummy 5 model soal ber-stimulus untuk Kelas 10, 11, dan 12">
-                            <i data-lucide="sparkles" style="width: 15px; height: 15px; color: #c026d3;"></i> Buat Contoh Dummy (Matematika 50 Soal Kls 10, 11, 12)
+                        <button type="submit" class="btn btn-outline" style="background: #fdf4ff; border-color: #f5d0fe; color: #9333ea; font-weight: 800;" title="Generate 50 Soal Matematika, Biologi, dan Bahasa Arab untuk semua tingkat (Kelas 10, 11, dan 12)">
+                            <i data-lucide="sparkles" style="width: 15px; height: 15px; color: #c026d3;"></i> Buat Contoh Dummy (Matematika, Biologi, Bahasa Arab - Semua Tingkat)
                         </button>
                     </form>
 
@@ -1118,9 +1118,9 @@ $active_menu = "bank_soal";
             } else if (msg === 'dummy_created') {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Contoh Dummy Matematika Berhasil Dibuat!',
-                    text: '50 butir soal (40 PG, 5 PG Kompleks, 5 Essay) berhasil digenerate.',
-                    timer: 3000,
+                    title: 'Soal Dummy 3 Mapel Berhasil Dibuat!',
+                    text: '50 butir soal ber-stimulus untuk Matematika, Biologi, dan Bahasa Arab di semua tingkat (Kelas X, XI, XII) berhasil digenerate lengkap dengan kunci jawaban.',
+                    timer: 3500,
                     showConfirmButton: false
                 });
             } else if (msg === 'locked') {

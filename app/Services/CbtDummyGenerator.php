@@ -83,7 +83,7 @@ class CbtDummyGenerator {
             $dataset = $lvl['dataset'];
 
             // 1. Pastikan Paket di bs_paket ada
-            $stmtP = $db_siakad->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = 'Matematika' AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
+            $stmtP = $db_siakad->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
             $stmtP->execute([$topikId, $tingkat, $rombel]);
             $paketId = (int)$stmtP->fetchColumn();
 
@@ -95,8 +95,23 @@ class CbtDummyGenerator {
                 $db_siakad->prepare("UPDATE bs_paket SET guru_nama = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $paketId]);
             }
 
+            // Sinkronkan juga bs_paket ke db_core jika terpisah
+            if ($db_core !== $db_siakad) {
+                try {
+                    $stmtPCore = $db_core->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
+                    $stmtPCore->execute([$topikId, $tingkat, $rombel]);
+                    $pIdCore = (int)$stmtPCore->fetchColumn();
+                    if (!$pIdCore) {
+                        $db_core->prepare("INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, 'Matematika', ?, ?, 75, 90, 0)")
+                                ->execute([$paketId, $topikId, $tingkat, $guru]);
+                    } else {
+                        $db_core->prepare("UPDATE bs_paket SET guru_nama = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $pIdCore]);
+                    }
+                } catch (\Exception $e) {}
+            }
+
             // 2. Pastikan cbt_ujian ada dan Aktif
-            $stmtU = $db_core->prepare("SELECT id FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = 'Matematika' AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas') LIMIT 1");
+            $stmtU = $db_core->prepare("SELECT id FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas') LIMIT 1");
             $stmtU->execute([$topikId, $tingkat, $rombel]);
             $ujianId = (int)$stmtU->fetchColumn();
 
@@ -111,8 +126,15 @@ class CbtDummyGenerator {
 
             // Hubungkan juga ke jadwal_grid jika ada slot kelas ini
             try {
-                $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = 'Matematika' AND (kelas_nama = ? OR kelas_nama = ?)")->execute([$ujianId, $topikId, $rombel, $tingkat]);
+                $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ?)")->execute([$ujianId, $topikId, $rombel, $tingkat]);
             } catch (\Exception $e) {}
+
+            // Bersihkan butir soal lama di paket ini agar tidak double
+            try { $db_siakad->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
+            if ($db_core !== $db_siakad) {
+                try { $db_core->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
+            }
+            try { $db_core->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$ujianId]); } catch (\Exception $e) {}
 
             // 3. Masukkan 50 Butir Soal ke bs_soal dan cbt_soal
             $stmtBs = $db_siakad->prepare("
@@ -124,6 +146,11 @@ class CbtDummyGenerator {
                 INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
+
+            $stmtBsCore = ($db_core !== $db_siakad) ? $db_core->prepare("
+                INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan)
+                VALUES (?, ?, 'Matematika', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ") : null;
 
             foreach ($dataset as $soal) {
                 $no = (int)$soal['nomor_urut'];
@@ -144,6 +171,15 @@ class CbtDummyGenerator {
                     $topikId, $paketId, $tingkat, $no, $tipe, $tkesulitan, $skor,
                     $tanya, $opA, $opB, $opC, $opD, $opE, $kunci, $konten
                 ]);
+
+                if ($stmtBsCore) {
+                    try {
+                        $stmtBsCore->execute([
+                            $topikId, $paketId, $tingkat, $no, $tipe, $tkesulitan, $skor,
+                            $tanya, $opA, $opB, $opC, $opD, $opE, $kunci, $konten
+                        ]);
+                    } catch (\Exception $e) {}
+                }
 
                 // Insert ke cbt_soal
                 $stmtCbt->execute([

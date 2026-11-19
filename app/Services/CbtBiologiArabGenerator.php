@@ -183,10 +183,12 @@ class CbtBiologiArabGenerator {
             \App\Controllers\BankSoalController::ensureTables($db_core);
         }
 
-        // 1. Bersihkan topik duplikat & soal yang nyasar di topik non-simulasi
-        self::cleanupUnwantedTopics($db_siakad, $db_core);
+        // 1. Bersihkan topik duplikat jika tidak ada topik spesifik yang di-request
+        if (!$topikId) {
+            self::cleanupUnwantedTopics($db_siakad, $db_core);
+        }
 
-        // 2. Tentukan target topik: HANYA TOPIK SIMULASI!
+        // 2. Tentukan target topik
         $targetTopiks = [];
         if ($topikId && (int)$topikId > 0) {
             $targetTopiks[] = (int)$topikId;
@@ -218,10 +220,12 @@ class CbtBiologiArabGenerator {
         $totalInserted = 0;
 
         foreach ($targetTopiks as $tId) {
-            // Cek apakah topik ada di database
+            // Cek apakah topik ada di database (siakad atau core)
             $cekT = (int)$db_siakad->query("SELECT COUNT(*) FROM bs_topik WHERE id = {$tId}")->fetchColumn();
             if ($cekT === 0) {
-                // Jangan buat topik acak selain SIMULASI
+                try { $cekT = (int)$db_core->query("SELECT COUNT(*) FROM bs_topik WHERE id = {$tId}")->fetchColumn(); } catch (\Exception $e) {}
+            }
+            if ($cekT === 0) {
                 continue;
             }
 
@@ -272,12 +276,25 @@ class CbtBiologiArabGenerator {
             ];
 
             foreach ($bioLevels as $lvl) {
-                $inserted = self::insertSubjectPackage(
-                    $db_siakad, $db_core, $tId, 'Biologi',
-                    $lvl['tingkat'], $lvl['rombel'], $lvl['kode'], $lvl['guru'],
-                    'Simulasi Biologi - ' . $lvl['tingkat'], $lvl['dataset']
-                );
-                $totalInserted += $inserted;
+                $bioMapelList = [];
+                try {
+                    $stmtCekBio = $db_siakad->prepare("SELECT DISTINCT mapel_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Biologi%' AND (kelas_nama = ? OR kelas_nama LIKE ?)");
+                    $stmtCekBio->execute([$tId, $lvl['tingkat'], '%' . $lvl['tingkat'] . '%']);
+                    $bioMapelList = $stmtCekBio->fetchAll(PDO::FETCH_COLUMN);
+                } catch (\Exception $e) {}
+
+                if (empty($bioMapelList)) {
+                    $bioMapelList = ['Biologi'];
+                }
+
+                foreach ($bioMapelList as $bMapel) {
+                    $inserted = self::insertSubjectPackage(
+                        $db_siakad, $db_core, $tId, $bMapel,
+                        $lvl['tingkat'], $lvl['rombel'], $lvl['kode'], $lvl['guru'],
+                        'Simulasi ' . $bMapel . ' - ' . $lvl['tingkat'], $lvl['dataset']
+                    );
+                    $totalInserted += $inserted;
+                }
             }
 
             // ══════════════════════════════════════════════════════════════
@@ -285,8 +302,6 @@ class CbtBiologiArabGenerator {
             // Catatan: Cek apakah di bs_paket menggunakan nama "Bahasa Arab Peminatan" atau "Bahasa Arab"
             // Kita dukung kedua varian agar selalu match dengan tampilan Bank Soal user!
             // ══════════════════════════════════════════════════════════════
-            $arabMapelNames = ['Bahasa Arab', 'Bahasa Arab Peminatan'];
-
             $arabLevels = [
                 [
                     'tingkat' => 'Kelas X',
@@ -312,20 +327,26 @@ class CbtBiologiArabGenerator {
             ];
 
             foreach ($arabLevels as $lvl) {
-                // Cek apakah paket Bahasa Arab Peminatan ada di bs_paket untuk tingkat ini
-                $stmtCekArab = $db_siakad->prepare("SELECT mapel_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Arab%' AND kelas_nama = ? LIMIT 1");
-                $stmtCekArab->execute([$tId, $lvl['tingkat']]);
-                $existingArabMapel = $stmtCekArab->fetchColumn();
+                // Ambil semua varian nama Bahasa Arab di bs_paket untuk tingkat ini
+                $arabMapelList = [];
+                try {
+                    $stmtCekArab = $db_siakad->prepare("SELECT DISTINCT mapel_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Arab%' AND (kelas_nama = ? OR kelas_nama LIKE ?)");
+                    $stmtCekArab->execute([$tId, $lvl['tingkat'], '%' . $lvl['tingkat'] . '%']);
+                    $arabMapelList = $stmtCekArab->fetchAll(PDO::FETCH_COLUMN);
+                } catch (\Exception $e) {}
 
-                $chosenMapel = $existingArabMapel ?: 'Bahasa Arab Peminatan';
+                if (empty($arabMapelList)) {
+                    $arabMapelList = ['Bahasa Arab', 'Bahasa Arab Peminatan'];
+                }
 
-                $inserted = self::insertSubjectPackage(
-                    $db_siakad, $db_core, $tId, $chosenMapel,
-                    $lvl['tingkat'], $lvl['rombel'], $lvl['kode'], $lvl['guru'],
-                    'Simulasi Bahasa Arab - ' . $lvl['tingkat'], $lvl['dataset']
-                );
-                $totalInserted += $inserted;
-
+                foreach ($arabMapelList as $aMapel) {
+                    $inserted = self::insertSubjectPackage(
+                        $db_siakad, $db_core, $tId, $aMapel,
+                        $lvl['tingkat'], $lvl['rombel'], $lvl['kode'], $lvl['guru'],
+                        'Simulasi ' . $aMapel . ' - ' . $lvl['tingkat'], $lvl['dataset']
+                    );
+                    $totalInserted += $inserted;
+                }
             }
         }
 
@@ -360,6 +381,21 @@ class CbtBiologiArabGenerator {
             $db_siakad->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $paketId]);
         }
 
+        // Sinkronkan juga bs_paket ke db_core jika terpisah
+        if ($db_core !== $db_siakad) {
+            try {
+                $stmtPCore = $db_core->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
+                $stmtPCore->execute([$topikId, $mapelNama, $tingkat, $rombel]);
+                $pIdCore = (int)$stmtPCore->fetchColumn();
+                if (!$pIdCore) {
+                    $db_core->prepare("INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, ?, ?, ?, ?, 75, 90, 0)")
+                            ->execute([$paketId, $topikId, $mapelNama, $tingkat, $rombel, $guru]);
+                } else {
+                    $db_core->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $pIdCore]);
+                }
+            } catch (\Exception $e) {}
+        }
+
         // 2. Pastikan cbt_ujian ada dan Aktif
         $stmtU = $db_core->prepare("SELECT id FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas') LIMIT 1");
         $stmtU->execute([$topikId, $mapelNama, $tingkat, $rombel]);
@@ -378,6 +414,13 @@ class CbtBiologiArabGenerator {
             $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ?)")->execute([$ujianId, $topikId, $mapelNama, $rombel, $tingkat]);
         } catch (\Exception $e) {}
 
+        // Bersihkan soal lama di paket ini agar tidak double
+        try { $db_siakad->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
+        if ($db_core !== $db_siakad) {
+            try { $db_core->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
+        }
+        try { $db_core->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$ujianId]); } catch (\Exception $e) {}
+
         // 3. Masukkan 50 Butir Soal ke bs_soal dan cbt_soal
         $stmtBs = $db_siakad->prepare("
             INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan)
@@ -388,6 +431,11 @@ class CbtBiologiArabGenerator {
             INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
+
+        $stmtBsCore = ($db_core !== $db_siakad) ? $db_core->prepare("
+            INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ") : null;
 
         $count = 0;
         foreach ($dataset as $soal) {
@@ -409,6 +457,15 @@ class CbtBiologiArabGenerator {
                 $topikId, $paketId, $mapelNama, $tingkat, $no, $tipe, $tkesulitan, $skor,
                 $tanya, $opA, $opB, $opC, $opD, $opE, $kunci, $konten
             ]);
+
+            if ($stmtBsCore) {
+                try {
+                    $stmtBsCore->execute([
+                        $topikId, $paketId, $mapelNama, $tingkat, $no, $tipe, $tkesulitan, $skor,
+                        $tanya, $opA, $opB, $opC, $opD, $opE, $kunci, $konten
+                    ]);
+                } catch (\Exception $e) {}
+            }
 
             // Insert ke cbt_soal
             $stmtCbt->execute([
