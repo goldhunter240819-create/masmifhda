@@ -65,14 +65,28 @@ $active_menu = 'ruang';
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <label style="font-size: 0.82rem; font-weight: 700; color: #475569;">Pilih Topik:</label>
                     <select onchange="window.location.href='<?php echo base_url('cbt/ruang?topik_id='); ?>' + this.value" class="input-sm" style="min-width: 280px; font-weight: 700; border-radius: 10px; border-color: #cbd5e1; background: #f8fafc; cursor: pointer; padding: 7px 12px;">
+                        <option value="0" <?php echo ($selectedTopikId <= 0) ? 'selected' : ''; ?>>-- Pilih Topik Ujian Terlebih Dahulu --</option>
                         <?php foreach ($topikList as $tp): ?>
                         <option value="<?php echo $tp['id']; ?>" <?php echo ($selectedTopikId == $tp['id']) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($tp['nama_topik']); ?> (<?php echo htmlspecialchars($tp['tahun_ajaran']); ?>)
+                            [<?php echo htmlspecialchars($tp['jenis'] ?? $tp['jenis_topik'] ?? 'Ujian'); ?>] <?php echo htmlspecialchars($tp['nama_topik']); ?> (<?php echo htmlspecialchars($tp['tahun_ajaran']); ?>)
                         </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
             </div>
+
+            <?php if ($selectedTopikId <= 0): ?>
+            <!-- State Belum Pilih Topik -->
+            <div class="card" style="padding: 3.5rem 2rem; border-radius: 20px; border: 2px dashed #cbd5e1; background: #f8fafc; text-align: center; margin-bottom: 2rem;">
+                <div style="width: 68px; height: 68px; border-radius: 18px; background: #eff6ff; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 2rem; border: 1px solid #bfdbfe;">
+                    <i data-lucide="layers"></i>
+                </div>
+                <h3 style="font-size: 1.2rem; font-weight: 900; color: #0f172a; margin: 0 0 8px 0;">Silakan Pilih Topik Ujian Terlebih Dahulu</h3>
+                <p style="color: #64748b; font-size: 0.9rem; max-width: 520px; margin: 0 auto; line-height: 1.5;">
+                    Pilih salah satu topik ujian CBT pada menu <b>Pilih Topik</b> di atas untuk menampilkan daftar ruang ujian, melihat rekap kapasitas kursi terisi/kosong, dan mengatur penugasan pengawas per-sesi.
+                </p>
+            </div>
+            <?php else: ?>
 
             <!-- KPI Stats Summary -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
@@ -230,6 +244,7 @@ $active_menu = 'ruang';
                     </table>
                 </div>
             </div>
+            <?php endif; ?>
 
         </div>
     </div>

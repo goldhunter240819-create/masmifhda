@@ -67,14 +67,16 @@ $active_menu = 'denah';
                                 <i data-lucide="layers" style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px; color: #2563eb;"></i> Topik:
                             </label>
                             <select onchange="location.href='<?php echo base_url('cbt/denah?ruang_id=' . $selectedRuangId . '&topik_id='); ?>' + this.value" class="input-sm" style="font-weight: 800; color: #0f172a; min-width: 240px; border-radius: 10px; background: #f8fafc;">
+                                <option value="0" <?php echo ($selectedTopikId <= 0) ? 'selected' : ''; ?>>-- Pilih Topik Ujian Terlebih Dahulu --</option>
                                 <?php foreach ($topikList as $tp): ?>
                                     <option value="<?php echo $tp['id']; ?>" <?php echo ((int)$tp['id'] === $selectedTopikId) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($tp['nama_topik']); ?> (<?php echo htmlspecialchars($tp['tahun_ajaran']); ?>)
+                                        [<?php echo htmlspecialchars($tp['jenis'] ?? $tp['jenis_topik'] ?? 'Ujian'); ?>] <?php echo htmlspecialchars($tp['nama_topik']); ?> (<?php echo htmlspecialchars($tp['tahun_ajaran']); ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
 
+                        <?php if ($selectedTopikId > 0): ?>
                         <!-- Dropdown Pilih Ruang -->
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <label class="label-sm" style="margin-bottom: 0; white-space: nowrap; font-weight: 800; color: #475569;">
@@ -88,6 +90,7 @@ $active_menu = 'denah';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Tombol Action Penataan Siswa -->
@@ -174,7 +177,18 @@ $active_menu = 'denah';
                 <?php endif; ?>
             </div>
 
-            <?php if (!$currentRuang): ?>
+            <?php if ($selectedTopikId <= 0): ?>
+                <!-- State Belum Pilih Topik -->
+                <div class="card" style="padding: 3.5rem 2rem; border-radius: 20px; border: 2px dashed #cbd5e1; background: #f8fafc; text-align: center; margin-bottom: 2rem;">
+                    <div style="width: 68px; height: 68px; border-radius: 18px; background: #eff6ff; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 2rem; border: 1px solid #bfdbfe;">
+                        <i data-lucide="layers"></i>
+                    </div>
+                    <h3 style="font-size: 1.2rem; font-weight: 900; color: #0f172a; margin: 0 0 8px 0;">Silakan Pilih Topik Ujian Terlebih Dahulu</h3>
+                    <p style="color: #64748b; font-size: 0.9rem; max-width: 520px; margin: 0 auto; line-height: 1.5;">
+                        Pilih salah satu topik ujian CBT pada menu <b>Topik</b> di atas untuk menampilkan denah tempat duduk siswa dan mengatur penataan kursi ujian.
+                    </p>
+                </div>
+            <?php elseif (!$currentRuang): ?>
                 <div style="background: white; border-radius: 16px; padding: 50px 20px; text-align: center; border: 1px dashed #cbd5e1;">
                     <i data-lucide="door-closed" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 12px;"></i>
                     <h3 style="font-size: 1.1rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">Belum Ada Ruang Ujian</h3>

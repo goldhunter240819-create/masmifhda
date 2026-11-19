@@ -2388,6 +2388,37 @@ class CbtController {
     }
 
     /**
+     * Ambil daftar topik ujian aktif dari database core atau siakad
+     */
+    public static function getActiveTopikList($db, $db_siakad = null) {
+        $db_siakad = $db_siakad ?: $db;
+        $topikList = [];
+        try {
+            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status != 'Arsip' ORDER BY (status = 'Aktif') DESC, (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+            if (empty($topikList) && $db !== $db_siakad) {
+                $topikList = $db->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status != 'Arsip' ORDER BY (status = 'Aktif') DESC, (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+            }
+        } catch (\Exception $e) {
+            try {
+                $topikList = $db_siakad->query("SELECT * FROM bs_topik ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {
+                if ($db !== $db_siakad) {
+                    try {
+                        $topikList = $db->query("SELECT * FROM bs_topik ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                    } catch (\Exception $e3) {}
+                }
+            }
+        }
+        foreach ($topikList as &$tp) {
+            if (!isset($tp['jenis_topik']) && isset($tp['jenis'])) {
+                $tp['jenis_topik'] = $tp['jenis'];
+            }
+        }
+        unset($tp);
+        return $topikList;
+    }
+
+    /**
      * Rekap Hasil Ujian Siswa Real
      */
     public static function hasil() {
@@ -2398,13 +2429,7 @@ class CbtController {
         self::syncJadwalWithUjian($db, $db_siakad);
 
         // Ambil daftar Topik Ujian aktif
-        $topikList = [];
-        try {
-            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-            if (empty($topikList) && $db !== $db_siakad) {
-                $topikList = $db->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-            }
-        } catch (\Exception $e) {}
+        $topikList = self::getActiveTopikList($db, $db_siakad);
 
         $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
         $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
@@ -3908,15 +3933,27 @@ class CbtController {
         self::ensureTables($db);
 
         // Ambil daftar topik aktif dari bs_topik
-        $topikList = [];
-        try {
-            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-            if (empty($topikList) && $db !== $db_siakad) {
-                $topikList = $db->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-            }
-        } catch (\Exception $e) {}
+        $topikList = self::getActiveTopikList($db, $db_siakad);
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
 
-        $selectedTopikId = !empty($_GET['topik_id']) ? (int)$_GET['topik_id'] : ($topikList[0]['id'] ?? 0);
+        if ($selectedTopikId <= 0) {
+            $slotList = [];
+            $pengawasRuang = [];
+            $guruList = [];
+            $ruangList = [];
+            $totalRuang = 0;
+            $totalKapasitas = 0;
+            $totalTerisi = 0;
+            $totalKosong = 0;
+
+            $title = "Kelola Ruang Ujian - MAS MIFTAHUL HUDA";
+            $active_menu = 'ruang';
+            ob_start();
+            include __DIR__ . '/../../resources/views/cbt/ruang.php';
+            $content = ob_get_clean();
+            include __DIR__ . '/../../resources/views/siakad/layout.php';
+            return;
+        }
 
         // Ambil slot sesi untuk topik terpilih
         $slotList = [];
@@ -4167,15 +4204,25 @@ class CbtController {
         self::ensureTables($db);
 
         // Ambil daftar topik aktif dari bs_topik
-        $topikList = [];
-        try {
-            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-            if (empty($topikList) && $db !== $db_siakad) {
-                $topikList = $db->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-            }
-        } catch (\Exception $e) {}
+        $topikList = self::getActiveTopikList($db, $db_siakad);
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
 
-        $selectedTopikId = !empty($_GET['topik_id']) ? (int)$_GET['topik_id'] : ($topikList[0]['id'] ?? 0);
+        if ($selectedTopikId <= 0) {
+            $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $selectedRuangId = 0;
+            $currentRuang = null;
+            $mejaList = [];
+            $tingkatStats = [10 => 0, 11 => 0, 12 => 0, 'other' => 0, 'kosong' => 0];
+            $unassignedSiswa = [];
+
+            $title = "Denah Tempat Duduk - MAS MIFTAHUL HUDA";
+            $active_menu = 'denah';
+            ob_start();
+            include __DIR__ . '/../../resources/views/cbt/denah.php';
+            $content = ob_get_clean();
+            include __DIR__ . '/../../resources/views/siakad/layout.php';
+            return;
+        }
 
         $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 

@@ -86,26 +86,8 @@ if ($is_cbt_only) {
     }
 }
 
-// Ambil informasi Ruang & Nomor Tempat Duduk Ujian (Khusus Siswa Reguler Siakad)
+// Inisialisasi info tempat duduk (akan ditentukan setelah evaluasi topik aktif/terdekat)
 $seatingInfo = null;
-if (!$is_cbt_only && !empty($siswa['id'])) {
-    try {
-        $stmtSeat = $core_db->prepare("
-            SELECT dp.nomor_meja, dp.posisi_baris, dp.posisi_kolom, dp.posisi_sisi,
-                   r.nama_ruang, r.kode_ruang, r.lokasi
-            FROM cbt_denah_peserta dp
-            JOIN cbt_ruang r ON dp.ruang_id = r.id
-            WHERE dp.siswa_id = :sid OR (dp.nis = :nis AND :nis != '')
-            ORDER BY dp.id DESC
-            LIMIT 1
-        ");
-        $stmtSeat->execute([
-            ':sid' => $siswa['id'],
-            ':nis' => (string)($siswa['nis'] ?? '')
-        ]);
-        $seatingInfo = $stmtSeat->fetch(PDO::FETCH_ASSOC);
-    } catch (\Exception $e) {}
-}
 
 // 1. Jalankan Auto-Sync Matriks Jadwal ke CBT Ujian
 try {
@@ -132,20 +114,46 @@ $maxTabViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
 $tokenMasaBerlaku = (int)($cbtSettings['token_refresh_interval'] ?? 120);
 if ($tokenMasaBerlaku <= 0) $tokenMasaBerlaku = 120;
 
-// 3. Ambil Info Topik Aktif
-$topikAktif = null;
+// 3. Ambil Info Topik Terdekat yang Aktif
+$nearestTopik = null;
 try {
-    $stmtTop = $siakad_db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
-    if ($stmtTop) {
-        $topikAktif = $stmtTop->fetch(PDO::FETCH_ASSOC);
+    $stmtTp = $core_db->query("
+        SELECT * FROM bs_topik 
+        WHERE status = 'Aktif' 
+        ORDER BY 
+            CASE 
+                WHEN tgl_mulai >= CURDATE() THEN 0 
+                WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
+                ELSE 2 
+            END ASC,
+            ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
+            id DESC
+        LIMIT 1
+    ");
+    if ($stmtTp) {
+        $nearestTopik = $stmtTp->fetch(PDO::FETCH_ASSOC);
     }
-    if (!$topikAktif) {
-        $stmtTopC = $core_db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1");
-        if ($stmtTopC) {
-            $topikAktif = $stmtTopC->fetch(PDO::FETCH_ASSOC);
+    if (!$nearestTopik && isset($siakad_db)) {
+        $stmtTpS = $siakad_db->query("
+            SELECT * FROM bs_topik 
+            WHERE status = 'Aktif' 
+            ORDER BY 
+                CASE 
+                    WHEN tgl_mulai >= CURDATE() THEN 0 
+                    WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
+                    ELSE 2 
+                END ASC,
+                ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
+                id DESC
+            LIMIT 1
+        ");
+        if ($stmtTpS) {
+            $nearestTopik = $stmtTpS->fetch(PDO::FETCH_ASSOC);
         }
     }
 } catch (\Exception $e) {}
+$nearestTopikId = (int)($nearestTopik['id'] ?? 0);
+$topikAktif = $nearestTopik;
 
 // 4. Daftar Ujian CBT yang Aktif untuk Siswa
 $ujianListRaw = [];
@@ -190,30 +198,34 @@ try {
         WHERE u.status = 'Aktif'
           AND (u.topik_id IS NULL OR u.topik_id = 0 OR (t.id IS NOT NULL AND t.status = 'Aktif'))
           AND (u.kelas_nama IS NULL OR u.kelas_nama = '' OR u.kelas_nama IN ($inPlaceholders))
-        ORDER BY (total_soal > 0) DESC, u.id DESC
+        ORDER BY 
+            CASE WHEN u.topik_id = {$nearestTopikId} THEN 0 ELSE 1 END ASC,
+            (total_soal > 0) DESC, 
+            u.id DESC
     ";
     $params = array_merge([$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')], $allowedKelas);
     $stmtUjian = $core_db->prepare($sqlUjian);
     $stmtUjian->execute($params);
     $ujianListRaw = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
 
-    // Deduplikasi Ujian per Mapel: Cegah kartu dobel/ganda di HP siswa
+    // Deduplikasi Ujian per Mapel & Topik: Prioritaskan topik terdekat
     $seenMapelKeys = [];
     $dedupedList = [];
     foreach ($ujianListRaw as $uRaw) {
         $mRaw = strtolower(trim($uRaw['mapel_nama'] ?? ''));
         if (strpos($mRaw, 'arab') !== false) {
-            $mKey = 'bahasa arab';
+            $mKeyNorm = 'bahasa arab';
         } elseif (strpos($mRaw, 'biologi') !== false) {
-            $mKey = 'biologi';
+            $mKeyNorm = 'biologi';
         } elseif (strpos($mRaw, 'matematika') !== false) {
-            $mKey = 'matematika';
+            $mKeyNorm = 'matematika';
         } else {
-            $mKey = $mRaw;
+            $mKeyNorm = $mRaw;
         }
 
+        $mKey = ($uRaw['topik_id'] ?? 0) . '_' . $mKeyNorm;
         if (isset($seenMapelKeys[$mKey])) {
-            continue; // Lewati duplikat mapel yang sama
+            continue; // Lewati duplikat mapel yang sama dalam satu topik
         }
         $seenMapelKeys[$mKey] = true;
         $dedupedList[] = $uRaw;
@@ -230,113 +242,87 @@ $todayDate = date('Y-m-d');
 $nowTs = time();
 $dayOrder = ['Senin' => 1, 'Selasa' => 2, 'Rabu' => 3, 'Kamis' => 4, 'Jumat' => 5, 'Sabtu' => 6, 'Minggu' => 7];
 
-// Ambil topik terdekat yang Aktif
-$nearestTopik = null;
-try {
-    $stmtTp = $core_db->query("
-        SELECT * FROM bs_topik 
-        WHERE status = 'Aktif' 
-        ORDER BY 
-            CASE 
-                WHEN tgl_mulai >= CURDATE() THEN 0 
-                WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
-                ELSE 2 
-            END ASC,
-            ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
-            id DESC
-        LIMIT 1
-    ");
-    if ($stmtTp) {
-        $nearestTopik = $stmtTp->fetch(PDO::FETCH_ASSOC);
-    }
-    if (!$nearestTopik && isset($siakad_db)) {
-        $stmtTpS = $siakad_db->query("
-            SELECT * FROM bs_topik 
-            WHERE status = 'Aktif' 
-            ORDER BY 
-                CASE 
-                    WHEN tgl_mulai >= CURDATE() THEN 0 
-                    WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
-                    ELSE 2 
-                END ASC,
-                ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
-                id DESC
-            LIMIT 1
-        ");
-        if ($stmtTpS) {
-            $nearestTopik = $stmtTpS->fetch(PDO::FETCH_ASSOC);
-        }
-    }
-} catch (\Exception $e) {}
-
 // Ambil jadwal lengkap siswa untuk Topik Terdekat (Untuk Modal Pop-up Jadwal Ujian)
 $jadwalSiswaList = [];
-$nearestTopikId = (int)($nearestTopik['id'] ?? 0);
 try {
     $sqlJadwalSiswa = "
         SELECT g.*, 
-               s.jam_mulai, s.jam_selesai, s.label_sesi, s.urutan as sesi_urutan,
                u.durasi_menit, u.kkm,
                t.nama_topik, t.tahun_ajaran as topik_ta
         FROM cbt_jadwal_grid g
         LEFT JOIN bs_topik t ON g.topik_id = t.id
         LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
-        LEFT JOIN cbt_jam_slot s ON (
-            (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
-            AND (
-                g.jam_slot = s.label_sesi 
-                OR g.jam_slot = s.urutan
-                OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
-                OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
-            )
-        )
-        WHERE (g.kelas_nama = :kelas OR g.kelas_nama = :tingkat OR g.kelas_nama = :short_tingkat OR g.kelas_nama = 'Semua Kelas' OR :kelas LIKE CONCAT('%', g.kelas_nama, '%'))
+        WHERE (g.kelas_nama = :kelas OR g.kelas_nama = 'Semua Kelas')
     ";
     if ($nearestTopikId > 0) {
         $sqlJadwalSiswa .= " AND (g.topik_id = :topik_id OR g.topik_id IS NULL OR g.topik_id = 0)";
     }
-    $sqlJadwalSiswa .= " ORDER BY COALESCE(g.tanggal, '2099-12-31') ASC, s.jam_mulai ASC, g.id ASC";
+    $sqlJadwalSiswa .= " ORDER BY COALESCE(g.tanggal, '2099-12-31') ASC, g.jam_slot ASC, g.id ASC";
 
     $stmtJadwalSiswa = $core_db->prepare($sqlJadwalSiswa);
     $paramsJadwal = [
-        ':kelas' => $siswa['nama_kelas'],
-        ':tingkat' => $tingkat_kelas,
-        ':short_tingkat' => $short_tingkat
+        ':kelas' => $siswa['nama_kelas']
     ];
     if ($nearestTopikId > 0) {
         $paramsJadwal[':topik_id'] = $nearestTopikId;
     }
     $stmtJadwalSiswa->execute($paramsJadwal);
-    $jadwalSiswaList = $stmtJadwalSiswa->fetchAll(PDO::FETCH_ASSOC);
+    $rawGrids = $stmtJadwalSiswa->fetchAll(PDO::FETCH_ASSOC);
 
-    if (empty($jadwalSiswaList) && $nearestTopikId > 0) {
-        $stmtJadwalSiswaFallback = $core_db->prepare("
-            SELECT g.*, 
-                   s.jam_mulai, s.jam_selesai, s.label_sesi, s.urutan as sesi_urutan,
-                   u.durasi_menit, u.kkm,
-                   t.nama_topik, t.tahun_ajaran as topik_ta
-            FROM cbt_jadwal_grid g
-            LEFT JOIN bs_topik t ON g.topik_id = t.id
-            LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
-            LEFT JOIN cbt_jam_slot s ON (
-                (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
-                AND (
-                    g.jam_slot = s.label_sesi 
-                    OR g.jam_slot = s.urutan
-                    OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
-                    OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
-                )
-            )
-            WHERE (g.kelas_nama = :kelas OR g.kelas_nama = :tingkat OR g.kelas_nama = :short_tingkat OR g.kelas_nama = 'Semua Kelas' OR :kelas LIKE CONCAT('%', g.kelas_nama, '%'))
-            ORDER BY COALESCE(g.tanggal, '2099-12-31') ASC, s.jam_mulai ASC, g.id ASC
-        ");
-        $stmtJadwalSiswaFallback->execute([
-            ':kelas' => $siswa['nama_kelas'],
-            ':tingkat' => $tingkat_kelas,
-            ':short_tingkat' => $short_tingkat
-        ]);
-        $jadwalSiswaList = $stmtJadwalSiswaFallback->fetchAll(PDO::FETCH_ASSOC);
+    // Ambil mapping slot sesi untuk penentuan label sesi & jam
+    $slotRef = [];
+    try {
+        $stmtSlots = $core_db->prepare("SELECT * FROM cbt_jam_slot WHERE (topik_id = :tid OR topik_id IS NULL OR topik_id = 0) ORDER BY urutan ASC");
+        $stmtSlots->execute([':tid' => $nearestTopikId]);
+        $slotRef = $stmtSlots->fetchAll(PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {}
+
+    $processedGrids = [];
+    $seenGridKeys = [];
+    foreach ($rawGrids as $rg) {
+        $slotStr = trim($rg['jam_slot'] ?? '');
+        $parts = explode('-', $slotStr);
+        $startStr = trim($parts[0] ?? '');
+        $endStr = trim($parts[1] ?? '');
+
+        // Cari slot sesi yang cocok
+        $matchedSlot = null;
+        foreach ($slotRef as $sl) {
+            $slStart = substr(trim($sl['jam_mulai']), 0, 5);
+            $slEnd = substr(trim($sl['jam_selesai']), 0, 5);
+            if ($startStr === $slStart || $slotStr === $sl['label_sesi'] || $slotStr === ($slStart . ' - ' . $slEnd)) {
+                $matchedSlot = $sl;
+                break;
+            }
+        }
+
+        // Jika slot istirahat, jangan jadikan sebagai jadwal ujian
+        if ($matchedSlot && !empty($matchedSlot['is_istirahat'])) {
+            continue;
+        }
+
+        $labelSesi = $matchedSlot['label_sesi'] ?? '';
+        if (empty($labelSesi)) {
+            if ($startStr === '08:00') $labelSesi = 'Sesi 1';
+            elseif ($startStr === '09:00') $labelSesi = 'Sesi 2';
+            elseif ($startStr === '10:10') $labelSesi = 'Sesi 3';
+            else $labelSesi = $slotStr ?: 'Sesi Ujian';
+        }
+
+        $tglStr = $rg['tanggal'] ?? '';
+        $mNorm = strtolower(trim($rg['mapel_nama'] ?? ''));
+        $dedupKey = $tglStr . '_' . $startStr . '_' . $mNorm;
+        if (isset($seenGridKeys[$dedupKey])) {
+            continue;
+        }
+        $seenGridKeys[$dedupKey] = true;
+
+        $rg['label_sesi'] = $labelSesi;
+        $rg['jam_mulai'] = $matchedSlot ? $matchedSlot['jam_mulai'] : ($startStr ? ($startStr . ':00') : '');
+        $rg['jam_selesai'] = $matchedSlot ? $matchedSlot['jam_selesai'] : ($endStr ? ($endStr . ':00') : '');
+        $processedGrids[] = $rg;
     }
+    $jadwalSiswaList = $processedGrids;
 } catch (\Exception $e) {}
 
 // Ambil Data Absensi Siswa Hari Ini jika Wajib Absensi Aktif
@@ -479,21 +465,14 @@ foreach ($ujianListRaw as $u) {
                 }
             } else {
                 // Tidak ada jadwal untuk HARI INI. Cek apakah ada jadwal di hari lain di cbt_jadwal_grid
+                $uTopikId = (int)($u['topik_id'] ?? 0);
                 $stmtOther = $core_db->prepare("
-                    SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
+                    SELECT g.* 
                     FROM cbt_jadwal_grid g 
-                    LEFT JOIN cbt_jam_slot s ON (
-                        (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
-                        AND (
-                            g.jam_slot = s.label_sesi 
-                            OR g.jam_slot = s.urutan
-                            OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
-                            OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
-                        )
-                    )
                     WHERE g.ujian_id = :uid 
                        OR (
                            (g.mapel_nama = :mapel OR :mapel LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', :mapel, '%'))
+                           AND (:tid <= 0 OR g.topik_id = :tid2 OR g.topik_id IS NULL OR g.topik_id = 0)
                            AND (
                                g.kelas_nama = :kelas 
                                OR g.kelas_nama = :tingkat 
@@ -503,11 +482,13 @@ foreach ($ujianListRaw as $u) {
                                OR g.kelas_nama LIKE CONCAT('%', :short_tingkat, '%')
                            )
                        )
-                    ORDER BY (g.ujian_id = :uid2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, s.jam_mulai ASC, g.id ASC LIMIT 1
+                    ORDER BY (g.ujian_id = :uid2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, g.jam_slot ASC, g.id ASC LIMIT 1
                 ");
                 $stmtOther->execute([
                     ':uid' => $u['id'],
                     ':mapel' => $u['mapel_nama'],
+                    ':tid' => $uTopikId,
+                    ':tid2' => $uTopikId,
                     ':kelas' => $siswa['nama_kelas'],
                     ':tingkat' => $tingkat_kelas,
                     ':short_tingkat' => $short_tingkat,
@@ -523,14 +504,24 @@ foreach ($ujianListRaw as $u) {
                     $curDayIdx = $dayOrder[$curHari] ?? 0;
                     $targetDayIdx = $dayOrder[$otherDayIndo] ?? 0;
 
+                    $jamSlotStr = trim($otherGrid['jam_slot'] ?? '');
+                    $jamMulaiParsed = '';
+                    if (strpos($jamSlotStr, '-') !== false) {
+                        $parts = explode('-', $jamSlotStr);
+                        $jamMulaiParsed = trim($parts[0]);
+                    } else {
+                        $jamMulaiParsed = $jamSlotStr;
+                    }
+
                     $u['upcoming_date'] = $otherGrid['tanggal'] ?? '';
-                    $u['upcoming_time'] = $otherGrid['jam_mulai'] ?? '';
+                    $u['upcoming_time'] = $jamMulaiParsed;
                     $u['grid_topik_id'] = $otherGrid['topik_id'] ?? 0;
 
+                    $jamDisplay = !empty($jamMulaiParsed) ? ' (' . $jamMulaiParsed . ' WIB)' : '';
                     if (!empty($otherGrid['tanggal'])) {
                         if ($todayDate < $otherGrid['tanggal']) {
                             $scheduleState = 'early';
-                            $scheduleNotice = 'Jadwal: ' . date('d M Y', strtotime($otherGrid['tanggal'])) . (!empty($otherGrid['jam_mulai']) ? ' (' . $otherGrid['jam_mulai'] . ' WIB)' : '');
+                            $scheduleNotice = 'Jadwal: ' . date('d M Y', strtotime($otherGrid['tanggal'])) . $jamDisplay;
                         } else {
                             $scheduleState = 'expired';
                             $scheduleNotice = 'Jadwal tanggal ' . date('d M Y', strtotime($otherGrid['tanggal'])) . ' telah terlewat';
@@ -538,14 +529,14 @@ foreach ($ujianListRaw as $u) {
                     } elseif ($targetDayIdx > 0 && $curDayIdx > 0) {
                         if ($curDayIdx < $targetDayIdx) {
                             $scheduleState = 'early';
-                            $scheduleNotice = 'Jadwal: Hari ' . $otherDayIndo . (!empty($otherGrid['jam_mulai']) ? ' (' . $otherGrid['jam_mulai'] . ' WIB)' : '');
+                            $scheduleNotice = 'Jadwal: Hari ' . $otherDayIndo . $jamDisplay;
                         } else {
                             $scheduleState = 'expired';
                             $scheduleNotice = 'Jadwal Hari ' . $otherDayIndo . ' telah terlewat';
                         }
                     } else {
                         $scheduleState = 'early';
-                        $scheduleNotice = 'Jadwal: Hari ' . $otherDayIndo;
+                        $scheduleNotice = 'Jadwal: Hari ' . $otherDayIndo . $jamDisplay;
                     }
                     $jadwalSlotLabel = 'Hari ' . $otherDayIndo;
                 } else {
@@ -704,6 +695,40 @@ if (!$activeOngoingUjian && !$upcomingUjian && !$completedTodayUjian) {
 
         $upcomingUjian = $upcomingCandidates[0];
     }
+}
+
+// Ambil informasi Ruang & Nomor Tempat Duduk Ujian (Khusus Siswa Reguler Siakad)
+// Menyesuaikan jadwal topik ruang yang sedang berlangsung, atau paling dekat jika belum berlangsung
+if (!$is_cbt_only && !empty($siswa['id'])) {
+    $targetTopikId = 0;
+    if (!empty($activeOngoingUjian['topik_id'])) {
+        $targetTopikId = (int)$activeOngoingUjian['topik_id'];
+    } elseif (!empty($upcomingUjian['topik_id'])) {
+        $targetTopikId = (int)$upcomingUjian['topik_id'];
+    } elseif (!empty($nearestTopikId)) {
+        $targetTopikId = $nearestTopikId;
+    }
+
+    try {
+        $stmtSeat = $core_db->prepare("
+            SELECT dp.nomor_meja, dp.posisi_baris, dp.posisi_kolom, dp.posisi_sisi, dp.topik_id,
+                   r.nama_ruang, r.kode_ruang, r.lokasi
+            FROM cbt_denah_peserta dp
+            JOIN cbt_ruang r ON dp.ruang_id = r.id
+            WHERE dp.siswa_id = :sid OR (dp.nis = :nis AND :nis != '')
+            ORDER BY 
+                CASE WHEN :target_tid > 0 AND dp.topik_id = :target_tid2 THEN 0 ELSE 1 END ASC,
+                dp.id DESC
+            LIMIT 1
+        ");
+        $stmtSeat->execute([
+            ':sid' => $siswa['id'],
+            ':nis' => (string)($siswa['nis'] ?? ''),
+            ':target_tid' => $targetTopikId,
+            ':target_tid2' => $targetTopikId
+        ]);
+        $seatingInfo = $stmtSeat->fetch(PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {}
 }
 
 // 5. Riwayat Ujian yang Sudah Selesai
@@ -985,7 +1010,7 @@ include 'header.php';
         z-index: 99999;
         justify-content: center;
         align-items: center;
-        padding: 16px;
+        padding: 16px 16px 85px 16px;
     }
     .cbt-modal-box {
         background: #ffffff;
@@ -996,7 +1021,8 @@ include 'header.php';
         border: 1px solid #e2e8f0;
         overflow: hidden;
         animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        max-height: 90vh;
+        max-height: calc(85vh - 75px);
+        margin-bottom: 40px;
         display: flex;
         flex-direction: column;
     }
@@ -1349,8 +1375,8 @@ include 'header.php';
     <?php endif; ?>
 
     <!-- MODAL: INFORMASI JADWAL UJIAN SISWA -->
-    <div id="modalJadwalSiswa" class="cbt-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
-        <div class="cbt-modal-box" style="background: white; border-radius: 20px; max-width: 500px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; overflow: hidden; animation: slideUp 0.25s ease-out; max-height: 85vh; display: flex; flex-direction: column;">
+    <div id="modalJadwalSiswa" class="cbt-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px 16px 85px 16px;">
+        <div class="cbt-modal-box" style="background: white; border-radius: 20px; max-width: 500px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; overflow: hidden; animation: slideUp 0.25s ease-out; max-height: calc(85vh - 75px); margin-bottom: 40px; display: flex; flex-direction: column;">
             <!-- Header -->
             <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
