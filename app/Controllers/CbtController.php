@@ -3449,7 +3449,7 @@ class CbtController {
         $db = $ctx['db_core'];
         self::ensureTables($db);
 
-        $ruangList = $db->query("SELECT id, kode_ruang, nama_ruang, kapasitas, kode_pola FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         $selectedRuangId = isset($_GET['ruang_id']) ? (int)$_GET['ruang_id'] : 0;
         if ($selectedRuangId <= 0 && !empty($ruangList)) {

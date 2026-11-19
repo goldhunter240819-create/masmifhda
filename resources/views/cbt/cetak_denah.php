@@ -11,9 +11,21 @@ if (class_exists('\App\Core\Branding')) {
 }
 $kemenagLogo = function_exists('base_url') ? base_url('public/assets/img/kemenag-logo.png') : '/public/assets/img/kemenag-logo.png';
 
-$tipeMeja = (int)$ruang['tipe_meja'];
-$samping = (int)$ruang['baris_samping'];
-$belakang = (int)$ruang['baris_belakang'];
+$tipeMeja = (int)($ruang['tipe_meja'] ?? 1);
+$samping = (int)($ruang['baris_samping'] ?? 0);
+$belakang = (int)($ruang['baris_belakang'] ?? 0);
+if ($samping <= 0 || $belakang <= 0) {
+    $polaParts = explode('x', strtolower($ruang['kode_pola'] ?? ''));
+    if (count($polaParts) === 3) {
+        $tipeMeja = (int)trim($polaParts[0]) ?: 1;
+        $samping = (int)trim($polaParts[1]) ?: 6;
+        $belakang = (int)trim($polaParts[2]) ?: 5;
+    } else {
+        $tipeMeja = $tipeMeja ?: 1;
+        $samping = $samping ?: 6;
+        $belakang = $belakang ?: 5;
+    }
+}
 
 $mejaByBaris = [];
 foreach ($mejaList as $m) {

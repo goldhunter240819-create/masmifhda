@@ -130,7 +130,7 @@ $active_menu = 'denah';
                         <span>&bull;</span>
                         <span>Kapasitas: <b><?php echo $currentRuang['kapasitas']; ?> Kursi</b></span>
                         <span>&bull;</span>
-                        <span>Pengawas: <b><?php echo htmlspecialchars($currentRuang['pengawas'] ?: 'Pengawas CBT'); ?></b></span>
+                        <span>Pengawas: <b><?php echo htmlspecialchars(($currentRuang['pengawas'] ?? '') ?: 'Pengawas CBT'); ?></b></span>
                     </div>
 
                     <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 800;">
@@ -177,9 +177,23 @@ $active_menu = 'denah';
 
                 <!-- Grid Denah Meja -->
                 <?php
-                $tipeMeja = (int)$currentRuang['tipe_meja'];
-                $samping = (int)$currentRuang['baris_samping'];
-                $belakang = (int)$currentRuang['baris_belakang'];
+                $tipeMeja = (int)($currentRuang['tipe_meja'] ?? 1);
+                $samping = (int)($currentRuang['baris_samping'] ?? 0);
+                $belakang = (int)($currentRuang['baris_belakang'] ?? 0);
+
+                // Fallback parsing otomatis dari kode_pola (contoh: "1 x 6 x 5" atau "2 x 3 x 5")
+                if ($samping <= 0 || $belakang <= 0) {
+                    $polaParts = explode('x', strtolower($currentRuang['kode_pola'] ?? ''));
+                    if (count($polaParts) === 3) {
+                        $tipeMeja = (int)trim($polaParts[0]) ?: 1;
+                        $samping = (int)trim($polaParts[1]) ?: 6;
+                        $belakang = (int)trim($polaParts[2]) ?: 5;
+                    } else {
+                        $tipeMeja = $tipeMeja ?: 1;
+                        $samping = $samping ?: 6;
+                        $belakang = $belakang ?: 5;
+                    }
+                }
 
                 // Kelompokkan meja per baris belakang
                 $mejaByBaris = [];
