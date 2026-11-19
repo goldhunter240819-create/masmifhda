@@ -190,6 +190,16 @@ try {
         \App\Controllers\CbtController::syncJadwalWithUjian($dbCore, $dbSiakad, (int)$tpRow['id']);
     }
     $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";
+
+    // DIAGNOSTIC DUMP UNTUK ANALISIS JADWAL & SLOT
+    $slots = $dbCore->query("SELECT id, topik_id, urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat FROM cbt_jam_slot ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\n--- SLOTS IN CBT_JAM_SLOT ---\n" . json_encode($slots, JSON_PRETTY_PRINT) . "\n";
+
+    $grids = $dbCore->query("SELECT id, topik_id, mapel_nama, hari, tanggal, jam_slot, kelas_nama FROM cbt_jadwal_grid ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\n--- GRIDS IN CBT_JADWAL_GRID ---\n" . json_encode($grids, JSON_PRETTY_PRINT) . "\n";
+
+    $ujians = $dbCore->query("SELECT id, topik_id, mapel_nama, kelas_nama, durasi_menit, status FROM cbt_ujian WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\n--- ACTIVE UJIAN ---\n" . json_encode($ujians, JSON_PRETTY_PRINT) . "\n";
 } catch (\Throwable $e) {
     $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";
 }
