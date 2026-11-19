@@ -20,7 +20,7 @@ $active_menu = 'denah';
             <?php if (isset($_GET['reset'])): ?>
             <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700;">
                 <i data-lucide="info" style="width: 22px; height: 22px; color: #3b82f6;"></i>
-                <div>Seluruh kursi di ruangan ini telah dikosongkan. Siswa siap ditata ulang.</div>
+                <div>Seluruh kursi di ruangan ini telah dikosongkan untuk topik ini. Siswa siap ditata ulang.</div>
             </div>
             <?php endif; ?>
 
@@ -38,37 +38,56 @@ $active_menu = 'denah';
                     <div class="header-text-premium">
                         <div class="header-badge">LAYOUT & SEATING ARRANGEMENT</div>
                         <h1><i data-lucide="grid"></i> Denah Tempat Duduk Siswa</h1>
-                        <p>Visualisasi tata letak meja ujian dengan penempatan acak silang tingkatan (anti-contek), cetak denah A4 pintu ruang, dan cetak label nomor meja.</p>
+                        <p>Visualisasi tata letak meja ujian dengan penempatan acak silang tingkatan (anti-contek), cetak denah A4 pintu ruang, dan cetak label nomor meja terisolasi per-topik.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <?php if ($currentRuang): ?>
-                        <a href="<?php echo base_url('cbt/denah/cetak?ruang_id=' . $currentRuang['id']); ?>" target="_blank" class="e-btn e-btn-glass">
+                        <a href="<?php echo base_url('cbt/denah/cetak?ruang_id=' . $currentRuang['id'] . '&topik_id=' . $selectedTopikId); ?>" target="_blank" class="e-btn e-btn-glass">
                             <i data-lucide="printer"></i> Cetak Denah A4
                         </a>
-                        <a href="<?php echo base_url('cbt/denah/cetak-label?ruang_id=' . $currentRuang['id']); ?>" target="_blank" class="e-btn e-btn-glass">
+                        <a href="<?php echo base_url('cbt/denah/cetak-label?ruang_id=' . $currentRuang['id'] . '&topik_id=' . $selectedTopikId); ?>" target="_blank" class="e-btn e-btn-glass">
                             <i data-lucide="tag"></i> Cetak Label Meja
                         </a>
                         <?php endif; ?>
-                        <a href="<?php echo base_url('cbt/ruang'); ?>" class="e-btn e-btn-blue-light">
+                        <a href="<?php echo base_url('cbt/ruang?topik_id=' . $selectedTopikId); ?>" class="e-btn e-btn-blue-light">
                             <i data-lucide="door-open"></i> Kelola Ruangan
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Selector Ruang & Toolbar Aksi -->
+            <!-- Topik Selector Bar & Ruang Toolbar -->
             <div class="card" style="padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: #ffffff;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                    <!-- Dropdown Pilih Ruang -->
-                    <div style="display: flex; align-items: center; gap: 10px; min-width: 280px;">
-                        <label class="label-sm" style="margin-bottom: 0; white-space: nowrap; font-weight: 800;">Pilih Ruangan:</label>
-                        <select onchange="location.href='<?php echo base_url('cbt/denah?ruang_id='); ?>' + this.value" class="input-sm" style="font-weight: 800; color: #0f172a; min-width: 220px;">
-                            <?php foreach ($ruangList as $rg): ?>
-                                <option value="<?php echo $rg['id']; ?>" <?php echo ((int)$rg['id'] === $selectedRuangId) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($rg['kode_ruang'] . ' - ' . $rg['nama_ruang'] . ' (' . ($rg['kode_pola'] ?: 'Meja') . ')'); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                    <!-- Filter Topik & Ruangan Berdampingan -->
+                    <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                        <!-- Dropdown Topik Ujian -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label class="label-sm" style="margin-bottom: 0; white-space: nowrap; font-weight: 800; color: #475569;">
+                                <i data-lucide="layers" style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px; color: #2563eb;"></i> Topik:
+                            </label>
+                            <select onchange="location.href='<?php echo base_url('cbt/denah?ruang_id=' . $selectedRuangId . '&topik_id='); ?>' + this.value" class="input-sm" style="font-weight: 800; color: #0f172a; min-width: 240px; border-radius: 10px; background: #f8fafc;">
+                                <?php foreach ($topikList as $tp): ?>
+                                    <option value="<?php echo $tp['id']; ?>" <?php echo ((int)$tp['id'] === $selectedTopikId) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($tp['nama_topik']); ?> (<?php echo htmlspecialchars($tp['tahun_ajaran']); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Dropdown Pilih Ruang -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label class="label-sm" style="margin-bottom: 0; white-space: nowrap; font-weight: 800; color: #475569;">
+                                <i data-lucide="door-closed" style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px; color: #2563eb;"></i> Ruangan:
+                            </label>
+                            <select onchange="location.href='<?php echo base_url('cbt/denah?topik_id=' . $selectedTopikId . '&ruang_id='); ?>' + this.value" class="input-sm" style="font-weight: 800; color: #0f172a; min-width: 220px; border-radius: 10px; background: #f8fafc;">
+                                <?php foreach ($ruangList as $rg): ?>
+                                    <option value="<?php echo $rg['id']; ?>" <?php echo ((int)$rg['id'] === $selectedRuangId) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($rg['kode_ruang'] . ' - ' . $rg['nama_ruang'] . ' (' . ($rg['kode_pola'] ?: 'Meja') . ')'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Tombol Action Penataan Siswa -->
@@ -79,8 +98,9 @@ $active_menu = 'denah';
                             <button type="button" class="e-btn e-btn-primary" style="background: #2563eb;" onclick="toggleDropdownGenerate()">
                                 <i data-lucide="shuffle"></i> Tata Siswa Otomatis <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
                             </button>
-                            <div id="dropdownGenerate" style="display: none; position: absolute; right: 0; top: 110%; background: white; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 100; width: 280px; padding: 6px 0;">
+                            <div id="dropdownGenerate" style="display: none; position: absolute; right: 0; top: 110%; background: white; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 100; width: 290px; padding: 6px 0;">
                                 <form method="POST" action="<?php echo base_url('cbt/denah/generate'); ?>" style="margin: 0;">
+                                    <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                                     <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
                                     <input type="hidden" name="mode" value="smart_cross">
                                     <button type="submit" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 800; color: #1e293b;">
@@ -93,6 +113,7 @@ $active_menu = 'denah';
                                 </form>
                                 <div style="height: 1px; background: #f1f5f9; margin: 4px 0;"></div>
                                 <form method="POST" action="<?php echo base_url('cbt/denah/generate'); ?>" style="margin: 0;">
+                                    <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                                     <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
                                     <input type="hidden" name="mode" value="full_random">
                                     <button type="submit" style="width: 100%; text-align: left; padding: 8px 16px; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 700; color: #334155;">
@@ -101,6 +122,7 @@ $active_menu = 'denah';
                                     </button>
                                 </form>
                                 <form method="POST" action="<?php echo base_url('cbt/denah/generate'); ?>" style="margin: 0;">
+                                    <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                                     <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
                                     <input type="hidden" name="mode" value="sequential">
                                     <button type="submit" style="width: 100%; text-align: left; padding: 8px 16px; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 700; color: #334155;">
@@ -112,7 +134,8 @@ $active_menu = 'denah';
                         </div>
 
                         <!-- Tombol Kosongkan Kursi -->
-                        <form method="POST" action="<?php echo base_url('cbt/denah/reset'); ?>" style="margin: 0;" onsubmit="return confirm('Kosongkan semua tempat duduk di ruangan ini?')">
+                        <form method="POST" action="<?php echo base_url('cbt/denah/reset'); ?>" style="margin: 0;" onsubmit="return confirm('Kosongkan semua tempat duduk di ruangan ini untuk topik ini?')">
+                            <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                             <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
                             <button type="submit" class="e-btn e-btn-secondary" style="border: 1px solid #cbd5e1;">
                                 <i data-lucide="rotate-ccw"></i> Kosongkan Kursi
@@ -126,14 +149,14 @@ $active_menu = 'denah';
                 <?php if ($currentRuang): ?>
                 <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 12px; font-size: 0.8rem; font-weight: 700;">
-                        <span>Pola Meja: <b style="font-family: monospace; color: #2563eb; font-size: 0.95rem;"><?php echo htmlspecialchars($currentRuang['kode_pola']); ?></b></span>
+                        <span>Pola Meja: <b style="font-family: monospace; color: #2563eb; font-size: 0.95rem;"><?php echo htmlspecialchars($currentRuang['kode_pola'] ?: ($currentRuang['tipe_meja'] . ' x ' . $currentRuang['baris_samping'] . ' x ' . $currentRuang['baris_belakang'])); ?></b></span>
                         <span>&bull;</span>
                         <span>Kapasitas: <b><?php echo $currentRuang['kapasitas']; ?> Kursi</b></span>
                         <span>&bull;</span>
-                        <span>Pengawas: <b><?php echo htmlspecialchars(($currentRuang['pengawas'] ?? '') ?: 'Pengawas CBT'); ?></b></span>
+                        <span>Lokasi: <b><?php echo htmlspecialchars($currentRuang['lokasi'] ?: 'Madrasah'); ?></b></span>
                     </div>
 
-                    <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 800;">
+                    <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 800; flex-wrap: wrap;">
                         <span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px;">
                             🔵 Kelas X: <?php echo $tingkatStats[10]; ?>
                         </span>
@@ -156,7 +179,7 @@ $active_menu = 'denah';
                     <i data-lucide="door-closed" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 12px;"></i>
                     <h3 style="font-size: 1.1rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">Belum Ada Ruang Ujian</h3>
                     <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">Silakan buat ruang ujian terlebih dahulu di menu Kelola Ruang.</p>
-                    <a href="<?php echo base_url('cbt/ruang'); ?>" class="e-btn e-btn-primary" style="background: #2563eb;">Kelola Ruang Ujian</a>
+                    <a href="<?php echo base_url('cbt/ruang?topik_id=' . $selectedTopikId); ?>" class="e-btn e-btn-primary" style="background: #2563eb;">Kelola Ruang Ujian</a>
                 </div>
             <?php else: ?>
 
@@ -245,6 +268,7 @@ $active_menu = 'denah';
                                                 </span>
                                                 <?php if ($hasSiswa): ?>
                                                     <form method="POST" action="<?php echo base_url('cbt/denah/remove-seat'); ?>" style="margin: 0;" onsubmit="return confirm('Lepas siswa ini dari kursi?')">
+                                                        <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                                                         <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
                                                         <input type="hidden" name="slot_id" value="<?php echo $seat['id']; ?>">
                                                         <button type="submit" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0;" title="Lepas Siswa">✕</button>
@@ -303,6 +327,7 @@ $active_menu = 'denah';
                                                         </span>
                                                         <?php if ($hasSiswa): ?>
                                                             <form method="POST" action="<?php echo base_url('cbt/denah/remove-seat'); ?>" style="margin: 0;" onsubmit="return confirm('Lepas siswa ini dari kursi?')">
+                                                                <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                                                                 <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
                                                                 <input type="hidden" name="slot_id" value="<?php echo $seat['id']; ?>">
                                                                 <button type="submit" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0;" title="Lepas Siswa">✕</button>
@@ -366,6 +391,7 @@ $active_menu = 'denah';
         </div>
 
         <form method="POST" action="<?php echo base_url('cbt/denah/assign-manual'); ?>" style="padding: 1.5rem;">
+            <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
             <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id'] ?? 0; ?>">
             <input type="hidden" name="slot_id" id="inpAssignSlotId" value="0">
 

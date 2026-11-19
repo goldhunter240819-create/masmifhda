@@ -67,6 +67,40 @@
                 <div class="hero-bg-icon"><i data-lucide="book-open"></i></div>
             </div>
 
+            <?php if (!empty($jadwalMengawasToday)): ?>
+            <div style="margin: 0 2rem 2rem 2rem; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); border-radius: 24px; padding: 1.5rem 2rem; color: white; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.2);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i data-lucide="clipboard-check" style="width: 24px; height: 24px;"></i>
+                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800;">Jadwal Mengawas CBT Hari Ini</h3>
+                    </div>
+                    <span style="background: rgba(255,255,255,0.25); padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 800;">
+                        <?php echo count($jadwalMengawasToday); ?> Sesi Ujian
+                    </span>
+                </div>
+                <p style="font-size: 0.88rem; opacity: 0.95; margin-bottom: 14px;">Hari ini Anda memiliki penugasan resmi mengawas ujian CBT pada ruangan berikut:</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                    <?php foreach ($jadwalMengawasToday as $jm): ?>
+                        <div style="background: rgba(255,255,255,0.18); border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(4px);">
+                            <div>
+                                <div style="font-weight: 900; font-size: 1.05rem;">
+                                    🚪 <?php echo htmlspecialchars($jm['nama_ruang']); ?> (<?php echo htmlspecialchars($jm['kode_ruang']); ?>)
+                                </div>
+                                <div style="font-size: 0.8rem; opacity: 0.9; margin-top: 3px;">
+                                    <?php echo htmlspecialchars($jm['nama_topik'] ?: 'Ujian CBT'); ?> • <?php echo htmlspecialchars($jm['lokasi'] ?: 'Gedung Utama'); ?>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="background: white; color: #047857; font-weight: 900; font-size: 0.78rem; padding: 6px 12px; border-radius: 8px; display: inline-block;">
+                                    <?php echo htmlspecialchars($jm['sesi_label']); ?><?php echo !empty($jm['jam_slot']) ? ' (' . htmlspecialchars($jm['jam_slot']) . ')' : ''; ?>
+                                </span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="z-dashboard-grid">
                 <div class="z-panel-modern">
                     <div class="panel-header">

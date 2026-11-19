@@ -339,6 +339,8 @@ include 'header.php';
         const btnNilai = document.getElementById('tabBtnNilai');
         const contentScan = document.getElementById('tabContentScan');
         const contentNilai = document.getElementById('tabContentNilai');
+        const navScan = document.getElementById('navItemScan');
+        const navNilai = document.getElementById('navItemNilai');
 
         if (tab === 'scan') {
             btnScan.style.background = '#059669';
@@ -347,6 +349,9 @@ include 'header.php';
             btnNilai.style.color = '#475569';
             contentScan.style.display = 'block';
             contentNilai.style.display = 'none';
+
+            if (navScan) { navScan.style.color = '#059669'; }
+            if (navNilai) { navNilai.style.color = '#64748b'; }
         } else {
             btnNilai.style.background = '#059669';
             btnNilai.style.color = '#ffffff';
@@ -354,6 +359,9 @@ include 'header.php';
             btnScan.style.color = '#475569';
             contentNilai.style.display = 'block';
             contentScan.style.display = 'none';
+
+            if (navNilai) { navNilai.style.color = '#059669'; }
+            if (navScan) { navScan.style.color = '#64748b'; }
         }
     }
 
@@ -432,3 +440,27 @@ include 'header.php';
         });
     }
 </script>
+
+<!-- BOTTOM NAVIGATION FOOTER PENGAWAS CBT KELAS JAUH -->
+<div class="bottom-nav" style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; border-top: 1px solid #e2e8f0; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); display: flex; justify-content: space-around; align-items: center; min-height: 68px; padding-top: 6px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 9999; background: #ffffff;">
+    <a href="guru_dashboard.php" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #64748b;">
+        <i class="fa-solid fa-house" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+        <span style="font-size: 0.72rem; font-weight: 700;">Beranda</span>
+    </a>
+    <a href="javascript:void(0)" onclick="switchKJTab('scan'); window.scrollTo({top: 0, behavior: 'smooth'});" id="navItemScan" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #059669;">
+        <i class="fa-solid fa-qrcode" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+        <span style="font-size: 0.72rem; font-weight: 700;">Scan Absen</span>
+    </a>
+    <a href="javascript:void(0)" onclick="switchKJTab('nilai'); window.scrollTo({top: 0, behavior: 'smooth'});" id="navItemNilai" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #64748b;">
+        <i class="fa-solid fa-chart-line" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+        <span style="font-size: 0.72rem; font-weight: 700;">Hasil Nilai</span>
+    </a>
+    <a href="javascript:void(0)" onclick="if(confirm('Yakin ingin keluar / logout dari akun pengawas?')) window.location.href='logout.php';" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
+        <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+        <span style="font-size: 0.72rem; font-weight: 700;">Keluar</span>
+    </a>
+</div>
+
+</div> <!-- .mobile-wrapper -->
+</body>
+</html>

@@ -412,11 +412,7 @@ $currentView = $_GET['view'] ?? 'grid';
                                             <?php if($cell): ?>
                                             <td class="cell-filled" onclick="openDetailModal(<?php echo htmlspecialchars(json_encode($cell), ENT_QUOTES, 'UTF-8'); ?>)" title="Klik untuk lihat detail / hapus">
                                                 <span class="mapel-name"><?php echo htmlspecialchars($cell['mapel_nama']); ?></span>
-                                                <span class="guru-name">
-                                                    <i data-lucide="user" style="width:10px;height:10px;display:inline;"></i>
-                                                    <?php echo htmlspecialchars(!empty($cell['pengawas']) ? $cell['pengawas'] : ($cell['ruang'] ?: 'Pengawas')); ?>
-                                                </span>
-                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
                                                     <span style="font-size:0.62rem; color:#059669; font-weight:700;"><?php echo $cell['durasi_menit']; ?> mnt</span>
                                                     <span style="font-size:0.6rem; background:#dcfce7; color:#166534; padding:1px 4px; border-radius:4px; font-weight:800;">
                                                         <?php echo htmlspecialchars($cell['ujian_status'] ?? 'Aktif'); ?>
@@ -758,28 +754,8 @@ $currentView = $_GET['view'] ?? 'grid';
                     <input type="hidden" name="kelas_id" id="grid_kelas_id" value="<?php echo $kelasList[0]['id'] ?? 1; ?>">
                 </div>
                 <div>
-                    <label class="label-sm">Ruang Ujian (Opsional)</label>
-                    <input type="text" name="ruang" id="grid_ruang" class="input-sm" placeholder="Contoh: Lab Komputer 1">
-                </div>
-            </div>
-
-            <div style="margin-bottom: 1.25rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div>
-                        <label class="label-sm">Guru Pengawas</label>
-                        <select name="pengawas" id="grid_pengawas" class="input-sm" style="width:100%;">
-                            <option value="">-- Pilih Guru Pengawas --</option>
-                            <?php foreach($guruList as $g): ?>
-                                <option value="<?php echo htmlspecialchars($g['nama']); ?>">
-                                    <?php echo htmlspecialchars($g['nama']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label-sm">Tanggal Riil (Otomatis)</label>
-                        <input type="date" name="tanggal" id="grid_tanggal" class="input-sm">
-                    </div>
+                    <label class="label-sm">Tanggal Riil Pelaksanaan</label>
+                    <input type="date" name="tanggal" id="grid_tanggal" class="input-sm">
                 </div>
             </div>
 
@@ -816,17 +792,16 @@ $currentView = $_GET['view'] ?? 'grid';
             <input type="hidden" name="kelas_id" id="atur_bulk_kelas_id" value="">
 
             <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem;">
-                Tentukan mata pelajaran dan guru pengawas untuk masing-masing slot waktu kelas ini. Pengawas diambil langsung dari data guru. Pilih <em>-- Kosongkan Slot Ini --</em> jika pada jam tersebut tidak ada ujian.
+                Tentukan mata pelajaran untuk masing-masing slot waktu kelas ini. Pengawas dapat diatur terpadu di menu Kelola Ruangan. Pilih <em>-- Kosongkan Slot Ini --</em> jika pada jam tersebut tidak ada ujian.
             </p>
 
             <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                     <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                         <tr>
-                            <th style="padding: 10px 12px; text-align: left; width: 90px;">Hari</th>
-                            <th style="padding: 10px 12px; text-align: left; width: 110px;">Slot Waktu</th>
+                            <th style="padding: 10px 12px; text-align: left; width: 110px;">Hari</th>
+                            <th style="padding: 10px 12px; text-align: left; width: 130px;">Slot Waktu</th>
                             <th style="padding: 10px 12px; text-align: left;">Mata Pelajaran</th>
-                            <th style="padding: 10px 12px; text-align: left; width: 220px;">Guru Pengawas</th>
                         </tr>
                     </thead>
                     <tbody id="aturKelasTbody">
@@ -873,17 +848,9 @@ $currentView = $_GET['view'] ?? 'grid';
                 <span style="color:#94a3b8;">Kelas:</span>
                 <strong id="detailKelas" style="color:#0f172a;">-</strong>
             </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between;">
                 <span style="color:#94a3b8;">Waktu:</span>
                 <strong id="detailWaktu" style="color:#0ea5e9;">-</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
-                <span style="color:#94a3b8;">Pengawas:</span>
-                <strong id="detailPengawas" style="color:#0f172a;">-</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color:#94a3b8;">Ruang:</span>
-                <strong id="detailRuang" style="color:#0f172a;">-</strong>
             </div>
         </div>
 
@@ -1121,7 +1088,6 @@ $currentView = $_GET['view'] ?? 'grid';
                             <th style="padding: 10px 14px; text-align: left; width: 100px;">Hari</th>
                             <th style="padding: 10px 14px; text-align: left; width: 130px;">Slot Waktu</th>
                             <th style="padding: 10px 14px; text-align: left;">Mata Pelajaran (Diuji Serentak)</th>
-                            <th style="padding: 10px 14px; text-align: left; width: 220px;">Guru Pengawas (Opsional)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1137,13 +1103,11 @@ $currentView = $_GET['view'] ?? 'grid';
 
                                 // Cari apakah ada mapel yang sudah tersimpan di slot ini
                                 $existingMapel = '';
-                                $existingPengawas = '';
                                 $foundEntries = $jadwal_master[$h][$jamStr] ?? ($jadwal_master[$dateVal][$jamStr] ?? ($jadwal_master[$plainHari][$jamStr] ?? []));
                                 if (!empty($foundEntries)) {
                                     foreach ($foundEntries as $cData) {
                                         if (!empty($cData['mapel_nama'])) {
                                             $existingMapel = $cData['mapel_nama'];
-                                            $existingPengawas = $cData['pengawas'] ?? '';
                                             break;
                                         }
                                     }
@@ -1170,18 +1134,6 @@ $currentView = $_GET['view'] ?? 'grid';
                                     ?>
                                         <option value="<?php echo htmlspecialchars($mp['nama_mapel']); ?>" <?php echo $selMapel; ?>>
                                             <?php echo htmlspecialchars($mp['nama_mapel']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </td>
-                            <td style="padding: 9px 14px;">
-                                <select name="schedules[<?php echo $globalRowIdx; ?>][pengawas]" class="input-sm" style="width: 100%; font-size: 0.8rem;">
-                                    <option value="">-- Pengawas Per Kelas --</option>
-                                    <?php foreach($guruList as $g): 
-                                        $selG = (strcasecmp($existingPengawas, $g['nama']) === 0) ? 'selected' : '';
-                                    ?>
-                                        <option value="<?php echo htmlspecialchars($g['nama']); ?>" <?php echo $selG; ?>>
-                                            <?php echo htmlspecialchars($g['nama']); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -1312,7 +1264,7 @@ $currentView = $_GET['view'] ?? 'grid';
         if (document.getElementById('grid_mapel_nama')) {
             document.getElementById('grid_mapel_nama').value = '';
         }
-        document.getElementById('grid_pengawas').value = '';
+        if (document.getElementById('grid_pengawas')) document.getElementById('grid_pengawas').value = '';
         if (HARI_TANGGAL_MAP && HARI_TANGGAL_MAP[hari] && document.getElementById('grid_tanggal')) {
             document.getElementById('grid_tanggal').value = HARI_TANGGAL_MAP[hari].date || '';
         }
@@ -1371,18 +1323,6 @@ $currentView = $_GET['view'] ?? 'grid';
                     optionsMapel += `<option value="${m.nama_mapel}" ${sel}>${m.nama_mapel}</option>`;
                 });
 
-                // Dropdown Guru Pengawas (dari data guru real)
-                let optionsPengawas = '<option value="">-- Pilih Guru Pengawas --</option>';
-                let pengawasMatched = false;
-                GURU_LIST.forEach(g => {
-                    const selGuru = (currentPengawas && currentPengawas.trim().toLowerCase() === g.nama.trim().toLowerCase()) ? 'selected' : '';
-                    if (selGuru) pengawasMatched = true;
-                    optionsPengawas += `<option value="${g.nama}" ${selGuru}>${g.nama}</option>`;
-                });
-                if (currentPengawas && !pengawasMatched) {
-                    optionsPengawas += `<option value="${currentPengawas}" selected>${currentPengawas}</option>`;
-                }
-
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #f1f5f9';
                 tr.innerHTML = `
@@ -1402,11 +1342,6 @@ $currentView = $_GET['view'] ?? 'grid';
                             ${optionsMapel}
                         </select>
                     </td>
-                    <td style="padding:8px 12px;">
-                        <select name="schedules[${rowIdx}][pengawas]" class="input-sm" style="width:100%; font-size:0.8rem;">
-                            ${optionsPengawas}
-                        </select>
-                    </td>
                 `;
                 tbody.appendChild(tr);
                 rowIdx++;
@@ -1424,8 +1359,8 @@ $currentView = $_GET['view'] ?? 'grid';
         document.getElementById('detailKode').innerText = (data.kode_ujian && data.kode_ujian !== '-') ? ('Kode: ' + data.kode_ujian) : ('Mata Pelajaran: ' + (data.mapel_nama || '-'));
         document.getElementById('detailKelas').innerText = data.kelas_nama || '-';
         document.getElementById('detailWaktu').innerText = (data.hari || '') + ', ' + (data.jam_slot || '');
-        document.getElementById('detailPengawas').innerText = data.pengawas || 'Pengawas Ruang';
-        document.getElementById('detailRuang').innerText = data.ruang || '-';
+        if (document.getElementById('detailPengawas')) document.getElementById('detailPengawas').innerText = data.pengawas || 'Pengawas Ruang';
+        if (document.getElementById('detailRuang')) document.getElementById('detailRuang').innerText = data.ruang || '-';
         document.getElementById('detailDeleteId').value = data.id || '';
 
         document.getElementById('modalDetailSlot').classList.add('open');

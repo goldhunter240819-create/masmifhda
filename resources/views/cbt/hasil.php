@@ -31,10 +31,10 @@ $active_menu = 'hasil';
                         <p>Monitoring skor perolehan siswa, analisis ketuntasan terhadap KKM, dan rekapitulasi nilai ujian berbasis komputer.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="<?php echo base_url('cbt/hasil/cetak?ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
+                        <a href="<?php echo base_url('cbt/hasil/cetak?topik_id=' . ($selectedTopikId ?? 0) . '&mapel=' . urlencode($selectedMapel ?? '') . '&ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
                             <i data-lucide="printer"></i> Cetak Rekap Nilai
                         </a>
-                        <a href="<?php echo base_url('cbt/analisis?ujian_id=' . ($selectedUjianId ?? '')); ?>" class="e-btn e-btn-blue-light">
+                        <a href="<?php echo base_url('cbt/analisis?topik_id=' . ($selectedTopikId ?? 0) . '&ujian_id=' . ($selectedUjianId ?? '')); ?>" class="e-btn e-btn-blue-light">
                             <i data-lucide="bar-chart-2"></i> Analisis Butir Soal
                         </a>
                     </div>
@@ -44,19 +44,31 @@ $active_menu = 'hasil';
             <!-- Filter Panel -->
             <div class="card" style="padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: #ffffff;">
                 <form method="GET" action="<?php echo base_url('cbt/hasil'); ?>" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                    <div style="flex: 2; min-width: 220px;">
-                        <label class="label-sm">Pilih Paket Ujian</label>
-                        <select name="ujian_id" class="input-sm" onchange="this.form.submit()">
-                            <option value="0">-- Semua Paket Ujian --</option>
-                            <?php foreach($ujianList as $uj): ?>
-                                <option value="<?php echo $uj['id']; ?>" <?php echo ($selectedUjianId == $uj['id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($uj['nama_ujian'] . ' (' . $uj['mapel_nama'] . ')'); ?>
+                    <div style="flex: 1.6; min-width: 200px;">
+                        <label class="label-sm">Topik Ujian</label>
+                        <select name="topik_id" class="input-sm" onchange="this.form.submit()">
+                            <option value="0">-- Semua Topik Ujian --</option>
+                            <?php foreach($topikList as $tp): ?>
+                                <option value="<?php echo $tp['id']; ?>" <?php echo ($selectedTopikId == $tp['id']) ? 'selected' : ''; ?>>
+                                    [<?php echo htmlspecialchars($tp['jenis_topik'] ?: 'Ujian'); ?>] <?php echo htmlspecialchars($tp['nama_topik']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
-                    <div style="flex: 1; min-width: 150px;">
+                    <div style="flex: 1.3; min-width: 170px;">
+                        <label class="label-sm">Mata Pelajaran</label>
+                        <select name="mapel" class="input-sm" onchange="this.form.submit()">
+                            <option value="">-- Semua Mapel --</option>
+                            <?php foreach($mapelList as $mp): ?>
+                                <option value="<?php echo htmlspecialchars($mp); ?>" <?php echo ($selectedMapel === $mp) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($mp); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div style="flex: 1; min-width: 140px;">
                         <label class="label-sm">Filter Kelas</label>
                         <select name="kelas" class="input-sm" onchange="this.form.submit()">
                             <option value="">-- Semua Kelas --</option>

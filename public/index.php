@@ -2498,6 +2498,7 @@ $router->add('GET', '/cbt/hasil/cetak', [\App\Controllers\CbtController::class, 
 $router->add('GET', '/cbt/ruang', [\App\Controllers\CbtController::class, 'ruang']);
 $router->add('POST', '/cbt/ruang/save', [\App\Controllers\CbtController::class, 'saveRuang']);
 $router->add('POST', '/cbt/ruang/delete', [\App\Controllers\CbtController::class, 'deleteRuang']);
+$router->add('POST', '/cbt/ruang/pengawas/save', [\App\Controllers\CbtController::class, 'savePengawasRuang']);
 $router->add('GET', '/cbt/denah', [\App\Controllers\CbtController::class, 'denah']);
 $router->add('POST', '/cbt/denah/generate', [\App\Controllers\CbtController::class, 'generateDenah']);
 $router->add('POST', '/cbt/denah/reset', [\App\Controllers\CbtController::class, 'resetDenah']);

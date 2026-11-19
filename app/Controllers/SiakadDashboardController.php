@@ -119,6 +119,33 @@ class SiakadDashboardController {
         $nama    = isset($_SESSION['nama']) ? $_SESSION['nama'] : 'Guru';
         $initial = strtoupper(substr($nama, 0, 2));
 
+        $jadwalMengawasToday = [];
+        try {
+            $db = \App\Core\Database::connect('core');
+            $todayDate = date('Y-m-d');
+            $stmtMng = $db->prepare("
+                SELECT rp.*, r.nama_ruang, r.kode_ruang, r.lokasi, t.nama_topik
+                FROM cbt_ruang_pengawas rp
+                JOIN cbt_ruang r ON rp.ruang_id = r.id
+                LEFT JOIN bs_topik t ON rp.topik_id = t.id
+                WHERE (rp.guru_nama = :gnama OR :gnama2 LIKE CONCAT('%', rp.guru_nama, '%') OR rp.guru_nama LIKE CONCAT('%', :gnama3, '%'))
+                  AND (
+                      t.status = 'Aktif'
+                      OR (t.tgl_mulai <= :today AND t.tgl_selesai >= :today2)
+                      OR rp.topik_id IS NULL
+                  )
+                ORDER BY rp.sesi_label ASC, rp.id ASC
+            ");
+            $stmtMng->execute([
+                ':gnama' => $nama,
+                ':gnama2' => $nama,
+                ':gnama3' => $nama,
+                ':today' => $todayDate,
+                ':today2' => $todayDate
+            ]);
+            $jadwalMengawasToday = $stmtMng->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
         $title = "Dashboard Guru - SIAKAD";
         ob_start();
         include __DIR__ . '/../../resources/views/siakad/dashboard_guru.php';

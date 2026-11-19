@@ -1,8 +1,12 @@
 <?php
 $namaInstitusi = 'MADRASAH ALIYAH MIFTAHUL HUDA';
 $logoUrl = function_exists('base_url') ? base_url('public/uploads/logo/logo.png') : '/public/uploads/logo/logo.png';
+$faviconUrl = $logoUrl;
 if (class_exists('\App\Core\Branding')) {
-    try { $logoUrl = \App\Core\Branding::getInstitusiLogo(); } catch (\Throwable $e) {}
+    try { 
+        $logoUrl = \App\Core\Branding::getInstitusiLogo(); 
+        $faviconUrl = \App\Core\Branding::getInstitusiFavicon();
+    } catch (\Throwable $e) {}
 }
 ?>
 <!DOCTYPE html>
@@ -11,6 +15,7 @@ if (class_exists('\App\Core\Branding')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Label Meja Peserta - <?= htmlspecialchars($ruang['nama_ruang']) ?></title>
+    <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>

@@ -17,6 +17,13 @@ $active_menu = 'ruang';
             </div>
             <?php endif; ?>
 
+            <?php if (isset($_GET['saved_pengawas'])): ?>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700;">
+                <i data-lucide="check-circle" style="width: 22px; height: 22px; color: #2563eb;"></i>
+                <div>Tugas Pengawas Ruang Per-Sesi Berhasil Disimpan & Diterapkan ke Dashboard Guru!</div>
+            </div>
+            <?php endif; ?>
+
             <?php if (isset($_GET['deleted'])): ?>
             <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700;">
                 <i data-lucide="trash-2" style="width: 22px; height: 22px; color: #ef4444;"></i>
@@ -31,16 +38,39 @@ $active_menu = 'ruang';
                     <div class="header-text-premium">
                         <div class="header-badge">MANAJEMEN RUANG & MEJA CBT</div>
                         <h1><i data-lucide="door-open"></i> Kelola Ruang Ujian</h1>
-                        <p>Atur tata letak meja ujian (meja gandeng 2x atau meja tunggal 1x), baris ke samping dan ke belakang, serta kapasitas peserta.</p>
+                        <p>Atur tata letak meja ujian (meja gandeng 2x atau meja tunggal 1x), baris ke samping dan ke belakang, serta penugasan pengawas per-sesi.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button type="button" onclick="bukaModalRuang()" class="e-btn e-btn-primary" style="background: #2563eb;">
                             <i data-lucide="plus-circle"></i> Tambah Ruang Ujian
                         </button>
-                        <a href="<?php echo base_url('cbt/denah'); ?>" class="e-btn e-btn-glass">
+                        <a href="<?php echo base_url('cbt/denah?topik_id=' . $selectedTopikId); ?>" class="e-btn e-btn-glass">
                             <i data-lucide="grid"></i> Atur Denah Tempat Duduk
                         </a>
                     </div>
+                </div>
+            </div>
+
+            <!-- Topik Selector Bar -->
+            <div class="card" style="padding: 1.1rem 1.4rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: #ffffff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #2563eb; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(37,99,235,0.1);">
+                        <i data-lucide="layers" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">TOPIK UJIAN CBT AKTIF</div>
+                        <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">Kelola Ruang & Pengawas Terisolasi Per-Topik</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <label style="font-size: 0.82rem; font-weight: 700; color: #475569;">Pilih Topik:</label>
+                    <select onchange="window.location.href='<?php echo base_url('cbt/ruang?topik_id='); ?>' + this.value" class="input-sm" style="min-width: 280px; font-weight: 700; border-radius: 10px; border-color: #cbd5e1; background: #f8fafc; cursor: pointer; padding: 7px 12px;">
+                        <?php foreach ($topikList as $tp): ?>
+                        <option value="<?php echo $tp['id']; ?>" <?php echo ($selectedTopikId == $tp['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($tp['nama_topik']); ?> (<?php echo htmlspecialchars($tp['tahun_ajaran']); ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
 
@@ -72,7 +102,7 @@ $active_menu = 'ruang';
                     </div>
                     <div>
                         <div style="font-size: 1.5rem; font-weight: 900; color: #4338ca; line-height: 1;"><?php echo $totalTerisi; ?></div>
-                        <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 4px;">Siswa Teralokasi</div>
+                        <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 4px;">Siswa Teralokasi (Topik Ini)</div>
                     </div>
                 </div>
 
@@ -106,8 +136,8 @@ $active_menu = 'ruang';
                                 <th>Kode & Nama Ruang</th>
                                 <th>Pola Konfigurasi Meja</th>
                                 <th>Kapasitas & Keterisian</th>
-                                <th>Lokasi & Pengawas</th>
-                                <th style="width: 220px; text-align: right;">Aksi</th>
+                                <th>Lokasi & Pengawas Per-Sesi</th>
+                                <th style="width: 250px; text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -157,20 +187,33 @@ $active_menu = 'ruang';
                                         </div>
                                     </td>
                                     <td>
-                                        <div style="font-size: 0.82rem; font-weight: 700; color: #334155;">
-                                            <i data-lucide="user-check" style="width: 13px; height: 13px; display: inline-block; vertical-align: -2px; color: #64748b;"></i>
-                                            <?php echo htmlspecialchars($r['pengawas'] ?: 'Pengawas Ruangan'); ?>
-                                        </div>
-                                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">
+                                        <div style="font-size: 0.74rem; color: #64748b; margin-bottom: 5px;">
                                             <i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline-block; vertical-align: -1px;"></i>
-                                            <?php echo htmlspecialchars($r['lokasi'] ?: 'Madrasah'); ?>
+                                            <strong><?php echo htmlspecialchars($r['lokasi'] ?: 'Madrasah'); ?></strong>
                                         </div>
+                                        <?php if (!empty($r['pengawas_sesi'])): ?>
+                                            <div style="display: flex; flex-direction: column; gap: 3px;">
+                                                <?php foreach ($r['pengawas_sesi'] as $sesiLbl => $gNama): ?>
+                                                <div style="font-size: 0.72rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 7px; display: inline-flex; align-items: center; gap: 5px; width: fit-content;">
+                                                    <span style="font-weight: 800; color: #2563eb;"><?php echo htmlspecialchars($sesiLbl); ?>:</span>
+                                                    <span style="color: #1e293b; font-weight: 600;"><?php echo htmlspecialchars($gNama); ?></span>
+                                                </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <div style="font-size: 0.72rem; color: #94a3b8; font-style: italic;">
+                                                Belum diatur pengawas sesi
+                                            </div>
+                                        <?php endif; ?>
                                     </td>
                                     <td style="text-align: right; white-space: nowrap;">
-                                        <a href="<?php echo base_url('cbt/denah?ruang_id=' . $r['id']); ?>" class="e-btn" style="background: #2563eb; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px;" title="Atur Denah Tempat Duduk Siswa">
+                                        <button type="button" class="e-btn" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.75rem; font-weight: 800; padding: 6px 10px; border-radius: 8px;" onclick='bukaModalPengawas(<?php echo htmlspecialchars(json_encode($r), ENT_QUOTES, "UTF-8"); ?>)' title="Atur Pengawas Per-Sesi untuk Topik Ini">
+                                            <i data-lucide="user-check" style="width: 13px; height: 13px;"></i> Pengawas
+                                        </button>
+                                        <a href="<?php echo base_url('cbt/denah?ruang_id=' . $r['id'] . '&topik_id=' . $selectedTopikId); ?>" class="e-btn" style="background: #2563eb; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; margin-left: 4px;" title="Atur Denah Tempat Duduk Siswa">
                                             <i data-lucide="grid" style="width: 13px; height: 13px;"></i> Denah
                                         </a>
-                                        <button type="button" class="e-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.75rem; font-weight: 700; padding: 6px 10px; border-radius: 8px; margin-left: 4px;" onclick='editRuang(<?php echo json_encode($r); ?>)' title="Edit Ruangan">
+                                        <button type="button" class="e-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.75rem; font-weight: 700; padding: 6px 10px; border-radius: 8px; margin-left: 4px;" onclick='editRuang(<?php echo htmlspecialchars(json_encode($r), ENT_QUOTES, "UTF-8"); ?>)' title="Edit Ruangan">
                                             <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i>
                                         </button>
                                         <form method="POST" action="<?php echo base_url('cbt/ruang/delete'); ?>" style="display: inline-block; margin-left: 4px;" onsubmit="return confirm('Yakin ingin menghapus ruang ini beserta seluruh denah tempat duduknya?')">
@@ -189,6 +232,86 @@ $active_menu = 'ruang';
             </div>
 
         </div>
+    </div>
+</div>
+
+<!-- Modal Atur Pengawas Per-Sesi Ruang -->
+<div id="modalPengawasRuang" class="cbt-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 20px; max-width: 540px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; overflow: hidden; animation: slideUp 0.25s ease-out;">
+        <div style="padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="user-check" style="color: #38bdf8;"></i>
+                <span>Atur Pengawas Per-Sesi</span>
+            </div>
+            <button type="button" onclick="tutupModalPengawas()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.25rem;">✕</button>
+        </div>
+
+        <form method="POST" action="<?php echo base_url('cbt/ruang/pengawas/save'); ?>" style="padding: 1.5rem;">
+            <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
+            <input type="hidden" name="ruang_id" id="pengawasRuangId" value="0">
+
+            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 12px 14px; margin-bottom: 1.25rem;">
+                <div style="font-size: 0.72rem; font-weight: 800; color: #2563eb; text-transform: uppercase;">Ruang Ujian & Topik</div>
+                <div id="modalPengawasRuangNama" style="font-size: 1.05rem; font-weight: 900; color: #0f172a;">-</div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                    Guru pengawas yang dipilih akan otomatis menerima penugasan di Dashboard Guru masing-masing.
+                </div>
+            </div>
+
+            <div style="font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                Alokasi Guru Pengawas Tiap Sesi Ujian:
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow-y: auto; padding-right: 4px; margin-bottom: 1.5rem;">
+                <?php
+                // Filter non-istirahat slots
+                $activeSlots = [];
+                if (!empty($slotList)) {
+                    foreach ($slotList as $s) {
+                        if (isset($s['is_istirahat']) && (int)$s['is_istirahat'] === 1) continue;
+                        $activeSlots[] = [
+                            'label' => $s['label_sesi'] ?: ('Sesi ' . $s['urutan']),
+                            'jam' => $s['jam_mulai'] . ' - ' . $s['jam_selesai']
+                        ];
+                    }
+                }
+                if (empty($activeSlots)) {
+                    $activeSlots = [
+                        ['label' => 'Sesi 1', 'jam' => '08:00 - 09:00'],
+                        ['label' => 'Sesi 2', 'jam' => '09:00 - 10:00'],
+                        ['label' => 'Sesi 3', 'jam' => '10:10 - 11:10'],
+                    ];
+                }
+                foreach ($activeSlots as $sl):
+                    $fieldKey = preg_replace('/[^a-zA-Z0-9_]/', '_', $sl['label']);
+                ?>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 800; color: #0f172a; font-size: 0.82rem;"><?php echo htmlspecialchars($sl['label']); ?></span>
+                        <span style="font-size: 0.72rem; color: #64748b; font-family: monospace; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">
+                            <?php echo htmlspecialchars($sl['jam']); ?>
+                        </span>
+                    </div>
+                    <input type="hidden" name="pengawas[<?php echo htmlspecialchars($sl['label']); ?>][jam_slot]" value="<?php echo htmlspecialchars($sl['jam']); ?>">
+                    <select name="pengawas[<?php echo htmlspecialchars($sl['label']); ?>][guru_nama]" id="select_pengawas_<?php echo $fieldKey; ?>" class="input-sm select-guru-sesi" style="width: 100%; border-radius: 8px;">
+                        <option value="">-- Tidak Ada Pengawas / Kosongkan --</option>
+                        <?php foreach ($guruList as $g): ?>
+                        <option value="<?php echo htmlspecialchars($g['nama']); ?>">
+                            <?php echo htmlspecialchars($g['nama']); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" onclick="tutupModalPengawas()" class="e-btn e-btn-secondary" style="padding: 8px 16px;">Batal</button>
+                <button type="submit" class="e-btn e-btn-primary" style="background: #2563eb; padding: 8px 20px;">
+                    <i data-lucide="save"></i> Simpan Pengawas Sesi
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -261,15 +384,9 @@ $active_menu = 'ruang';
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <div>
-                    <label class="label-sm">Lokasi Gedung / Lantai</label>
-                    <input type="text" name="lokasi" id="inpLokasi" class="input-sm" placeholder="Contoh: Gedung A Lt. 1">
-                </div>
-                <div>
-                    <label class="label-sm">Pengawas Ruangan</label>
-                    <input type="text" name="pengawas" id="inpPengawas" class="input-sm" placeholder="Nama Guru Pengawas">
-                </div>
+            <div style="margin-bottom: 12px;">
+                <label class="label-sm">Lokasi Gedung / Lantai</label>
+                <input type="text" name="lokasi" id="inpLokasi" class="input-sm" placeholder="Contoh: Gedung A Lt. 1">
             </div>
 
             <div style="margin-bottom: 16px;">
@@ -321,7 +438,6 @@ function bukaModalRuang() {
     document.getElementById('inpBarisSamping').value = '3';
     document.getElementById('inpBarisBelakang').value = '5';
     document.getElementById('inpLokasi').value = '';
-    document.getElementById('inpPengawas').value = '';
     document.getElementById('inpKeterangan').value = '';
     hitungKapasitas();
 
@@ -344,7 +460,6 @@ function editRuang(r) {
     document.getElementById('inpBarisSamping').value = r.baris_samping || 3;
     document.getElementById('inpBarisBelakang').value = r.baris_belakang || 5;
     document.getElementById('inpLokasi').value = r.lokasi || '';
-    document.getElementById('inpPengawas').value = r.pengawas || '';
     document.getElementById('inpKeterangan').value = r.keterangan || '';
     hitungKapasitas();
 
@@ -354,5 +469,34 @@ function editRuang(r) {
 
 function tutupModalRuang() {
     document.getElementById('modalRuang').style.display = 'none';
+}
+
+function bukaModalPengawas(r) {
+    document.getElementById('pengawasRuangId').value = r.id;
+    document.getElementById('modalPengawasRuangNama').textContent = r.nama_ruang + ' (' + r.kode_ruang + ')';
+
+    // Reset all selects first
+    const selects = document.querySelectorAll('.select-guru-sesi');
+    selects.forEach(sel => {
+        sel.value = '';
+    });
+
+    // Populate existing pengawas per sesi
+    if (r.pengawas_sesi && typeof r.pengawas_sesi === 'object') {
+        for (const [sesi, guru] of Object.entries(r.pengawas_sesi)) {
+            const cleanKey = sesi.replace(/[^a-zA-Z0-9_]/g, '_');
+            const el = document.getElementById('select_pengawas_' + cleanKey);
+            if (el) {
+                el.value = guru;
+            }
+        }
+    }
+
+    document.getElementById('modalPengawasRuang').style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+}
+
+function tutupModalPengawas() {
+    document.getElementById('modalPengawasRuang').style.display = 'none';
 }
 </script>

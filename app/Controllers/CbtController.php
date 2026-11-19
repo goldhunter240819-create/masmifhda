@@ -450,6 +450,41 @@ class CbtController {
                    ->execute(['require_cbt_attendance', '1', 'aturan', 'Wajibkan Siswa Absensi Scan 1 Pintu Sebelum Mengerjakan Ujian']);
             } catch (\Exception $e) {}
 
+            // 12. Tabel Pengawas Ruangan Per Sesi (Scoped Topik)
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_ruang_pengawas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                topik_id INT NOT NULL,
+                ruang_id INT NOT NULL,
+                sesi_label VARCHAR(100) NOT NULL,
+                jam_slot VARCHAR(50) DEFAULT NULL,
+                guru_id INT DEFAULT NULL,
+                guru_nama VARCHAR(150) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_topik_ruang_sesi (topik_id, ruang_id, sesi_label),
+                INDEX (topik_id),
+                INDEX (ruang_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Migration: Kolom topik_id di cbt_denah_peserta
+            try {
+                $chkCol = $db->query("SHOW COLUMNS FROM cbt_denah_peserta LIKE 'topik_id'")->fetch();
+                if (!$chkCol) {
+                    $db->exec("ALTER TABLE cbt_denah_peserta ADD COLUMN topik_id INT DEFAULT NULL AFTER ruang_id, ADD INDEX (topik_id)");
+                }
+                // Update denah lama ke topik aktif jika belum ber-topik
+                $activeTId = (int)($db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 3);
+                $db->exec("UPDATE cbt_denah_peserta SET topik_id = {$activeTId} WHERE topik_id IS NULL OR topik_id = 0");
+            } catch (\Exception $e) {}
+
+            // Migration: Durasi Default 60 menit
+            try {
+                $defDurasi = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'default_durasi_menit'")->fetchColumn() ?: 60);
+                if ($defDurasi > 0) {
+                    $db->exec("UPDATE cbt_ujian SET durasi_menit = {$defDurasi} WHERE durasi_menit = 90 OR durasi_menit IS NULL OR durasi_menit = 0");
+                }
+            } catch (\Exception $e) {}
+
         } catch (\Exception $e) {
             // Silence exception
         }
@@ -908,6 +943,9 @@ class CbtController {
             ];
         }
 
+        $cbtSettings = self::getAllPengaturan($db);
+        $defDurasi = !empty($cbtSettings['default_durasi_menit']) ? (int)$cbtSettings['default_durasi_menit'] : 60;
+
         // Ambil grid jadwal tersimpan untuk topik aktif (mendukung mapel langsung tanpa ujian_id)
         $gridRows = [];
         if ($selectedTopikId > 0) {
@@ -916,7 +954,7 @@ class CbtController {
                        COALESCE(NULLIF(g.mapel_nama, ''), u.mapel_nama, 'Mata Pelajaran') AS mapel_nama,
                        COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
                        COALESCE(u.kode_ujian, '-') AS kode_ujian,
-                       COALESCE(u.durasi_menit, 90) AS durasi_menit,
+                       COALESCE(u.durasi_menit, {$defDurasi}) AS durasi_menit,
                        COALESCE(u.status, 'Aktif') as ujian_status 
                 FROM cbt_jadwal_grid g
                 LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
@@ -933,7 +971,7 @@ class CbtController {
                            COALESCE(NULLIF(g.mapel_nama, ''), u.mapel_nama, 'Mata Pelajaran') AS mapel_nama,
                            COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
                            COALESCE(u.kode_ujian, '-') AS kode_ujian,
-                           COALESCE(u.durasi_menit, 90) AS durasi_menit,
+                           COALESCE(u.durasi_menit, {$defDurasi}) AS durasi_menit,
                            COALESCE(u.status, 'Aktif') as ujian_status 
                     FROM cbt_jadwal_grid g
                     LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
@@ -950,7 +988,7 @@ class CbtController {
                        COALESCE(NULLIF(g.mapel_nama, ''), u.mapel_nama, 'Mata Pelajaran') AS mapel_nama,
                        COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
                        COALESCE(u.kode_ujian, '-') AS kode_ujian,
-                       COALESCE(u.durasi_menit, 90) AS durasi_menit,
+                       COALESCE(u.durasi_menit, {$defDurasi}) AS durasi_menit,
                        COALESCE(u.status, 'Aktif') as ujian_status 
                 FROM cbt_jadwal_grid g
                 LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
@@ -1280,6 +1318,9 @@ class CbtController {
         try {
             self::ensureTables($db);
 
+            $defDurasi = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'default_durasi_menit'")->fetchColumn() ?: 60);
+            $defKkm = (int)($db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'standar_kkm'")->fetchColumn() ?: 75);
+
             $sql = "SELECT * FROM cbt_jadwal_grid WHERE mapel_nama IS NOT NULL AND mapel_nama != ''";
             $params = [];
             if ($topik_id) {
@@ -1338,8 +1379,8 @@ class CbtController {
                     if (strlen($prefix) < 3) $prefix = str_pad($prefix, 3, 'X');
                     $tokenUjian = $prefix . rand(100, 999);
 
-                    $stmtIns = $db->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, 90, 75, 1, 1, ?, 'Aktif')");
-                    $stmtIns->execute([$tId, $kode, $namaUjian, $mapel, $kelasNama, $tokenUjian]);
+                    $stmtIns = $db->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, 'Aktif')");
+                    $stmtIns->execute([$tId, $kode, $namaUjian, $mapel, $kelasNama, $defDurasi, $defKkm, $tokenUjian]);
                     $newUjianId = (int)$db->lastInsertId();
                     $existingUjian = ['id' => $newUjianId, 'topik_id' => $tId, 'mapel_nama' => $mapel, 'kelas_nama' => $kelasNama, 'token' => $tokenUjian];
 
@@ -2352,15 +2393,39 @@ class CbtController {
     public static function hasil() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'] ?? $db;
         self::ensureTables($db);
-        self::syncJadwalWithUjian($db, $ctx['db_siakad']);
+        self::syncJadwalWithUjian($db, $db_siakad);
 
-        $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+        // Ambil daftar Topik Ujian aktif
+        $topikList = [];
+        try {
+            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($topikList) && $db !== $db_siakad) {
+                $topikList = $db->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Exception $e) {}
 
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
         $selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
         $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
+
+        // Ambil daftar Mapel yang relevan (difilter per topik jika topik dipilih)
+        $mapelList = [];
+        try {
+            if ($selectedTopikId > 0) {
+                $stmtM = $db->prepare("SELECT DISTINCT mapel_nama FROM cbt_ujian WHERE topik_id = ? AND mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC");
+                $stmtM->execute([$selectedTopikId]);
+                $mapelList = $stmtM->fetchAll(PDO::FETCH_COLUMN);
+            } else {
+                $mapelList = $db->query("SELECT DISTINCT mapel_nama FROM cbt_ujian WHERE mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
+            }
+        } catch (\Exception $e) {}
+
+        $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
         // Daftar kelas real dari database kelas + kelas jauh
         $kelasList = [];
@@ -2381,6 +2446,17 @@ class CbtController {
                 LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
                 WHERE 1=1";
         $params = [];
+
+        if ($selectedTopikId > 0) {
+            $sql .= " AND (u.topik_id = :topik_id)";
+            $params[':topik_id'] = $selectedTopikId;
+        }
+
+        if (!empty($selectedMapel)) {
+            $sql .= " AND (u.mapel_nama = :mapel OR p.mapel_nama = :mapel2)";
+            $params[':mapel'] = $selectedMapel;
+            $params[':mapel2'] = $selectedMapel;
+        }
 
         if ($selectedUjianId > 0) {
             $sql .= " AND p.ujian_id = :ujian_id";
@@ -2474,6 +2550,8 @@ class CbtController {
         $db = $ctx['db_core'];
         self::ensureTables($db);
 
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
         $selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
@@ -2484,6 +2562,10 @@ class CbtController {
             $stmt = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ?");
             $stmt->execute([$selectedUjianId]);
             $currentUjian = $stmt->fetch(PDO::FETCH_ASSOC);
+        } elseif ($selectedTopikId > 0 || !empty($selectedMapel)) {
+            $stmtFind = $db->prepare("SELECT * FROM cbt_ujian WHERE (topik_id = ? OR ? = 0) AND (mapel_nama = ? OR ? = '') ORDER BY id DESC LIMIT 1");
+            $stmtFind->execute([$selectedTopikId, $selectedTopikId, $selectedMapel, $selectedMapel]);
+            $currentUjian = $stmtFind->fetch(PDO::FETCH_ASSOC);
         }
 
         $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama, u.kode_ujian, u.durasi_menit 
@@ -2491,6 +2573,17 @@ class CbtController {
                 LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
                 WHERE 1=1";
         $params = [];
+
+        if ($selectedTopikId > 0) {
+            $sql .= " AND (u.topik_id = :topik_id)";
+            $params[':topik_id'] = $selectedTopikId;
+        }
+
+        if (!empty($selectedMapel)) {
+            $sql .= " AND (u.mapel_nama = :mapel OR p.mapel_nama = :mapel2)";
+            $params[':mapel'] = $selectedMapel;
+            $params[':mapel2'] = $selectedMapel;
+        }
 
         if ($selectedUjianId > 0) {
             $sql .= " AND p.ujian_id = :ujian_id";
@@ -3310,6 +3403,16 @@ class CbtController {
                         } catch (\Exception $e) {}
                     }
                 }
+
+                // Sinkronkan langsung ke durasi ujian jika default_durasi_menit diubah
+                if (isset($submitted['default_durasi_menit'])) {
+                    $newDurasi = (int)$submitted['default_durasi_menit'];
+                    if ($newDurasi > 0) {
+                        try {
+                            $db->prepare("UPDATE cbt_ujian SET durasi_menit = ? WHERE durasi_menit = 90 OR durasi_menit IS NULL OR durasi_menit = 0")->execute([$newDurasi]);
+                        } catch (\Exception $e) {}
+                    }
+                }
             }
             redirect('/cbt/pengaturan?saved=1');
             exit;
@@ -3801,7 +3904,47 @@ class CbtController {
     public static function ruang() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
         self::ensureTables($db);
+
+        // Ambil daftar topik aktif dari bs_topik
+        $topikList = [];
+        try {
+            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($topikList) && $db !== $db_siakad) {
+                $topikList = $db->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Exception $e) {}
+
+        $selectedTopikId = !empty($_GET['topik_id']) ? (int)$_GET['topik_id'] : ($topikList[0]['id'] ?? 0);
+
+        // Ambil slot sesi untuk topik terpilih
+        $slotList = [];
+        try {
+            $stmtSlot = $db->prepare("SELECT * FROM cbt_jam_slot WHERE (topik_id = ? OR topik_id IS NULL OR topik_id = 0) ORDER BY urutan ASC, jam_mulai ASC");
+            $stmtSlot->execute([$selectedTopikId]);
+            $slotList = $stmtSlot->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        // Ambil mapping pengawas per-ruang per-sesi untuk topik ini
+        $pengawasRuang = [];
+        try {
+            $stmtP = $db->prepare("SELECT * FROM cbt_ruang_pengawas WHERE topik_id = ?");
+            $stmtP->execute([$selectedTopikId]);
+            $rowsP = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rowsP as $rp) {
+                $pengawasRuang[(int)$rp['ruang_id']][$rp['sesi_label']] = $rp['guru_nama'];
+            }
+        } catch (\Exception $e) {}
+
+        // Ambil daftar guru
+        $guruList = [];
+        try {
+            $guruList = $db_siakad->query("SELECT id, nama FROM guru WHERE status = 'Aktif' ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($guruList) && $db !== $db_siakad) {
+                $guruList = $db->query("SELECT id, nama FROM guru WHERE status = 'Aktif' ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Exception $e) {}
 
         $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -3813,13 +3956,15 @@ class CbtController {
             $rId = (int)$r['id'];
             $totalKapasitas += (int)$r['kapasitas'];
 
-            $stmtCnt = $db->prepare("SELECT COUNT(*) FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL");
-            $stmtCnt->execute([$rId]);
+            $stmtCnt = $db->prepare("SELECT COUNT(*) FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL AND (topik_id = ? OR topik_id IS NULL)");
+            $stmtCnt->execute([$rId, $selectedTopikId]);
             $terisi = (int)$stmtCnt->fetchColumn();
             $r['terisi'] = $terisi;
             $r['kosong'] = max(0, (int)$r['kapasitas'] - $terisi);
             $r['persen'] = $r['kapasitas'] > 0 ? round(($terisi / $r['kapasitas']) * 100) : 0;
             $totalTerisi += $terisi;
+
+            $r['pengawas_sesi'] = $pengawasRuang[$rId] ?? [];
         }
         unset($r);
 
@@ -3831,6 +3976,49 @@ class CbtController {
         include __DIR__ . '/../../resources/views/cbt/ruang.php';
         $content = ob_get_clean();
         include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Simpan Pengawas Ruangan Per Sesi (Scoped Topik)
+     */
+    public static function savePengawasRuang() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $topikId = (int)($_POST['topik_id'] ?? 0);
+            $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $pengawasData = $_POST['pengawas'] ?? [];
+
+            if ($topikId > 0 && $ruangId > 0 && is_array($pengawasData)) {
+                $stmtSave = $db->prepare("
+                    INSERT INTO cbt_ruang_pengawas (topik_id, ruang_id, sesi_label, jam_slot, guru_nama)
+                    VALUES (:topik_id, :ruang_id, :sesi_label, :jam_slot, :guru_nama)
+                    ON DUPLICATE KEY UPDATE jam_slot = VALUES(jam_slot), guru_nama = VALUES(guru_nama), updated_at = NOW()
+                ");
+
+                foreach ($pengawasData as $sesiLabel => $info) {
+                    $guruNama = trim($info['guru_nama'] ?? '');
+                    $jamSlot = trim($info['jam_slot'] ?? '');
+                    if (!empty($guruNama)) {
+                        $stmtSave->execute([
+                            ':topik_id' => $topikId,
+                            ':ruang_id' => $ruangId,
+                            ':sesi_label' => $sesiLabel,
+                            ':jam_slot' => $jamSlot,
+                            ':guru_nama' => $guruNama
+                        ]);
+                    } else {
+                        $db->prepare("DELETE FROM cbt_ruang_pengawas WHERE topik_id = ? AND ruang_id = ? AND sesi_label = ?")
+                           ->execute([$topikId, $ruangId, $sesiLabel]);
+                    }
+                }
+            }
+            redirect("/cbt/ruang?topik_id={$topikId}&saved_pengawas=1");
+            exit;
+        }
+        redirect('/cbt/ruang');
     }
 
     /**
@@ -3911,15 +4099,20 @@ class CbtController {
     /**
      * Helper: Sinkronisasi Slot Kursi Meja Ruang
      */
-    public static function syncSlotMejaRuang($db, $ruangId, $tipe_meja, $baris_samping, $baris_belakang) {
+    public static function syncSlotMejaRuang($db, $ruangId, $tipe_meja, $baris_samping, $baris_belakang, $topikId = null) {
         $tipe_meja = max(1, min(2, (int)$tipe_meja));
         $baris_samping = max(1, (int)$baris_samping);
         $baris_belakang = max(1, (int)$baris_belakang);
         $totalSlotDibutuhkan = $tipe_meja * $baris_samping * $baris_belakang;
 
-        // Ambil slot yang sudah ada saat ini
-        $stmtCurr = $db->prepare("SELECT id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
-        $stmtCurr->execute([$ruangId]);
+        // Ambil slot yang sudah ada saat ini untuk topik ini
+        if ($topikId > 0) {
+            $stmtCurr = $db->prepare("SELECT id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? ORDER BY nomor_meja ASC");
+            $stmtCurr->execute([$ruangId, $topikId]);
+        } else {
+            $stmtCurr = $db->prepare("SELECT id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id IS NULL OR topik_id = 0) ORDER BY nomor_meja ASC");
+            $stmtCurr->execute([$ruangId]);
+        }
         $existing = $stmtCurr->fetchAll(PDO::FETCH_ASSOC);
 
         $existingByNo = [];
@@ -3942,7 +4135,7 @@ class CbtController {
         }
 
         $stmtUp = $db->prepare("UPDATE cbt_denah_peserta SET posisi_baris = ?, posisi_kolom = ?, posisi_sisi = ? WHERE id = ?");
-        $stmtIns = $db->prepare("INSERT INTO cbt_denah_peserta (ruang_id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi) VALUES (?, ?, ?, ?, ?)");
+        $stmtIns = $db->prepare("INSERT INTO cbt_denah_peserta (ruang_id, topik_id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi) VALUES (?, ?, ?, ?, ?, ?)");
 
         foreach ($expectedSlots as $exp) {
             $mNo = $exp['no'];
@@ -3952,12 +4145,16 @@ class CbtController {
                     $stmtUp->execute([$exp['b'], $exp['k'], $exp['sisi'], $cur['id']]);
                 }
             } else {
-                $stmtIns->execute([$ruangId, $mNo, $exp['b'], $exp['k'], $exp['sisi']]);
+                $stmtIns->execute([$ruangId, $topikId, $mNo, $exp['b'], $exp['k'], $exp['sisi']]);
             }
         }
 
         // Hapus slot berlebih jika nomor meja melebihi kapasitas
-        $db->prepare("DELETE FROM cbt_denah_peserta WHERE ruang_id = ? AND nomor_meja > ? AND (siswa_id IS NULL OR siswa_id = 0)")->execute([$ruangId, $totalSlotDibutuhkan]);
+        if ($topikId > 0) {
+            $db->prepare("DELETE FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? AND nomor_meja > ? AND (siswa_id IS NULL OR siswa_id = 0)")->execute([$ruangId, $topikId, $totalSlotDibutuhkan]);
+        } else {
+            $db->prepare("DELETE FROM cbt_denah_peserta WHERE ruang_id = ? AND nomor_meja > ? AND (siswa_id IS NULL OR siswa_id = 0)")->execute([$ruangId, $totalSlotDibutuhkan]);
+        }
     }
 
     /**
@@ -3966,7 +4163,19 @@ class CbtController {
     public static function denah() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
         self::ensureTables($db);
+
+        // Ambil daftar topik aktif dari bs_topik
+        $topikList = [];
+        try {
+            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($topikList) && $db !== $db_siakad) {
+                $topikList = $db->query("SELECT id, nama_topik, jenis_topik, tahun_ajaran FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Exception $e) {}
+
+        $selectedTopikId = !empty($_GET['topik_id']) ? (int)$_GET['topik_id'] : ($topikList[0]['id'] ?? 0);
 
         $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -3983,7 +4192,7 @@ class CbtController {
             }
         }
 
-        // Ambil slot meja di ruang terpilih
+        // Ambil slot meja di ruang terpilih untuk topik ini
         $mejaList = [];
         $tingkatStats = [10 => 0, 11 => 0, 12 => 0, 'other' => 0, 'kosong' => 0];
 
@@ -4000,11 +4209,11 @@ class CbtController {
                 }
             }
 
-            // Selalu sinkronkan mapping baris & kolom dengan konfigurasi pola meja saat ini
-            self::syncSlotMejaRuang($db, $currentRuang['id'], $tipeMeja, $samping, $belakang);
+            // Selalu sinkronkan mapping baris & kolom dengan konfigurasi pola meja dan topik saat ini
+            self::syncSlotMejaRuang($db, $currentRuang['id'], $tipeMeja, $samping, $belakang, $selectedTopikId);
 
-            $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
-            $stmtMeja->execute([$selectedRuangId]);
+            $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) ORDER BY nomor_meja ASC");
+            $stmtMeja->execute([$selectedRuangId, $selectedTopikId]);
             $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($mejaList as $m) {
@@ -4021,17 +4230,18 @@ class CbtController {
             }
         }
 
-        // Ambil daftar siswa reguler Siakad yang BELUM punya kursi di ruangan manapun
+        // Ambil daftar siswa reguler Siakad yang BELUM punya kursi di topik ini
         $unassignedSiswa = [];
         try {
-            $stmtUn = $db->query("
+            $stmtUn = $db->prepare("
                 SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat
                 FROM siswa s
                 LEFT JOIN kelas k ON s.kelas_id = k.id
                 WHERE (s.status = 'Aktif' OR s.status IS NULL OR s.status = '')
-                  AND s.id NOT IN (SELECT siswa_id FROM cbt_denah_peserta WHERE siswa_id IS NOT NULL)
+                  AND s.id NOT IN (SELECT siswa_id FROM cbt_denah_peserta WHERE siswa_id IS NOT NULL AND (topik_id = ? OR topik_id IS NULL))
                 ORDER BY k.tingkat ASC, s.nama ASC
             ");
+            $stmtUn->execute([$selectedTopikId]);
             $unassignedSiswa = $stmtUn->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
@@ -4044,7 +4254,7 @@ class CbtController {
     }
 
     /**
-     * Auto-Generate Penempatan Denah Tempat Duduk
+     * Auto-Generate Penempatan Denah Tempat Duduk (Scoped Topik)
      * Opsi: smart_cross (Silang Tingkatan Anti-Contek), full_random, sequential
      */
     public static function generateDenah() {
@@ -4054,10 +4264,11 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $topikId = (int)($_POST['topik_id'] ?? 0);
             $mode = trim($_POST['mode'] ?? 'smart_cross'); // smart_cross | full_random | sequential
 
             if ($ruangId <= 0) {
-                redirect('/cbt/denah');
+                redirect('/cbt/denah' . ($topikId ? '?topik_id=' . $topikId : ''));
                 exit;
             }
 
@@ -4066,33 +4277,39 @@ class CbtController {
             $stmtR->execute([$ruangId]);
             $ruang = $stmtR->fetch(PDO::FETCH_ASSOC);
             if (!$ruang) {
-                redirect('/cbt/denah');
+                redirect('/cbt/denah' . ($topikId ? '?topik_id=' . $topikId : ''));
                 exit;
             }
 
-            // Ambil slot meja kosong di ruangan ini
-            $stmtSlots = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NULL ORDER BY nomor_meja ASC");
-            $stmtSlots->execute([$ruangId]);
+            // Ambil slot meja kosong di ruangan ini untuk topik terpilih
+            if ($topikId > 0) {
+                $stmtSlots = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) AND siswa_id IS NULL ORDER BY nomor_meja ASC");
+                $stmtSlots->execute([$ruangId, $topikId]);
+            } else {
+                $stmtSlots = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NULL ORDER BY nomor_meja ASC");
+                $stmtSlots->execute([$ruangId]);
+            }
             $slots = $stmtSlots->fetchAll(PDO::FETCH_ASSOC);
 
             if (empty($slots)) {
-                redirect("/cbt/denah?ruang_id={$ruangId}&err=" . urlencode('Semua kursi di ruangan ini sudah terisi penuh! Kosongkan terlebih dahulu jika ingin menata ulang.'));
+                redirect("/cbt/denah?ruang_id={$ruangId}&topik_id={$topikId}&err=" . urlencode('Semua kursi di ruangan ini sudah terisi penuh! Kosongkan terlebih dahulu jika ingin menata ulang.'));
                 exit;
             }
 
-            // Ambil siswa reguler Siakad yang BELUM punya kursi di ruangan manapun
-            $stmtSiswa = $db->query("
+            // Ambil siswa reguler Siakad yang BELUM punya kursi di topik terpilih
+            $stmtSiswa = $db->prepare("
                 SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat
                 FROM siswa s
                 LEFT JOIN kelas k ON s.kelas_id = k.id
                 WHERE (s.status = 'Aktif' OR s.status IS NULL OR s.status = '')
-                  AND s.id NOT IN (SELECT siswa_id FROM cbt_denah_peserta WHERE siswa_id IS NOT NULL)
+                  AND s.id NOT IN (SELECT siswa_id FROM cbt_denah_peserta WHERE siswa_id IS NOT NULL AND (topik_id = ? OR ? = 0 OR topik_id IS NULL))
                 ORDER BY k.tingkat ASC, s.nama ASC
             ");
+            $stmtSiswa->execute([$topikId, $topikId]);
             $candidates = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
 
             if (empty($candidates)) {
-                redirect("/cbt/denah?ruang_id={$ruangId}&err=" . urlencode('Tidak ada siswa reguler Siakad yang belum punya tempat duduk!'));
+                redirect("/cbt/denah?ruang_id={$ruangId}&topik_id={$topikId}&err=" . urlencode('Tidak ada siswa reguler Siakad yang belum punya tempat duduk di topik ini!'));
                 exit;
             }
 
@@ -4202,14 +4419,14 @@ class CbtController {
                 $countAssigned++;
             }
 
-            redirect("/cbt/denah?ruang_id={$ruangId}&assigned={$countAssigned}");
+            redirect("/cbt/denah?ruang_id={$ruangId}&topik_id={$topikId}&assigned={$countAssigned}");
             exit;
         }
         redirect('/cbt/denah');
     }
 
     /**
-     * Kosongkan Kursi di Ruangan Terpilih
+     * Kosongkan Kursi di Ruangan Terpilih (Scoped Topik)
      */
     public static function resetDenah() {
         $ctx = self::getAuthContext();
@@ -4218,14 +4435,23 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $topikId = (int)($_POST['topik_id'] ?? 0);
             if ($ruangId > 0) {
-                $db->prepare("
-                    UPDATE cbt_denah_peserta 
-                    SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
-                    WHERE ruang_id = ?
-                ")->execute([$ruangId]);
+                if ($topikId > 0) {
+                    $db->prepare("
+                        UPDATE cbt_denah_peserta 
+                        SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
+                        WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL)
+                    ")->execute([$ruangId, $topikId]);
+                } else {
+                    $db->prepare("
+                        UPDATE cbt_denah_peserta 
+                        SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
+                        WHERE ruang_id = ?
+                    ")->execute([$ruangId]);
+                }
             }
-            redirect("/cbt/denah?ruang_id={$ruangId}&reset=1");
+            redirect("/cbt/denah?ruang_id={$ruangId}&topik_id={$topikId}&reset=1");
             exit;
         }
         redirect('/cbt/denah');
@@ -4241,6 +4467,7 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $topikId = (int)($_POST['topik_id'] ?? 0);
             $slotId = (int)($_POST['slot_id'] ?? 0);
             $siswaId = (int)($_POST['siswa_id'] ?? 0);
 
@@ -4256,12 +4483,20 @@ class CbtController {
                 $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
 
                 if ($sRow) {
-                    // Lepas siswa ini dari kursi lain jika ada
-                    $db->prepare("
-                        UPDATE cbt_denah_peserta 
-                        SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
-                        WHERE siswa_id = ?
-                    ")->execute([$siswaId]);
+                    // Lepas siswa ini dari kursi lain di topik yang sama jika ada
+                    if ($topikId > 0) {
+                        $db->prepare("
+                            UPDATE cbt_denah_peserta 
+                            SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
+                            WHERE siswa_id = ? AND (topik_id = ? OR topik_id IS NULL)
+                        ")->execute([$siswaId, $topikId]);
+                    } else {
+                        $db->prepare("
+                            UPDATE cbt_denah_peserta 
+                            SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
+                            WHERE siswa_id = ?
+                        ")->execute([$siswaId]);
+                    }
 
                     // Tempatkan ke kursi ini
                     $stmtUp = $db->prepare("
@@ -4280,7 +4515,7 @@ class CbtController {
                     ]);
                 }
             }
-            redirect("/cbt/denah?ruang_id={$ruangId}");
+            redirect("/cbt/denah?ruang_id={$ruangId}&topik_id={$topikId}");
             exit;
         }
         redirect('/cbt/denah');
@@ -4296,6 +4531,7 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $topikId = (int)($_POST['topik_id'] ?? 0);
             $slotId = (int)($_POST['slot_id'] ?? 0);
 
             if ($slotId > 0) {
@@ -4305,7 +4541,7 @@ class CbtController {
                     WHERE id = ?
                 ")->execute([$slotId]);
             }
-            redirect("/cbt/denah?ruang_id={$ruangId}");
+            redirect("/cbt/denah?ruang_id={$ruangId}&topik_id={$topikId}");
             exit;
         }
         redirect('/cbt/denah');
@@ -4317,9 +4553,11 @@ class CbtController {
     public static function cetakDenah() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
         self::ensureTables($db);
 
         $ruangId = isset($_GET['ruang_id']) ? (int)$_GET['ruang_id'] : 0;
+        $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
         $stmtR = $db->prepare("SELECT * FROM cbt_ruang WHERE id = ?");
         $stmtR->execute([$ruangId]);
         $ruang = $stmtR->fetch(PDO::FETCH_ASSOC);
@@ -4329,8 +4567,22 @@ class CbtController {
             exit;
         }
 
-        $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
-        $stmtMeja->execute([$ruangId]);
+        $topik = null;
+        if ($topikId > 0) {
+            try {
+                $stmtTp = $db_siakad->prepare("SELECT * FROM bs_topik WHERE id = ?");
+                $stmtTp->execute([$topikId]);
+                $topik = $stmtTp->fetch(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+        }
+
+        if ($topikId > 0) {
+            $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) ORDER BY nomor_meja ASC");
+            $stmtMeja->execute([$ruangId, $topikId]);
+        } else {
+            $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
+            $stmtMeja->execute([$ruangId]);
+        }
         $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
 
         include __DIR__ . '/../../resources/views/cbt/cetak_denah.php';
@@ -4343,9 +4595,11 @@ class CbtController {
     public static function cetakLabelMeja() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
         self::ensureTables($db);
 
         $ruangId = isset($_GET['ruang_id']) ? (int)$_GET['ruang_id'] : 0;
+        $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
         $stmtR = $db->prepare("SELECT * FROM cbt_ruang WHERE id = ?");
         $stmtR->execute([$ruangId]);
         $ruang = $stmtR->fetch(PDO::FETCH_ASSOC);
@@ -4355,8 +4609,22 @@ class CbtController {
             exit;
         }
 
-        $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
-        $stmtMeja->execute([$ruangId]);
+        $topik = null;
+        if ($topikId > 0) {
+            try {
+                $stmtTp = $db_siakad->prepare("SELECT * FROM bs_topik WHERE id = ?");
+                $stmtTp->execute([$topikId]);
+                $topik = $stmtTp->fetch(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+        }
+
+        if ($topikId > 0) {
+            $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
+            $stmtMeja->execute([$ruangId, $topikId]);
+        } else {
+            $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
+            $stmtMeja->execute([$ruangId]);
+        }
         $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
 
         include __DIR__ . '/../../resources/views/cbt/cetak_label_meja.php';

@@ -76,6 +76,34 @@ if (!$guru) {
     exit;
 }
 
+// Jadwal Mengawas CBT Hari Ini
+$jadwalMengawasToday = [];
+try {
+    $gNama = trim($guru['nama'] ?? '');
+    $todayDate = date('Y-m-d');
+    $stmtMng = $core_db->prepare("
+        SELECT rp.*, r.nama_ruang, r.kode_ruang, r.lokasi, t.nama_topik, t.tgl_mulai, t.tgl_selesai
+        FROM cbt_ruang_pengawas rp
+        JOIN cbt_ruang r ON rp.ruang_id = r.id
+        LEFT JOIN bs_topik t ON rp.topik_id = t.id
+        WHERE (rp.guru_nama = :gnama OR :gnama2 LIKE CONCAT('%', rp.guru_nama, '%') OR rp.guru_nama LIKE CONCAT('%', :gnama3, '%'))
+          AND (
+              t.status = 'Aktif'
+              OR (t.tgl_mulai <= :today AND t.tgl_selesai >= :today2)
+              OR rp.topik_id IS NULL
+          )
+        ORDER BY rp.sesi_label ASC, rp.id ASC
+    ");
+    $stmtMng->execute([
+        ':gnama' => $gNama,
+        ':gnama2' => $gNama,
+        ':gnama3' => $gNama,
+        ':today' => $todayDate,
+        ':today2' => $todayDate
+    ]);
+    $jadwalMengawasToday = $stmtMng->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
+
 $page_title = 'Portal Guru';
 
 // Pengumuman
@@ -183,6 +211,42 @@ include 'header.php';
 </div>
 
 <div class="main-content">
+    <!-- Jadwal Mengawas CBT Hari Ini -->
+    <?php if (!empty($jadwalMengawasToday)): ?>
+    <div style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%); border-radius: 16px; padding: 16px; margin-bottom: 20px; color: white; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-clipboard-user" style="font-size: 1.25rem;"></i>
+                <span style="font-weight: 800; font-size: 0.95rem;">Jadwal Mengawas CBT Hari Ini</span>
+            </div>
+            <span style="background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 800;">
+                <?= count($jadwalMengawasToday) ?> Sesi
+            </span>
+        </div>
+        <div style="font-size: 0.82rem; opacity: 0.95; margin-bottom: 12px;">
+            Hari ini Anda memiliki penugasan mengawas ujian di ruangan berikut:
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <?php foreach ($jadwalMengawasToday as $jm): ?>
+                <div style="background: rgba(255,255,255,0.18); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(4px);">
+                    <div>
+                        <div style="font-weight: 900; font-size: 0.95rem;">
+                            <i class="fa-solid fa-door-open" style="margin-right: 4px;"></i> <?= htmlspecialchars($jm['nama_ruang']) ?> (<?= htmlspecialchars($jm['kode_ruang']) ?>)
+                        </div>
+                        <div style="font-size: 0.74rem; opacity: 0.9; margin-top: 2px;">
+                            <?= htmlspecialchars($jm['nama_topik'] ?: 'Ujian CBT') ?> • <?= htmlspecialchars($jm['lokasi'] ?: 'Gedung Utama') ?>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="background: white; color: #047857; font-weight: 900; font-size: 0.72rem; padding: 4px 10px; border-radius: 8px; display: inline-block;">
+                            <?= htmlspecialchars($jm['sesi_label']) ?><?= !empty($jm['jam_slot']) ? ' (' . htmlspecialchars($jm['jam_slot']) . ')' : '' ?>
+                        </span>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
     <!-- Animasi Liburan Dihapus -->
 
     <!-- 1. Mading Pengumuman (Paling Atas) -->

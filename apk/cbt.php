@@ -230,6 +230,115 @@ $todayDate = date('Y-m-d');
 $nowTs = time();
 $dayOrder = ['Senin' => 1, 'Selasa' => 2, 'Rabu' => 3, 'Kamis' => 4, 'Jumat' => 5, 'Sabtu' => 6, 'Minggu' => 7];
 
+// Ambil topik terdekat yang Aktif
+$nearestTopik = null;
+try {
+    $stmtTp = $core_db->query("
+        SELECT * FROM bs_topik 
+        WHERE status = 'Aktif' 
+        ORDER BY 
+            CASE 
+                WHEN tgl_mulai >= CURDATE() THEN 0 
+                WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
+                ELSE 2 
+            END ASC,
+            ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
+            id DESC
+        LIMIT 1
+    ");
+    if ($stmtTp) {
+        $nearestTopik = $stmtTp->fetch(PDO::FETCH_ASSOC);
+    }
+    if (!$nearestTopik && isset($siakad_db)) {
+        $stmtTpS = $siakad_db->query("
+            SELECT * FROM bs_topik 
+            WHERE status = 'Aktif' 
+            ORDER BY 
+                CASE 
+                    WHEN tgl_mulai >= CURDATE() THEN 0 
+                    WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
+                    ELSE 2 
+                END ASC,
+                ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
+                id DESC
+            LIMIT 1
+        ");
+        if ($stmtTpS) {
+            $nearestTopik = $stmtTpS->fetch(PDO::FETCH_ASSOC);
+        }
+    }
+} catch (\Exception $e) {}
+
+// Ambil jadwal lengkap siswa untuk Topik Terdekat (Untuk Modal Pop-up Jadwal Ujian)
+$jadwalSiswaList = [];
+$nearestTopikId = (int)($nearestTopik['id'] ?? 0);
+try {
+    $sqlJadwalSiswa = "
+        SELECT g.*, 
+               s.jam_mulai, s.jam_selesai, s.label_sesi, s.urutan as sesi_urutan,
+               u.durasi_menit, u.kkm,
+               t.nama_topik, t.tahun_ajaran as topik_ta
+        FROM cbt_jadwal_grid g
+        LEFT JOIN bs_topik t ON g.topik_id = t.id
+        LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
+        LEFT JOIN cbt_jam_slot s ON (
+            (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
+            AND (
+                g.jam_slot = s.label_sesi 
+                OR g.jam_slot = s.urutan
+                OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
+                OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
+            )
+        )
+        WHERE (g.kelas_nama = :kelas OR g.kelas_nama = :tingkat OR g.kelas_nama = :short_tingkat OR g.kelas_nama = 'Semua Kelas' OR :kelas LIKE CONCAT('%', g.kelas_nama, '%'))
+    ";
+    if ($nearestTopikId > 0) {
+        $sqlJadwalSiswa .= " AND (g.topik_id = :topik_id OR g.topik_id IS NULL OR g.topik_id = 0)";
+    }
+    $sqlJadwalSiswa .= " ORDER BY COALESCE(g.tanggal, '2099-12-31') ASC, s.jam_mulai ASC, g.id ASC";
+
+    $stmtJadwalSiswa = $core_db->prepare($sqlJadwalSiswa);
+    $paramsJadwal = [
+        ':kelas' => $siswa['nama_kelas'],
+        ':tingkat' => $tingkat_kelas,
+        ':short_tingkat' => $short_tingkat
+    ];
+    if ($nearestTopikId > 0) {
+        $paramsJadwal[':topik_id'] = $nearestTopikId;
+    }
+    $stmtJadwalSiswa->execute($paramsJadwal);
+    $jadwalSiswaList = $stmtJadwalSiswa->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($jadwalSiswaList) && $nearestTopikId > 0) {
+        $stmtJadwalSiswaFallback = $core_db->prepare("
+            SELECT g.*, 
+                   s.jam_mulai, s.jam_selesai, s.label_sesi, s.urutan as sesi_urutan,
+                   u.durasi_menit, u.kkm,
+                   t.nama_topik, t.tahun_ajaran as topik_ta
+            FROM cbt_jadwal_grid g
+            LEFT JOIN bs_topik t ON g.topik_id = t.id
+            LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
+            LEFT JOIN cbt_jam_slot s ON (
+                (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
+                AND (
+                    g.jam_slot = s.label_sesi 
+                    OR g.jam_slot = s.urutan
+                    OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
+                    OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
+                )
+            )
+            WHERE (g.kelas_nama = :kelas OR g.kelas_nama = :tingkat OR g.kelas_nama = :short_tingkat OR g.kelas_nama = 'Semua Kelas' OR :kelas LIKE CONCAT('%', g.kelas_nama, '%'))
+            ORDER BY COALESCE(g.tanggal, '2099-12-31') ASC, s.jam_mulai ASC, g.id ASC
+        ");
+        $stmtJadwalSiswaFallback->execute([
+            ':kelas' => $siswa['nama_kelas'],
+            ':tingkat' => $tingkat_kelas,
+            ':short_tingkat' => $short_tingkat
+        ]);
+        $jadwalSiswaList = $stmtJadwalSiswaFallback->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (\Exception $e) {}
+
 // Ambil Data Absensi Siswa Hari Ini jika Wajib Absensi Aktif
 $absenHariIniMap = [];
 if ($requireAttendance) {
@@ -394,7 +503,7 @@ foreach ($ujianListRaw as $u) {
                                OR g.kelas_nama LIKE CONCAT('%', :short_tingkat, '%')
                            )
                        )
-                    ORDER BY (g.ujian_id = :uid2) DESC, g.id DESC LIMIT 1
+                    ORDER BY (g.ujian_id = :uid2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, s.jam_mulai ASC, g.id ASC LIMIT 1
                 ");
                 $stmtOther->execute([
                     ':uid' => $u['id'],
@@ -413,6 +522,10 @@ foreach ($ujianListRaw as $u) {
                     $otherDayIndo = $hariIndo[$otherDayName] ?? $otherDayName;
                     $curDayIdx = $dayOrder[$curHari] ?? 0;
                     $targetDayIdx = $dayOrder[$otherDayIndo] ?? 0;
+
+                    $u['upcoming_date'] = $otherGrid['tanggal'] ?? '';
+                    $u['upcoming_time'] = $otherGrid['jam_mulai'] ?? '';
+                    $u['grid_topik_id'] = $otherGrid['topik_id'] ?? 0;
 
                     if (!empty($otherGrid['tanggal'])) {
                         if ($todayDate < $otherGrid['tanggal']) {
@@ -474,6 +587,9 @@ foreach ($ujianListRaw as $u) {
     $u['schedule_state'] = $scheduleState;
     $u['schedule_notice'] = $scheduleNotice;
     $u['jadwal_slot_label'] = $jadwalSlotLabel;
+    $u['upcoming_date'] = $otherGrid['tanggal'] ?? '';
+    $u['upcoming_time'] = $otherGrid['jam_mulai'] ?? '';
+    $u['grid_topik_id'] = $otherGrid['topik_id'] ?? 0;
 
     $allEvaluatedUjian[] = $u;
 }
@@ -554,13 +670,39 @@ if (!$activeOngoingUjian && !$upcomingUjian) {
     }
 }
 
-// Prioritas 5: Cari jadwal mendatang di hari berikutnya
+// Prioritas 5: Cari jadwal mendatang di hari berikutnya (Prioritaskan topik terdekat & tanggal terawal)
 if (!$activeOngoingUjian && !$upcomingUjian && !$completedTodayUjian) {
+    $upcomingCandidates = [];
+    $nearestTopikId = (int)($nearestTopik['id'] ?? 0);
+
     foreach ($allEvaluatedUjian as $uItem) {
         if ($uItem['status_pengerjaan'] !== 'Selesai' && $uItem['schedule_state'] === 'early') {
-            $upcomingUjian = $uItem;
-            break;
+            $upcomingCandidates[] = $uItem;
         }
+    }
+
+    if (!empty($upcomingCandidates)) {
+        usort($upcomingCandidates, function($a, $b) use ($nearestTopikId) {
+            $tA = (int)($a['topik_id'] ?: ($a['grid_topik_id'] ?? 0));
+            $tB = (int)($b['topik_id'] ?: ($b['grid_topik_id'] ?? 0));
+            $isTopikA = ($nearestTopikId > 0 && $tA === $nearestTopikId) ? 0 : 1;
+            $isTopikB = ($nearestTopikId > 0 && $tB === $nearestTopikId) ? 0 : 1;
+            if ($isTopikA !== $isTopikB) {
+                return $isTopikA <=> $isTopikB;
+            }
+
+            $dateA = !empty($a['upcoming_date']) ? $a['upcoming_date'] : '9999-12-31';
+            $dateB = !empty($b['upcoming_date']) ? $b['upcoming_date'] : '9999-12-31';
+            if ($dateA !== $dateB) {
+                return strcmp($dateA, $dateB);
+            }
+
+            $timeA = !empty($a['upcoming_time']) ? $a['upcoming_time'] : '00:00';
+            $timeB = !empty($b['upcoming_time']) ? $b['upcoming_time'] : '00:00';
+            return strcmp($timeA, $timeB);
+        });
+
+        $upcomingUjian = $upcomingCandidates[0];
     }
 }
 
@@ -915,11 +1057,15 @@ include 'header.php';
         <?php endif; ?>
     </div>
 
-    <!-- Action Bar: Tombol Tata Tertib & Mode Jadwal -->
-    <div class="cbt-actions-bar">
+    <!-- Action Bar: Tombol Tata Tertib, Jadwal Ujian & Mode Jadwal -->
+    <div class="cbt-actions-bar" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
         <button type="button" onclick="bukaModalTataTertib()" class="btn-tatatertib-top">
-            <i class="fa-solid fa-file-shield" style="color: #2563eb; font-size: 1rem;"></i>
+            <i class="fa-solid fa-file-shield" style="color: #2563eb; font-size: 0.95rem;"></i>
             <span>Tata Tertib & Larangan Ujian</span>
+        </button>
+        <button type="button" onclick="bukaModalJadwalSiswa()" class="btn-tatatertib-top" style="border-color: #cbd5e1; background: #ffffff;">
+            <i class="fa-solid fa-calendar-days" style="color: #059669; font-size: 0.95rem;"></i>
+            <span>Jadwal Ujian</span>
         </button>
         <?php if ($lockSchedule): ?>
             <span class="badge-sched-mode mode-normal">
@@ -1202,6 +1348,81 @@ include 'header.php';
         </div>
     <?php endif; ?>
 
+    <!-- MODAL: INFORMASI JADWAL UJIAN SISWA -->
+    <div id="modalJadwalSiswa" class="cbt-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+        <div class="cbt-modal-box" style="background: white; border-radius: 20px; max-width: 500px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; overflow: hidden; animation: slideUp 0.25s ease-out; max-height: 85vh; display: flex; flex-direction: column;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 99, 235, 0.2); color: #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; border: 1px solid rgba(56, 189, 248, 0.3);">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 0.98rem; font-weight: 900;">Jadwal Pelaksanaan Ujian</h3>
+                        <p style="margin: 2px 0 0; font-size: 0.72rem; color: #94a3b8;">
+                            <?= htmlspecialchars($nearestTopik['nama_topik'] ?? 'Asesmen CBT') ?> • Kelas <?= htmlspecialchars($siswa['nama_kelas']) ?>
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="tutupModalJadwalSiswa()" style="background: none; border: none; color: #94a3b8; font-size: 1.25rem; cursor: pointer;">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 16px 20px; overflow-y: auto; flex: 1;">
+                <?php if (empty($jadwalSiswaList)): ?>
+                    <div style="text-align: center; padding: 30px 10px; color: #94a3b8;">
+                        <i class="fa-solid fa-calendar-xmark" style="font-size: 2.5rem; margin-bottom: 10px; color: #cbd5e1;"></i>
+                        <div style="font-weight: 800; font-size: 0.92rem; color: #475569;">Belum Ada Jadwal Khusus</div>
+                        <div style="font-size: 0.76rem; margin-top: 4px;">Jadwal ujian untuk kelas Anda akan muncul begitu dirilis oleh panitia.</div>
+                    </div>
+                <?php else: ?>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <?php 
+                        $curGroupDate = '';
+                        foreach ($jadwalSiswaList as $js): 
+                            $tglStr = !empty($js['tanggal']) ? date('d M Y', strtotime($js['tanggal'])) : ($js['hari'] ?? 'Hari Ujian');
+                            $isToday = (!empty($js['tanggal']) && $js['tanggal'] === $todayDate) || ($js['hari'] === $curHari);
+                        ?>
+                            <?php if ($tglStr !== $curGroupDate): $curGroupDate = $tglStr; ?>
+                                <div style="font-size: 0.74rem; font-weight: 800; color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; padding: 5px 12px; border-radius: 8px; margin-top: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                    <span><i class="fa-solid fa-calendar-day"></i> <?= htmlspecialchars($tglStr) ?></span>
+                                    <?php if ($isToday): ?>
+                                        <span style="background: #0284c7; color: white; font-size: 0.65rem; padding: 1px 6px; border-radius: 4px;">HARI INI</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 11px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                                    <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a;">
+                                        <?= htmlspecialchars($js['mapel_nama']) ?>
+                                    </div>
+                                    <span style="font-size: 0.68rem; font-weight: 800; background: #eff6ff; color: #2563eb; padding: 2px 7px; border-radius: 6px; border: 1px solid #bfdbfe; font-family: monospace;">
+                                        <?= htmlspecialchars($js['label_sesi'] ?: ($js['jam_slot'] ?: 'Sesi Ujian')) ?>
+                                    </span>
+                                </div>
+                                <div style="display: flex; gap: 10px; font-size: 0.72rem; color: #64748b; font-weight: 600; flex-wrap: wrap;">
+                                    <?php if (!empty($js['jam_mulai'])): ?>
+                                        <span><i class="fa-solid fa-clock"></i> <?= substr($js['jam_mulai'], 0, 5) ?> - <?= substr($js['jam_selesai'], 0, 5) ?> WIB</span>
+                                    <?php endif; ?>
+                                    <span><i class="fa-solid fa-stopwatch"></i> <?= (int)($js['durasi_menit'] ?: 60) ?> Menit</span>
+                                    <span><i class="fa-solid fa-bullseye"></i> KKM: <?= (int)($js['kkm'] ?: 75) ?></span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: right;">
+                <button type="button" onclick="tutupModalJadwalSiswa()" style="background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; padding: 8px 18px; cursor: pointer;">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL 1: TATA TERTIB & LARANGAN UJIAN CBT -->
     <div id="modalTataTertib" class="cbt-modal-backdrop">
         <div class="cbt-modal-box">
@@ -1325,6 +1546,13 @@ include 'header.php';
 <script>
 let curUjianId = 0;
 let curExpectedToken = '';
+
+function bukaModalJadwalSiswa() {
+    document.getElementById('modalJadwalSiswa').style.display = 'flex';
+}
+function tutupModalJadwalSiswa() {
+    document.getElementById('modalJadwalSiswa').style.display = 'none';
+}
 
 function bukaModalTataTertib() {
     document.getElementById('modalTataTertib').style.display = 'flex';

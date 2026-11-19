@@ -126,8 +126,35 @@ try {
     $dbCore = \App\Core\Database::connect('core');
     require_once __DIR__ . '/app/Controllers/CbtController.php';
     \App\Controllers\CbtController::ensureTables($dbCore);
-    // Pastikan kolom topik_id ada di cbt_jam_slot
+
+    // Pastikan kolom topik_id ada di cbt_jam_slot dan cbt_denah_peserta
     try { $dbCore->exec("ALTER TABLE cbt_jam_slot ADD COLUMN topik_id INT DEFAULT NULL AFTER id, ADD INDEX (topik_id)"); } catch (\Throwable $e) {}
+    try { $dbCore->exec("ALTER TABLE cbt_denah_peserta ADD COLUMN topik_id INT DEFAULT NULL AFTER ruang_id, ADD INDEX (topik_id)"); } catch (\Throwable $e) {}
+
+    // Pastikan tabel cbt_ruang_pengawas sudah dibuat
+    $dbCore->exec("
+        CREATE TABLE IF NOT EXISTS cbt_ruang_pengawas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            topik_id INT NOT NULL,
+            ruang_id INT NOT NULL,
+            sesi_label VARCHAR(50) NOT NULL,
+            jam_slot VARCHAR(50) NULL,
+            guru_id INT NULL,
+            guru_nama VARCHAR(150) NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_topik_ruang_sesi (topik_id, ruang_id, sesi_label),
+            INDEX idx_topik (topik_id),
+            INDEX idx_ruang (ruang_id),
+            INDEX idx_guru (guru_nama)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    // Sinkronkan durasi default 60 menit
+    try {
+        $dbCore->exec("UPDATE cbt_pengaturan SET default_durasi_menit = 60 WHERE default_durasi_menit = 90 OR default_durasi_menit IS NULL");
+        $dbCore->exec("UPDATE cbt_ujian SET durasi_menit = 60 WHERE durasi_menit = 90 OR durasi_menit IS NULL OR durasi_menit = 0");
+    } catch (\Throwable $e) {}
 
     // Bersihkan data absensi tes siswa 414 atau absensi hari ini yang nyangkut
     $dbCore->exec("DELETE FROM cbt_absensi WHERE siswa_id = 414 OR tanggal = CURDATE() OR waktu_scan >= CURDATE()");

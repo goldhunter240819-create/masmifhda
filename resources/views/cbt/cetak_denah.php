@@ -6,8 +6,12 @@ $namaInstitusi = 'MADRASAH ALIYAH MIFTAHUL HUDA';
 $namaKepala = 'Drs. Hamim Hasyim';
 $nipKepala = '-';
 $logoUrl = function_exists('base_url') ? base_url('public/uploads/logo/logo.png') : '/public/uploads/logo/logo.png';
+$faviconUrl = $logoUrl;
 if (class_exists('\App\Core\Branding')) {
-    try { $logoUrl = \App\Core\Branding::getInstitusiLogo(); } catch (\Throwable $e) {}
+    try { 
+        $logoUrl = \App\Core\Branding::getInstitusiLogo(); 
+        $faviconUrl = \App\Core\Branding::getInstitusiFavicon();
+    } catch (\Throwable $e) {}
 }
 $kemenagLogo = function_exists('base_url') ? base_url('public/assets/img/kemenag-logo.png') : '/public/assets/img/kemenag-logo.png';
 
@@ -40,6 +44,7 @@ foreach ($mejaList as $m) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Denah Ruang Ujian - <?= htmlspecialchars($ruang['nama_ruang']) ?></title>
+    <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>

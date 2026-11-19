@@ -6,9 +6,11 @@ $namaInstitusi = 'MADRASAH ALIYAH MIFTAHUL HUDA';
 $namaKepala = 'Drs. Hamim Hasyim';
 $nipKepala = '-';
 $logoUrl = function_exists('base_url') ? base_url('public/uploads/logo/logo.png') : '/public/uploads/logo/logo.png';
+$faviconUrl = $logoUrl;
 if (class_exists('\App\Core\Branding')) {
     try {
         $logoUrl = \App\Core\Branding::getInstitusiLogo();
+        $faviconUrl = \App\Core\Branding::getInstitusiFavicon();
     } catch (\Throwable $e) {}
 }
 $kemenagLogo = function_exists('base_url') ? base_url('public/assets/img/kemenag-logo.png') : '/public/assets/img/kemenag-logo.png';
@@ -38,6 +40,7 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rekap Nilai CBT - <?= htmlspecialchars($mapelNama . ' (' . $kelasLabel . ')') ?></title>
+    <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
