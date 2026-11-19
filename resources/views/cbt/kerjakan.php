@@ -1903,7 +1903,15 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 container.appendChild(wrapper);
 
                 // Gambar garis awal setelah DOM dirender
-                setTimeout(() => {
+                try {
+                if (typeof AndroidOneSignal !== "undefined" && typeof AndroidOneSignal.stopExamLock === "function") {
+                    AndroidOneSignal.stopExamLock();
+                } else if (typeof Android !== "undefined" && typeof Android.stopExamLock === "function") {
+                    Android.stopExamLock();
+                }
+            } catch(e) {}
+
+            setTimeout(() => {
                     drawLines();
                     lucide.createIcons();
                 }, 40);
@@ -2199,10 +2207,27 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 localStorage.removeItem(storageKeyDeadline);
             } catch(e) {}
 
+            try {
+                if (typeof AndroidOneSignal !== "undefined" && typeof AndroidOneSignal.stopExamLock === "function") {
+                    AndroidOneSignal.stopExamLock();
+                } else if (typeof Android !== "undefined" && typeof Android.stopExamLock === "function") {
+                    Android.stopExamLock();
+                }
+            } catch(e) {}
+
             setTimeout(() => {
                 document.getElementById('formSubmitUjian').submit();
             }, 1200);
         }
+
+        // Auto-lock Android Screen Pinning / Kiosk Mode via Native Bridge
+        try {
+            if (typeof AndroidOneSignal !== "undefined" && typeof AndroidOneSignal.startExamLock === "function") {
+                AndroidOneSignal.startExamLock();
+            } else if (typeof Android !== "undefined" && typeof Android.startExamLock === "function") {
+                Android.startExamLock();
+            }
+        } catch(e) {}
 
         // ─── ANTI-CHEAT & DANGER ALARM SYSTEM (MEME AUDIO) ───────────────────
         const isAntiCheat = <?php echo $isAntiCheat ? 'true' : 'false'; ?>;
