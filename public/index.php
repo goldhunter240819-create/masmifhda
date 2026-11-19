@@ -2438,6 +2438,7 @@ $router->add('GET', '/cbt/dashboard', [\App\Controllers\CbtController::class, 'd
 $router->add('GET', '/cbt/topik', [\App\Controllers\CbtController::class, 'topik']);
 $router->add('POST', '/cbt/topik/save', [\App\Controllers\CbtController::class, 'saveTopik']);
 $router->add('POST', '/cbt/topik/delete', [\App\Controllers\CbtController::class, 'deleteTopik']);
+$router->add('POST', '/cbt/topik/reset', [\App\Controllers\CbtController::class, 'resetTopik']);
 $router->add('POST', '/cbt/topik/dates/save', [\App\Controllers\CbtController::class, 'saveTopikDates']);
 $router->add('GET', '/cbt/bank_soal', function() { redirect('/bank_soal'); exit; });
 $router->add('GET', '/cbt/jadwal', [\App\Controllers\CbtController::class, 'jadwal']);

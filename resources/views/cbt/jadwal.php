@@ -3,6 +3,9 @@ $pageTitle = 'Jadwal Ujian CBT';
 $active_menu = 'jadwal';
 
 $selectedHari = $_GET['hari'] ?? 'Semua';
+if ($selectedHari !== 'Semua' && !in_array($selectedHari, $hari_list)) {
+    $selectedHari = 'Semua';
+}
 $displayDays = ($selectedHari === 'Semua') ? $hari_list : [$selectedHari];
 $currentView = $_GET['view'] ?? 'grid';
 ?>
@@ -203,6 +206,16 @@ $currentView = $_GET['view'] ?? 'grid';
                     <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                         <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #22c55e;"></i> Jadwal ujian serentak berhasil diterapkan ke seluruh kelas terpilih!
                     </div>
+                <?php elseif($_GET['msg'] === 'exam_reset'): ?>
+                    <div style="background: #fff7ed; border: 1.5px solid #fdba74; color: #9a3412; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.08);">
+                        <i data-lucide="check-circle" style="width: 22px; height: 22px; color: #ea580c; flex-shrink: 0;"></i>
+                        <div>
+                            <span>Hasil & simulasi pengerjaan siswa pada topik ini berhasil direset (<?php echo (int)($_GET['count'] ?? 0); ?> rekaman pengerjaan dibersihkan). Siswa dapat mengerjakan kembali dari awal.</span>
+                            <div style="font-size: 0.78rem; color: #166534; font-weight: 800; margin-top: 3px;">
+                                🛡️ BANK SOAL 100% AMAN: Butir-butir soal di Bank Soal tidak dihapus dan tetap utuh!
+                            </div>
+                        </div>
+                    </div>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -290,6 +303,9 @@ $currentView = $_GET['view'] ?? 'grid';
 
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <?php if ($selectedTopik): ?>
+                        <button type="button" onclick="openModalResetTopikJadwal(<?php echo $selectedTopikId; ?>, '<?php echo htmlspecialchars(addslashes($selectedTopik['nama_topik'] ?? '')); ?>')" class="e-btn" style="background: #fff7ed; color: #ea580c; font-weight: 800; border: 1.5px solid #fed7aa; padding: 8px 14px; border-radius: 10px; font-size: 0.82rem; display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.08);" title="Reset Hasil Ujian Siswa untuk Simulasi Ulang (Bank Soal Tetap Aman)">
+                            <i data-lucide="rotate-ccw" style="width: 15px; height: 15px; color:#ea580c;"></i> Reset Ujian Topik Ini
+                        </button>
                         <button type="button" onclick="openModalAturTanggalTopik(<?php echo htmlspecialchars(json_encode($selectedTopik), ENT_QUOTES, 'UTF-8'); ?>)" class="e-btn" style="background: #ffffff; color: #0284c7; font-weight: 800; border: 1.5px solid #0ea5e9; padding: 8px 14px; border-radius: 10px; font-size: 0.82rem; display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
                             <i data-lucide="calendar" style="width: 15px; height: 15px; color:#0ea5e9;"></i> Atur / Ubah Tanggal Ujian
                         </button>
@@ -990,6 +1006,53 @@ $currentView = $_GET['view'] ?? 'grid';
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL RESET SIMULASI UJIAN TOPIK                                -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="modalResetTopikJadwal" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('open')">
+    <div style="background: #ffffff; width: 90%; max-width: 480px; border-radius: 20px; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18); border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #9a3412; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-ccw" style="width: 22px; height: 22px; color: #ea580c;"></i>
+                Reset Simulasi Ujian Topik
+            </h3>
+            <button type="button" onclick="document.getElementById('modalResetTopikJadwal').classList.remove('open')" style="background: none; border: none; cursor: pointer; color: #94a3b8;">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="<?php echo base_url('cbt/topik/reset'); ?>">
+            <input type="hidden" name="id" id="resetJadwalTopikId" value="<?php echo $selectedTopikId; ?>">
+            <input type="hidden" name="redirect_to" value="jadwal">
+
+            <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 14px; margin-bottom: 1.25rem;">
+                <div style="font-size: 0.75rem; font-weight: 800; color: #c2410c; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Topik yang Akan Direset:</div>
+                <div id="resetJadwalTopikNama" style="font-size: 1.05rem; font-weight: 900; color: #9a3412;">
+                    <?php echo htmlspecialchars($selectedTopik['nama_topik'] ?? ''); ?>
+                </div>
+            </div>
+
+            <p style="font-size: 0.85rem; color: #475569; line-height: 1.6; margin-bottom: 1rem;">
+                Tindakan ini akan <strong>membersihkan seluruh riwayat pengerjaan siswa, jawaban, perolehan nilai, dan status selesai</strong> pada ujian-ujian di topik ini, sehingga Anda atau siswa dapat melakukan simulasi pengerjaan ulang dari awal.
+            </p>
+
+            <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 10px 14px; margin-bottom: 1.5rem; font-size: 0.82rem; color: #166534; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="shield-check" style="width: 22px; height: 22px; color: #16a34a; flex-shrink: 0;"></i>
+                <span><strong>Bank Soal 100% Aman:</strong> Seluruh butir soal, paket soal, dan kunci jawaban di Bank Soal <u>tidak akan dihapus</u>!</span>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="document.getElementById('modalResetTopikJadwal').classList.remove('open')" class="e-btn e-btn-dark">
+                    Batal
+                </button>
+                <button type="submit" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #fff; border: none; padding: 9px 20px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(234,88,12,0.25);">
+                    <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Ya, Reset Hasil Ujian
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- MODAL 7: ATUR JADWAL SERENTAK GLOBAL SELURUH KELAS              -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div id="modalAturGlobal" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('open')">
@@ -1138,6 +1201,18 @@ $currentView = $_GET['view'] ?? 'grid';
     const HARI_LIST = <?php echo json_encode($hari_list); ?>;
     const GURU_LIST = <?php echo json_encode($guruList); ?>;
     const HARI_TANGGAL_MAP = <?php echo json_encode($hari_tanggal_map ?? []); ?>;
+
+    // ─── Modal Topik: Reset Ujian Topik (Simulasi Ulang) ───
+    function openModalResetTopikJadwal(id, nama) {
+        if (document.getElementById('resetJadwalTopikId')) {
+            document.getElementById('resetJadwalTopikId').value = id;
+        }
+        if (document.getElementById('resetJadwalTopikNama')) {
+            document.getElementById('resetJadwalTopikNama').innerText = nama;
+        }
+        document.getElementById('modalResetTopikJadwal').classList.add('open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
 
     // ─── Modal Global: Atur Jadwal Serentak ───
     function openAturGlobalModal() {

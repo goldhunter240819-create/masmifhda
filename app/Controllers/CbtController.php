@@ -554,30 +554,58 @@ class CbtController {
         // Auto-sinkronkan grid jadwal dengan cbt_ujian & Bank Soal
         self::syncJadwalWithUjian($db, $db_siakad, $selectedTopikId);
 
-        // Pemetaan hari ke tanggal riil berdasarkan tgl_mulai topik
+        // Pemetaan hari ke tanggal riil berdasarkan rentang tgl_mulai & tgl_selesai topik
+        // (Hari sebelum tanggal mulai TIDAK dimasukkan, agar sesuai periode topik ujian riil)
         $hari_tanggal_map = [];
+        $hari_list = [];
+        $bulanIndoShort = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
+            7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
+        ];
+        $namaHariMap = [
+            1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis',
+            5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'
+        ];
+
         if (!empty($selectedTopik['tgl_mulai'])) {
             $startDate = new \DateTime($selectedTopik['tgl_mulai']);
-            $startDayIndex = (int)$startDate->format('N'); // 1 = Senin, 6 = Sabtu, 7 = Minggu
-            $mondayOfStart = clone $startDate;
-            if ($startDayIndex > 1) {
-                $mondayOfStart->modify('-' . ($startDayIndex - 1) . ' days');
+            if (!empty($selectedTopik['tgl_selesai']) && $selectedTopik['tgl_selesai'] >= $selectedTopik['tgl_mulai']) {
+                $endDate = new \DateTime($selectedTopik['tgl_selesai']);
+            } else {
+                // Jika tgl_selesai belum diatur, default sampai akhir pekan (Sabtu) atau minimal 3 hari ke depan
+                $endDate = clone $startDate;
+                $startN = (int)$startDate->format('N');
+                if ($startN < 6) {
+                    $endDate->modify('+' . (6 - $startN) . ' days');
+                }
             }
-            $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            $bulanIndoShort = [
-                1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
-                7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
-            ];
-            foreach ($days as $idx => $d) {
-                $dDate = clone $mondayOfStart;
-                $dDate->modify("+{$idx} days");
-                $mNum = (int)$dDate->format('n');
-                $hari_tanggal_map[$d] = [
-                    'date' => $dDate->format('Y-m-d'),
-                    'label_short' => $dDate->format('d') . ' ' . ($bulanIndoShort[$mNum] ?? ''),
-                    'label_full' => $d . ', ' . $dDate->format('d') . ' ' . ($bulanIndoShort[$mNum] ?? '') . ' ' . $dDate->format('Y')
-                ];
+
+            // Loop HANYA dari tgl_mulai sampai tgl_selesai (hari-hari sebelum tanggal mulai TIDAK dimasukkan)
+            $curr = clone $startDate;
+            while ($curr <= $endDate) {
+                $dayN = (int)$curr->format('N');
+                // Masukkan hari kerja (Senin - Sabtu; jika ujian mencakup Minggu juga disertakan)
+                if ($dayN <= 6 || $curr == $endDate) {
+                    $dName = $namaHariMap[$dayN];
+                    if (!in_array($dName, $hari_list)) {
+                        $hari_list[] = $dName;
+                    }
+                    $mNum = (int)$curr->format('n');
+                    $hari_tanggal_map[$dName] = [
+                        'date' => $curr->format('Y-m-d'),
+                        'label_short' => $curr->format('d') . ' ' . ($bulanIndoShort[$mNum] ?? ''),
+                        'label_full' => $dName . ', ' . $curr->format('d') . ' ' . ($bulanIndoShort[$mNum] ?? '') . ' ' . $curr->format('Y')
+                    ];
+                }
+                $curr->modify('+1 day');
             }
+        }
+
+        // Fallback jika topik belum diset tanggal sama sekali
+        if (empty($hari_list)) {
+            if (empty($hari_list)) {
+            $hari_list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        }
         }
 
         // Ambil daftar kelas real
@@ -689,7 +717,9 @@ class CbtController {
             $jadwal_master[$h][$slot][$gr['kelas_nama']] = $gr;
         }
 
-        $hari_list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        if (empty($hari_list)) {
+            $hari_list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        }
 
         $title = "Jadwal Ujian CBT - MAS MIFTAHUL HUDA";
         ob_start();
@@ -1362,24 +1392,82 @@ class CbtController {
     }
 
     /**
-     * Hapus Topik Ujian
+     * Reset Hasil & Simulasi Pengerjaan Ujian untuk Topik Tertentu
+     * Menghapus record pengerjaan di cbt_peserta sehingga siswa dapat mengulang ujian dari awal
+     * 🛡️ PERLINDUNGAN AMAN: Bank Soal (bs_paket, bs_soal, cbt_soal, bs_topik) TIDAK DISENTUH SAMA SEKALI!
      */
-    public static function deleteTopik() {
+    public static function resetTopik() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
         $db_siakad = $ctx['db_siakad'];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = (int)($_POST['id'] ?? 0);
+            $id = (int)($_POST['id'] ?? ($_POST['topik_id'] ?? 0));
+            $redirectTo = $_POST['redirect_to'] ?? 'topik';
+
             if ($id > 0) {
-                if ($db_siakad) {
-                    try { $db_siakad->prepare("DELETE FROM bs_topik WHERE id = ?")->execute([$id]); } catch (\Exception $e) {}
+                $ujianIds = [];
+
+                // 1. Ambil seluruh ujian dengan topik_id ini
+                try {
+                    $u1 = $db->query("SELECT id FROM cbt_ujian WHERE topik_id = {$id}")->fetchAll(PDO::FETCH_COLUMN);
+                    foreach ($u1 as $uid) {
+                        $ujianIds[] = (int)$uid;
+                    }
+                } catch (\Exception $e) {}
+
+                // 2. Ambil juga ujian yang terjadwal di cbt_jadwal_grid untuk topik ini
+                try {
+                    $u2 = $db->query("SELECT DISTINCT ujian_id FROM cbt_jadwal_grid WHERE topik_id = {$id} AND ujian_id IS NOT NULL AND ujian_id > 0")->fetchAll(PDO::FETCH_COLUMN);
+                    foreach ($u2 as $uid) {
+                        $ujianIds[] = (int)$uid;
+                    }
+                } catch (\Exception $e) {}
+
+                // 3. Fallback: Cari ujian yang memuat nama topik
+                try {
+                    $stmtNama = ($db_siakad ?: $db)->prepare("SELECT nama_topik FROM bs_topik WHERE id = ?");
+                    $stmtNama->execute([$id]);
+                    $namaTopik = $stmtNama->fetchColumn();
+                    if ($namaTopik) {
+                        $stmtMatch = $db->prepare("SELECT id FROM cbt_ujian WHERE nama_ujian LIKE ?");
+                        $stmtMatch->execute(['%' . $namaTopik . '%']);
+                        foreach ($stmtMatch->fetchAll(PDO::FETCH_COLUMN) as $uid) {
+                            $ujianIds[] = (int)$uid;
+                        }
+                    }
+                } catch (\Exception $e) {}
+
+                $ujianIds = array_unique(array_filter($ujianIds));
+
+                $deletedCount = 0;
+                if (!empty($ujianIds)) {
+                    $inIds = implode(',', array_map('intval', $ujianIds));
+
+                    // Hitung jumlah peserta yang akan direset
+                    try {
+                        $deletedCount = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id IN ({$inIds})")->fetchColumn();
+                    } catch (\Exception $e) {}
+
+                    // Hapus data pengerjaan ujian siswa (jawaban, skor nilai, waktu selesai, riwayat)
+                    try {
+                        $db->exec("DELETE FROM cbt_peserta WHERE ujian_id IN ({$inIds})");
+                    } catch (\Exception $e) {}
+
+                    // Kembalikan status ujian ke 'Aktif'
+                    try {
+                        $db->exec("UPDATE cbt_ujian SET status = 'Aktif' WHERE id IN ({$inIds})");
+                    } catch (\Exception $e) {}
                 }
-                try { $db->prepare("DELETE FROM bs_topik WHERE id = ?")->execute([$id]); } catch (\Exception $e) {}
-                try { $db->prepare("DELETE FROM cbt_jadwal_grid WHERE topik_id = ?")->execute([$id]); } catch (\Exception $e) {}
+
+                // Redirect dengan notifikasi sukses
+                $targetUrl = ($redirectTo === 'jadwal') 
+                    ? ('/cbt/jadwal?topik_id=' . $id . '&msg=exam_reset&count=' . $deletedCount)
+                    : ('/cbt/topik?msg=exam_reset&count=' . $deletedCount);
+
+                redirect($targetUrl);
+                exit;
             }
-            redirect('/cbt/topik?msg=deleted');
-            exit;
         }
         redirect('/cbt/topik');
     }

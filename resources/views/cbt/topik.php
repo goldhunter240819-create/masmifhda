@@ -49,6 +49,16 @@ function formatTanggalIndo($dateStr) {
                     <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
                         <i data-lucide="trash-2" style="width: 20px; height: 20px; color: #ef4444;"></i> Topik ujian berhasil dihapus.
                     </div>
+                <?php elseif($_GET['msg'] === 'exam_reset'): ?>
+                    <div style="background: #fff7ed; border: 1.5px solid #fdba74; color: #9a3412; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.08);">
+                        <i data-lucide="check-circle" style="width: 22px; height: 22px; color: #ea580c; flex-shrink: 0;"></i>
+                        <div>
+                            <span>Hasil & simulasi pengerjaan siswa pada topik ini berhasil direset (<?php echo (int)($_GET['count'] ?? 0); ?> pengerjaan dibersihkan). Siswa dapat mengerjakan ujian kembali dari awal.</span>
+                            <div style="font-size: 0.78rem; color: #166534; font-weight: 800; margin-top: 3px;">
+                                🛡️ BANK SOAL 100% AMAN: Seluruh butir soal di Bank Soal tidak dihapus dan tetap utuh!
+                            </div>
+                        </div>
+                    </div>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -299,6 +309,11 @@ function formatTanggalIndo($dateStr) {
                                                     <i data-lucide="calendar" style="width: 13px; height: 13px;"></i> Atur Jadwal
                                                 </a>
 
+                                                <!-- Tombol Reset Ujian Siswa (Untuk Simulasi Ulang, Bank Soal Tetap Aman) -->
+                                                <button type="button" onclick="openModalResetTopik(<?php echo $row['id']; ?>, '<?php echo htmlspecialchars(addslashes($row['nama_topik'])); ?>')" class="e-btn" style="background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; padding: 6px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Reset Hasil & Simulasi Ujian Siswa (Bank Soal Tetap Aman)">
+                                                    <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i> Reset
+                                                </button>
+
                                                 <!-- Edit Topik -->
                                                 <button type="button" onclick='openModalEditTopik(<?php echo json_encode($row); ?>)' class="e-btn" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 9px; border-radius: 8px; font-size: 0.78rem; cursor: pointer;" title="Edit Topik">
                                                     <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i>
@@ -437,7 +452,60 @@ function formatTanggalIndo($dateStr) {
     </div>
 </div>
 
+<!-- Modal Reset Ujian Topik -->
+<div id="modalResetTopik" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#ffffff; width:92%; max-width:480px; border-radius:20px; padding:1.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0; animation:modalPop 0.2s ease-out;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+            <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:#9a3412; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="rotate-ccw" style="width:22px; height:22px; color:#ea580c;"></i>
+                Reset Simulasi Ujian Topik
+            </h3>
+            <button type="button" onclick="closeModalResetTopik()" style="background:none; border:none; cursor:pointer; color:#94a3b8; font-size:1.2rem; line-height:1;">
+                &times;
+            </button>
+        </div>
+
+        <form method="POST" action="<?php echo base_url('cbt/topik/reset'); ?>">
+            <input type="hidden" name="id" id="resetTopikId" value="">
+            <input type="hidden" name="redirect_to" value="topik">
+
+            <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:14px; margin-bottom:1.25rem;">
+                <div style="font-size:0.75rem; font-weight:800; color:#c2410c; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Topik yang Akan Direset:</div>
+                <div id="resetTopikNama" style="font-size:1.05rem; font-weight:900; color:#9a3412;">-</div>
+            </div>
+
+            <p style="font-size:0.85rem; color:#475569; line-height:1.6; margin-bottom:1rem;">
+                Tindakan ini akan <strong>membersihkan seluruh riwayat pengerjaan siswa, jawaban, perolehan nilai, dan status selesai</strong> pada ujian-ujian di topik ini, sehingga Anda atau siswa dapat melakukan simulasi pengerjaan ulang dari awal.
+            </p>
+
+            <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:10px 14px; margin-bottom:1.5rem; font-size:0.82rem; color:#166534; display:flex; align-items:center; gap:10px;">
+                <i data-lucide="shield-check" style="width:22px; height:22px; color:#16a34a; flex-shrink:0;"></i>
+                <span><strong>Bank Soal 100% Aman:</strong> Seluruh butir soal, paket soal, dan kunci jawaban di Bank Soal <u>tidak akan dihapus</u>!</span>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeModalResetTopik()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:9px 18px; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer;">
+                    Batal
+                </button>
+                <button type="submit" style="background:linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color:#fff; border:none; padding:9px 20px; border-radius:10px; font-weight:800; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(234,88,12,0.25);">
+                    <i data-lucide="rotate-ccw" style="width:14px; height:14px;"></i> Ya, Reset Hasil Ujian
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+    function openModalResetTopik(id, nama) {
+        document.getElementById('resetTopikId').value = id;
+        document.getElementById('resetTopikNama').innerText = nama;
+        document.getElementById('modalResetTopik').style.display = 'flex';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function closeModalResetTopik() {
+        document.getElementById('modalResetTopik').style.display = 'none';
+    }
     function openModalTambahTopik() {
         document.getElementById('modalTopikTitle').innerText = 'Tambah Topik Ujian Baru';
         document.getElementById('topikFormId').value = '0';
@@ -511,5 +579,7 @@ function formatTanggalIndo($dateStr) {
     window.onclick = function(event) {
         const m = document.getElementById('modalTopik');
         if (event.target === m) closeModalTopik();
+        const mReset = document.getElementById('modalResetTopik');
+        if (event.target === mReset) closeModalResetTopik();
     }
 </script>

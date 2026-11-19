@@ -876,6 +876,11 @@ class BankSoalController {
             // Panggil service CbtDummyGenerator untuk generate 50 soal ber-stimulus per tingkat (Kelas X, XI, XII)
             \App\Services\CbtDummyGenerator::generateAll($topikId);
 
+            // Panggil service CbtBiologiArabGenerator untuk generate 50 soal Biologi & 50 soal Bahasa Arab per tingkat (Kelas X, XI, XII)
+            if (class_exists('\\App\\Services\\CbtBiologiArabGenerator')) {
+                \App\Services\CbtBiologiArabGenerator::generateAll($topikId);
+            }
+
             // Sinkronkan langsung dengan jadwal dan ujian CBT
             try {
                 \App\Controllers\CbtController::syncJadwalWithUjian($this->db_core, $this->db, $topikId);

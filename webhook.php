@@ -99,6 +99,17 @@ try {
     $output .= "\nPerangkat migration error: " . $e->getMessage() . "\n";
 }
 
+// 3.9 Generate Otomatis 50 Soal Biologi & 50 Soal Bahasa Arab per Tingkat (Kelas X, XI, XII)
+try {
+    if (file_exists(__DIR__ . '/app/Services/CbtBiologiArabGenerator.php')) {
+        require_once __DIR__ . '/app/Services/CbtBiologiArabGenerator.php';
+        $insertedSoal = \App\Services\CbtBiologiArabGenerator::generateAll();
+        $output .= "\nCBT Biologi & Arab questions generated: {$insertedSoal} items.\n";
+    }
+} catch (\Throwable $e) {
+    $output .= "\nCBT Biologi & Arab generator error: " . $e->getMessage() . "\n";
+}
+
 // 4. Catat riwayat ke log
 $logData = date('Y-m-d H:i:s') . "\nResult:\n" . $output . "\n-------------------------\n";
 @file_put_contents(__DIR__ . '/webhook.log', $logData, FILE_APPEND);
