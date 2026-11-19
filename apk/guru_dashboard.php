@@ -260,13 +260,18 @@ include 'header.php';
 
 
 
-    <!-- ================= JADWAL & BANK SOAL BUTTON ================= -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px;">
-        <button onclick="document.getElementById('modal-jadwal').style.display='flex'" style="width: 100%; padding: 14px 10px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; gap: 8px;">
+    <!-- ================= JADWAL, BANK SOAL & HASIL UJIAN BUTTON ================= -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <button onclick="document.getElementById('modal-jadwal').style.display='flex'" style="width: 100%; padding: 13px 10px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; font-size: 0.86rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; gap: 8px;">
             <i class="fa-solid fa-calendar-alt"></i> Jadwal Mengajar
         </button>
-        <a href="bank_soal.php" style="width: 100%; padding: 14px 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; border-radius: 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(2,132,199,0.2); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
+        <a href="bank_soal.php" style="width: 100%; padding: 13px 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; border-radius: 12px; font-size: 0.86rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(2,132,199,0.2); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
             <i class="fa-solid fa-layer-group"></i> Bank Soal Saya
+        </a>
+    </div>
+    <div style="margin-bottom: 25px;">
+        <a href="hasil_ujian.php" style="width: 100%; box-sizing: border-box; padding: 13px 14px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 0.88rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
+            <i class="fa-solid fa-square-poll-vertical"></i> Rekap Hasil Ujian CBT
         </a>
     </div>
 

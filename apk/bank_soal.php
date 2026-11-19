@@ -334,21 +334,21 @@ foreach ($topikList as $tp) {
                                         </div>
                                     </div>
 
-                                    <!-- Tombol Aksi -->
+                                    <!-- Tombol Aksi Mobile APK -->
                                     <div style="display: flex; gap: 8px;">
                                         <?php if ($isLocked): ?>
-                                            <a href="bank_soal_detail.php?id=<?= $pk['id'] ?>" style="flex: 1; text-align: center; background: #f8fafc; color: #475569; padding: 9px 0; border-radius: 8px; font-size: 0.82rem; font-weight: 800; text-decoration: none; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                                <i class="fa-solid fa-eye"></i> Lihat Soal (Terkunci)
+                                            <a href="bank_soal_detail.php?id=<?= $pk['id'] ?>" style="flex: 1.1; text-align: center; background: #f8fafc; color: #475569; padding: 10px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: 800; text-decoration: none; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                                <i class="fa-solid fa-eye"></i> Lihat Soal
                                             </a>
                                         <?php else: ?>
-                                            <a href="bank_soal_detail.php?id=<?= $pk['id'] ?>" style="flex: 1; text-align: center; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; padding: 9px 0; border-radius: 8px; font-size: 0.82rem; font-weight: 800; text-decoration: none; border: none; box-shadow: 0 3px 8px rgba(14, 165, 233, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                            <a href="bank_soal_detail.php?id=<?= $pk['id'] ?>" style="flex: 1.1; text-align: center; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; padding: 10px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: 800; text-decoration: none; border: none; box-shadow: 0 3px 8px rgba(14, 165, 233, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px;">
                                                 <i class="fa-solid fa-pen-to-square"></i> Kelola Butir Soal
                                             </a>
                                         <?php endif; ?>
 
-                                        <!-- Shortcut Web Version -->
-                                        <a href="/bank_soal/daftar_soal?paket_id=<?= $pk['id'] ?>" target="_blank" style="width: 38px; height: 38px; background: #f1f5f9; color: #475569; border-radius: 8px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.85rem; border: 1px solid #e2e8f0;" title="Buka di Versi Web Lengkap">
-                                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                        <!-- Tombol Lihat Hasil Ujian di APK -->
+                                        <a href="hasil_ujian.php?paket_id=<?= $pk['id'] ?>" style="flex: 1; text-align: center; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: 800; text-decoration: none; border: none; box-shadow: 0 3px 8px rgba(16, 185, 129, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                            <i class="fa-solid fa-chart-column"></i> Hasil Ujian
                                         </a>
                                     </div>
                                 </div>
