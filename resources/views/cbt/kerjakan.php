@@ -2399,6 +2399,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         window.addEventListener('load', () => {
             try { if (window.lucide) lucide.createIcons(); } catch(e) {}
         });
+
+        // Ping developer monitoring every 45s while student is in exam
+        setInterval(() => {
+            fetch('/apk/ping_tracker.php').catch(() => {});
+        }, 45000);
     </script>
 </body>
 </html>

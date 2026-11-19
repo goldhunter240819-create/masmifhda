@@ -87,6 +87,26 @@ class AuditLogger
     public static function loginSuccess(string $username, string $role): void
     {
         self::log(self::AUTH, "LOGIN BERHASIL — @{$username}", self::OK, ['role' => $role]);
+
+        // Auto-ping GHTech Developer Tracker agar langsung terdata di Monitoring Dashboard
+        try {
+            $_ghtech_key = "4a0fef55431a38a8ee6317c512178502";
+            $_ip = self::getClientIp();
+            if ($_ip == "127.0.0.1" || $_ip == "::1" || empty($_ip) || $_ip == "0.0.0.0") {
+                if (!isset($_COOKIE["ghtech_vid"])) {
+                    $vid = uniqid("loc_");
+                    setcookie("ghtech_vid", $vid, time() + 86400, "/");
+                    $_ip = $vid;
+                } else {
+                    $_ip = $_COOKIE["ghtech_vid"];
+                }
+            }
+            $cleanUser = trim(str_replace(['@', '[', ']'], '', $username));
+            if (!empty($cleanUser)) {
+                $ctx = stream_context_create(['http' => ['timeout' => 1]]);
+                @file_get_contents("http://localhost/ghtech/api/track.php?key=" . $_ghtech_key . "&ip=" . urlencode($_ip) . "&user=" . urlencode($cleanUser), false, $ctx);
+            }
+        } catch (\Throwable $e) {}
     }
 
     public static function loginFailed(string $username): void
