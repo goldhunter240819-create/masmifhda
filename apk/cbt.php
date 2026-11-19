@@ -102,20 +102,37 @@ $maxTabViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
 $tokenMasaBerlaku = (int)($cbtSettings['token_refresh_interval'] ?? 120);
 if ($tokenMasaBerlaku <= 0) $tokenMasaBerlaku = 120;
 
-// 3. Ambil Info Topik Terdekat yang Aktif
+// 3. Ambil Info Topik Terdekat yang Aktif / Sedang Berlangsung
 $nearestTopik = null;
 try {
     $stmtTp = $core_db->query("
-        SELECT * FROM bs_topik 
-        WHERE status = 'Aktif' 
+        SELECT t.*, 
+               COALESCE(g.grid_count, 0) as grid_count,
+               COALESCE(g.today_count, 0) as today_count
+        FROM bs_topik t
+        LEFT JOIN (
+            SELECT topik_id, 
+                   COUNT(*) as grid_count,
+                   SUM(CASE WHEN tanggal = CURDATE() THEN 1 ELSE 0 END) as today_count
+            FROM cbt_jadwal_grid 
+            GROUP BY topik_id
+        ) g ON t.id = g.topik_id
+        WHERE t.status = 'Aktif' 
         ORDER BY 
             CASE 
-                WHEN tgl_mulai >= CURDATE() THEN 0 
-                WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
-                ELSE 2 
+                -- 0: Topik yang memiliki jadwal ujian hari ini di cbt_jadwal_grid
+                WHEN COALESCE(g.today_count, 0) > 0 THEN 0
+                -- 1: Topik yang saat ini sedang berlangsung rentang tanggalnya (tgl_mulai <= hari ini <= tgl_selesai)
+                WHEN (t.tgl_mulai IS NOT NULL AND t.tgl_mulai != '' AND t.tgl_mulai <= CURDATE() 
+                      AND (t.tgl_selesai IS NULL OR t.tgl_selesai = '' OR t.tgl_selesai >= CURDATE())) THEN 1
+                -- 2: Topik yang memiliki entri grid jadwal tersimpan
+                WHEN COALESCE(g.grid_count, 0) > 0 THEN 2
+                -- 3: Topik mendatang terdekat (tgl_mulai >= CURDATE)
+                WHEN (t.tgl_mulai IS NOT NULL AND t.tgl_mulai != '' AND t.tgl_mulai >= CURDATE()) THEN 3
+                ELSE 4
             END ASC,
-            ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
-            id DESC
+            ABS(DATEDIFF(COALESCE(NULLIF(t.tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
+            t.id DESC
         LIMIT 1
     ");
     if ($stmtTp) {
@@ -127,8 +144,9 @@ try {
             WHERE status = 'Aktif' 
             ORDER BY 
                 CASE 
-                    WHEN tgl_mulai >= CURDATE() THEN 0 
-                    WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_selesai >= CURDATE()) THEN 1 
+                    WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_mulai <= CURDATE() 
+                          AND (tgl_selesai IS NULL OR tgl_selesai = '' OR tgl_selesai >= CURDATE())) THEN 0
+                    WHEN (tgl_mulai IS NOT NULL AND tgl_mulai != '' AND tgl_mulai >= CURDATE()) THEN 1 
                     ELSE 2 
                 END ASC,
                 ABS(DATEDIFF(COALESCE(NULLIF(tgl_mulai, ''), CURDATE()), CURDATE())) ASC,
@@ -254,7 +272,7 @@ try {
     if ($nearestTopikId > 0) {
         $sqlJadwalSiswa .= " AND (g.topik_id = :topik_id OR g.topik_id IS NULL OR g.topik_id = 0)";
     }
-    $sqlJadwalSiswa .= " ORDER BY COALESCE(g.tanggal, '2099-12-31') ASC, g.jam_slot ASC, g.id ASC";
+    $sqlJadwalSiswa .= " ORDER BY COALESCE(g.tanggal, '2099-12-31') ASC, FIELD(g.hari, 'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu') ASC, g.jam_slot ASC, g.id ASC";
 
     $stmtJadwalSiswa = $core_db->prepare($sqlJadwalSiswa);
     $paramsJadwal = [
@@ -295,8 +313,8 @@ try {
             }
         }
 
-        // Jika slot istirahat, jangan jadikan sebagai jadwal ujian
-        if ($matchedSlot && !empty($matchedSlot['is_istirahat'])) {
+        // Jika slot istirahat atau nama mapel kosong, jangan jadikan sebagai jadwal ujian
+        if (($matchedSlot && !empty($matchedSlot['is_istirahat'])) || stripos($rg['mapel_nama'] ?? '', 'istirahat') !== false || empty(trim($rg['mapel_nama'] ?? ''))) {
             continue;
         }
 
@@ -1103,6 +1121,44 @@ include 'header.php';
         <?php endif; ?>
     </div>
 
+    <!-- Banner Info Topik Ujian & Jadwal Hari Ini (Jadwal Ujian Aktif Siswa) -->
+    <?php if (!empty($nearestTopik)): ?>
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #a7f3d0; border-radius: 16px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.06);">
+            <div style="min-width: 0; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap;">
+                    <span style="background: #10b981; color: white; font-size: 0.62rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        TOPIK AKTIF
+                    </span>
+                    <?php if (!empty($nearestTopik['tgl_mulai']) && !empty($nearestTopik['tgl_selesai'])): ?>
+                        <span style="font-size: 0.68rem; color: #047857; font-weight: 700;">
+                            <?= date('d M', strtotime($nearestTopik['tgl_mulai'])) ?> - <?= date('d M Y', strtotime($nearestTopik['tgl_selesai'])) ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <div style="font-size: 0.94rem; font-weight: 900; color: #065f46; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <?= htmlspecialchars($nearestTopik['nama_topik']) ?>
+                </div>
+                <div style="font-size: 0.72rem; color: #059669; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                    <span><i class="fa-solid fa-calendar-day"></i> Hari ini: <b><?= $curHari ?>, <?= date('d M Y') ?></b></span>
+                    <?php 
+                    $todayCount = 0;
+                    foreach ($jadwalSiswaList as $jsItem) {
+                        if ((!empty($jsItem['tanggal']) && $jsItem['tanggal'] === $todayDate) || ($jsItem['hari'] === $curHari)) {
+                            $todayCount++;
+                        }
+                    }
+                    if ($todayCount > 0): ?>
+                        • <span><b><?= $todayCount ?> Mapel</b> Terjadwal</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <button type="button" onclick="bukaModalJadwalSiswa()" style="background: #059669; color: white; border: none; border-radius: 10px; padding: 8px 14px; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.25);">
+                <i class="fa-solid fa-calendar-week"></i>
+                <span>Jadwal</span>
+            </button>
+        </div>
+    <?php endif; ?>
+
     <!-- Banner Status Asesmen Berlangsung -->
     <?php if ($activeOngoingUjian): ?>
         <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); border: 1px solid rgba(56, 189, 248, 0.3);">
@@ -1412,15 +1468,37 @@ include 'header.php';
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <?php 
                         $curGroupDate = '';
+                        $indoDaysMap = [
+                            'Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu',
+                            'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'
+                        ];
                         foreach ($jadwalSiswaList as $js): 
-                            $tglStr = !empty($js['tanggal']) ? date('d M Y', strtotime($js['tanggal'])) : ($js['hari'] ?? 'Hari Ujian');
+                            $hariName = !empty($js['hari']) ? trim($js['hari']) : (!empty($js['tanggal']) ? ($indoDaysMap[date('l', strtotime($js['tanggal']))] ?? '') : '');
+                            $tglFmt = !empty($js['tanggal']) ? date('d M Y', strtotime($js['tanggal'])) : '';
+                            
+                            $headerGroup = '';
+                            if ($hariName && $tglFmt) {
+                                $headerGroup = $hariName . ' (' . $tglFmt . ')';
+                            } elseif ($hariName) {
+                                $headerGroup = $hariName;
+                            } elseif ($tglFmt) {
+                                $headerGroup = $tglFmt;
+                            } else {
+                                $headerGroup = 'Jadwal Ujian';
+                            }
+
                             $isToday = (!empty($js['tanggal']) && $js['tanggal'] === $todayDate) || ($js['hari'] === $curHari);
                         ?>
-                            <?php if ($tglStr !== $curGroupDate): $curGroupDate = $tglStr; ?>
-                                <div style="font-size: 0.74rem; font-weight: 800; color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; padding: 5px 12px; border-radius: 8px; margin-top: 6px; display: flex; align-items: center; justify-content: space-between;">
-                                    <span><i class="fa-solid fa-calendar-day"></i> <?= htmlspecialchars($tglStr) ?></span>
+                            <?php if ($headerGroup !== $curGroupDate): $curGroupDate = $headerGroup; ?>
+                                <div style="font-size: 0.8rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1.5px solid #7dd3fc; padding: 7px 14px; border-radius: 10px; margin-top: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                                    <span style="display: flex; align-items: center; gap: 7px;">
+                                        <i class="fa-solid fa-calendar-day" style="color: #0284c7;"></i> 
+                                        <span><?= htmlspecialchars($headerGroup) ?></span>
+                                    </span>
                                     <?php if ($isToday): ?>
-                                        <span style="background: #0284c7; color: white; font-size: 0.65rem; padding: 1px 6px; border-radius: 4px;">HARI INI</span>
+                                        <span style="background: #0284c7; color: white; font-size: 0.65rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 1px 3px rgba(2,132,199,0.4);">
+                                            HARI INI
+                                        </span>
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
@@ -1508,27 +1586,27 @@ include 'header.php';
     </div>
 
     <!-- MODAL 2: KONFIRMASI MULAI UJIAN + TOKEN INPUT -->
-    <div id="modalStartExam" class="cbt-modal-backdrop">
-        <div class="cbt-modal-box" style="max-height: 94vh; max-width: 395px; border-radius: 20px;">
+    <div id="modalStartExam" class="cbt-modal-backdrop" style="align-items: center; justify-content: center; overflow-y: auto;">
+        <div class="cbt-modal-box" style="max-height: 90vh; max-height: 90dvh; max-width: 395px; border-radius: 20px; display: flex; flex-direction: column;">
             <!-- Modal Header Compact -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 13px 18px; display: flex; align-items: center; justify-content: space-between; color: #ffffff;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 34px; height: 34px; background: rgba(255, 255, 255, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; color: #ffffff; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 32px; height: 32px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
                         🚀
                     </div>
                     <div>
-                        <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; line-height: 1.2;">Mulai Ujian CBT</h3>
-                        <p style="margin: 2px 0 0; font-size: 0.72rem; color: #bfdbfe;">Masukkan token ujian untuk membuka soal</p>
+                        <h3 style="margin: 0; font-size: 0.94rem; font-weight: 800; line-height: 1.2;">Mulai Ujian CBT</h3>
+                        <p style="margin: 2px 0 0; font-size: 0.7rem; color: #bfdbfe;">Masukkan token ujian untuk membuka soal</p>
                     </div>
                 </div>
-                <button type="button" onclick="tutupModalMulai()" style="background: rgba(255,255,255,0.18); border: none; color: white; width: 28px; height: 28px; border-radius: 8px; font-size: 1.15rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+                <button type="button" onclick="tutupModalMulai()" style="background: rgba(255,255,255,0.18); border: none; color: white; width: 26px; height: 26px; border-radius: 6px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
             </div>
 
-            <!-- Modal Body Compact -->
-            <div style="padding: 12px 16px; overflow-y: auto;">
+            <!-- Modal Body Scrollable -->
+            <div style="padding: 12px 16px; overflow-y: auto; flex: 1;">
                 <!-- Info Paket Ujian Ringkas -->
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px;">
-                    <div id="modalExamTitle" style="font-size: 0.84rem; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; margin-bottom: 8px;">
+                    <div id="modalExamTitle" style="font-size: 0.82rem; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
                     <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.68rem; font-weight: 700;">
                         <span id="modalExamMapel" style="background: #eff6ff; color: #2563eb; padding: 2px 6px; border-radius: 5px; border: 1px solid #dbeafe;">-</span>
                         <span id="modalExamDurasi" style="background: #f0fdf4; color: #16a34a; padding: 2px 6px; border-radius: 5px; border: 1px solid #dcfce7;">-</span>
@@ -1537,43 +1615,43 @@ include 'header.php';
                 </div>
 
                 <!-- Box Token Ujian Resmi (Bisa diklik untuk auto-salin/isi!) -->
-                <div onclick="autoFillToken()" title="Klik untuk otomatis mengisi token" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 12px; padding: 8px 14px; margin-bottom: 10px; text-align: center; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); border: 1.5px solid #334155;">
-                    <div style="font-size: 0.66rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px;">
-                        KODE TOKEN UJIAN RESMI <span style="font-size: 0.62rem; color: #38bdf8; font-weight: 600; text-transform: none;">(Klik untuk salin)</span>
+                <div onclick="autoFillToken()" title="Klik untuk otomatis mengisi token" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 12px; padding: 7px 12px; margin-bottom: 8px; text-align: center; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); border: 1.5px solid #334155;">
+                    <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                        KODE TOKEN UJIAN RESMI <span style="font-size: 0.6rem; color: #38bdf8; font-weight: 600; text-transform: none;">(Klik untuk isi)</span>
                     </div>
-                    <div id="modalExamToken" style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 1.6rem; font-weight: 900; letter-spacing: 5px; color: #38bdf8; margin: 2px 0 1px; text-shadow: 0 2px 8px rgba(56, 189, 248, 0.35); font-variant-numeric: slashed-zero;">
+                    <div id="modalExamToken" style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 1.5rem; font-weight: 900; letter-spacing: 4px; color: #38bdf8; margin: 1px 0; text-shadow: 0 2px 8px rgba(56, 189, 248, 0.35); font-variant-numeric: slashed-zero;">
                         ------
                     </div>
-                    <div id="tokenCharHint" style="display: none; font-size: 0.68rem; font-weight: 800; color: #facc15; margin: 2px auto 0; background: rgba(234, 179, 8, 0.15); padding: 2px 8px; border-radius: 20px; border: 1px solid rgba(234, 179, 8, 0.3);">
+                    <div id="tokenCharHint" style="display: none; font-size: 0.65rem; font-weight: 800; color: #facc15; margin: 2px auto 0; background: rgba(234, 179, 8, 0.15); padding: 1px 6px; border-radius: 20px; border: 1px solid rgba(234, 179, 8, 0.3);">
                         <i class="fa-solid fa-circle-info"></i> Memakai Huruf <b>O</b> (Bukan Nol 0)
                     </div>
                 </div>
 
                 <!-- Form Input Token Siswa -->
-                <div style="margin-bottom: 8px;">
-                    <label for="inputTokenUjian" style="display: block; font-size: 0.74rem; font-weight: 800; color: #334155; margin-bottom: 4px;">
+                <div style="margin-bottom: 6px;">
+                    <label for="inputTokenUjian" style="display: block; font-size: 0.72rem; font-weight: 800; color: #334155; margin-bottom: 3px;">
                         Ketikkan / Konfirmasi Token di Bawah:
                     </label>
-                    <input type="text" id="inputTokenUjian" placeholder="Ketik Token" maxlength="10" autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 9px; border-radius: 10px; border: 2px solid #cbd5e1; text-align: center; text-transform: uppercase; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 1.15rem; font-weight: 900; letter-spacing: 5px; color: #0f172a; outline: none; transition: border-color 0.2s; font-variant-numeric: slashed-zero;">
-                    <div id="tokenErrorMsg" style="display: none; color: #dc2626; font-size: 0.7rem; font-weight: 800; margin-top: 3px; text-align: center;">
+                    <input type="text" id="inputTokenUjian" placeholder="Ketik Token" maxlength="10" autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 8px; border: 2px solid #cbd5e1; text-align: center; text-transform: uppercase; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 1.1rem; font-weight: 900; letter-spacing: 4px; color: #0f172a; outline: none; transition: border-color 0.2s; font-variant-numeric: slashed-zero;">
+                    <div id="tokenErrorMsg" style="display: none; color: #dc2626; font-size: 0.68rem; font-weight: 800; margin-top: 2px; text-align: center;">
                         <i class="fa-solid fa-circle-exclamation"></i> Token tidak cocok! Silakan cek kembali.
                     </div>
                 </div>
 
-                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 8px; font-size: 0.68rem; color: #92400e; line-height: 1.35; display: flex; gap: 5px; align-items: flex-start;">
-                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.75rem; margin-top: 1px; flex-shrink: 0; color: #d97706;"></i>
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 5px 8px; font-size: 0.66rem; color: #92400e; line-height: 1.3; display: flex; gap: 5px; align-items: flex-start;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.72rem; margin-top: 1px; flex-shrink: 0; color: #d97706;"></i>
                     <div>
                         <b>Perhatian:</b> Waktu ujian langsung dihitung mundur begitu tombol Mulai ditekan.
                     </div>
                 </div>
             </div>
 
-            <!-- Modal Footer Buttons -->
-            <div style="padding: 10px 16px 14px; display: flex; gap: 8px; border-top: 1px solid #f1f5f9;">
-                <button type="button" onclick="tutupModalMulai()" style="flex: 1; padding: 10px; border-radius: 9px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 800; font-size: 0.8rem; cursor: pointer;">
+            <!-- Modal Footer Buttons (Never shrinks) -->
+            <div style="padding: 9px 16px 12px; display: flex; gap: 8px; border-top: 1px solid #f1f5f9; flex-shrink: 0; background: #ffffff;">
+                <button type="button" onclick="tutupModalMulai()" style="flex: 1; padding: 9px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 800; font-size: 0.78rem; cursor: pointer;">
                     Batal
                 </button>
-                <button type="button" onclick="verifikasiDanMulaiUjian()" style="flex: 1.3; padding: 10px; border-radius: 9px; border: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 900; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);">
+                <button type="button" onclick="verifikasiDanMulaiUjian()" style="flex: 1.3; padding: 9px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 900; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);">
                     <span>Mulai Ujian</span> <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>

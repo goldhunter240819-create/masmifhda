@@ -1629,30 +1629,55 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     row.innerHTML = `
                         <td style="padding:12px 14px; color:#1e293b; font-weight:600; line-height:1.5;">${bTeks}</td>
                         <td style="padding:8px 10px; text-align:center; border-left:1px solid #e2e8f0;">
-                            <button type="button" class="btn" style="padding:7px 14px; font-size:0.82rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isB ? '#16a34a' : '#ffffff'}; color:${isB ? '#ffffff' : '#16a34a'}; border:1.5px solid #86efac; box-shadow:${isB ? '0 2px 4px rgba(22,163,74,0.3)' : 'none'};">
+                            <div role="button" class="bs-btn-benar" style="display:inline-block; padding:7px 14px; font-size:0.82rem; font-weight:800; border-radius:8px; cursor:pointer; user-select:none; transition:all 0.15s; background:${isB ? '#16a34a' : '#ffffff'}; color:${isB ? '#ffffff' : '#16a34a'}; border:1.5px solid #86efac; box-shadow:${isB ? '0 2px 4px rgba(22,163,74,0.3)' : 'none'};">
                                 ${isB ? '✓ Benar' : 'Benar'}
-                            </button>
+                            </div>
                         </td>
                         <td style="padding:8px 10px; text-align:center; border-left:1px solid #e2e8f0;">
-                            <button type="button" class="btn" style="padding:7px 14px; font-size:0.82rem; font-weight:800; border-radius:8px; cursor:pointer; transition:all 0.2s; background:${isS ? '#dc2626' : '#ffffff'}; color:${isS ? '#ffffff' : '#dc2626'}; border:1.5px solid #fca5a5; box-shadow:${isS ? '0 2px 4px rgba(220,38,38,0.3)' : 'none'};">
+                            <div role="button" class="bs-btn-salah" style="display:inline-block; padding:7px 14px; font-size:0.82rem; font-weight:800; border-radius:8px; cursor:pointer; user-select:none; transition:all 0.15s; background:${isS ? '#dc2626' : '#ffffff'}; color:${isS ? '#ffffff' : '#dc2626'}; border:1.5px solid #fca5a5; box-shadow:${isS ? '0 2px 4px rgba(220,38,38,0.3)' : 'none'};">
                                 ${isS ? '✕ Salah' : 'Salah'}
-                            </button>
+                            </div>
                         </td>
                     `;
-                    row.querySelectorAll('button')[0].onclick = () => {
-                        curAns[bIdx] = 'Benar';
+                    const bBtn = row.querySelector('.bs-btn-benar');
+                    const sBtn = row.querySelector('.bs-btn-salah');
+
+                    function selectBsAnswer(choice) {
+                        isNavigatingQuestion = true;
+                        lastUserActionTime = Date.now();
+                        setTimeout(() => { isNavigatingQuestion = false; }, 1500);
+
+                        curAns[bIdx] = choice;
                         userAnswers[idx] = { ...curAns };
-                        loadQuestion(idx);
+
+                        if (choice === 'Benar') {
+                            bBtn.style.background = '#16a34a';
+                            bBtn.style.color = '#ffffff';
+                            bBtn.style.boxShadow = '0 2px 4px rgba(22,163,74,0.3)';
+                            bBtn.textContent = '✓ Benar';
+
+                            sBtn.style.background = '#ffffff';
+                            sBtn.style.color = '#dc2626';
+                            sBtn.style.boxShadow = 'none';
+                            sBtn.textContent = 'Salah';
+                        } else {
+                            sBtn.style.background = '#dc2626';
+                            sBtn.style.color = '#ffffff';
+                            sBtn.style.boxShadow = '0 2px 4px rgba(220,38,38,0.3)';
+                            sBtn.textContent = '✕ Salah';
+
+                            bBtn.style.background = '#ffffff';
+                            bBtn.style.color = '#16a34a';
+                            bBtn.style.boxShadow = 'none';
+                            bBtn.textContent = 'Benar';
+                        }
+
                         renderPalette();
                         saveCurrentAnswers(true);
-                    };
-                    row.querySelectorAll('button')[1].onclick = () => {
-                        curAns[bIdx] = 'Salah';
-                        userAnswers[idx] = { ...curAns };
-                        loadQuestion(idx);
-                        renderPalette();
-                        saveCurrentAnswers(true);
-                    };
+                    }
+
+                    bBtn.onclick = () => selectBsAnswer('Benar');
+                    sBtn.onclick = () => selectBsAnswer('Salah');
                     tbody.appendChild(row);
                 });
                 container.appendChild(table);
@@ -1906,13 +1931,6 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 container.appendChild(wrapper);
 
                 // Gambar garis awal setelah DOM dirender
-                try {
-                if (typeof AndroidOneSignal !== "undefined" && typeof AndroidOneSignal.stopExamLock === "function") {
-                    AndroidOneSignal.stopExamLock();
-                } else if (typeof Android !== "undefined" && typeof Android.stopExamLock === "function") {
-                    Android.stopExamLock();
-                }
-            } catch(e) {}
 
             setTimeout(() => {
                     drawLines();
