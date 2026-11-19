@@ -18,6 +18,7 @@ $paket_id = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
 $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
 $selected_kelas = trim($_GET['kelas'] ?? '');
 $search = trim($_GET['q'] ?? '');
+$sort = trim($_GET['sort'] ?? 'nilai_desc');
 
 // Action Buka Kunci Siswa (Reset Pelanggaran / Izinkan Lanjut)
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'unlock') {
@@ -173,14 +174,64 @@ if (!empty($matchedUjianIds)) {
     try {
         $inIds = implode(',', $matchedUjianIds);
         
-        // Ambil daftar kelas unik untuk filter tabs
+        // Ambil daftar kelas rombel spesifik & kelas jauh yang relevan dengan paket
+        $candidateKelas = [];
+        $pktTingkat = trim($paket['kelas_nama'] ?? '');
+        $pktSasaran = trim($paket['kelas_sasaran'] ?? '');
+
+        // Kelas dari database Siakad/Core
+        try {
+            $stmtAllKls = $db->query("SELECT nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC");
+            $allRombel = $stmtAllKls->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($allRombel as $rk) {
+                $nKls = trim($rk['nama_kelas']);
+                if (stripos($pktTingkat, 'XII') !== false || stripos($pktTingkat, '12') !== false) {
+                    if (str_starts_with($nKls, 'XII')) $candidateKelas[] = $nKls;
+                } elseif (stripos($pktTingkat, 'XI') !== false || stripos($pktTingkat, '11') !== false) {
+                    if (str_starts_with($nKls, 'XI')) $candidateKelas[] = $nKls;
+                } elseif (stripos($pktTingkat, 'X') !== false || stripos($pktTingkat, '10') !== false) {
+                    if (str_starts_with($nKls, 'X ') || str_starts_with($nKls, 'X-') || str_starts_with($nKls, 'X.')) $candidateKelas[] = $nKls;
+                } else {
+                    $candidateKelas[] = $nKls;
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // Tambahkan rombel dari kelas_sasaran jika ada
+        if (!empty($pktSasaran)) {
+            $parts = explode(',', $pktSasaran);
+            foreach ($parts as $pt) {
+                $pt = trim($pt);
+                if (!empty($pt)) $candidateKelas[] = $pt;
+            }
+        }
+
+        // Tambahkan Kelas Jauh sesuai tingkatan
+        if (stripos($pktTingkat, 'XII') !== false || stripos($pktTingkat, '12') !== false) {
+            $candidateKelas[] = 'XII - Kelas Jauh';
+        } elseif (stripos($pktTingkat, 'XI') !== false || stripos($pktTingkat, '11') !== false) {
+            $candidateKelas[] = 'XI - Kelas Jauh';
+        } elseif (stripos($pktTingkat, 'X') !== false || stripos($pktTingkat, '10') !== false) {
+            $candidateKelas[] = 'X - Kelas Jauh';
+        } else {
+            $candidateKelas[] = 'X - Kelas Jauh';
+            $candidateKelas[] = 'XI - Kelas Jauh';
+            $candidateKelas[] = 'XII - Kelas Jauh';
+        }
+
+        // Tambahkan kelas riil dari cbt_peserta
         $stmtKls = $core_db->query("
             SELECT DISTINCT kelas_nama 
             FROM cbt_peserta 
             WHERE ujian_id IN ($inIds) AND kelas_nama IS NOT NULL AND kelas_nama != ''
-            ORDER BY kelas_nama ASC
         ");
-        $kelasList = $stmtKls->fetchAll(PDO::FETCH_COLUMN);
+        $realKls = $stmtKls->fetchAll(PDO::FETCH_COLUMN);
+
+        $mergedKls = array_unique(array_filter(array_merge($candidateKelas, $realKls)));
+        usort($mergedKls, function($a, $b) {
+            return strnatcasecmp($a, $b);
+        });
+        $kelasList = array_values($mergedKls);
 
         $sqlPeserta = "
             SELECT p.*, u.nama_ujian, u.kode_ujian, u.mapel_nama as ujian_mapel, u.kkm as kkm_ujian
@@ -200,7 +251,28 @@ if (!empty($matchedUjianIds)) {
             $paramsP[':q'] = "%{$search}%";
         }
 
-        $sqlPeserta .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+                // Custom sorting
+        switch ($sort) {
+            case 'nilai_asc':
+                $sqlPeserta .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir ASC, p.nama_siswa ASC";
+                break;
+            case 'nama_asc':
+                $sqlPeserta .= " ORDER BY p.nama_siswa ASC, p.nilai_akhir DESC";
+                break;
+            case 'nama_desc':
+                $sqlPeserta .= " ORDER BY p.nama_siswa DESC, p.nilai_akhir DESC";
+                break;
+            case 'nis_asc':
+                $sqlPeserta .= " ORDER BY p.nis ASC, p.nama_siswa ASC";
+                break;
+            case 'waktu_desc':
+                $sqlPeserta .= " ORDER BY (p.waktu_selesai IS NOT NULL) DESC, p.waktu_selesai DESC, p.nilai_akhir DESC";
+                break;
+            case 'nilai_desc':
+            default:
+                $sqlPeserta .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+                break;
+        }
         $stmtPeserta = $core_db->prepare($sqlPeserta);
         $stmtPeserta->execute($paramsP);
         $pesertaList = $stmtPeserta->fetchAll(PDO::FETCH_ASSOC);
@@ -408,9 +480,9 @@ include 'header.php';
         <div class="hasil-badge-top">
             <i class="fa-solid fa-square-poll-vertical"></i> Evaluasi CBT Mobile
         </div>
-        <button type="button" onclick="window.print()" class="btn-back-round" title="Cetak Rekap Nilai" style="border: none; cursor: pointer;">
+        <a href="cetak_hasil.php?paket_id=<?= $paket_id ?>&ujian_id=<?= $ujian_id ?>&kelas=<?= urlencode($selected_kelas) ?>&sort=<?= urlencode($sort) ?>&q=<?= urlencode($search) ?>" target="_blank" class="btn-back-round" title="Cetak Rekap Nilai Resmi Kemenag A4">
             <i class="fa-solid fa-print"></i>
-        </button>
+        </a>
     </div>
 
     <div>
@@ -500,19 +572,31 @@ include 'header.php';
             Cari
         </button>
     </form>
+    
+    <!-- Pilihan Urutan Siswa -->
+    <div style="margin-top: 8px;">
+        <select onchange="location.href='hasil_ujian.php?paket_id=<?= $paket_id ?>&ujian_id=<?= $ujian_id ?>&kelas=<?= urlencode($selected_kelas) ?>&q=<?= urlencode($search) ?>&sort=' + this.value" style="width: 100%; box-sizing: border-box; background: white; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 8px 12px; font-size: 0.78rem; font-weight: 700; color: #1e293b; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <option value="nilai_desc" <?= ($sort === 'nilai_desc') ? 'selected' : '' ?>>📊 Urutan: Nilai Tertinggi (Rank)</option>
+            <option value="nilai_asc" <?= ($sort === 'nilai_asc') ? 'selected' : '' ?>>📉 Urutan: Nilai Terendah</option>
+            <option value="nama_asc" <?= ($sort === 'nama_asc') ? 'selected' : '' ?>>🔤 Urutan: Nama Siswa (A - Z)</option>
+            <option value="nama_desc" <?= ($sort === 'nama_desc') ? 'selected' : '' ?>>🔤 Urutan: Nama Siswa (Z - A)</option>
+            <option value="nis_asc" <?= ($sort === 'nis_asc') ? 'selected' : '' ?>>🔢 Urutan: Nomor Peserta / NIS</option>
+            <option value="waktu_desc" <?= ($sort === 'waktu_desc') ? 'selected' : '' ?>>⏱️ Urutan: Waktu Selesai (Terbaru)</option>
+        </select>
+    </div>
 </div>
 
 <!-- Filter Pills Kelas -->
 <?php if (!empty($kelasList)): ?>
     <div class="filter-pills">
-        <a href="hasil_ujian.php?paket_id=<?= $paket_id ?>&q=<?= urlencode($search) ?>" class="pill-item <?= empty($selected_kelas) ? 'active' : '' ?>">
+        <a href="hasil_ujian.php?paket_id=<?= $paket_id ?>&sort=<?= urlencode($sort) ?>&q=<?= urlencode($search) ?>" class="pill-item <?= empty($selected_kelas) ? 'active' : '' ?>">
             Semua Kelas (<?= $totalPeserta ?>)
         </a>
         <?php foreach ($kelasList as $kName): ?>
             <?php
             $cntKls = count(array_filter($pesertaList, fn($p) => $p['kelas_nama'] === $kName));
             ?>
-            <a href="hasil_ujian.php?paket_id=<?= $paket_id ?>&kelas=<?= urlencode($kName) ?>&q=<?= urlencode($search) ?>" class="pill-item <?= ($selected_kelas === $kName) ? 'active' : '' ?>">
+            <a href="hasil_ujian.php?paket_id=<?= $paket_id ?>&kelas=<?= urlencode($kName) ?>&sort=<?= urlencode($sort) ?>&q=<?= urlencode($search) ?>" class="pill-item <?= ($selected_kelas === $kName) ? 'active' : '' ?>">
                 <?= htmlspecialchars($kName) ?>
             </a>
         <?php endforeach; ?>
@@ -565,8 +649,10 @@ include 'header.php';
                             <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                 <span>NIS: <b><?= htmlspecialchars($p['nis'] ?: '-') ?></b></span>
                                 <span>&bull;</span>
-                                <span style="background: #eff6ff; color: #1d4ed8; padding: 1px 6px; border-radius: 4px; font-weight: 700;">
+                                <?php $isKJ = (stripos($p['kelas_nama'] ?? '', 'jauh') !== false); ?>
+                                <span style="<?= $isKJ ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;' : 'background: #eff6ff; color: #1d4ed8;' ?> padding: 1px 6px; border-radius: 4px; font-weight: 700;">
                                     <?= htmlspecialchars($p['kelas_nama'] ?: 'Umum') ?>
+                                    <?= $isKJ ? ' &bull; KJ' : '' ?>
                                 </span>
                             </div>
                         </div>

@@ -31,9 +31,9 @@ $active_menu = 'hasil';
                         <p>Monitoring skor perolehan siswa, analisis ketuntasan terhadap KKM, dan rekapitulasi nilai ujian berbasis komputer.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" onclick="window.print()" class="e-btn e-btn-glass">
+                        <a href="<?php echo base_url('cbt/hasil/cetak?ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
                             <i data-lucide="printer"></i> Cetak Rekap Nilai
-                        </button>
+                        </a>
                         <a href="<?php echo base_url('cbt/analisis?ujian_id=' . ($selectedUjianId ?? '')); ?>" class="e-btn e-btn-blue-light">
                             <i data-lucide="bar-chart-2"></i> Analisis Butir Soal
                         </a>
@@ -65,6 +65,18 @@ $active_menu = 'hasil';
                                     <?php echo htmlspecialchars($kls); ?>
                                 </option>
                             <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div style="flex: 1.2; min-width: 170px;">
+                        <label class="label-sm">Urutan Data Siswa</label>
+                        <select name="sort" class="input-sm" onchange="this.form.submit()">
+                            <option value="nilai_desc" <?php echo (($sort ?? 'nilai_desc') === 'nilai_desc') ? 'selected' : ''; ?>>Nilai Tertinggi (Rank)</option>
+                            <option value="nilai_asc" <?php echo (($sort ?? '') === 'nilai_asc') ? 'selected' : ''; ?>>Nilai Terendah</option>
+                            <option value="nama_asc" <?php echo (($sort ?? '') === 'nama_asc') ? 'selected' : ''; ?>>Nama Siswa (A - Z)</option>
+                            <option value="nama_desc" <?php echo (($sort ?? '') === 'nama_desc') ? 'selected' : ''; ?>>Nama Siswa (Z - A)</option>
+                            <option value="nis_asc" <?php echo (($sort ?? '') === 'nis_asc') ? 'selected' : ''; ?>>Nomor Peserta / NIS</option>
+                            <option value="waktu_desc" <?php echo (($sort ?? '') === 'waktu_desc') ? 'selected' : ''; ?>>Waktu Selesai (Terbaru)</option>
                         </select>
                     </div>
 
@@ -170,8 +182,12 @@ $active_menu = 'hasil';
                                         <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">NIS: <?php echo htmlspecialchars($p['nis'] ?: '-'); ?></div>
                                     </td>
                                     <td>
-                                        <span style="font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: #e0e7ff; color: #4338ca;">
+                                        <?php $isKJ = (stripos($p['kelas_nama'] ?? '', 'jauh') !== false); ?>
+                                        <span style="font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; <?php echo $isKJ ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;' : 'background: #e0e7ff; color: #4338ca;'; ?>">
                                             <?php echo htmlspecialchars($p['kelas_nama'] ?: '-'); ?>
+                                            <?php if ($isKJ): ?>
+                                                <span style="font-size: 0.65rem; background: #b45309; color: #fff; padding: 1px 4px; border-radius: 3px; margin-left: 2px;">KJ</span>
+                                            <?php endif; ?>
                                         </span>
                                     </td>
                                     <td>

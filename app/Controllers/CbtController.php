@@ -1866,6 +1866,7 @@ class CbtController {
         $selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
 
         // Daftar kelas real dari database kelas + kelas jauh
         $kelasList = [];
@@ -1873,8 +1874,11 @@ class CbtController {
             $k1 = $db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
             $k2 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
             $k3 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-            $kelasList = array_unique(array_filter(array_merge($k1, $k2, $k3)));
-            sort($kelasList);
+            $merged = array_unique(array_filter(array_merge($k1, $k2, $k3)));
+            usort($merged, function($a, $b) {
+                return strnatcasecmp($a, $b);
+            });
+            $kelasList = array_values($merged);
         } catch (\Exception $e) {}
 
         // Query Peserta Real
@@ -1899,16 +1903,40 @@ class CbtController {
             $params[':q'] = "%{$search}%";
         }
 
-        $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+        // Custom Sort Siswa
+        switch ($sort) {
+            case 'nilai_asc':
+                $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir ASC, p.nama_siswa ASC";
+                break;
+            case 'nama_asc':
+                $sql .= " ORDER BY p.nama_siswa ASC, p.nilai_akhir DESC";
+                break;
+            case 'nama_desc':
+                $sql .= " ORDER BY p.nama_siswa DESC, p.nilai_akhir DESC";
+                break;
+            case 'nis_asc':
+                $sql .= " ORDER BY p.nis ASC, p.nama_siswa ASC";
+                break;
+            case 'waktu_desc':
+                $sql .= " ORDER BY (p.waktu_selesai IS NOT NULL) DESC, p.waktu_selesai DESC, p.nilai_akhir DESC";
+                break;
+            case 'nilai_desc':
+            default:
+                $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+                break;
+        }
+
         $stmtP = $db->prepare($sql);
         $stmtP->execute($params);
         $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
-        // KKM patokan
+        // KKM patokan & current ujian
         $kkmUjian = 75;
+        $currentUjian = null;
         if ($selectedUjianId > 0) {
             foreach ($ujianList as $uj) {
                 if ($uj['id'] == $selectedUjianId) {
+                    $currentUjian = $uj;
                     $kkmUjian = (int)$uj['kkm'];
                     break;
                 }
@@ -1942,6 +1970,105 @@ class CbtController {
         include __DIR__ . '/../../resources/views/cbt/hasil.php';
         $content = ob_get_clean();
         include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Cetak Rekap Nilai Ujian Siswa (Kop Surat Resmi Madrasah, Format A4 Standar)
+     */
+    public static function cetakHasil() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+        $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
+        $search = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
+
+        $currentUjian = null;
+        if ($selectedUjianId > 0) {
+            $stmt = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ?");
+            $stmt->execute([$selectedUjianId]);
+            $currentUjian = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama, u.kode_ujian, u.durasi_menit 
+                FROM cbt_peserta p 
+                LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
+                WHERE 1=1";
+        $params = [];
+
+        if ($selectedUjianId > 0) {
+            $sql .= " AND p.ujian_id = :ujian_id";
+            $params[':ujian_id'] = $selectedUjianId;
+        }
+
+        if (!empty($selectedKelas)) {
+            $sql .= " AND p.kelas_nama = :kelas";
+            $params[':kelas'] = $selectedKelas;
+        }
+
+        if (!empty($search)) {
+            $sql .= " AND (p.nama_siswa LIKE :q OR p.nis LIKE :q)";
+            $params[':q'] = "%{$search}%";
+        }
+
+        switch ($sort) {
+            case 'nilai_asc':
+                $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir ASC, p.nama_siswa ASC";
+                break;
+            case 'nama_asc':
+                $sql .= " ORDER BY p.nama_siswa ASC, p.nilai_akhir DESC";
+                break;
+            case 'nama_desc':
+                $sql .= " ORDER BY p.nama_siswa DESC, p.nilai_akhir DESC";
+                break;
+            case 'nis_asc':
+                $sql .= " ORDER BY p.nis ASC, p.nama_siswa ASC";
+                break;
+            case 'waktu_desc':
+                $sql .= " ORDER BY (p.waktu_selesai IS NOT NULL) DESC, p.waktu_selesai DESC, p.nilai_akhir DESC";
+                break;
+            case 'nilai_desc':
+            default:
+                $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+                break;
+        }
+
+        $stmtP = $db->prepare($sql);
+        $stmtP->execute($params);
+        $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+
+        $kkmUjian = (int)($currentUjian['kkm'] ?? 75);
+
+        $totalSelesai = 0;
+        $totalNilai = 0;
+        $tuntasCount = 0;
+        $maxScore = 0;
+        $minScore = 100;
+
+        foreach ($pesertaList as $p) {
+            if ($p['status_pengerjaan'] === 'Selesai') {
+                $totalSelesai++;
+                $nilai = (float)$p['nilai_akhir'];
+                $totalNilai += $nilai;
+                if ($nilai > $maxScore) $maxScore = $nilai;
+                if ($nilai < $minScore) $minScore = $nilai;
+                if ($nilai >= $kkmUjian) {
+                    $tuntasCount++;
+                }
+            }
+        }
+        if ($totalSelesai === 0) {
+            $minScore = 0;
+        }
+        $rataRata = $totalSelesai > 0 ? ($totalNilai / $totalSelesai) : 0;
+        $persenTuntas = $totalSelesai > 0 ? round(($tuntasCount / $totalSelesai) * 100) : 0;
+        $maxNilai = $maxScore;
+        $minNilai = $minScore;
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_hasil.php';
+        exit;
     }
 
     /**
