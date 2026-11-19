@@ -217,7 +217,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 \App\Services\AuditLogger::loginSuccess($guru_nama, 'Guru (APK Manual)');
 
-                                header("Location: guru_dashboard.php");
+                                if (stripos($user['username'], 'kelasjauh') !== false || stripos($user['username'], 'kelas_jauh') !== false || stripos($user['username'], 'kj') !== false) {
+                                    $_SESSION['is_guru_kelas_jauh'] = true;
+                                    header("Location: guru_kelas_jauh.php");
+                                } else {
+                                    header("Location: guru_dashboard.php");
+                                }
                                 exit;
                             } else {
                                 $error_msg = "Data Guru tidak ditemukan untuk akun ini.";
@@ -373,7 +378,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 
                                 \App\Services\AuditLogger::loginSuccess($_SESSION['guru_nama'], 'Guru (APK)');
                                 
-                                header("Location: guru_dashboard.php");
+                                if (stripos($user['username'], 'kelasjauh') !== false || stripos($user['username'], 'kelas_jauh') !== false || stripos($user['username'], 'kj') !== false) {
+                                    $_SESSION['is_guru_kelas_jauh'] = true;
+                                    header("Location: guru_kelas_jauh.php");
+                                } else {
+                                    header("Location: guru_dashboard.php");
+                                }
                                 exit;
                             } else {
                                 $error_msg = "Data Guru tidak ditemukan untuk user ini.";

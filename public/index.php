@@ -2492,6 +2492,23 @@ $router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::cla
 $router->add('POST', '/cbt/token/expire', [\App\Controllers\CbtController::class, 'expireToken']);
 $router->add('GET', '/cbt/hasil', [\App\Controllers\CbtController::class, 'hasil']);
 $router->add('GET', '/cbt/hasil/cetak', [\App\Controllers\CbtController::class, 'cetakHasil']);
+
+// CBT Ruang & Denah Tempat Duduk
+$router->add('GET', '/cbt/ruang', [\App\Controllers\CbtController::class, 'ruang']);
+$router->add('POST', '/cbt/ruang/save', [\App\Controllers\CbtController::class, 'saveRuang']);
+$router->add('POST', '/cbt/ruang/delete', [\App\Controllers\CbtController::class, 'deleteRuang']);
+$router->add('GET', '/cbt/denah', [\App\Controllers\CbtController::class, 'denah']);
+$router->add('POST', '/cbt/denah/generate', [\App\Controllers\CbtController::class, 'generateDenah']);
+$router->add('POST', '/cbt/denah/reset', [\App\Controllers\CbtController::class, 'resetDenah']);
+$router->add('POST', '/cbt/denah/assign-manual', [\App\Controllers\CbtController::class, 'assignManualDenah']);
+$router->add('POST', '/cbt/denah/remove-seat', [\App\Controllers\CbtController::class, 'removeSeatDenah']);
+$router->add('GET', '/cbt/denah/cetak', [\App\Controllers\CbtController::class, 'cetakDenah']);
+$router->add('GET', '/cbt/denah/cetak-label', [\App\Controllers\CbtController::class, 'cetakLabelMeja']);
+
+// CBT Absensi Scan 1 Pintu & Rekap
+$router->add('GET', '/cbt/scan', [\App\Controllers\CbtController::class, 'absensiScan']);
+$router->add('POST', '/cbt/scan/process', [\App\Controllers\CbtController::class, 'processAbsensiScan']);
+$router->add('GET', '/cbt/absensi', [\App\Controllers\CbtController::class, 'absensiRekap']);
 $router->add('POST', '/cbt/hasil/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
 $router->add('POST', '/cbt/peserta/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
 $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'analisis']);

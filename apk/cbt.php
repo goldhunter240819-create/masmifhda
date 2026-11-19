@@ -105,6 +105,7 @@ try {
 } catch (\Exception $e) {}
 
 $lockSchedule = ($cbtSettings['lock_by_schedule_time'] ?? '1') === '1';
+$requireAttendance = ($cbtSettings['require_cbt_attendance'] ?? '0') === '1';
 $showScoreToStudent = ($cbtSettings['show_score_to_student'] ?? '1') === '1';
 $maxTabViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
 $tokenMasaBerlaku = (int)($cbtSettings['token_refresh_interval'] ?? 120);
@@ -204,6 +205,35 @@ $curHari = $hariIndo[date('l')] ?? '';
 $todayDate = date('Y-m-d');
 $nowTs = time();
 $dayOrder = ['Senin' => 1, 'Selasa' => 2, 'Rabu' => 3, 'Kamis' => 4, 'Jumat' => 5, 'Sabtu' => 6, 'Minggu' => 7];
+
+// Ambil Data Absensi Siswa Hari Ini jika Wajib Absensi Aktif
+$absenHariIniMap = [];
+if ($requireAttendance) {
+    try {
+        $stmtAbs = $core_db->prepare("
+            SELECT ujian_id, mapel_nama, status, waktu_scan 
+            FROM cbt_absensi 
+            WHERE (siswa_id = :sid OR (nis = :nis AND :nis != '')) 
+              AND (tanggal = :today OR DATE(waktu_scan) = :today2)
+              AND status IN ('Hadir', 'Terlambat')
+        ");
+        $stmtAbs->execute([
+            ':sid' => $siswa_id,
+            ':nis' => (string)($siswa['nis'] ?? ''),
+            ':today' => $todayDate,
+            ':today2' => $todayDate
+        ]);
+        while ($abRow = $stmtAbs->fetch(PDO::FETCH_ASSOC)) {
+            if (!empty($abRow['ujian_id'])) {
+                $absenHariIniMap['uid_' . $abRow['ujian_id']] = $abRow;
+            }
+            $mKey = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $abRow['mapel_nama'] ?? '')));
+            if ($mKey) {
+                $absenHariIniMap['mapel_' . $mKey] = $abRow;
+            }
+        }
+    } catch (\Exception $e) {}
+}
 
 foreach ($ujianListRaw as $u) {
     // 1. Jamin Token Spesifik per Mapel & Kelas
@@ -362,6 +392,23 @@ foreach ($ujianListRaw as $u) {
         $canTake = true;
         $scheduleNotice = 'Mode Ujian Susulan (Terbuka)';
     }
+
+    // Evaluasi Verifikasi Absensi 1 Pintu (Jika Diwajibkan di Pengaturan CBT)
+    $hasAbsen = true;
+    $absenInfo = null;
+    if ($requireAttendance) {
+        $hasAbsen = false;
+        $mKeyNorm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $u['mapel_nama'] ?? '')));
+        if (!empty($u['id']) && isset($absenHariIniMap['uid_' . $u['id']])) {
+            $hasAbsen = true;
+            $absenInfo = $absenHariIniMap['uid_' . $u['id']];
+        } elseif ($mKeyNorm && isset($absenHariIniMap['mapel_' . $mKeyNorm])) {
+            $hasAbsen = true;
+            $absenInfo = $absenHariIniMap['mapel_' . $mKeyNorm];
+        }
+    }
+    $u['has_absen'] = $hasAbsen;
+    $u['absen_info'] = $absenInfo;
 
     $u['is_hari_ini'] = $isHariIni;
     $u['can_take'] = $canTake;
@@ -993,9 +1040,23 @@ include 'header.php';
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
                 <?php elseif ($u['can_take']): ?>
-                    <button type="button" class="btn-ujian btn-ujian-start" onclick="konfirmasiMulaiUjian(<?= (int)$u['id'] ?>, '<?= htmlspecialchars(addslashes($u['nama_ujian'])) ?>', '<?= htmlspecialchars(addslashes($u['mapel_nama'])) ?>', <?= $durasi ?>, <?= $totalSoal ?>, '<?= htmlspecialchars(addslashes($tokenUjian)) ?>', <?= $kkm ?>)">
-                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Mulai Kerjakan Ujian
-                    </button>
+                    <?php if ($requireAttendance && empty($u['has_absen'])): ?>
+                        <div style="font-size: 0.73rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; background: #fff1f2; padding: 7px 10px; border-radius: 8px; border: 1px solid #fecdd3;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color: #e11d48;"></i> Anda belum absen. Silakan scan barcode kartu Anda ke pengawas ujian.
+                        </div>
+                        <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #94a3b8; color: #ffffff; cursor: not-allowed; border: none; box-shadow: none;" disabled title="Silakan lakukan absensi terlebih dahulu ke pengawas ruang">
+                            <i class="fa-solid fa-qrcode"></i> Silakan Absensi Terlebih Dahulu
+                        </button>
+                    <?php else: ?>
+                        <?php if ($requireAttendance && !empty($u['absen_info'])): ?>
+                            <div style="font-size: 0.72rem; color: #059669; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #ecfdf5; padding: 6px 10px; border-radius: 8px; border: 1px solid #a7f3d0;">
+                                <i class="fa-solid fa-circle-check"></i> Absensi Terverifikasi (Pukul <?= date('H:i', strtotime($u['absen_info']['waktu_scan'])) ?> WIB)
+                            </div>
+                        <?php endif; ?>
+                        <button type="button" class="btn-ujian btn-ujian-start" onclick="konfirmasiMulaiUjian(<?= (int)$u['id'] ?>, '<?= htmlspecialchars(addslashes($u['nama_ujian'])) ?>', '<?= htmlspecialchars(addslashes($u['mapel_nama'])) ?>', <?= $durasi ?>, <?= $totalSoal ?>, '<?= htmlspecialchars(addslashes($tokenUjian)) ?>', <?= $kkm ?>)">
+                            <i class="fa-solid fa-arrow-right-to-bracket"></i> Mulai Kerjakan Ujian
+                        </button>
+                    <?php endif; ?>
                 <?php elseif ($u['schedule_state'] === 'early'): ?>
                     <div class="btn-ujian btn-ujian-locked">
                         <i class="fa-solid fa-lock"></i> <?= htmlspecialchars($u['schedule_notice'] ?: 'Belum Masuk Waktu Ujian') ?>

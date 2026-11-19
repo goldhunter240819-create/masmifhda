@@ -72,9 +72,11 @@ $apk_apps = [
         'bendahara_bos' => ['icon' => 'fa-landmark', 'name' => 'Bend. BOS', 'color' => '#f43f5e', 'bg' => '#ffe4e6', 'url' => 'bendahara_bos.php']
     ],
     'Absensi & Perizinan' => [
+        'scan_cbt' => ['icon' => 'fa-qrcode', 'name' => 'Scan Absensi CBT', 'color' => '#7c3aed', 'bg' => '#ede9fe', 'url' => 'cbt_scan.php'],
         'scan_siswa' => ['icon' => 'fa-qrcode', 'name' => 'Scan Siswa', 'color' => '#0ea5e9', 'bg' => '#e0f2fe', 'url' => 'scanner_siswa.php'],
         'scan_guru' => ['icon' => 'fa-expand', 'name' => 'Scan Guru', 'color' => '#3b82f6', 'bg' => '#eff6ff', 'url' => 'scanner_guru.php'],
-        'admin_izin' => ['icon' => 'fa-clipboard-check', 'name' => 'Persetujuan Izin', 'color' => '#f59e0b', 'bg' => '#fffbeb', 'url' => 'admin_izin.php']
+        'admin_izin' => ['icon' => 'fa-clipboard-check', 'name' => 'Persetujuan Izin', 'color' => '#f59e0b', 'bg' => '#fffbeb', 'url' => 'admin_izin.php'],
+        'cbt_kelas_jauh' => ['icon' => 'fa-satellite-dish', 'name' => 'CBT Kelas Jauh', 'color' => '#059669', 'bg' => '#ecfdf5', 'url' => 'guru_kelas_jauh.php']
     ],
     'Kepala Madrasah' => [
         'mon_keuangan' => ['icon' => 'fa-chart-line', 'name' => 'Mon. Keuangan', 'color' => '#3b82f6', 'bg' => '#eff6ff', 'url' => 'monitoring_keuangan.php'],

@@ -260,7 +260,7 @@ include 'header.php';
 
 
 
-    <!-- ================= JADWAL, BANK SOAL & HASIL UJIAN BUTTON ================= -->
+    <!-- ================= JADWAL, BANK SOAL, ABSENSI CBT & HASIL UJIAN BUTTON ================= -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
         <button onclick="document.getElementById('modal-jadwal').style.display='flex'" style="width: 100%; padding: 13px 10px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; font-size: 0.86rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; gap: 8px;">
             <i class="fa-solid fa-calendar-alt"></i> Jadwal Mengajar
@@ -269,9 +269,17 @@ include 'header.php';
             <i class="fa-solid fa-layer-group"></i> Bank Soal Saya
         </a>
     </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+        <a href="cbt_scan.php" style="width: 100%; box-sizing: border-box; padding: 13px 10px; background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); color: white; border: none; border-radius: 12px; font-size: 0.86rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
+            <i class="fa-solid fa-qrcode"></i> Scan Absensi CBT
+        </a>
+        <a href="hasil_ujian.php" style="width: 100%; box-sizing: border-box; padding: 13px 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 0.86rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
+            <i class="fa-solid fa-square-poll-vertical"></i> Rekap Hasil CBT
+        </a>
+    </div>
     <div style="margin-bottom: 25px;">
-        <a href="hasil_ujian.php" style="width: 100%; box-sizing: border-box; padding: 13px 14px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 0.88rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
-            <i class="fa-solid fa-square-poll-vertical"></i> Rekap Hasil Ujian CBT
+        <a href="guru_kelas_jauh.php" style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #f0fdf4; color: #15803d; border: 1.5px dashed #86efac; border-radius: 12px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
+            <i class="fa-solid fa-satellite-dish"></i> Portal Pengawas Siswa Kelas Jauh
         </a>
     </div>
 

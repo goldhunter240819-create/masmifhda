@@ -23,6 +23,7 @@ $acakOpsi = ($settings['acak_opsi_default'] ?? '1') === '1';
 $showScore = ($settings['show_score_to_student'] ?? '1') === '1';
 $showDiscussion = ($settings['show_discussion_to_student'] ?? '0') === '1';
 $allowReview = ($settings['allow_student_review'] ?? '1') === '1';
+$requireAttendance = ($settings['require_cbt_attendance'] ?? '0') === '1';
 $tokenMode = $settings['token_mode'] ?? 'manual';
 $tokenInterval = (int)($settings['token_refresh_interval'] ?? 120);
 
@@ -462,6 +463,27 @@ $listTerkunci = $listTerkunci ?? [];
                                 <label class="cbt-switch">
                                     <input type="hidden" name="settings[lock_by_schedule_time]" value="0">
                                     <input type="checkbox" name="settings[lock_by_schedule_time]" value="1" <?php echo $lockBySchedule ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 2b. Wajibkan Absensi Sebelum Ujian (Scan 1 Pintu) -->
+                        <div class="card setting-card" style="border-left: 4px solid #8b5cf6; background: #faf8ff;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-purple"><i data-lucide="qr-code"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Wajibkan Absensi Sebelum Ujian (Scan 1 Pintu)</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        <b>Jika AKTIF:</b> Siswa <b>WAJIB</b> di-scan barcode/QR kartunya oleh pengawas di pintu masuk/ruang ujian sebelum bisa mengerjakan ujian. Jika siswa belum tercatat hadir pada mapel/sesi hari ini, tombol pengerjaan di aplikasi siswa akan <b>abu-abu (disabled)</b> dengan keterangan <i>"Silakan Absensi Terlebih Dahulu"</i>.<br>
+                                        <b>Jika NONAKTIF:</b> Siswa dapat langsung mulai ujian tanpa verifikasi scan absensi terlebih dahulu.
+                                    </p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[require_cbt_attendance]" value="0">
+                                    <input type="checkbox" name="settings[require_cbt_attendance]" value="1" <?php echo $requireAttendance ? 'checked' : ''; ?>>
                                     <span class="cbt-slider"></span>
                                 </label>
                             </div>

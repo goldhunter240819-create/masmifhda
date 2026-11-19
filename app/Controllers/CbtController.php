@@ -319,7 +319,106 @@ class CbtController {
             $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02'))");
             $db->exec("DELETE FROM cbt_peserta WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02')) OR nis LIKE '2024100%'");
             $db->exec("DELETE FROM cbt_token WHERE token = 'MAS982'");
-            $db->exec("DELETE FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02')");
+                        $db->exec("DELETE FROM cbt_ujian WHERE kode_ujian IN ('UJN-MAT-01', 'UJN-FIQ-02')");
+
+            // 9. Tabel Kelola Ruang Ujian CBT
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_ruang (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                kode_ruang VARCHAR(50) NOT NULL UNIQUE,
+                nama_ruang VARCHAR(100) NOT NULL,
+                tipe_meja TINYINT DEFAULT 1,
+                baris_samping INT DEFAULT 4,
+                baris_belakang INT DEFAULT 5,
+                kapasitas INT NOT NULL,
+                kode_pola VARCHAR(30) DEFAULT NULL,
+                lokasi VARCHAR(100) DEFAULT NULL,
+                pengawas VARCHAR(150) DEFAULT NULL,
+                keterangan TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // 10. Tabel Denah Tempat Duduk Peserta
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_denah_peserta (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ruang_id INT NOT NULL,
+                nomor_meja INT NOT NULL,
+                posisi_baris INT NOT NULL,
+                posisi_kolom INT NOT NULL,
+                posisi_sisi ENUM('L','R','C') DEFAULT 'C',
+                siswa_id INT DEFAULT NULL,
+                nis VARCHAR(50) DEFAULT NULL,
+                nama_siswa VARCHAR(150) DEFAULT NULL,
+                kelas_id INT DEFAULT NULL,
+                kelas_nama VARCHAR(50) DEFAULT NULL,
+                tingkat INT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX (ruang_id),
+                INDEX (nomor_meja),
+                INDEX (siswa_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // 11. Tabel Absensi CBT Scan 1 Pintu
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_absensi (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                siswa_id INT NOT NULL,
+                nis VARCHAR(50) NOT NULL,
+                nama_siswa VARCHAR(150) NOT NULL,
+                kelas_nama VARCHAR(100) NOT NULL,
+                tipe_peserta ENUM('reguler', 'khusus') DEFAULT 'reguler',
+                topik_id INT DEFAULT NULL,
+                ujian_id INT DEFAULT NULL,
+                mapel_nama VARCHAR(150) NOT NULL,
+                jam_slot VARCHAR(50) NOT NULL,
+                waktu_scan DATETIME NOT NULL,
+                status ENUM('Hadir', 'Terlambat', 'Izin', 'Sakit') DEFAULT 'Hadir',
+                metode_scan VARCHAR(30) DEFAULT 'QR_SCAN',
+                petugas_nama VARCHAR(100) DEFAULT NULL,
+                ruang_nama VARCHAR(100) DEFAULT NULL,
+                keterangan VARCHAR(255) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (tanggal),
+                INDEX (nis),
+                INDEX (siswa_id),
+                INDEX (ujian_id),
+                INDEX (mapel_nama)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Seed ruang default jika kosong
+            try {
+                $cntR = (int)$db->query("SELECT COUNT(*) FROM cbt_ruang")->fetchColumn();
+                if ($cntR === 0) {
+                    $db->exec("INSERT INTO cbt_ruang (kode_ruang, nama_ruang, tipe_meja, baris_samping, baris_belakang, kapasitas, kode_pola, lokasi, pengawas) VALUES
+                    ('R-01', 'Ruang 01', 2, 3, 5, 30, '2 x 3 x 5', 'Gedung A Lantai 1', 'Drs. Hamim Hasyim'),
+                    ('R-02', 'Ruang 02', 2, 3, 5, 30, '2 x 3 x 5', 'Gedung A Lantai 1', 'Ahmad Asrofi, S.Pd.'),
+                    ('R-03', 'Ruang 03', 1, 5, 5, 25, '1 x 5 x 5', 'Gedung B Lantai 2', 'Hikmatul Latifah, S.Pd.'),
+                    ('LAB-01', 'Lab Komputer', 1, 5, 5, 25, '1 x 5 x 5', 'Gedung Lab CBT', 'Proktor CBT')");
+
+                    $rList = $db->query("SELECT * FROM cbt_ruang")->fetchAll(PDO::FETCH_ASSOC);
+                    $stmtInsSlot = $db->prepare("INSERT INTO cbt_denah_peserta (ruang_id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi) VALUES (?, ?, ?, ?, ?)");
+                    foreach ($rList as $rg) {
+                        $mNo = 1;
+                        for ($b = 1; $b <= (int)$rg['baris_belakang']; $b++) {
+                            for ($k = 1; $k <= (int)$rg['baris_samping']; $k++) {
+                                if ((int)$rg['tipe_meja'] === 2) {
+                                    $stmtInsSlot->execute([$rg['id'], $mNo++, $b, $k, 'L']);
+                                    $stmtInsSlot->execute([$rg['id'], $mNo++, $b, $k, 'R']);
+                                } else {
+                                    $stmtInsSlot->execute([$rg['id'], $mNo++, $b, $k, 'C']);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {}
+
+            // Seed setting absensi cbt jika belum ada
+            try {
+                $db->prepare("INSERT IGNORE INTO cbt_pengaturan (setting_key, setting_value, kategori, keterangan) VALUES (?, ?, ?, ?)")
+                   ->execute(['require_cbt_attendance', '1', 'aturan', 'Wajibkan Siswa Absensi Scan 1 Pintu Sebelum Mengerjakan Ujian']);
+            } catch (\Exception $e) {}
 
         } catch (\Exception $e) {
             // Silence exception
@@ -2788,7 +2887,7 @@ class CbtController {
                     'anti_cheat_mode', 'force_fullscreen', 'block_tab_switch',
                     'disable_right_click', 'disable_copy_paste', 'lock_single_device',
                     'watermark_student_nis', 'sound_alarm_on_violation', 'block_back_button',
-                    'lock_by_schedule_time', 'acak_soal_default', 'acak_opsi_default',
+                    'lock_by_schedule_time', 'require_cbt_attendance', 'acak_soal_default', 'acak_opsi_default',
                     'show_score_to_student', 'show_discussion_to_student', 'allow_student_review'
                 ];
                 foreach ($booleanKeys as $bk) {
@@ -3184,5 +3283,810 @@ class CbtController {
         }
 
         include __DIR__ . '/../../resources/views/cbt/peserta_khusus_cetak.php';
+    }
+
+    // =========================================================================
+    // MODUL A: KELOLA RUANG & DENAH TEMPAT DUDUK CBT
+    // =========================================================================
+
+    /**
+     * Master Kelola Ruang Ujian CBT
+     */
+    public static function ruang() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalRuang = count($ruangList);
+        $totalKapasitas = 0;
+        $totalTerisi = 0;
+
+        foreach ($ruangList as &$r) {
+            $rId = (int)$r['id'];
+            $totalKapasitas += (int)$r['kapasitas'];
+
+            $stmtCnt = $db->prepare("SELECT COUNT(*) FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL");
+            $stmtCnt->execute([$rId]);
+            $terisi = (int)$stmtCnt->fetchColumn();
+            $r['terisi'] = $terisi;
+            $r['kosong'] = max(0, (int)$r['kapasitas'] - $terisi);
+            $r['persen'] = $r['kapasitas'] > 0 ? round(($terisi / $r['kapasitas']) * 100) : 0;
+            $totalTerisi += $terisi;
+        }
+        unset($r);
+
+        $totalKosong = max(0, $totalKapasitas - $totalTerisi);
+
+        $title = "Kelola Ruang Ujian - MAS MIFTAHUL HUDA";
+        $active_menu = 'ruang';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/ruang.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Simpan / Perbarui Ruang Ujian
+     */
+    public static function saveRuang() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = !empty($_POST['id']) ? (int)$_POST['id'] : 0;
+            $kode_ruang = strtoupper(trim($_POST['kode_ruang'] ?? ''));
+            $nama_ruang = trim($_POST['nama_ruang'] ?? '');
+            $tipe_meja = max(1, min(2, (int)($_POST['tipe_meja'] ?? 1))); // 1 = Tunggal, 2 = Gandeng
+            $baris_samping = max(1, (int)($_POST['baris_samping'] ?? 4));
+            $baris_belakang = max(1, (int)($_POST['baris_belakang'] ?? 5));
+            $lokasi = trim($_POST['lokasi'] ?? '');
+            $pengawas = trim($_POST['pengawas'] ?? '');
+            $keterangan = trim($_POST['keterangan'] ?? '');
+
+            // Hitung kapasitas & kode pola otomatis
+            $kapasitas = $tipe_meja * $baris_samping * $baris_belakang;
+            $kode_pola = "{$tipe_meja} x {$baris_samping} x {$baris_belakang}";
+
+            if (empty($kode_ruang) || empty($nama_ruang)) {
+                redirect('/cbt/ruang?err=' . urlencode('Nama dan Kode Ruang wajib diisi!'));
+                exit;
+            }
+
+            if ($id > 0) {
+                // Update
+                $stmt = $db->prepare("
+                    UPDATE cbt_ruang 
+                    SET kode_ruang = ?, nama_ruang = ?, tipe_meja = ?, baris_samping = ?, baris_belakang = ?, 
+                        kapasitas = ?, kode_pola = ?, lokasi = ?, pengawas = ?, keterangan = ?
+                    WHERE id = ?
+                ");
+                $stmt->execute([$kode_ruang, $nama_ruang, $tipe_meja, $baris_samping, $baris_belakang, $kapasitas, $kode_pola, $lokasi, $pengawas, $keterangan, $id]);
+                $ruangId = $id;
+            } else {
+                // Insert
+                $stmt = $db->prepare("
+                    INSERT INTO cbt_ruang (kode_ruang, nama_ruang, tipe_meja, baris_samping, baris_belakang, kapasitas, kode_pola, lokasi, pengawas, keterangan)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$kode_ruang, $nama_ruang, $tipe_meja, $baris_samping, $baris_belakang, $kapasitas, $kode_pola, $lokasi, $pengawas, $keterangan]);
+                $ruangId = (int)$db->lastInsertId();
+            }
+
+            // Sinkronkan slot meja di cbt_denah_peserta
+            self::syncSlotMejaRuang($db, $ruangId, $tipe_meja, $baris_samping, $baris_belakang);
+
+            redirect('/cbt/ruang?success=1');
+            exit;
+        }
+        redirect('/cbt/ruang');
+    }
+
+    /**
+     * Hapus Ruang Ujian
+     */
+    public static function deleteRuang() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            if ($id > 0) {
+                $db->prepare("DELETE FROM cbt_denah_peserta WHERE ruang_id = ?")->execute([$id]);
+                $db->prepare("DELETE FROM cbt_ruang WHERE id = ?")->execute([$id]);
+            }
+        }
+        redirect('/cbt/ruang?deleted=1');
+    }
+
+    /**
+     * Helper: Sinkronisasi Slot Kursi Meja Ruang
+     */
+    private static function syncSlotMejaRuang($db, $ruangId, $tipe_meja, $baris_samping, $baris_belakang) {
+        $totalSlotDibutuhkan = $tipe_meja * $baris_samping * $baris_belakang;
+
+        // Ambil slot yang sudah ada
+        $existing = $db->prepare("SELECT id, nomor_meja, siswa_id FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
+        $existing->execute([$ruangId]);
+        $existingSlots = $existing->fetchAll(PDO::FETCH_ASSOC);
+        $countExisting = count($existingSlots);
+
+        // Jika slot kurang, buat slot tambahan
+        if ($countExisting < $totalSlotDibutuhkan) {
+            $stmtIns = $db->prepare("INSERT INTO cbt_denah_peserta (ruang_id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi) VALUES (?, ?, ?, ?, ?)");
+            $mejaNo = $countExisting + 1;
+
+            for ($b = 1; $b <= $baris_belakang; $b++) {
+                for ($k = 1; $k <= $baris_samping; $k++) {
+                    if ($tipe_meja === 2) {
+                        if ($mejaNo <= $totalSlotDibutuhkan) {
+                            $stmtIns->execute([$ruangId, $mejaNo++, $b, $k, 'L']);
+                        }
+                        if ($mejaNo <= $totalSlotDibutuhkan) {
+                            $stmtIns->execute([$ruangId, $mejaNo++, $b, $k, 'R']);
+                        }
+                    } else {
+                        if ($mejaNo <= $totalSlotDibutuhkan) {
+                            $stmtIns->execute([$ruangId, $mejaNo++, $b, $k, 'C']);
+                        }
+                    }
+                }
+            }
+        } elseif ($countExisting > $totalSlotDibutuhkan) {
+            // Hapus slot berlebih yang kosong
+            $db->prepare("DELETE FROM cbt_denah_peserta WHERE ruang_id = ? AND nomor_meja > ? AND siswa_id IS NULL")->execute([$ruangId, $totalSlotDibutuhkan]);
+        }
+    }
+
+    /**
+     * Halaman Visual Denah Tempat Duduk Siswa
+     */
+    public static function denah() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $ruangList = $db->query("SELECT id, kode_ruang, nama_ruang, kapasitas, kode_pola FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        $selectedRuangId = isset($_GET['ruang_id']) ? (int)$_GET['ruang_id'] : 0;
+        if ($selectedRuangId <= 0 && !empty($ruangList)) {
+            $selectedRuangId = (int)$ruangList[0]['id'];
+        }
+
+        $currentRuang = null;
+        foreach ($ruangList as $rg) {
+            if ((int)$rg['id'] === $selectedRuangId) {
+                $currentRuang = $rg;
+                break;
+            }
+        }
+
+        // Ambil slot meja di ruang terpilih
+        $mejaList = [];
+        $tingkatStats = [10 => 0, 11 => 0, 12 => 0, 'other' => 0, 'kosong' => 0];
+
+        if ($currentRuang) {
+            $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
+            $stmtMeja->execute([$selectedRuangId]);
+            $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($mejaList as $m) {
+                if (!empty($m['siswa_id'])) {
+                    $t = (int)($m['tingkat'] ?? 0);
+                    if (isset($tingkatStats[$t])) {
+                        $tingkatStats[$t]++;
+                    } else {
+                        $tingkatStats['other']++;
+                    }
+                } else {
+                    $tingkatStats['kosong']++;
+                }
+            }
+        }
+
+        // Ambil daftar siswa reguler Siakad yang BELUM punya kursi di ruangan manapun
+        $unassignedSiswa = [];
+        try {
+            $stmtUn = $db->query("
+                SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                WHERE (s.status = 'Aktif' OR s.status IS NULL OR s.status = '')
+                  AND s.id NOT IN (SELECT siswa_id FROM cbt_denah_peserta WHERE siswa_id IS NOT NULL)
+                ORDER BY k.tingkat ASC, s.nama ASC
+            ");
+            $unassignedSiswa = $stmtUn->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $title = "Denah Tempat Duduk - MAS MIFTAHUL HUDA";
+        $active_menu = 'denah';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/denah.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Auto-Generate Penempatan Denah Tempat Duduk
+     * Opsi: smart_cross (Silang Tingkatan Anti-Contek), full_random, sequential
+     */
+    public static function generateDenah() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $mode = trim($_POST['mode'] ?? 'smart_cross'); // smart_cross | full_random | sequential
+
+            if ($ruangId <= 0) {
+                redirect('/cbt/denah');
+                exit;
+            }
+
+            // Ambil info ruang
+            $stmtR = $db->prepare("SELECT * FROM cbt_ruang WHERE id = ?");
+            $stmtR->execute([$ruangId]);
+            $ruang = $stmtR->fetch(PDO::FETCH_ASSOC);
+            if (!$ruang) {
+                redirect('/cbt/denah');
+                exit;
+            }
+
+            // Ambil slot meja kosong di ruangan ini
+            $stmtSlots = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NULL ORDER BY nomor_meja ASC");
+            $stmtSlots->execute([$ruangId]);
+            $slots = $stmtSlots->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($slots)) {
+                redirect("/cbt/denah?ruang_id={$ruangId}&err=" . urlencode('Semua kursi di ruangan ini sudah terisi penuh! Kosongkan terlebih dahulu jika ingin menata ulang.'));
+                exit;
+            }
+
+            // Ambil siswa reguler Siakad yang BELUM punya kursi di ruangan manapun
+            $stmtSiswa = $db->query("
+                SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                WHERE (s.status = 'Aktif' OR s.status IS NULL OR s.status = '')
+                  AND s.id NOT IN (SELECT siswa_id FROM cbt_denah_peserta WHERE siswa_id IS NOT NULL)
+                ORDER BY k.tingkat ASC, s.nama ASC
+            ");
+            $candidates = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($candidates)) {
+                redirect("/cbt/denah?ruang_id={$ruangId}&err=" . urlencode('Tidak ada siswa reguler Siakad yang belum punya tempat duduk!'));
+                exit;
+            }
+
+            $assignedMap = [];
+
+            if ($mode === 'smart_cross') {
+                // Algoritma Smart Zig-Zag: Silang Tingkatan (Tingkat 10, 11, 12 diselang-selingkan)
+                $b10 = [];
+                $b11 = [];
+                $b12 = [];
+                $bOther = [];
+
+                foreach ($candidates as $c) {
+                    $t = (int)($c['tingkat'] ?? 0);
+                    if ($t === 10) $b10[] = $c;
+                    elseif ($t === 11) $b11[] = $c;
+                    elseif ($t === 12) $b12[] = $c;
+                    else $bOther[] = $c;
+                }
+
+                // Acak di dalam tingkatan masing-masing
+                shuffle($b10);
+                shuffle($b11);
+                shuffle($b12);
+                shuffle($bOther);
+
+                $poolCount = count($slots);
+                $isGandeng = ((int)$ruang['tipe_meja'] === 2);
+
+                for ($i = 0; $i < $poolCount; $i++) {
+                    $slot = $slots[$i];
+                    $baris = (int)$slot['posisi_baris'];
+                    $kolom = (int)$slot['posisi_kolom'];
+                    $sisi = $slot['posisi_sisi']; // L, R, C
+
+                    // Pola urutan target tingkat per posisi agar silang
+                    if ($isGandeng) {
+                        // Di meja gandeng: L dan R harus beda tingkat
+                        $shift = ($baris % 3);
+                        if ($sisi === 'L') {
+                            $order = [($shift + 1), ($shift + 2), ($shift + 3)];
+                        } else {
+                            $order = [($shift + 2), ($shift + 3), ($shift + 1)];
+                        }
+                    } else {
+                        // Di meja tunggal: geser tingkat per kolom & baris
+                        $val = ($baris + $kolom) % 3;
+                        $order = [$val + 1, (($val + 1) % 3) + 1, (($val + 2) % 3) + 1];
+                    }
+
+                    // Ambil siswa dari target tingkat yang sesuai
+                    $picked = null;
+                    foreach ($order as $ord) {
+                        if ($ord === 1 && !empty($b10)) { $picked = array_shift($b10); break; }
+                        if ($ord === 2 && !empty($b11)) { $picked = array_shift($b11); break; }
+                        if ($ord === 3 && !empty($b12)) { $picked = array_shift($b12); break; }
+                    }
+
+                    // Fallback jika bucket utama habis
+                    if (!$picked) {
+                        if (!empty($b10)) $picked = array_shift($b10);
+                        elseif (!empty($b11)) $picked = array_shift($b11);
+                        elseif (!empty($b12)) $picked = array_shift($b12);
+                        elseif (!empty($bOther)) $picked = array_shift($bOther);
+                    }
+
+                    if ($picked) {
+                        $assignedMap[$slot['id']] = $picked;
+                    }
+                }
+            } elseif ($mode === 'full_random') {
+                shuffle($candidates);
+                $pickList = array_slice($candidates, 0, count($slots));
+                foreach ($slots as $idx => $slot) {
+                    if (isset($pickList[$idx])) {
+                        $assignedMap[$slot['id']] = $pickList[$idx];
+                    }
+                }
+            } else {
+                // Sequential (urut kelas & nama)
+                $pickList = array_slice($candidates, 0, count($slots));
+                foreach ($slots as $idx => $slot) {
+                    if (isset($pickList[$idx])) {
+                        $assignedMap[$slot['id']] = $pickList[$idx];
+                    }
+                }
+            }
+
+            // Simpan ke database
+            $stmtUp = $db->prepare("
+                UPDATE cbt_denah_peserta 
+                SET siswa_id = ?, nis = ?, nama_siswa = ?, kelas_id = ?, kelas_nama = ?, tingkat = ?
+                WHERE id = ?
+            ");
+
+            $countAssigned = 0;
+            foreach ($assignedMap as $slotId => $siswa) {
+                $stmtUp->execute([
+                    $siswa['id'],
+                    $siswa['nis'],
+                    $siswa['nama'],
+                    $siswa['kelas_id'],
+                    $siswa['nama_kelas'],
+                    $siswa['tingkat'],
+                    $slotId
+                ]);
+                $countAssigned++;
+            }
+
+            redirect("/cbt/denah?ruang_id={$ruangId}&assigned={$countAssigned}");
+            exit;
+        }
+        redirect('/cbt/denah');
+    }
+
+    /**
+     * Kosongkan Kursi di Ruangan Terpilih
+     */
+    public static function resetDenah() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            if ($ruangId > 0) {
+                $db->prepare("
+                    UPDATE cbt_denah_peserta 
+                    SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
+                    WHERE ruang_id = ?
+                ")->execute([$ruangId]);
+            }
+            redirect("/cbt/denah?ruang_id={$ruangId}&reset=1");
+            exit;
+        }
+        redirect('/cbt/denah');
+    }
+
+    /**
+     * Tempatkan Siswa Manual ke Kursi Tertentu
+     */
+    public static function assignManualDenah() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $slotId = (int)($_POST['slot_id'] ?? 0);
+            $siswaId = (int)($_POST['siswa_id'] ?? 0);
+
+            if ($slotId > 0 && $siswaId > 0) {
+                // Ambil info siswa
+                $stmtS = $db->prepare("
+                    SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    WHERE s.id = ?
+                ");
+                $stmtS->execute([$siswaId]);
+                $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+
+                if ($sRow) {
+                    // Lepas siswa ini dari kursi lain jika ada
+                    $db->prepare("
+                        UPDATE cbt_denah_peserta 
+                        SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
+                        WHERE siswa_id = ?
+                    ")->execute([$siswaId]);
+
+                    // Tempatkan ke kursi ini
+                    $stmtUp = $db->prepare("
+                        UPDATE cbt_denah_peserta 
+                        SET siswa_id = ?, nis = ?, nama_siswa = ?, kelas_id = ?, kelas_nama = ?, tingkat = ?
+                        WHERE id = ?
+                    ");
+                    $stmtUp->execute([
+                        $sRow['id'],
+                        $sRow['nis'],
+                        $sRow['nama'],
+                        $sRow['kelas_id'],
+                        $sRow['nama_kelas'],
+                        $sRow['tingkat'],
+                        $slotId
+                    ]);
+                }
+            }
+            redirect("/cbt/denah?ruang_id={$ruangId}");
+            exit;
+        }
+        redirect('/cbt/denah');
+    }
+
+    /**
+     * Lepas Siswa dari Kursi Tertentu
+     */
+    public static function removeSeatDenah() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ruangId = (int)($_POST['ruang_id'] ?? 0);
+            $slotId = (int)($_POST['slot_id'] ?? 0);
+
+            if ($slotId > 0) {
+                $db->prepare("
+                    UPDATE cbt_denah_peserta 
+                    SET siswa_id = NULL, nis = NULL, nama_siswa = NULL, kelas_id = NULL, kelas_nama = NULL, tingkat = NULL 
+                    WHERE id = ?
+                ")->execute([$slotId]);
+            }
+            redirect("/cbt/denah?ruang_id={$ruangId}");
+            exit;
+        }
+        redirect('/cbt/denah');
+    }
+
+    /**
+     * Cetak Dokumen Denah Ruangan A4 (Ditempel di Pintu Ruangan)
+     */
+    public static function cetakDenah() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $ruangId = isset($_GET['ruang_id']) ? (int)$_GET['ruang_id'] : 0;
+        $stmtR = $db->prepare("SELECT * FROM cbt_ruang WHERE id = ?");
+        $stmtR->execute([$ruangId]);
+        $ruang = $stmtR->fetch(PDO::FETCH_ASSOC);
+
+        if (!$ruang) {
+            redirect('/cbt/ruang');
+            exit;
+        }
+
+        $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
+        $stmtMeja->execute([$ruangId]);
+        $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_denah.php';
+        exit;
+    }
+
+    /**
+     * Cetak Label Meja Peserta (Kartu Stiker Meja Siap Potong A4)
+     */
+    public static function cetakLabelMeja() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $ruangId = isset($_GET['ruang_id']) ? (int)$_GET['ruang_id'] : 0;
+        $stmtR = $db->prepare("SELECT * FROM cbt_ruang WHERE id = ?");
+        $stmtR->execute([$ruangId]);
+        $ruang = $stmtR->fetch(PDO::FETCH_ASSOC);
+
+        if (!$ruang) {
+            redirect('/cbt/ruang');
+            exit;
+        }
+
+        $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
+        $stmtMeja->execute([$ruangId]);
+        $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_label_meja.php';
+        exit;
+    }
+
+    // =========================================================================
+    // MODUL B & C: ABSENSI CBT SCAN 1 PINTU (TERINTEGRASI JADWAL & KELAS JAUH)
+    // =========================================================================
+
+    /**
+     * Halaman Scanner Absensi CBT 1 Pintu (Desktop & Mobile)
+     */
+    public static function absensiScan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $todayDate = date('Y-m-d');
+        $curTime = date('H:i');
+
+        // Jadwal aktif hari ini
+        $jadwalToday = $db->query("
+            SELECT g.*, u.nama_ujian, u.kode_ujian, s.jam_mulai, s.jam_selesai, s.label_sesi
+            FROM cbt_jadwal_grid g
+            LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
+            LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+            WHERE g.tanggal = '{$todayDate}' OR (g.tanggal IS NULL AND g.hari = '" . self::getIndoDayName(date('w')) . "')
+            ORDER BY s.jam_mulai ASC, g.kelas_nama ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Riwayat absensi hari ini
+        $stmtRecent = $db->query("SELECT * FROM cbt_absensi WHERE tanggal = '{$todayDate}' ORDER BY waktu_scan DESC LIMIT 50");
+        $recentAbsen = $stmtRecent ? $stmtRecent->fetchAll(PDO::FETCH_ASSOC) : [];
+
+        $title = "Scanner Absensi CBT 1 Pintu - MAS MIFTAHUL HUDA";
+        $active_menu = 'absensi_cbt';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/absensi_scan.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * API Handler: Proses Scan Barcode / NIS 1 Pintu
+     */
+    public static function processAbsensiScan() {
+        header('Content-Type: application/json');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Metode request tidak valid']);
+            exit;
+        }
+
+        $code = trim($_POST['code'] ?? ($_POST['nis'] ?? ''));
+        if (empty($code)) {
+            echo json_encode(['success' => false, 'message' => 'Barcode / NIS tidak boleh kosong!']);
+            exit;
+        }
+
+        $todayDate = date('Y-m-d');
+        $curTime = date('H:i:s');
+        $curHari = self::getIndoDayName(date('w'));
+
+        // 1. Cari siswa: Apakah siswa reguler atau peserta khusus kelas jauh?
+        $siswa = null;
+        $tipePeserta = 'reguler';
+
+        // Cek siswa reguler Siakad
+        $stmtS = $db->prepare("
+            SELECT s.id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+            FROM siswa s
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            WHERE s.nis = ? OR s.nisn = ? OR s.id = ?
+            LIMIT 1
+        ");
+        $stmtS->execute([$code, $code, $code]);
+        $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+
+        if ($sRow) {
+            $siswa = [
+                'id' => (int)$sRow['id'],
+                'nis' => $sRow['nis'],
+                'nama' => $sRow['nama'],
+                'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                'tingkat' => $sRow['tingkat'],
+                'foto' => $sRow['foto'],
+                'tipe' => 'reguler'
+            ];
+        } else {
+            // Cek di cbt_peserta_khusus (Kelas Jauh)
+            $stmtK = $db->prepare("
+                SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
+                FROM cbt_peserta_khusus
+                WHERE no_peserta = ? OR username = ? OR id = ?
+                LIMIT 1
+            ");
+            $stmtK->execute([$code, $code, $code]);
+            $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+            if ($kRow) {
+                $siswa = [
+                    'id' => (int)$kRow['id'],
+                    'nis' => $kRow['nis'],
+                    'nama' => $kRow['nama'],
+                    'kelas_nama' => $kRow['kelas_nama'] ?: 'Kelas Jauh',
+                    'tingkat' => $kRow['tingkat'],
+                    'foto' => null,
+                    'tipe' => 'khusus'
+                ];
+                $tipePeserta = 'khusus';
+            }
+        }
+
+        if (!$siswa) {
+            echo json_encode([
+                'success' => false,
+                'message' => "Siswa dengan ID/NIS '{$code}' tidak ditemukan di sistem!"
+            ]);
+            exit;
+        }
+
+        // 2. Tentukan Jadwal Mapel & Sesi Aktif saat ini untuk kelas siswa tersebut
+        $targetKelas = $siswa['kelas_nama'];
+
+        // Cari jadwal ujian yang sedang berlangsung pada jam sekarang
+        $stmtJadwal = $db->prepare("
+            SELECT g.*, u.nama_ujian, s.jam_mulai, s.jam_selesai, s.label_sesi
+            FROM cbt_jadwal_grid g
+            LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
+            LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+            WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND g.hari = ?))
+              AND (
+                  g.kelas_nama = ? 
+                  OR ? LIKE CONCAT('%', g.kelas_nama, '%') 
+                  OR g.kelas_nama = 'Semua Kelas'
+                  OR g.kelas_nama IS NULL
+              )
+            ORDER BY (
+                s.jam_mulai IS NOT NULL AND ? >= s.jam_mulai AND ? <= s.jam_selesai
+            ) DESC, s.jam_mulai ASC LIMIT 1
+        ");
+        $stmtJadwal->execute([$todayDate, $curHari, $targetKelas, $targetKelas, $curTime, $curTime]);
+        $jadwal = $stmtJadwal->fetch(PDO::FETCH_ASSOC);
+
+        $mapelNama = $jadwal['mapel_nama'] ?? ($jadwal['nama_ujian'] ?? 'Asesmen CBT Harian');
+        $jamSlot = $jadwal['jam_slot'] ?? ($jadwal['label_sesi'] ?? 'Sesi 1');
+        $topikId = (int)($jadwal['topik_id'] ?? 0);
+        $ujianId = (int)($jadwal['ujian_id'] ?? 0);
+        $ruangNama = trim($_POST['ruang_nama'] ?? ($jadwal['ruang'] ?? ''));
+
+        // 3. Cek apakah sudah absen untuk mapel & tanggal ini
+        $stmtCheck = $db->prepare("
+            SELECT id, waktu_scan FROM cbt_absensi 
+            WHERE tanggal = ? AND nis = ? AND mapel_nama = ?
+        ");
+        $stmtCheck->execute([$todayDate, $siswa['nis'], $mapelNama]);
+        $exist = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if ($exist) {
+            echo json_encode([
+                'success' => true,
+                'already' => true,
+                'message' => "Siswa {$siswa['nama']} sudah terabsen sebelumnya pada pukul " . date('H:i', strtotime($exist['waktu_scan'])) . " WIB.",
+                'siswa' => $siswa,
+                'mapel' => $mapelNama,
+                'sesi' => $jamSlot,
+                'waktu' => date('H:i:s', strtotime($exist['waktu_scan']))
+            ]);
+            exit;
+        }
+
+        // Tentukan status kehadiran (Hadir / Terlambat)
+        $statusAbsen = 'Hadir';
+        if (!empty($jadwal['jam_mulai'])) {
+            $waktuMulai = strtotime($todayDate . ' ' . $jadwal['jam_mulai']);
+            $waktuSekarang = time();
+            if ($waktuSekarang > ($waktuMulai + 900)) { // Terlambat jika lewat 15 menit
+                $statusAbsen = 'Terlambat';
+            }
+        }
+
+        $petugasNama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengawas CBT');
+
+        // 4. Catat ke cbt_absensi
+        $stmtIns = $db->prepare("
+            INSERT INTO cbt_absensi 
+            (tanggal, siswa_id, nis, nama_siswa, kelas_nama, tipe_peserta, topik_id, ujian_id, mapel_nama, jam_slot, waktu_scan, status, metode_scan, petugas_nama, ruang_nama)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, 'QR_SCAN', ?, ?)
+        ");
+        $stmtIns->execute([
+            $todayDate,
+            $siswa['id'],
+            $siswa['nis'],
+            $siswa['nama'],
+            $siswa['kelas_nama'],
+            $tipePeserta,
+            $topikId,
+            $ujianId,
+            $mapelNama,
+            $jamSlot,
+            $statusAbsen,
+            $petugasNama,
+            $ruangNama
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Absensi Berhasil! {$siswa['nama']} tercatat {$statusAbsen}.",
+            'siswa' => $siswa,
+            'mapel' => $mapelNama,
+            'sesi' => $jamSlot,
+            'status' => $statusAbsen,
+            'waktu' => date('H:i:s')
+        ]);
+        exit;
+    }
+
+    /**
+     * Halaman Rekap Absensi Siswa CBT
+     */
+    public static function absensiRekap() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $selectedTanggal = isset($_GET['tanggal']) ? trim($_GET['tanggal']) : date('Y-m-d');
+        $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
+        $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
+
+        // Ambil filter list
+        $kelasList = $db->query("SELECT DISTINCT kelas_nama FROM cbt_absensi ORDER BY kelas_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
+        $mapelList = $db->query("SELECT DISTINCT mapel_nama FROM cbt_absensi ORDER BY mapel_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
+
+        $sql = "SELECT * FROM cbt_absensi WHERE tanggal = :tgl";
+        $params = [':tgl' => $selectedTanggal];
+
+        if (!empty($selectedKelas)) {
+            $sql .= " AND kelas_nama = :kelas";
+            $params[':kelas'] = $selectedKelas;
+        }
+
+        if (!empty($selectedMapel)) {
+            $sql .= " AND mapel_nama = :mapel";
+            $params[':mapel'] = $selectedMapel;
+        }
+
+        $sql .= " ORDER BY waktu_scan DESC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $absensiRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $title = "Rekap Absensi Ujian CBT - MAS MIFTAHUL HUDA";
+        $active_menu = 'absensi_rekap';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/absensi_rekap.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    private static function getIndoDayName($w) {
+        $days = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+        return $days[(int)$w] ?? 'Senin';
     }
 }

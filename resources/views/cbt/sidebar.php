@@ -80,6 +80,30 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
                 <span>Peserta Kelas Jauh</span>
             </a>
 
+            <!-- Kelola Ruang Ujian -->
+            <a href="<?php echo base_url('cbt/ruang'); ?>" class="z-nav-item <?php echo $active_menu === 'ruang' ? 'active' : ''; ?>">
+                <i data-lucide="door-open"></i>
+                <span>Kelola Ruang</span>
+            </a>
+
+            <!-- Denah Tempat Duduk -->
+            <a href="<?php echo base_url('cbt/denah'); ?>" class="z-nav-item <?php echo $active_menu === 'denah' ? 'active' : ''; ?>">
+                <i data-lucide="grid"></i>
+                <span>Denah Tempat Duduk</span>
+            </a>
+
+            <!-- Absensi CBT Scan 1 Pintu -->
+            <a href="<?php echo base_url('cbt/scan'); ?>" class="z-nav-item <?php echo $active_menu === 'absensi_cbt' ? 'active' : ''; ?>">
+                <i data-lucide="qr-code"></i>
+                <span>Scan Absensi CBT</span>
+            </a>
+
+            <!-- Rekap Absensi CBT -->
+            <a href="<?php echo base_url('cbt/absensi'); ?>" class="z-nav-item <?php echo $active_menu === 'absensi_rekap' ? 'active' : ''; ?>">
+                <i data-lucide="clipboard-check"></i>
+                <span>Rekap Absensi CBT</span>
+            </a>
+
             <!-- Hasil Ujian -->
             <a href="<?php echo base_url('cbt/hasil'); ?>" class="z-nav-item <?php echo $active_menu === 'hasil' ? 'active' : ''; ?>">
                 <i data-lucide="award"></i>
