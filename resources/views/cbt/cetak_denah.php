@@ -62,7 +62,7 @@ foreach ($mejaList as $m) {
         .meta-table td { padding: 3px 6px; }
         .papan-tulis-banner { background: #064e3b; color: white; border: 2px solid #022c22; border-radius: 6px; text-align: center; padding: 8px; font-weight: 900; font-size: 0.85rem; letter-spacing: 2px; margin-bottom: 18px; }
         .denah-grid { display: flex; flex-direction: column; gap: 14px; margin-bottom: 25px; }
-        .denah-row { display: flex; justify-content: center; gap: 16px; }
+        .denah-row { display: flex; justify-content: center; gap: <?= ($tipeMeja === 1) ? '10px' : '18px' ?>; flex-wrap: nowrap; }
         .meja-blok { display: flex; gap: 4px; border: 1.5px solid #0f172a; padding: 4px; border-radius: 6px; background: #f8fafc; }
         .kursi-box { width: 120px; height: 72px; border: 1px solid #475569; border-radius: 4px; padding: 4px 6px; display: flex; flex-direction: column; justify-content: space-between; background: white; }
         .kursi-head { display: flex; justify-content: space-between; align-items: center; }
@@ -148,28 +148,45 @@ foreach ($mejaList as $m) {
                     if (!isset($mejaByKolom[$k])) $mejaByKolom[$k] = [];
                     $mejaByKolom[$k][] = $mr;
                 }
-                for ($k = 1; $k <= $samping; $k++):
-                    $kMejas = $mejaByKolom[$k] ?? [];
                 ?>
-                    <div class="meja-blok">
-                        <?php foreach ($kMejas as $seat): ?>
-                            <?php $hasSiswa = !empty($seat['siswa_id']); ?>
-                            <div class="kursi-box">
-                                <div class="kursi-head">
-                                    <span class="kursi-num">#<?= str_pad($seat['nomor_meja'], 2, '0', STR_PAD_LEFT) ?></span>
-                                    <?php if ($tipeMeja === 2): ?>
+                <?php for ($k = 1; $k <= $samping; $k++): ?>
+                    <?php if ($tipeMeja === 1): ?>
+                        <?php
+                        $seat = ($mejaByKolom[$k] ?? [])[0] ?? null;
+                        if (!$seat) continue;
+                        $hasSiswa = !empty($seat['siswa_id']);
+                        ?>
+                        <div class="kursi-box" style="border: 1.5px solid #0f172a;">
+                            <div class="kursi-head">
+                                <span class="kursi-num">#<?= str_pad($seat['nomor_meja'], 2, '0', STR_PAD_LEFT) ?></span>
+                            </div>
+                            <?php if ($hasSiswa): ?>
+                                <div class="kursi-nama"><?= htmlspecialchars($seat['nama_siswa']) ?></div>
+                                <div class="kursi-kelas"><?= htmlspecialchars($seat['kelas_nama'] ?: 'X') ?> • <?= htmlspecialchars($seat['nis'] ?: '-') ?></div>
+                            <?php else: ?>
+                                <div class="kursi-kosong">Kosong</div>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <?php $kMejas = $mejaByKolom[$k] ?? []; ?>
+                        <div class="meja-blok">
+                            <?php foreach ($kMejas as $seat): ?>
+                                <?php $hasSiswa = !empty($seat['siswa_id']); ?>
+                                <div class="kursi-box">
+                                    <div class="kursi-head">
+                                        <span class="kursi-num">#<?= str_pad($seat['nomor_meja'], 2, '0', STR_PAD_LEFT) ?></span>
                                         <span class="kursi-side"><?= ($seat['posisi_sisi'] === 'L') ? 'Kiri' : 'Kanan' ?></span>
+                                    </div>
+                                    <?php if ($hasSiswa): ?>
+                                        <div class="kursi-nama"><?= htmlspecialchars($seat['nama_siswa']) ?></div>
+                                        <div class="kursi-kelas"><?= htmlspecialchars($seat['kelas_nama'] ?: 'X') ?> • <?= htmlspecialchars($seat['nis'] ?: '-') ?></div>
+                                    <?php else: ?>
+                                        <div class="kursi-kosong">Kosong</div>
                                     <?php endif; ?>
                                 </div>
-                                <?php if ($hasSiswa): ?>
-                                    <div class="kursi-nama"><?= htmlspecialchars($seat['nama_siswa']) ?></div>
-                                    <div class="kursi-kelas"><?= htmlspecialchars($seat['kelas_nama'] ?: 'X') ?> • <?= htmlspecialchars($seat['nis'] ?: '-') ?></div>
-                                <?php else: ?>
-                                    <div class="kursi-kosong">Kosong</div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 <?php endfor; ?>
             </div>
         <?php endfor; ?>

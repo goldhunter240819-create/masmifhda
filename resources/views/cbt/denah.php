@@ -206,11 +206,10 @@ $active_menu = 'denah';
                 }
                 ?>
 
-                <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 1100px; margin: 0 auto;">
-                    <?php for ($b = 1; $b <= $belakang; $b++): ?>
-                        <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                <div style="width: 100%; overflow-x: auto; padding-bottom: 14px;">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; min-width: <?php echo ($tipeMeja === 2) ? ($samping * 270) : ($samping * 150); ?>px; max-width: 1200px; margin: 0 auto;">
+                        <?php for ($b = 1; $b <= $belakang; $b++): ?>
                             <?php
-                            // Ambil meja untuk baris ini
                             $mRow = $mejaByBaris[$b] ?? [];
                             $mejaByKolom = [];
                             foreach ($mRow as $mr) {
@@ -220,32 +219,30 @@ $active_menu = 'denah';
                                 }
                                 $mejaByKolom[$k][] = $mr;
                             }
-
-                            for ($k = 1; $k <= $samping; $k++):
-                                $kMejas = $mejaByKolom[$k] ?? [];
                             ?>
-                                <!-- Blok Meja (Gandeng atau Tunggal) -->
-                                <div style="display: flex; gap: 4px; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 6px; border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-                                    <?php foreach ($kMejas as $seat): ?>
+
+                            <?php if ($tipeMeja === 1): ?>
+                                <!-- BARIS MEJA TUNGGAL (1 Siswa per Meja) -->
+                                <div style="display: grid; grid-template-columns: repeat(<?php echo $samping; ?>, 1fr); gap: 14px;">
+                                    <?php for ($k = 1; $k <= $samping; $k++): ?>
                                         <?php
+                                        $seat = ($mejaByKolom[$k] ?? [])[0] ?? null;
+                                        if (!$seat) continue;
                                         $hasSiswa = !empty($seat['siswa_id']);
                                         $t = (int)($seat['tingkat'] ?? 0);
                                         $badgeBg = '#eff6ff'; $badgeColor = '#1d4ed8'; $badgeBorder = '#bfdbfe';
                                         if ($t === 11) { $badgeBg = '#f0fdf4'; $badgeColor = '#15803d'; $badgeBorder = '#bbf7d0'; }
                                         elseif ($t === 12) { $badgeBg = '#faf5ff'; $badgeColor = '#7e22ce'; $badgeBorder = '#e9d5ff'; }
                                         ?>
-                                        <!-- Kursi Item -->
-                                        <div style="width: 135px; min-height: 110px; background: <?php echo $hasSiswa ? '#ffffff' : '#f8fafc'; ?>; border: 1.5px <?php echo $hasSiswa ? 'solid #cbd5e1' : 'dashed #cbd5e1'; ?>; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+                                        <div style="background: <?php echo $hasSiswa ? '#ffffff' : '#f8fafc'; ?>; border: 1.5px <?php echo $hasSiswa ? 'solid #cbd5e1' : 'dashed #cbd5e1'; ?>; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; min-height: 115px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); position: relative;">
                                             <!-- Header Nomor Meja -->
                                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                <span style="font-size: 0.7rem; font-weight: 900; background: #1e293b; color: white; padding: 1px 6px; border-radius: 4px; font-family: monospace;">
+                                                <span style="font-size: 0.72rem; font-weight: 900; background: #0f172a; color: white; padding: 2px 7px; border-radius: 5px; font-family: monospace;">
                                                     #<?php echo str_pad($seat['nomor_meja'], 2, '0', STR_PAD_LEFT); ?>
                                                 </span>
-                                                <?php if ($tipeMeja === 2): ?>
-                                                    <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8;">
-                                                        <?php echo ($seat['posisi_sisi'] === 'L') ? 'Kiri' : 'Kanan'; ?>
-                                                    </span>
-                                                <?php endif; ?>
+                                                <span style="font-size: 0.65rem; font-weight: 700; color: #94a3b8;">
+                                                    B<?php echo $b; ?>-K<?php echo $k; ?>
+                                                </span>
                                                 <?php if ($hasSiswa): ?>
                                                     <form method="POST" action="<?php echo base_url('cbt/denah/remove-seat'); ?>" style="margin: 0;" onsubmit="return confirm('Lepas siswa ini dari kursi?')">
                                                         <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
@@ -257,34 +254,91 @@ $active_menu = 'denah';
 
                                             <!-- Body Siswa -->
                                             <?php if ($hasSiswa): ?>
-                                                <div style="margin: 6px 0;">
-                                                    <div style="font-weight: 800; font-size: 0.8rem; color: #0f172a; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?php echo htmlspecialchars($seat['nama_siswa']); ?>">
+                                                <div style="margin: 8px 0;">
+                                                    <div style="font-weight: 800; font-size: 0.84rem; color: #0f172a; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?php echo htmlspecialchars($seat['nama_siswa']); ?>">
                                                         <?php echo htmlspecialchars($seat['nama_siswa']); ?>
                                                     </div>
-                                                    <div style="font-size: 0.68rem; font-family: monospace; color: #64748b; margin-top: 2px;">
+                                                    <div style="font-size: 0.68rem; font-family: monospace; color: #64748b; margin-top: 3px;">
                                                         NIS: <?php echo htmlspecialchars($seat['nis'] ?: '-'); ?>
                                                     </div>
                                                 </div>
 
-                                                <!-- Badge Tingkat & Rombel -->
+                                                <!-- Badge Rombel -->
                                                 <div>
-                                                    <span style="display: block; text-align: center; font-size: 0.65rem; font-weight: 800; padding: 2px 4px; border-radius: 4px; background: <?php echo $badgeBg; ?>; color: <?php echo $badgeColor; ?>; border: 1px solid <?php echo $badgeBorder; ?>;">
+                                                    <span style="display: block; text-align: center; font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: <?php echo $badgeBg; ?>; color: <?php echo $badgeColor; ?>; border: 1px solid <?php echo $badgeBorder; ?>;">
                                                         <?php echo htmlspecialchars($seat['kelas_nama'] ?: 'Kelas X'); ?>
                                                     </span>
                                                 </div>
                                             <?php else: ?>
-                                                <!-- Kursi Kosong -->
                                                 <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;" onclick="bukaModalPilihSiswa(<?php echo $seat['id']; ?>, <?php echo $seat['nomor_meja']; ?>)">
-                                                    <div style="font-size: 1rem; color: #cbd5e1; margin-bottom: 2px;">+</div>
-                                                    <span style="font-size: 0.68rem; font-weight: 700; color: #94a3b8;">Kosong</span>
+                                                    <div style="font-size: 1.2rem; color: #cbd5e1; margin-bottom: 2px;">+</div>
+                                                    <span style="font-size: 0.7rem; font-weight: 700; color: #94a3b8;">Kosong</span>
                                                 </div>
                                             <?php endif; ?>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endfor; ?>
                                 </div>
-                            <?php endfor; ?>
-                        </div>
-                    <?php endfor; ?>
+
+                            <?php else: ?>
+                                <!-- BARIS MEJA GANDENG (2 Siswa per Meja: Kiri & Kanan) -->
+                                <div style="display: grid; grid-template-columns: repeat(<?php echo $samping; ?>, 1fr); gap: 18px;">
+                                    <?php for ($k = 1; $k <= $samping; $k++): ?>
+                                        <?php $kMejas = $mejaByKolom[$k] ?? []; ?>
+                                        <div style="display: flex; gap: 6px; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 6px; border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                            <?php foreach ($kMejas as $seat): ?>
+                                                <?php
+                                                $hasSiswa = !empty($seat['siswa_id']);
+                                                $t = (int)($seat['tingkat'] ?? 0);
+                                                $badgeBg = '#eff6ff'; $badgeColor = '#1d4ed8'; $badgeBorder = '#bfdbfe';
+                                                if ($t === 11) { $badgeBg = '#f0fdf4'; $badgeColor = '#15803d'; $badgeBorder = '#bbf7d0'; }
+                                                elseif ($t === 12) { $badgeBg = '#faf5ff'; $badgeColor = '#7e22ce'; $badgeBorder = '#e9d5ff'; }
+                                                ?>
+                                                <div style="flex: 1; min-width: 0; min-height: 115px; background: <?php echo $hasSiswa ? '#ffffff' : '#f8fafc'; ?>; border: 1.5px <?php echo $hasSiswa ? 'solid #cbd5e1' : 'dashed #cbd5e1'; ?>; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                        <span style="font-size: 0.7rem; font-weight: 900; background: #1e293b; color: white; padding: 1px 6px; border-radius: 4px; font-family: monospace;">
+                                                            #<?php echo str_pad($seat['nomor_meja'], 2, '0', STR_PAD_LEFT); ?>
+                                                        </span>
+                                                        <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8;">
+                                                            <?php echo ($seat['posisi_sisi'] === 'L') ? 'Kiri' : 'Kanan'; ?>
+                                                        </span>
+                                                        <?php if ($hasSiswa): ?>
+                                                            <form method="POST" action="<?php echo base_url('cbt/denah/remove-seat'); ?>" style="margin: 0;" onsubmit="return confirm('Lepas siswa ini dari kursi?')">
+                                                                <input type="hidden" name="ruang_id" value="<?php echo $currentRuang['id']; ?>">
+                                                                <input type="hidden" name="slot_id" value="<?php echo $seat['id']; ?>">
+                                                                <button type="submit" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0;" title="Lepas Siswa">✕</button>
+                                                            </form>
+                                                        <?php endif; ?>
+                                                    </div>
+
+                                                    <?php if ($hasSiswa): ?>
+                                                        <div style="margin: 6px 0;">
+                                                            <div style="font-weight: 800; font-size: 0.8rem; color: #0f172a; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?php echo htmlspecialchars($seat['nama_siswa']); ?>">
+                                                                <?php echo htmlspecialchars($seat['nama_siswa']); ?>
+                                                            </div>
+                                                            <div style="font-size: 0.68rem; font-family: monospace; color: #64748b; margin-top: 2px;">
+                                                                NIS: <?php echo htmlspecialchars($seat['nis'] ?: '-'); ?>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <span style="display: block; text-align: center; font-size: 0.65rem; font-weight: 800; padding: 2px 4px; border-radius: 4px; background: <?php echo $badgeBg; ?>; color: <?php echo $badgeColor; ?>; border: 1px solid <?php echo $badgeBorder; ?>;">
+                                                                <?php echo htmlspecialchars($seat['kelas_nama'] ?: 'Kelas X'); ?>
+                                                            </span>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;" onclick="bukaModalPilihSiswa(<?php echo $seat['id']; ?>, <?php echo $seat['nomor_meja']; ?>)">
+                                                            <div style="font-size: 1rem; color: #cbd5e1; margin-bottom: 2px;">+</div>
+                                                            <span style="font-size: 0.68rem; font-weight: 700; color: #94a3b8;">Kosong</span>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endfor; ?>
+                                </div>
+                            <?php endif; ?>
+
+                        <?php endfor; ?>
+                    </div>
                 </div>
 
                 <!-- Bagian Belakang Ruang -->

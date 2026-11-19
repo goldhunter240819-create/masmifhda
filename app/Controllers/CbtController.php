@@ -3405,40 +3405,53 @@ class CbtController {
     /**
      * Helper: Sinkronisasi Slot Kursi Meja Ruang
      */
-    private static function syncSlotMejaRuang($db, $ruangId, $tipe_meja, $baris_samping, $baris_belakang) {
+    public static function syncSlotMejaRuang($db, $ruangId, $tipe_meja, $baris_samping, $baris_belakang) {
+        $tipe_meja = max(1, min(2, (int)$tipe_meja));
+        $baris_samping = max(1, (int)$baris_samping);
+        $baris_belakang = max(1, (int)$baris_belakang);
         $totalSlotDibutuhkan = $tipe_meja * $baris_samping * $baris_belakang;
 
-        // Ambil slot yang sudah ada
-        $existing = $db->prepare("SELECT id, nomor_meja, siswa_id FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
-        $existing->execute([$ruangId]);
-        $existingSlots = $existing->fetchAll(PDO::FETCH_ASSOC);
-        $countExisting = count($existingSlots);
+        // Ambil slot yang sudah ada saat ini
+        $stmtCurr = $db->prepare("SELECT id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
+        $stmtCurr->execute([$ruangId]);
+        $existing = $stmtCurr->fetchAll(PDO::FETCH_ASSOC);
 
-        // Jika slot kurang, buat slot tambahan
-        if ($countExisting < $totalSlotDibutuhkan) {
-            $stmtIns = $db->prepare("INSERT INTO cbt_denah_peserta (ruang_id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi) VALUES (?, ?, ?, ?, ?)");
-            $mejaNo = $countExisting + 1;
+        $existingByNo = [];
+        foreach ($existing as $ex) {
+            $existingByNo[(int)$ex['nomor_meja']] = $ex;
+        }
 
-            for ($b = 1; $b <= $baris_belakang; $b++) {
-                for ($k = 1; $k <= $baris_samping; $k++) {
-                    if ($tipe_meja === 2) {
-                        if ($mejaNo <= $totalSlotDibutuhkan) {
-                            $stmtIns->execute([$ruangId, $mejaNo++, $b, $k, 'L']);
-                        }
-                        if ($mejaNo <= $totalSlotDibutuhkan) {
-                            $stmtIns->execute([$ruangId, $mejaNo++, $b, $k, 'R']);
-                        }
-                    } else {
-                        if ($mejaNo <= $totalSlotDibutuhkan) {
-                            $stmtIns->execute([$ruangId, $mejaNo++, $b, $k, 'C']);
-                        }
-                    }
+        // Susun expected mapping posisi baris, kolom, dan sisi meja
+        $expectedSlots = [];
+        $noMeja = 1;
+        for ($b = 1; $b <= $baris_belakang; $b++) {
+            for ($k = 1; $k <= $baris_samping; $k++) {
+                if ($tipe_meja === 2) {
+                    $expectedSlots[] = ['no' => $noMeja++, 'b' => $b, 'k' => $k, 'sisi' => 'L'];
+                    $expectedSlots[] = ['no' => $noMeja++, 'b' => $b, 'k' => $k, 'sisi' => 'R'];
+                } else {
+                    $expectedSlots[] = ['no' => $noMeja++, 'b' => $b, 'k' => $k, 'sisi' => 'C'];
                 }
             }
-        } elseif ($countExisting > $totalSlotDibutuhkan) {
-            // Hapus slot berlebih yang kosong
-            $db->prepare("DELETE FROM cbt_denah_peserta WHERE ruang_id = ? AND nomor_meja > ? AND siswa_id IS NULL")->execute([$ruangId, $totalSlotDibutuhkan]);
         }
+
+        $stmtUp = $db->prepare("UPDATE cbt_denah_peserta SET posisi_baris = ?, posisi_kolom = ?, posisi_sisi = ? WHERE id = ?");
+        $stmtIns = $db->prepare("INSERT INTO cbt_denah_peserta (ruang_id, nomor_meja, posisi_baris, posisi_kolom, posisi_sisi) VALUES (?, ?, ?, ?, ?)");
+
+        foreach ($expectedSlots as $exp) {
+            $mNo = $exp['no'];
+            if (isset($existingByNo[$mNo])) {
+                $cur = $existingByNo[$mNo];
+                if ((int)$cur['posisi_baris'] !== $exp['b'] || (int)$cur['posisi_kolom'] !== $exp['k'] || $cur['posisi_sisi'] !== $exp['sisi']) {
+                    $stmtUp->execute([$exp['b'], $exp['k'], $exp['sisi'], $cur['id']]);
+                }
+            } else {
+                $stmtIns->execute([$ruangId, $mNo, $exp['b'], $exp['k'], $exp['sisi']]);
+            }
+        }
+
+        // Hapus slot berlebih jika nomor meja melebihi kapasitas
+        $db->prepare("DELETE FROM cbt_denah_peserta WHERE ruang_id = ? AND nomor_meja > ? AND (siswa_id IS NULL OR siswa_id = 0)")->execute([$ruangId, $totalSlotDibutuhkan]);
     }
 
     /**
@@ -3469,6 +3482,21 @@ class CbtController {
         $tingkatStats = [10 => 0, 11 => 0, 12 => 0, 'other' => 0, 'kosong' => 0];
 
         if ($currentRuang) {
+            $tipeMeja = (int)($currentRuang['tipe_meja'] ?? 1);
+            $samping = (int)($currentRuang['baris_samping'] ?? 5);
+            $belakang = (int)($currentRuang['baris_belakang'] ?? 5);
+            if ($samping <= 0 || $belakang <= 0) {
+                $polaParts = explode('x', strtolower($currentRuang['kode_pola'] ?? ''));
+                if (count($polaParts) === 3) {
+                    $tipeMeja = (int)trim($polaParts[0]) ?: 1;
+                    $samping = (int)trim($polaParts[1]) ?: 6;
+                    $belakang = (int)trim($polaParts[2]) ?: 5;
+                }
+            }
+
+            // Selalu sinkronkan mapping baris & kolom dengan konfigurasi pola meja saat ini
+            self::syncSlotMejaRuang($db, $currentRuang['id'], $tipeMeja, $samping, $belakang);
+
             $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
             $stmtMeja->execute([$selectedRuangId]);
             $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
