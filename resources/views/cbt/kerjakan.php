@@ -2238,6 +2238,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         function playDangerAlarm() {
             if (!soundAlarm || !alarmAudio) return;
             try {
+                alarmAudio.loop = true;
+                alarmAudio.volume = 1.0;
                 alarmAudio.currentTime = 0;
                 alarmAudio.play().catch(e => console.log('Audio autoplay note:', e));
             } catch(e) {}
