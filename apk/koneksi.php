@@ -69,6 +69,47 @@ if (!isset($_SESSION['siswa_id']) && isset($_COOKIE['apk_remember_siswa'])) {
     } catch (Exception $e) {}
 }
 
+// Auto-Login Guru / Pengawas Kelas Jauh
+if (!isset($_SESSION['guru_id']) && isset($_COOKIE['apk_remember_guru'])) {
+    $cookie_g = (int)$_COOKIE['apk_remember_guru'];
+    if ($cookie_g >= 800000) {
+        $real_id = $cookie_g - 800000;
+        try {
+            $stmt_pkj = $core_db->prepare("SELECT * FROM cbt_pengawas_kj WHERE id = ? AND status = 'Aktif' LIMIT 1");
+            $stmt_pkj->execute([$real_id]);
+            $pkj = $stmt_pkj->fetch(PDO::FETCH_ASSOC);
+            if ($pkj) {
+                $_SESSION['guru_id'] = 800000 + (int)$pkj['id'];
+                $_SESSION['guru_nama'] = $pkj['nama'];
+                $_SESSION['guru_nip'] = 'KJ-' . str_pad($pkj['id'], 4, '0', STR_PAD_LEFT);
+                $_SESSION['role_id'] = 2;
+                $_SESSION['user_id'] = 800000 + (int)$pkj['id'];
+                $_SESSION['username'] = $pkj['username'];
+                $_SESSION['nama'] = $pkj['nama'];
+                $_SESSION['is_guru_kelas_jauh'] = true;
+                $_SESSION['lokasi_cabang'] = $pkj['lokasi_cabang'];
+            } else {
+                setcookie('apk_remember_guru', '', time() - 3600, "/");
+            }
+        } catch (\Exception $e) {}
+    } else {
+        try {
+            $stmt_g = $core_db->prepare("SELECT id, nama, nip, user_id FROM guru WHERE id = ? LIMIT 1");
+            $stmt_g->execute([$cookie_g]);
+            $g_row = $stmt_g->fetch(PDO::FETCH_ASSOC);
+            if ($g_row) {
+                $_SESSION['guru_id'] = $g_row['id'];
+                $_SESSION['guru_nama'] = $g_row['nama'];
+                $_SESSION['guru_nip'] = $g_row['nip'];
+                $_SESSION['user_id'] = $g_row['user_id'];
+                $_SESSION['nama'] = $g_row['nama'];
+            } else {
+                setcookie('apk_remember_guru', '', time() - 3600, "/");
+            }
+        } catch (\Exception $e) {}
+    }
+}
+
 // Fungsi bantu untuk format Rupiah
 function formatRupiah($angka) {
     return 'Rp ' . number_format($angka, 0, ',', '.');

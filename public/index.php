@@ -2509,6 +2509,8 @@ $router->add('GET', '/cbt/denah/cetak-label', [\App\Controllers\CbtController::c
 $router->add('GET', '/cbt/scan', [\App\Controllers\CbtController::class, 'absensiScan']);
 $router->add('POST', '/cbt/scan/process', [\App\Controllers\CbtController::class, 'processAbsensiScan']);
 $router->add('GET', '/cbt/absensi', [\App\Controllers\CbtController::class, 'absensiRekap']);
+$router->add('POST', '/cbt/absensi/delete', [\App\Controllers\CbtController::class, 'deleteAbsensi']);
+$router->add('POST', '/cbt/absensi/reset-today', [\App\Controllers\CbtController::class, 'resetAbsensiToday']);
 $router->add('POST', '/cbt/hasil/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
 $router->add('POST', '/cbt/peserta/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
 $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'analisis']);
@@ -2519,6 +2521,8 @@ $router->add('POST', '/cbt/pengaturan/reset-default', [\App\Controllers\CbtContr
 $router->add('GET', '/cbt/peserta_khusus', [\App\Controllers\CbtController::class, 'pesertaKhusus']);
 $router->add('POST', '/cbt/peserta_khusus/save', [\App\Controllers\CbtController::class, 'savePesertaKhusus']);
 $router->add('POST', '/cbt/peserta_khusus/delete', [\App\Controllers\CbtController::class, 'deletePesertaKhusus']);
+$router->add('POST', '/cbt/pengawas_kj/save', [\App\Controllers\CbtController::class, 'savePengawasKj']);
+$router->add('POST', '/cbt/pengawas_kj/delete', [\App\Controllers\CbtController::class, 'deletePengawasKj']);
 $router->add('POST', '/cbt/peserta_khusus/import', [\App\Controllers\CbtController::class, 'importPesertaKhusus']);
 $router->add('GET', '/cbt/peserta_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPesertaKhusus']);
 

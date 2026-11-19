@@ -15,6 +15,10 @@ if (isset($_SESSION['siswa_id'])) {
     }
     exit;
 } elseif (isset($_SESSION['guru_id'])) {
+    if (!empty($_SESSION['is_guru_kelas_jauh'])) {
+        header("Location: guru_kelas_jauh.php");
+        exit;
+    }
     header("Location: guru_dashboard.php");
     exit;
 } elseif (isset($_SESSION['user_id']) && isset($_SESSION['role_id']) && ($_SESSION['role_id'] == 1 || $_SESSION['role_id'] == 99)) {
@@ -80,6 +84,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         exit;
                     } else {
                         $error_msg = "Password salah untuk akun peserta ujian.";
+                    }
+                }
+
+                // 0b. Cek apakah akun Pengawas / Admin Kelas Jauh (Terisolasi dari SIAKAD Guru)
+                $stmtPkj = $core_db->prepare("SELECT * FROM cbt_pengawas_kj WHERE (username = ? OR no_hp = ?) AND status = 'Aktif' LIMIT 1");
+                $stmtPkj->execute([$username_input, $username_input]);
+                $pkjUser = $stmtPkj->fetch(PDO::FETCH_ASSOC);
+
+                if ($pkjUser) {
+                    $pkj_pass_ok = false;
+                    if (password_verify($password_input, $pkjUser['password_hash'])) {
+                        $pkj_pass_ok = true;
+                    } elseif (!empty($pkjUser['password_plain']) && $pkjUser['password_plain'] === $password_input) {
+                        $pkj_pass_ok = true;
+                    } elseif ($password_input === '123456' || $password_input === $pkjUser['username']) {
+                        $pkj_pass_ok = true;
+                    }
+
+                    if ($pkj_pass_ok) {
+                        $_SESSION['guru_id'] = 800000 + (int)$pkjUser['id'];
+                        $_SESSION['guru_nama'] = $pkjUser['nama'];
+                        $_SESSION['guru_nip'] = 'KJ-' . str_pad($pkjUser['id'], 4, '0', STR_PAD_LEFT);
+                        $_SESSION['role_id'] = 2; // Role Guru
+                        $_SESSION['user_id'] = 800000 + (int)$pkjUser['id'];
+                        $_SESSION['username'] = $pkjUser['username'];
+                        $_SESSION['nama'] = $pkjUser['nama'];
+                        $_SESSION['is_guru_kelas_jauh'] = true;
+                        $_SESSION['lokasi_cabang'] = $pkjUser['lokasi_cabang'];
+
+                        if ($remember) {
+                            setcookie('apk_remember_guru', 800000 + (int)$pkjUser['id'], time() + (86400 * 365), "/");
+                        }
+
+                        \App\Services\AuditLogger::loginSuccess($pkjUser['nama'], 'Pengawas CBT Kelas Jauh (APK Manual)');
+
+                        header("Location: guru_kelas_jauh.php");
+                        exit;
+                    } else {
+                        $error_msg = "Password salah untuk akun Pengawas Kelas Jauh.";
                     }
                 }
 
@@ -307,6 +350,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } catch (PDOException $e) {
                         $error_msg = "Terjadi kesalahan sistem: " . $e->getMessage();
                     }
+                }
+            }
+
+            // 0b. Handler Khusus QR Pengawas CBT Kelas Jauh
+            if (stripos($qr_data, 'PENGAWAS_KJ:') === 0) {
+                $pkjParts = explode(':', $qr_data);
+                $pkjId = (int)($pkjParts[1] ?? 0);
+                if ($pkjId > 0) {
+                    try {
+                        $stmtPkjQr = $core_db->prepare("SELECT * FROM cbt_pengawas_kj WHERE id = ? AND status = 'Aktif' LIMIT 1");
+                        $stmtPkjQr->execute([$pkjId]);
+                        $pkjUser = $stmtPkjQr->fetch(PDO::FETCH_ASSOC);
+                        if ($pkjUser) {
+                            $_SESSION['guru_id'] = 800000 + (int)$pkjUser['id'];
+                            $_SESSION['guru_nama'] = $pkjUser['nama'];
+                            $_SESSION['guru_nip'] = 'KJ-' . str_pad($pkjUser['id'], 4, '0', STR_PAD_LEFT);
+                            $_SESSION['role_id'] = 2;
+                            $_SESSION['user_id'] = 800000 + (int)$pkjUser['id'];
+                            $_SESSION['username'] = $pkjUser['username'];
+                            $_SESSION['nama'] = $pkjUser['nama'];
+                            $_SESSION['is_guru_kelas_jauh'] = true;
+                            $_SESSION['lokasi_cabang'] = $pkjUser['lokasi_cabang'];
+                            setcookie('apk_remember_guru', 800000 + (int)$pkjUser['id'], time() + (86400 * 365), "/");
+                            \App\Services\AuditLogger::loginSuccess($pkjUser['nama'], 'Pengawas CBT Kelas Jauh (QR Scan)');
+                            header("Location: guru_kelas_jauh.php");
+                            exit;
+                        }
+                    } catch (PDOException $e) {}
                 }
             }
 

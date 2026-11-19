@@ -17,14 +17,17 @@ $active_menu = 'absensi_rekap';
                     <div class="header-text-premium">
                         <div class="header-badge">MONITORING KEHADIRAN CBT</div>
                         <h1><i data-lucide="clipboard-check"></i> Rekap Absensi Siswa CBT</h1>
-                        <p>Monitoring data kehadiran siswa pada setiap sesi ujian, riwayat pemindaian barcode 1 pintu, dan kepatuhan jadwal pelaksanaan.</p>
+                        <p>Monitoring data kehadiran siswa pada setiap sesi ujian, riwayat pemindaian barcode 1 pintu, dan kontrol data absensi.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" onclick="konfirmasiResetHariIni('<?php echo htmlspecialchars($selectedTanggal); ?>')" class="e-btn e-btn-glass" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                            <i data-lucide="rotate-ccw"></i> Reset Absensi Hari Ini
+                        </button>
                         <a href="<?php echo base_url('cbt/scan'); ?>" class="e-btn e-btn-primary" style="background: #2563eb;">
                             <i data-lucide="qr-code"></i> Buka Scanner 1 Pintu
                         </a>
                         <button type="button" onclick="window.print()" class="e-btn e-btn-glass">
-                            <i data-lucide="printer"></i> Cetak Laporan Kehadiran
+                            <i data-lucide="printer"></i> Cetak Laporan
                         </button>
                     </div>
                 </div>
@@ -63,7 +66,7 @@ $active_menu = 'absensi_rekap';
                     </div>
 
                     <div style="margin-top: 18px;">
-                        <a href="<?php echo base_url('cbt/absensi'); ?>" class="e-btn e-btn-secondary" style="padding: 7px 14px;">Reset</a>
+                        <a href="<?php echo base_url('cbt/absensi'); ?>" class="e-btn e-btn-secondary" style="padding: 7px 14px;">Reset Filter</a>
                     </div>
                 </form>
             </div>
@@ -83,19 +86,20 @@ $active_menu = 'absensi_rekap';
                     <table class="z-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px;">No</th>
+                                <th style="width: 50px; text-align: center;">No</th>
                                 <th>NIS & Nama Siswa</th>
                                 <th>Kelas</th>
                                 <th>Mata Pelajaran & Sesi</th>
                                 <th>Waktu Scan Absensi</th>
                                 <th>Status</th>
                                 <th>Tipe Peserta</th>
+                                <th style="width: 80px; text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($absensiRows)): ?>
                             <tr>
-                                <td colspan="7" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
+                                <td colspan="8" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="clipboard-x" style="width: 44px; height: 44px; margin-bottom: 10px; color: #cbd5e1;"></i>
                                     <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Belum Ada Data Absensi CBT</div>
                                     <div style="font-size: 0.78rem;">Siswa belum melakukan scan pada tanggal atau filter yang dipilih.</div>
@@ -103,8 +107,8 @@ $active_menu = 'absensi_rekap';
                             </tr>
                             <?php else: ?>
                                 <?php $no = 1; foreach ($absensiRows as $row): ?>
-                                <tr>
-                                    <td style="color: #94a3b8; font-weight: 600;"><?php echo $no++; ?></td>
+                                <tr id="row-absen-<?php echo $row['id']; ?>">
+                                    <td style="color: #94a3b8; font-weight: 600; text-align: center;"><?php echo $no++; ?></td>
                                     <td>
                                         <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;"><?php echo htmlspecialchars($row['nama_siswa']); ?></div>
                                         <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">NIS: <?php echo htmlspecialchars($row['nis']); ?></div>
@@ -140,6 +144,11 @@ $active_menu = 'absensi_rekap';
                                             </span>
                                         <?php endif; ?>
                                     </td>
+                                    <td style="text-align: right;">
+                                        <button type="button" onclick="hapusBarisAbsensi(<?php echo (int)$row['id']; ?>, '<?php echo htmlspecialchars(addslashes($row['nama_siswa'])); ?>')" class="e-btn e-btn-glass" style="padding: 5px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Hapus Riwayat Absensi Ini">
+                                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -151,3 +160,98 @@ $active_menu = 'absensi_rekap';
         </div>
     </div>
 </div>
+
+<script>
+function hapusBarisAbsensi(id, nama) {
+    const doDelete = () => {
+        fetch('<?php echo base_url('cbt/absensi/delete'); ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ id: id })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                const el = document.getElementById('row-absen-' + id);
+                if (el) el.remove();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Terhapus!',
+                        text: res.message,
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(res.message);
+                }
+            } else {
+                alert(res.message || 'Gagal menghapus data absensi');
+            }
+        })
+        .catch(err => alert('Terjadi kesalahan jaringan atau server.'));
+    };
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Hapus Absensi?',
+            text: `Hapus catatan absensi untuk ${nama}? Siswa dapat melakukan scan ulang kembali.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then(result => {
+            if (result.isConfirmed) doDelete();
+        });
+    } else {
+        if (confirm(`Hapus catatan absensi untuk ${nama}?`)) doDelete();
+    }
+}
+
+function konfirmasiResetHariIni(tanggal) {
+    const doReset = () => {
+        fetch('<?php echo base_url('cbt/absensi/reset-today'); ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ tanggal: tanggal })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Berhasil Direset!',
+                        text: res.message,
+                        icon: 'success'
+                    }).then(() => location.reload());
+                } else {
+                    alert(res.message);
+                    location.reload();
+                }
+            } else {
+                alert(res.message || 'Gagal mereset absensi');
+            }
+        })
+        .catch(err => alert('Terjadi kesalahan jaringan atau server.'));
+    };
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Reset Seluruh Absensi Tanggal Ini?',
+            text: `Perhatian! Seluruh catatan scan absensi pada tanggal ${tanggal} akan dibersihkan. Fitur ini cocok digunakan untuk simulasi atau reset ulang hari ujian.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Reset Semua!',
+            cancelButtonText: 'Batal'
+        }).then(result => {
+            if (result.isConfirmed) doReset();
+        });
+    } else {
+        if (confirm(`Perhatian! Seluruh catatan scan absensi pada tanggal ${tanggal} akan dibersihkan. Lanjutkan?`)) doReset();
+    }
+}
+</script>

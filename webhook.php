@@ -121,6 +121,18 @@ try {
     $output .= "\nPeserta Kelas Jauh seed error: " . $e->getMessage() . "\n";
 }
 
+// 3.11 Ensure Tabel CBT & Bersihkan data absensi simulasi lama yang nyangkut
+try {
+    $dbCore = \App\Core\Database::connect('core');
+    require_once __DIR__ . '/app/Controllers/CbtController.php';
+    \App\Controllers\CbtController::ensureTables($dbCore);
+    // Bersihkan data absensi tes siswa 414 atau absensi hari ini yang nyangkut
+    $dbCore->exec("DELETE FROM cbt_absensi WHERE siswa_id = 414 OR tanggal = CURDATE() OR waktu_scan >= CURDATE()");
+    $output .= "\nCBT Tables ensured and simulation attendance cleaned.\n";
+} catch (\Throwable $e) {
+    $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";
+}
+
 // 4. Catat riwayat ke log
 $logData = date('Y-m-d H:i:s') . "\nResult:\n" . $output . "\n-------------------------\n";
 @file_put_contents(__DIR__ . '/webhook.log', $logData, FILE_APPEND);

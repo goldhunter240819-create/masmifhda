@@ -295,22 +295,33 @@ foreach ($ujianListRaw as $u) {
                 // Terjadwal HARI INI!
                 $isHariIni = true;
                 $slotLabel = $jGrid['label_sesi'] ?: $jGrid['jam_slot'];
-                $timeRange = (!empty($jGrid['jam_mulai']) && !empty($jGrid['jam_selesai'])) ? $jGrid['jam_mulai'] . ' - ' . $jGrid['jam_selesai'] . ' WIB' : '';
+                
+                $jMulaiStr = !empty($jGrid['jam_mulai']) ? $jGrid['jam_mulai'] : '';
+                $jSelesaiStr = !empty($jGrid['jam_selesai']) ? $jGrid['jam_selesai'] : '';
+
+                if ((empty($jMulaiStr) || empty($jSelesaiStr)) && !empty($jGrid['jam_slot'])) {
+                    if (preg_match('/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/', $jGrid['jam_slot'], $mTimes)) {
+                        $jMulaiStr = $mTimes[1];
+                        $jSelesaiStr = $mTimes[2];
+                    }
+                }
+
+                $timeRange = (!empty($jMulaiStr) && !empty($jSelesaiStr)) ? $jMulaiStr . ' - ' . $jSelesaiStr . ' WIB' : '';
                 $jadwalSlotLabel = trim($slotLabel . ' ' . ($timeRange ? "($timeRange)" : ''));
 
-                $startTs = !empty($jGrid['jam_mulai']) ? strtotime($todayDate . ' ' . $jGrid['jam_mulai']) : 0;
-                $endTs = !empty($jGrid['jam_selesai']) ? strtotime($todayDate . ' ' . $jGrid['jam_selesai']) : 0;
+                $startTs = !empty($jMulaiStr) ? strtotime($todayDate . ' ' . $jMulaiStr) : 0;
+                $endTs = !empty($jSelesaiStr) ? strtotime($todayDate . ' ' . $jSelesaiStr) : 0;
 
                 if ($startTs && $nowTs < $startTs) {
                     // Jam mulai belum tiba
                     $scheduleState = 'early';
                     $canTake = false;
-                    $scheduleNotice = 'Sesi dibuka pukul ' . $jGrid['jam_mulai'] . ' WIB';
+                    $scheduleNotice = 'Sesi dibuka pukul ' . $jMulaiStr . ' WIB';
                 } elseif ($endTs && $nowTs > $endTs) {
                     // Jam selesai sudah terlewat!
                     $scheduleState = 'expired';
                     $canTake = false;
-                    $scheduleNotice = 'Sesi telah berakhir pada pukul ' . $jGrid['jam_selesai'] . ' WIB';
+                    $scheduleNotice = 'Sesi telah berakhir pada pukul ' . $jSelesaiStr . ' WIB';
                 } else {
                     // Jam sedang berlangsung
                     $scheduleState = 'open';

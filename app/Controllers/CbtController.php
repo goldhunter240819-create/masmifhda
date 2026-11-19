@@ -138,6 +138,32 @@ class CbtController {
                 } catch (\Exception $e) {}
             }
 
+            // 6b. Tabel Akun Pengawas / Admin Kelas Jauh (Terisolasi dari SIAKAD Guru)
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_pengawas_kj (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nama VARCHAR(150) NOT NULL,
+                username VARCHAR(100) NOT NULL UNIQUE,
+                password_plain VARCHAR(100) NOT NULL DEFAULT '123456',
+                password_hash VARCHAR(255) NOT NULL,
+                no_hp VARCHAR(30) NULL,
+                lokasi_cabang VARCHAR(100) DEFAULT 'Kelas Jauh',
+                status VARCHAR(20) DEFAULT 'Aktif',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (username),
+                INDEX (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Seed default akun pengawas KJ jika masih kosong
+            try {
+                $cntP = (int)$db->query("SELECT COUNT(*) FROM cbt_pengawas_kj")->fetchColumn();
+                if ($cntP === 0) {
+                    $pwHash = password_hash('123456', PASSWORD_BCRYPT);
+                    $db->exec("INSERT INTO cbt_pengawas_kj (nama, username, password_plain, password_hash, lokasi_cabang, status) VALUES
+                        ('Ustadz Pengawas Cabang', 'adminkj', '123456', '{$pwHash}', 'Cabang Kelas Jauh', 'Aktif')
+                    ");
+                }
+            } catch (\Exception $e) {}
+
             // Seed default slots jika masih kosong
             $cntSlot = (int)$db->query("SELECT COUNT(*) FROM cbt_jam_slot")->fetchColumn();
             if ($cntSlot === 0) {
@@ -1556,9 +1582,26 @@ class CbtController {
                         $db->exec("DELETE FROM cbt_peserta WHERE ujian_id IN ({$inIds})");
                     } catch (\Exception $e) {}
 
+                    // Hapus data absensi terkait topik & ujian ini agar tidak nyangkut saat simulasi ulang
+                    try {
+                        $db->exec("DELETE FROM cbt_absensi WHERE topik_id = {$id} OR ujian_id IN ({$inIds})");
+                    } catch (\Exception $e) {}
+
                     // Kembalikan status ujian ke 'Aktif'
                     try {
                         $db->exec("UPDATE cbt_ujian SET status = 'Aktif' WHERE id IN ({$inIds})");
+                    } catch (\Exception $e) {}
+                } else {
+                    try {
+                        $db->exec("DELETE FROM cbt_absensi WHERE topik_id = {$id}");
+                    } catch (\Exception $e) {}
+                }
+
+                // Hapus juga data absensi berdasarkan nama topik jika ada
+                if (!empty($namaTopik)) {
+                    try {
+                        $stmtDelM = $db->prepare("DELETE FROM cbt_absensi WHERE mapel_nama LIKE ?");
+                        $stmtDelM->execute(['%' . $namaTopik . '%']);
                     } catch (\Exception $e) {}
                 }
 
@@ -3063,7 +3106,13 @@ class CbtController {
         $countXI = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta_khusus WHERE tingkat = 'Kelas XI'")->fetchColumn();
         $countXII = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta_khusus WHERE tingkat = 'Kelas XII'")->fetchColumn();
 
-        $title = "Peserta CBT Kelas Jauh - MAS MIFTAHUL HUDA";
+        $activeTab = $_GET['tab'] ?? 'siswa';
+        $pengawasKjList = [];
+        try {
+            $pengawasKjList = $db->query("SELECT * FROM cbt_pengawas_kj ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $title = "Peserta & Pengawas CBT Kelas Jauh - MAS MIFTAHUL HUDA";
         $active_menu = 'peserta_khusus';
 
         ob_start();
@@ -3158,6 +3207,63 @@ class CbtController {
             exit;
         }
         redirect('/cbt/peserta_khusus');
+    }
+
+    /**
+     * Simpan / Perbarui Akun Pengawas / Admin Kelas Jauh (Untuk Portal APK)
+     */
+    public static function savePengawasKj() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            $nama = trim($_POST['nama'] ?? '');
+            $username = strtolower(trim(preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $_POST['username'] ?? '')));
+            $password = trim($_POST['password'] ?? '');
+            $no_hp = trim($_POST['no_hp'] ?? '');
+            $lokasi_cabang = trim($_POST['lokasi_cabang'] ?? 'Cabang Kelas Jauh');
+            $status = trim($_POST['status'] ?? 'Aktif');
+
+            if (!empty($nama) && !empty($username)) {
+                $pwPlain = !empty($password) ? $password : '123456';
+                $pwHash = password_hash($pwPlain, PASSWORD_BCRYPT);
+
+                if ($id > 0) {
+                    if (!empty($password)) {
+                        $stmt = $db->prepare("UPDATE cbt_pengawas_kj SET nama = ?, username = ?, password_plain = ?, password_hash = ?, no_hp = ?, lokasi_cabang = ?, status = ? WHERE id = ?");
+                        $stmt->execute([$nama, $username, $pwPlain, $pwHash, $no_hp, $lokasi_cabang, $status, $id]);
+                    } else {
+                        $stmt = $db->prepare("UPDATE cbt_pengawas_kj SET nama = ?, username = ?, no_hp = ?, lokasi_cabang = ?, status = ? WHERE id = ?");
+                        $stmt->execute([$nama, $username, $no_hp, $lokasi_cabang, $status, $id]);
+                    }
+                } else {
+                    $stmt = $db->prepare("INSERT INTO cbt_pengawas_kj (nama, username, password_plain, password_hash, no_hp, lokasi_cabang, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$nama, $username, $pwPlain, $pwHash, $no_hp, $lokasi_cabang, $status]);
+                }
+                redirect('/cbt/peserta_khusus?tab=pengawas&msg=saved');
+                exit;
+            }
+        }
+        redirect('/cbt/peserta_khusus?tab=pengawas');
+    }
+
+    /**
+     * Hapus Akun Pengawas Kelas Jauh
+     */
+    public static function deletePengawasKj() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
+        if ($id > 0) {
+            $db->prepare("DELETE FROM cbt_pengawas_kj WHERE id = ?")->execute([$id]);
+            redirect('/cbt/peserta_khusus?tab=pengawas&msg=deleted');
+            exit;
+        }
+        redirect('/cbt/peserta_khusus?tab=pengawas');
     }
 
     /**
@@ -4052,12 +4158,17 @@ class CbtController {
         // 2. Tentukan Jadwal Mapel & Sesi Aktif saat ini untuk kelas siswa tersebut
         $targetKelas = $siswa['kelas_nama'];
 
-        // Cari jadwal ujian yang sedang berlangsung pada jam sekarang
+        // Ambil seluruh jadwal ujian hari ini untuk kelas siswa tersebut
         $stmtJadwal = $db->prepare("
             SELECT g.*, u.nama_ujian, s.jam_mulai, s.jam_selesai, s.label_sesi
             FROM cbt_jadwal_grid g
             LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
-            LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+            LEFT JOIN cbt_jam_slot s ON (
+                g.jam_slot = s.label_sesi 
+                OR g.jam_slot = s.urutan 
+                OR g.jam_slot = CONCAT(s.jam_mulai, ' - ', s.jam_selesai)
+                OR g.jam_slot LIKE CONCAT('%', s.jam_mulai, '%')
+            )
             WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND g.hari = ?))
               AND (
                   g.kelas_nama = ? 
@@ -4065,39 +4176,87 @@ class CbtController {
                   OR g.kelas_nama = 'Semua Kelas'
                   OR g.kelas_nama IS NULL
               )
-            ORDER BY (
-                s.jam_mulai IS NOT NULL AND ? >= s.jam_mulai AND ? <= s.jam_selesai
-            ) DESC, s.jam_mulai ASC LIMIT 1
+            ORDER BY g.id ASC
         ");
-        $stmtJadwal->execute([$todayDate, $curHari, $targetKelas, $targetKelas, $curTime, $curTime]);
-        $jadwal = $stmtJadwal->fetch(PDO::FETCH_ASSOC);
+        $stmtJadwal->execute([$todayDate, $curHari, $targetKelas, $targetKelas]);
+        $allJadwalGrid = $stmtJadwal->fetchAll(PDO::FETCH_ASSOC);
 
-        if (!$jadwal || empty($jadwal['nama_ujian'])) {
-            $stmtUjianAktif = $db->prepare("
-                SELECT id, nama_ujian, kode_ujian, durasi_menit 
-                FROM cbt_ujian 
-                WHERE status = 'aktif'
-                ORDER BY id DESC LIMIT 1
-            ");
-            $stmtUjianAktif->execute();
-            $ujianAktif = $stmtUjianAktif->fetch(PDO::FETCH_ASSOC);
-            if ($ujianAktif) {
-                $mapelNama = $ujianAktif['nama_ujian'];
-                $ujianId = (int)$ujianAktif['id'];
-                $jamSlot = 'Sesi CBT';
-            } else {
-                $mapelNama = 'Asesmen CBT Harian';
-                $ujianId = 0;
-                $jamSlot = 'Sesi 1';
+        $activeJadwal = null;
+        $upcomingJadwal = null;
+        $allExpired = true;
+
+        if (!empty($allJadwalGrid)) {
+            foreach ($allJadwalGrid as $jg) {
+                // Ekstraksi jam_mulai dan jam_selesai dengan cerdas
+                $jMulai = !empty($jg['jam_mulai']) ? trim($jg['jam_mulai']) : null;
+                $jSelesai = !empty($jg['jam_selesai']) ? trim($jg['jam_selesai']) : null;
+
+                if ((empty($jMulai) || empty($jSelesai)) && !empty($jg['jam_slot'])) {
+                    if (preg_match('/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/', $jg['jam_slot'], $m)) {
+                        $jMulai = sprintf('%05s', $m[1]);
+                        $jSelesai = sprintf('%05s', $m[2]);
+                    }
+                }
+                if (!empty($jMulai) && strlen($jMulai) === 5) $jMulai .= ':00';
+                if (!empty($jSelesai) && strlen($jSelesai) === 5) $jSelesai .= ':00';
+
+                $jg['parsed_jam_mulai'] = $jMulai;
+                $jg['parsed_jam_selesai'] = $jSelesai;
+
+                if (!empty($jMulai) && !empty($jSelesai)) {
+                    if ($curTime >= $jMulai && $curTime <= $jSelesai) {
+                        $activeJadwal = $jg;
+                        $allExpired = false;
+                        break;
+                    } elseif ($curTime < $jMulai) {
+                        $allExpired = false;
+                        if (!$upcomingJadwal) {
+                            $upcomingJadwal = $jg;
+                        }
+                    }
+                } else {
+                    $allExpired = false;
+                }
             }
-            $topikId = 0;
-        } else {
-            $mapelNama = $jadwal['mapel_nama'] ?? ($jadwal['nama_ujian'] ?? 'Asesmen CBT Harian');
-            $jamSlot = $jadwal['jam_slot'] ?? ($jadwal['label_sesi'] ?? 'Sesi 1');
-            $topikId = (int)($jadwal['topik_id'] ?? 0);
-            $ujianId = (int)($jadwal['ujian_id'] ?? 0);
+
+            // ATURAN KETAT JAM SESI (Permintaan User):
+            // 1. Jika belum masuk jam sesi, tolak scan dan beri tahu jam mulainya!
+            // 2. Jika sesi 1 belum habis, tidak bisa scan sesi 2!
+            // 3. Jika seluruh sesi hari ini sudah selesai, tolak scan!
+            if (!$activeJadwal) {
+                if ($upcomingJadwal) {
+                    $upMapel = !empty($upcomingJadwal['mapel_nama']) ? $upcomingJadwal['mapel_nama'] : (!empty($upcomingJadwal['nama_ujian']) ? $upcomingJadwal['nama_ujian'] : 'Ujian Selanjutnya');
+                    $upSlot = !empty($upcomingJadwal['label_sesi']) ? $upcomingJadwal['label_sesi'] : (!empty($upcomingJadwal['jam_slot']) ? $upcomingJadwal['jam_slot'] : '');
+                    $upJamMulai = !empty($upcomingJadwal['parsed_jam_mulai']) ? substr($upcomingJadwal['parsed_jam_mulai'], 0, 5) : 'jadwal';
+                    
+                    echo json_encode([
+                        'success' => false,
+                        'message' => "⚠️ Sesi Ujian Belum Dibuka! Jadwal sesi terdekat untuk kelas {$siswa['kelas_nama']} adalah {$upMapel} ({$upSlot}) yang baru dibuka pukul {$upJamMulai} WIB. Siswa belum dapat scan sebelum jam sesi dimulai."
+                    ]);
+                    exit;
+                } elseif ($allExpired) {
+                    echo json_encode([
+                        'success' => false,
+                        'message' => "⚠️ Waktu Sesi Ujian Telah Berakhir! Seluruh sesi ujian hari ini untuk kelas {$siswa['kelas_nama']} telah selesai. Silakan hubungi proktor / pengawas ujian."
+                    ]);
+                    exit;
+                }
+            }
         }
 
+        $jadwal = $activeJadwal;
+        if (!$jadwal) {
+            echo json_encode([
+                'success' => false,
+                'message' => "Tidak ada sesi ujian aktif untuk kelas {$siswa['kelas_nama']} pada jam saat ini (" . substr($curTime, 0, 5) . " WIB)!"
+            ]);
+            exit;
+        }
+
+        $mapelNama = !empty($jadwal['mapel_nama']) ? $jadwal['mapel_nama'] : (!empty($jadwal['nama_ujian']) ? $jadwal['nama_ujian'] : 'Asesmen CBT Harian');
+        $jamSlot = !empty($jadwal['label_sesi']) ? $jadwal['label_sesi'] : (!empty($jadwal['jam_slot']) ? $jadwal['jam_slot'] : 'Sesi 1');
+        $topikId = (int)($jadwal['topik_id'] ?? 0);
+        $ujianId = (int)($jadwal['ujian_id'] ?? 0);
         $ruangNama = trim($_POST['ruang_nama'] ?? ($jadwal['ruang'] ?? 'Gerbang / 1 Pintu'));
 
         // 3. Cek apakah sudah absen untuk mapel & tanggal ini
@@ -4112,7 +4271,7 @@ class CbtController {
             echo json_encode([
                 'success' => true,
                 'already' => true,
-                'message' => "Siswa {$siswa['nama']} sudah terabsen sebelumnya pada pukul " . date('H:i', strtotime($exist['waktu_scan'])) . " WIB.",
+                'message' => "Siswa {$siswa['nama']} sudah terabsen sebelumnya untuk mata pelajaran {$mapelNama} ({$jamSlot}) pada pukul " . date('H:i', strtotime($exist['waktu_scan'])) . " WIB.",
                 'siswa' => $siswa,
                 'mapel' => $mapelNama,
                 'mapel_nama' => $mapelNama,
@@ -4126,10 +4285,11 @@ class CbtController {
 
         // Tentukan status kehadiran (Hadir / Terlambat)
         $statusAbsen = 'Hadir';
-        if (!empty($jadwal['jam_mulai'])) {
-            $waktuMulai = strtotime($todayDate . ' ' . $jadwal['jam_mulai']);
+        $jMulai = !empty($jadwal['parsed_jam_mulai']) ? $jadwal['parsed_jam_mulai'] : (!empty($jadwal['jam_mulai']) ? $jadwal['jam_mulai'] : null);
+        if (!empty($jMulai)) {
+            $waktuMulai = strtotime($todayDate . ' ' . $jMulai);
             $waktuSekarang = time();
-            if ($waktuSekarang > ($waktuMulai + 900)) { // Terlambat jika lewat 15 menit
+            if ($waktuSekarang > ($waktuMulai + 900)) { // Terlambat jika lewat 15 menit dari jam mulai sesi
                 $statusAbsen = 'Terlambat';
             }
         }
@@ -4160,7 +4320,7 @@ class CbtController {
 
         echo json_encode([
             'success' => true,
-            'message' => "Absensi Berhasil! {$siswa['nama']} ({$siswa['kelas_nama']}) tercatat {$statusAbsen}.",
+            'message' => "Absensi Berhasil! {$siswa['nama']} ({$siswa['kelas_nama']}) tercatat {$statusAbsen} untuk {$mapelNama} ({$jamSlot}).",
             'siswa' => $siswa,
             'mapel' => $mapelNama,
             'mapel_nama' => $mapelNama,
@@ -4212,6 +4372,40 @@ class CbtController {
         include __DIR__ . '/../../resources/views/cbt/absensi_rekap.php';
         $content = ob_get_clean();
         include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Hapus 1 baris data scan absensi
+     */
+    public static function deleteAbsensi() {
+        header('Content-Type: application/json');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $db->prepare("DELETE FROM cbt_absensi WHERE id = ?")->execute([$id]);
+            echo json_encode(['success' => true, 'message' => 'Data absensi berhasil dihapus.']);
+            exit;
+        }
+        echo json_encode(['success' => false, 'message' => 'ID absensi tidak valid.']);
+        exit;
+    }
+
+    /**
+     * Reset / Hapus seluruh data absensi pada tanggal tertentu
+     */
+    public static function resetAbsensiToday() {
+        header('Content-Type: application/json');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $tanggal = $_POST['tanggal'] ?? date('Y-m-d');
+        $db->prepare("DELETE FROM cbt_absensi WHERE tanggal = ? OR DATE(waktu_scan) = ?")->execute([$tanggal, $tanggal]);
+        echo json_encode(['success' => true, 'message' => "Seluruh data absensi tanggal {$tanggal} berhasil direset."]);
+        exit;
     }
 
     private static function getIndoDayName($w) {
