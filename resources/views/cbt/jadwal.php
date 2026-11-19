@@ -604,8 +604,9 @@ $currentView = $_GET['view'] ?? 'grid';
                                 <button type="button" onclick="editJamSlot(<?php echo htmlspecialchars(json_encode($sl)); ?>)" style="background: none; border: none; cursor: pointer; color: #3b82f6; padding: 2px 5px;" title="Edit">
                                     <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
                                 </button>
-                                <form method="POST" action="<?php echo base_url('cbt/jadwal/slot/delete'); ?>" style="display: inline-block;" onsubmit="return confirm('Hapus slot jam ini?')">
+                                <form method="POST" action="<?php echo base_url('cbt/jadwal/slot/delete'); ?>" style="display: inline-block;" onsubmit="return confirm('Hapus slot jam ini? Jadwal lama pada topik ini akan dibersihkan agar tidak nyangkut.')">
                                     <input type="hidden" name="id" value="<?php echo $sl['id']; ?>">
+                                    <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                                     <button type="submit" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 2px 5px;" title="Hapus">
                                         <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                                     </button>
@@ -620,11 +621,22 @@ $currentView = $_GET['view'] ?? 'grid';
 
         <!-- Form Tambah / Edit Slot Jam -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem;">
-            <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.75rem;" id="formSlotTitle">
-                ➕ Tambah Slot Waktu Ujian Baru
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a;" id="formSlotTitle">
+                    ➕ Tambah Slot Waktu Ujian Baru
+                </div>
+                <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 700;">
+                    Topik: <?php echo htmlspecialchars($selectedTopik['nama_topik'] ?? 'Aktif'); ?>
+                </span>
             </div>
+
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; margin-bottom: 1rem; font-size: 0.75rem; color: #92400e; font-weight: 600;">
+                💡 <strong>Catatan Otomatis:</strong> Mengubah atau menambah jam sesi di topik ini akan otomatis membersihkan jadwal lama topik ini agar jam lama tidak nyangkut. Topik ujian lain tidak terpengaruh!
+            </div>
+
             <form method="POST" action="<?php echo base_url('cbt/jadwal/slot/save'); ?>" id="formSlotJam">
                 <input type="hidden" name="id" id="slot_id" value="0">
+                <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
                 <div style="display: grid; grid-template-columns: 80px 1fr 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
                     <div>
                         <label class="label-sm">Urutan</label>
@@ -663,7 +675,12 @@ $currentView = $_GET['view'] ?? 'grid';
         </div>
 
         <div style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
-            <form method="POST" action="<?php echo base_url('cbt/jadwal/slot/reset'); ?>" onsubmit="return confirm('Kembalikan seluruh slot waktu ke pengaturan standar?')">
+            <form method="POST" action="<?php echo base_url('cbt/jadwal/slot/reset'); ?>" onsubmit="return confirm('Kembalikan seluruh slot waktu ke pengaturan standar? Jadwal topik ini akan dibersihkan.')">
+                <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
+                <button type="submit" style="background: none; border: none; color: #64748b; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-decoration: underline;">
+                    <i data-lucide="rotate-ccw" style="width: 12px; height: 12px; display: inline; vertical-align: -1px;"></i> Reset ke Slot Standar
+                </button>
+            </form>
                 <button type="submit" style="background: none; border: none; color: #64748b; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-decoration: underline;">
                     <i data-lucide="rotate-ccw" style="width: 12px; height: 12px; display: inline; vertical-align: -1px;"></i> Reset ke Slot Standar
                 </button>
@@ -707,7 +724,7 @@ $currentView = $_GET['view'] ?? 'grid';
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem;">
                 <div>
                     <label class="label-sm">Hari Pelaksanaan <span style="color:#ef4444;">*</span></label>
-                    <select name="hari" id="grid_hari" class="input-sm" required>
+                    <select name="hari" id="grid_hari" class="input-sm" required onchange="syncGridTanggal(this.value)">
                         <?php foreach($hari_list as $h): ?>
                             <option value="<?php echo $h; ?>"><?php echo $h; ?></option>
                         <?php endforeach; ?>
@@ -1111,6 +1128,9 @@ $currentView = $_GET['view'] ?? 'grid';
                         <?php 
                         $globalRowIdx = 0;
                         foreach($hari_list as $h): 
+                            $dateInfo = $hari_tanggal_map[$h] ?? [];
+                            $dateVal = $dateInfo['date'] ?? '';
+                            $plainHari = $dateInfo['hari'] ?? (strpos($h, '(') !== false ? trim(explode('(', $h)[0]) : $h);
                             foreach($slotList as $slot):
                                 if (!empty($slot['is_istirahat'])) continue;
                                 $jamStr = substr($slot['jam_mulai'], 0, 5) . ' - ' . substr($slot['jam_selesai'], 0, 5);
@@ -1118,8 +1138,9 @@ $currentView = $_GET['view'] ?? 'grid';
                                 // Cari apakah ada mapel yang sudah tersimpan di slot ini
                                 $existingMapel = '';
                                 $existingPengawas = '';
-                                if (!empty($jadwal_master[$h][$jamStr])) {
-                                    foreach ($jadwal_master[$h][$jamStr] as $cData) {
+                                $foundEntries = $jadwal_master[$h][$jamStr] ?? ($jadwal_master[$dateVal][$jamStr] ?? ($jadwal_master[$plainHari][$jamStr] ?? []));
+                                if (!empty($foundEntries)) {
+                                    foreach ($foundEntries as $cData) {
                                         if (!empty($cData['mapel_nama'])) {
                                             $existingMapel = $cData['mapel_nama'];
                                             $existingPengawas = $cData['pengawas'] ?? '';
@@ -1130,9 +1151,10 @@ $currentView = $_GET['view'] ?? 'grid';
                         ?>
                         <tr style="border-bottom: 1px solid #f1f5f9; background: <?php echo ($globalRowIdx % 2 === 0) ? '#ffffff' : '#fafafa'; ?>;">
                             <td style="padding: 9px 14px; font-weight: 800; color: #0f172a;">
-                                <input type="hidden" name="schedules[<?php echo $globalRowIdx; ?>][hari]" value="<?php echo $h; ?>">
+                                <input type="hidden" name="schedules[<?php echo $globalRowIdx; ?>][hari]" value="<?php echo htmlspecialchars($plainHari); ?>">
+                                <input type="hidden" name="schedules[<?php echo $globalRowIdx; ?>][tanggal]" value="<?php echo htmlspecialchars($dateVal); ?>">
                                 <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-size: 0.76rem;">
-                                    <?php echo $h; ?>
+                                    <?php echo htmlspecialchars($h); ?>
                                 </span>
                             </td>
                             <td style="padding: 9px 14px; font-family: monospace; font-weight: 700; color: #0ea5e9;">
@@ -1276,6 +1298,12 @@ $currentView = $_GET['view'] ?? 'grid';
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
+    function syncGridTanggal(hari) {
+        if (typeof HARI_TANGGAL_MAP !== 'undefined' && HARI_TANGGAL_MAP[hari] && document.getElementById('grid_tanggal')) {
+            document.getElementById('grid_tanggal').value = HARI_TANGGAL_MAP[hari].date || '';
+        }
+    }
+
     function quickSchedule(hari, jamSlot, kelasNama, kelasId) {
         document.getElementById('grid_hari').value = hari;
         document.getElementById('grid_jam_slot').value = jamSlot;
@@ -1291,6 +1319,12 @@ $currentView = $_GET['view'] ?? 'grid';
         document.getElementById('modalGridTitle').innerHTML = '<i data-lucide="calendar-plus" style="width:20px;height:20px;color:#0ea5e9;"></i> Pasang Jadwal: ' + kelasNama + ' (' + hari + ')';
         document.getElementById('modalJadwalGrid').classList.add('open');
         if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function syncGridTanggal(hari) {
+        if (typeof HARI_TANGGAL_MAP !== 'undefined' && HARI_TANGGAL_MAP[hari] && document.getElementById('grid_tanggal')) {
+            document.getElementById('grid_tanggal').value = HARI_TANGGAL_MAP[hari].date || '';
+        }
     }
 
     function syncKelasId(selectEl) {
@@ -1310,12 +1344,22 @@ $currentView = $_GET['view'] ?? 'grid';
 
         let rowIdx = 0;
         HARI_LIST.forEach(hari => {
+            const dateInfo = (typeof HARI_TANGGAL_MAP !== 'undefined' && HARI_TANGGAL_MAP[hari]) ? HARI_TANGGAL_MAP[hari] : {};
+            const dateVal = dateInfo.date || '';
+            const plainHari = dateInfo.hari || (hari.includes('(') ? hari.split('(')[0].trim() : hari);
+
             SLOT_LIST.forEach(slot => {
                 if (parseInt(slot.is_istirahat) === 1) return; // Lewati istirahat
 
                 const jamStr = slot.jam_mulai.substring(0, 5) + ' - ' + slot.jam_selesai.substring(0, 5);
-                const currentExam = (JADWAL_MASTER[hari] && JADWAL_MASTER[hari][jamStr] && JADWAL_MASTER[hari][jamStr][kelasNama]) 
-                                    ? JADWAL_MASTER[hari][jamStr][kelasNama] : null;
+                let currentExam = null;
+                if (JADWAL_MASTER[hari] && JADWAL_MASTER[hari][jamStr] && JADWAL_MASTER[hari][jamStr][kelasNama]) {
+                    currentExam = JADWAL_MASTER[hari][jamStr][kelasNama];
+                } else if (dateVal && JADWAL_MASTER[dateVal] && JADWAL_MASTER[dateVal][jamStr] && JADWAL_MASTER[dateVal][jamStr][kelasNama]) {
+                    currentExam = JADWAL_MASTER[dateVal][jamStr][kelasNama];
+                } else if (JADWAL_MASTER[plainHari] && JADWAL_MASTER[plainHari][jamStr] && JADWAL_MASTER[plainHari][jamStr][kelasNama]) {
+                    currentExam = JADWAL_MASTER[plainHari][jamStr][kelasNama];
+                }
 
                 const currentMapel = currentExam ? (currentExam.mapel_nama || '') : '';
                 const currentPengawas = currentExam ? (currentExam.pengawas || '') : '';
@@ -1343,8 +1387,11 @@ $currentView = $_GET['view'] ?? 'grid';
                 tr.style.borderBottom = '1px solid #f1f5f9';
                 tr.innerHTML = `
                     <td style="padding:8px 12px; font-weight:700; color:#1e293b;">
-                        ${hari}
-                        <input type="hidden" name="schedules[${rowIdx}][hari]" value="${hari}">
+                        <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-size: 0.76rem;">
+                            ${hari}
+                        </span>
+                        <input type="hidden" name="schedules[${rowIdx}][hari]" value="${plainHari}">
+                        <input type="hidden" name="schedules[${rowIdx}][tanggal]" value="${dateVal}">
                     </td>
                     <td style="padding:8px 12px; font-family:monospace; font-weight:700; color:#0ea5e9;">
                         ${jamStr}

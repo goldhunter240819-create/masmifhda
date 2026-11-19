@@ -388,10 +388,16 @@ include 'header.php';
         .then(res => res.json())
         .then(res => {
             if (res.success) {
-                msgEl.style.color = '#059669';
-                msgEl.innerText = '✓ Berhasil: ' + (res.siswa ? res.siswa.nama : code) + ' terabsen pada mapel ' + (res.mapel_nama || '-');
-                inp.value = '';
-                setTimeout(() => { window.location.reload(); }, 1200);
+                if (res.already) {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.innerText = '⚠️ Siswa sudah scan sebelumnya: ' + (res.siswa ? res.siswa.nama : code) + ' pada jam ' + (res.waktu || '') + ' WIB. Belum waktunya ganti sesi!';
+                    alert('⚠️ SISWA SUDAH SCAN SEBELUMNYA!\n\nSiswa ' + (res.siswa ? res.siswa.nama : code) + ' telah terabsen pada jam ' + (res.waktu || '') + ' WIB.\nBelum waktunya ganti sesi/jam ujian!');
+                } else {
+                    msgEl.style.color = '#059669';
+                    msgEl.innerText = '✓ Berhasil: ' + (res.siswa ? res.siswa.nama : code) + ' terabsen pada mapel ' + (res.mapel_nama || '-');
+                    inp.value = '';
+                    setTimeout(() => { window.location.reload(); }, 1200);
+                }
             } else {
                 msgEl.style.color = '#dc2626';
                 msgEl.innerText = '✗ ' + (res.message || 'Gagal memproses kode');

@@ -94,13 +94,17 @@ class CbtController {
             // 5. Tabel Custom Jam / Slot Waktu Ujian CBT
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_jam_slot (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                topik_id INT DEFAULT NULL,
                 urutan INT DEFAULT 1,
                 label_sesi VARCHAR(50) DEFAULT 'Sesi 1',
                 jam_mulai VARCHAR(10) NOT NULL,
                 jam_selesai VARCHAR(10) NOT NULL,
                 is_istirahat TINYINT DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (topik_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            try { $db->exec("ALTER TABLE cbt_jam_slot ADD COLUMN topik_id INT DEFAULT NULL AFTER id, ADD INDEX (topik_id)"); } catch (\Exception $e) {}
 
             // 6. Tabel Peserta Khusus / Kelas Jauh (Terisolasi 100% dari SIAKAD & Keuangan)
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_peserta_khusus (
@@ -456,27 +460,119 @@ class CbtController {
      * Terisolasi dari sisa data MI (Madrasah Ibtidaiyah) lama
      */
     public static function getRealMapelList($db_siakad = null, $db_core = null) {
-        return [
-            ['id' => 1, 'nama_mapel' => "Al-Qur'an Hadits", 'kode_mapel' => 'QH'],
-            ['id' => 2, 'nama_mapel' => 'Akidah Akhlak', 'kode_mapel' => 'AA'],
-            ['id' => 3, 'nama_mapel' => 'Fikih', 'kode_mapel' => 'FIQ'],
-            ['id' => 4, 'nama_mapel' => 'Sejarah Kebudayaan Islam (SKI)', 'kode_mapel' => 'SKI'],
-            ['id' => 5, 'nama_mapel' => 'Bahasa Arab', 'kode_mapel' => 'ARB'],
-            ['id' => 6, 'nama_mapel' => 'Bahasa Indonesia', 'kode_mapel' => 'IND'],
-            ['id' => 7, 'nama_mapel' => 'Bahasa Inggris', 'kode_mapel' => 'ING'],
-            ['id' => 8, 'nama_mapel' => 'Matematika', 'kode_mapel' => 'MTK'],
-            ['id' => 9, 'nama_mapel' => 'Informatika', 'kode_mapel' => 'INF'],
-            ['id' => 10, 'nama_mapel' => 'Fisika', 'kode_mapel' => 'FIS'],
-            ['id' => 11, 'nama_mapel' => 'Kimia', 'kode_mapel' => 'KIM'],
-            ['id' => 12, 'nama_mapel' => 'Biologi', 'kode_mapel' => 'BIO'],
-            ['id' => 13, 'nama_mapel' => 'Sosiologi', 'kode_mapel' => 'SOS'],
-            ['id' => 14, 'nama_mapel' => 'Geografi', 'kode_mapel' => 'GEO'],
-            ['id' => 15, 'nama_mapel' => 'Ekonomi', 'kode_mapel' => 'EKO'],
-            ['id' => 16, 'nama_mapel' => 'Sejarah Umum', 'kode_mapel' => 'SEJ'],
-            ['id' => 17, 'nama_mapel' => 'Pendidikan Pancasila & Kewarganegaraan (PPKn)', 'kode_mapel' => 'PPKN'],
-            ['id' => 18, 'nama_mapel' => 'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)', 'kode_mapel' => 'PJOK'],
-            ['id' => 19, 'nama_mapel' => 'Seni Budaya', 'kode_mapel' => 'SBD'],
+        if (!$db_siakad) {
+            try {
+                $db_siakad = \App\Core\Database::connect('siakad');
+            } catch (\Exception $e) {}
+        }
+        if (!$db_core) {
+            try {
+                $db_core = \App\Core\Database::connect('core');
+            } catch (\Exception $e) {}
+        }
+
+        $result = [];
+        $seen = [];
+
+        // 1. Ambil dari tabel mapel di database Siakad (sumber resmi mata pelajaran MAS MIFTAHUL HUDA)
+        if ($db_siakad) {
+            try {
+                $rows = $db_siakad->query("SELECT id, nama_mapel, kode_mapel, kategori FROM mapel ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $r) {
+                    $key = strtolower(trim($r['nama_mapel']));
+                    if (!isset($seen[$key]) && !empty($key)) {
+                        $seen[$key] = true;
+                        $result[] = [
+                            'id' => (int)$r['id'],
+                            'nama_mapel' => trim($r['nama_mapel']),
+                            'kode_mapel' => trim($r['kode_mapel'] ?? ''),
+                            'kategori' => trim($r['kategori'] ?? 'Umum')
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {}
+        }
+
+        // 2. Ambil dari database core jika ada tabel mapel
+        if ($db_core && $db_core !== $db_siakad) {
+            try {
+                $rows = $db_core->query("SELECT id, nama_mapel, kode_mapel, kategori FROM mapel ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $r) {
+                    $key = strtolower(trim($r['nama_mapel']));
+                    if (!isset($seen[$key]) && !empty($key)) {
+                        $seen[$key] = true;
+                        $result[] = [
+                            'id' => (int)$r['id'],
+                            'nama_mapel' => trim($r['nama_mapel']),
+                            'kode_mapel' => trim($r['kode_mapel'] ?? ''),
+                            'kategori' => trim($r['kategori'] ?? 'Umum')
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {}
+        }
+
+        // 3. Gabungkan dari penugasan mengajar / bs_paket / cbt_ujian jika ada mapel khas
+        if ($db_siakad) {
+            try {
+                $extraMapels = $db_siakad->query("SELECT DISTINCT mapel_nama as nama_mapel FROM bs_paket WHERE mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($extraMapels as $em) {
+                    $key = strtolower(trim($em['nama_mapel']));
+                    if (!isset($seen[$key]) && !empty($key)) {
+                        $seen[$key] = true;
+                        $result[] = [
+                            'id' => count($result) + 1,
+                            'nama_mapel' => trim($em['nama_mapel']),
+                            'kode_mapel' => strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $em['nama_mapel']), 0, 3)),
+                            'kategori' => 'Umum'
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {}
+        }
+
+        // 4. Standar Master Lengkap Mapel MA (termasuk Prakarya & Kewirausahaan, Koding, Matematika Lanjutan, Tahfiz)
+        $defaultList = [
+            ['id' => 1, 'nama_mapel' => "Al-Qur'an Hadits", 'kode_mapel' => 'QH', 'kategori' => 'Pendidikan Agama Islam'],
+            ['id' => 2, 'nama_mapel' => 'Akidah Akhlak', 'kode_mapel' => 'AA', 'kategori' => 'Pendidikan Agama Islam'],
+            ['id' => 3, 'nama_mapel' => 'Fikih', 'kode_mapel' => 'FIQ', 'kategori' => 'Pendidikan Agama Islam'],
+            ['id' => 4, 'nama_mapel' => 'Sejarah Kebudayaan Islam (SKI)', 'kode_mapel' => 'SKI', 'kategori' => 'Pendidikan Agama Islam'],
+            ['id' => 5, 'nama_mapel' => 'Bahasa Arab', 'kode_mapel' => 'ARB', 'kategori' => 'Bahasa'],
+            ['id' => 6, 'nama_mapel' => 'Bahasa Indonesia', 'kode_mapel' => 'IND', 'kategori' => 'Umum'],
+            ['id' => 7, 'nama_mapel' => 'Bahasa Inggris', 'kode_mapel' => 'ING', 'kategori' => 'Umum'],
+            ['id' => 8, 'nama_mapel' => 'Matematika', 'kode_mapel' => 'MTK', 'kategori' => 'Umum'],
+            ['id' => 9, 'nama_mapel' => 'Matematika Lanjutan', 'kode_mapel' => 'MTKL', 'kategori' => 'Peminatan MIPA'],
+            ['id' => 10, 'nama_mapel' => 'Informatika', 'kode_mapel' => 'INF', 'kategori' => 'Umum'],
+            ['id' => 11, 'nama_mapel' => 'Koding', 'kode_mapel' => 'KOD', 'kategori' => 'Muatan Lokal'],
+            ['id' => 12, 'nama_mapel' => 'Fisika', 'kode_mapel' => 'FIS', 'kategori' => 'Peminatan MIPA'],
+            ['id' => 13, 'nama_mapel' => 'Kimia', 'kode_mapel' => 'KIM', 'kategori' => 'Peminatan MIPA'],
+            ['id' => 14, 'nama_mapel' => 'Biologi', 'kode_mapel' => 'BIO', 'kategori' => 'Peminatan MIPA'],
+            ['id' => 15, 'nama_mapel' => 'Sosiologi', 'kode_mapel' => 'SOS', 'kategori' => 'Peminatan IPS'],
+            ['id' => 16, 'nama_mapel' => 'Geografi', 'kode_mapel' => 'GEO', 'kategori' => 'Peminatan IPS'],
+            ['id' => 17, 'nama_mapel' => 'Ekonomi', 'kode_mapel' => 'EKO', 'kategori' => 'Peminatan IPS'],
+            ['id' => 18, 'nama_mapel' => 'Sejarah Umum', 'kode_mapel' => 'SEJ', 'kategori' => 'Umum'],
+            ['id' => 19, 'nama_mapel' => 'Sejarah Indonesia', 'kode_mapel' => 'SI', 'kategori' => 'Umum'],
+            ['id' => 20, 'nama_mapel' => 'Pendidikan Pancasila & Kewarganegaraan (PPKn)', 'kode_mapel' => 'PPKN', 'kategori' => 'Umum'],
+            ['id' => 21, 'nama_mapel' => 'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)', 'kode_mapel' => 'PJOK', 'kategori' => 'Umum'],
+            ['id' => 22, 'nama_mapel' => 'Seni Budaya', 'kode_mapel' => 'SBD', 'kategori' => 'Umum'],
+            ['id' => 23, 'nama_mapel' => 'Prakarya & Kewirausahaan', 'kode_mapel' => 'PKWU', 'kategori' => 'Umum'],
+            ['id' => 24, 'nama_mapel' => 'Tahfiz', 'kode_mapel' => 'TAH', 'kategori' => 'Muatan Lokal'],
         ];
+
+        foreach ($defaultList as $df) {
+            $key = strtolower(trim($df['nama_mapel']));
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $result[] = $df;
+            }
+        }
+
+        // Urutkan alfabetis
+        usort($result, function($a, $b) {
+            return strcasecmp($a['nama_mapel'], $b['nama_mapel']);
+        });
+
+        return $result;
     }
 
     /**
@@ -708,22 +804,33 @@ class CbtController {
                 }
             }
 
-            // Loop HANYA dari tgl_mulai sampai tgl_selesai (hari-hari sebelum tanggal mulai TIDAK dimasukkan)
+            // Loop HANYA dari tgl_mulai sampai tgl_selesai
+            // Menghasilkan daftar tanggal dan hari riil ujian (bisa 1 minggu, 2 minggu, dst tanpa terpotong)
             $curr = clone $startDate;
             while ($curr <= $endDate) {
                 $dayN = (int)$curr->format('N');
-                // Masukkan hari kerja (Senin - Sabtu; jika ujian mencakup Minggu juga disertakan)
-                if ($dayN <= 6 || $curr == $endDate) {
+                // Masukkan hari kerja (Senin - Sabtu; jika tgl_mulai / tgl_selesai jatuh hari Minggu, sertakan)
+                if ($dayN <= 6 || $curr == $startDate || $curr == $endDate) {
                     $dName = $namaHariMap[$dayN];
-                    if (!in_array($dName, $hari_list)) {
-                        $hari_list[] = $dName;
-                    }
+                    $dateYmd = $curr->format('Y-m-d');
                     $mNum = (int)$curr->format('n');
-                    $hari_tanggal_map[$dName] = [
-                        'date' => $curr->format('Y-m-d'),
-                        'label_short' => $curr->format('d') . ' ' . ($bulanIndoShort[$mNum] ?? ''),
+                    $shortDate = $curr->format('d') . ' ' . ($bulanIndoShort[$mNum] ?? '');
+                    
+                    // Format unik Hari + Tanggal (contoh: "Kamis (19 Nov)", "Jumat (20 Nov)", "Kamis (26 Nov)")
+                    $dayLabel = $dName . ' (' . $shortDate . ')';
+                    $hari_list[] = $dayLabel;
+
+                    $hari_tanggal_map[$dayLabel] = [
+                        'date' => $dateYmd,
+                        'hari' => $dName,
+                        'label_short' => $shortDate,
                         'label_full' => $dName . ', ' . $curr->format('d') . ' ' . ($bulanIndoShort[$mNum] ?? '') . ' ' . $curr->format('Y')
                     ];
+                    // Mapping untuk key hari murni dan key tanggal
+                    if (!isset($hari_tanggal_map[$dName])) {
+                        $hari_tanggal_map[$dName] = $hari_tanggal_map[$dayLabel];
+                    }
+                    $hari_tanggal_map[$dateYmd] = $hari_tanggal_map[$dayLabel];
                 }
                 $curr->modify('+1 day');
             }
@@ -742,16 +849,32 @@ class CbtController {
         // Ambil daftar mapel real madrasah
         $mapelList = self::getRealMapelList($db_siakad, $db);
 
-        // Ambil daftar custom jam slot
-        $slotList = $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC, jam_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
+        // Ambil daftar custom jam slot terisolasi per topik aktif
+        $stmtSlot = $db->prepare("SELECT * FROM cbt_jam_slot WHERE topik_id = ? ORDER BY urutan ASC, jam_mulai ASC");
+        $stmtSlot->execute([$selectedTopikId]);
+        $slotList = $stmtSlot->fetchAll(PDO::FETCH_ASSOC);
         if (empty($slotList)) {
-            $slotList = [
-                ['id' => 1, 'urutan' => 1, 'label_sesi' => 'Sesi 1', 'jam_mulai' => '07:30', 'jam_selesai' => '08:45', 'is_istirahat' => 0],
-                ['id' => 2, 'urutan' => 2, 'label_sesi' => 'Sesi 2', 'jam_mulai' => '09:00', 'jam_selesai' => '10:15', 'is_istirahat' => 0],
-                ['id' => 3, 'urutan' => 3, 'label_sesi' => 'Istirahat', 'jam_mulai' => '10:15', 'jam_selesai' => '10:45', 'is_istirahat' => 1],
-                ['id' => 4, 'urutan' => 4, 'label_sesi' => 'Sesi 3', 'jam_mulai' => '10:45', 'jam_selesai' => '12:00', 'is_istirahat' => 0],
-                ['id' => 5, 'urutan' => 5, 'label_sesi' => 'Sesi 4', 'jam_mulai' => '12:30', 'jam_selesai' => '13:45', 'is_istirahat' => 0],
-            ];
+            // Ambil slot default / global
+            $defSlots = $db->query("SELECT * FROM cbt_jam_slot WHERE topik_id IS NULL ORDER BY urutan ASC, jam_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($defSlots)) {
+                $defSlots = [
+                    ['urutan' => 1, 'label_sesi' => 'Sesi 1', 'jam_mulai' => '07:30', 'jam_selesai' => '08:45', 'is_istirahat' => 0],
+                    ['urutan' => 2, 'label_sesi' => 'Sesi 2', 'jam_mulai' => '09:00', 'jam_selesai' => '10:15', 'is_istirahat' => 0],
+                    ['urutan' => 3, 'label_sesi' => 'Istirahat', 'jam_mulai' => '10:15', 'jam_selesai' => '10:45', 'is_istirahat' => 1],
+                    ['urutan' => 4, 'label_sesi' => 'Sesi 3', 'jam_mulai' => '10:45', 'jam_selesai' => '12:00', 'is_istirahat' => 0],
+                    ['urutan' => 5, 'label_sesi' => 'Sesi 4', 'jam_mulai' => '12:30', 'jam_selesai' => '13:45', 'is_istirahat' => 0],
+                ];
+            }
+            if ($selectedTopikId > 0) {
+                foreach ($defSlots as $ds) {
+                    $ins = $db->prepare("INSERT INTO cbt_jam_slot (topik_id, urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES (?, ?, ?, ?, ?, ?)");
+                    $ins->execute([$selectedTopikId, $ds['urutan'], $ds['label_sesi'], $ds['jam_mulai'], $ds['jam_selesai'], $ds['is_istirahat']]);
+                }
+                $stmtSlot->execute([$selectedTopikId]);
+                $slotList = $stmtSlot->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $slotList = $defSlots;
+            }
         }
 
         // Ambil semua paket ujian
@@ -839,10 +962,24 @@ class CbtController {
         $jadwal_master = [];
         foreach ($gridRows as $gr) {
             $h = $gr['hari'];
+            $tgl = $gr['tanggal'] ?? null;
             $slot = $gr['jam_slot'];
             $kKey = !empty($gr['kelas_id']) ? $gr['kelas_id'] : $gr['kelas_nama'];
+
+            // 1. Simpan key hari mentah ('Kamis')
             $jadwal_master[$h][$slot][$kKey] = $gr;
             $jadwal_master[$h][$slot][$gr['kelas_nama']] = $gr;
+
+            // 2. Simpan jika ada tanggal 'YYYY-MM-DD'
+            if (!empty($tgl)) {
+                $jadwal_master[$tgl][$slot][$kKey] = $gr;
+                $jadwal_master[$tgl][$slot][$gr['kelas_nama']] = $gr;
+
+                $mNum = (int)date('n', strtotime($tgl));
+                $dayLabel = $h . ' (' . date('d', strtotime($tgl)) . ' ' . ($bulanIndoShort[$mNum] ?? '') . ')';
+                $jadwal_master[$dayLabel][$slot][$kKey] = $gr;
+                $jadwal_master[$dayLabel][$slot][$gr['kelas_nama']] = $gr;
+            }
         }
 
         if (empty($hari_list)) {
@@ -948,9 +1085,24 @@ class CbtController {
                 } catch (\Exception $e) {}
             }
 
+            $plainHari = $hari;
+            if (strpos($hari, '(') !== false) {
+                $plainHari = trim(explode('(', $hari)[0]);
+            }
+
             if ((!empty($mapel_nama) || !empty($ujian_id)) && !empty($jam_slot) && !empty($kelas_nama)) {
-                $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
-                $params = [$hari, $jam_slot, $kelas_nama];
+                $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE jam_slot = ? AND kelas_nama = ?";
+                $params = [$jam_slot, $kelas_nama];
+                if (!empty($tanggal)) {
+                    $checkSql .= " AND (tanggal = ? OR (tanggal IS NULL AND (hari = ? OR hari = ?)))";
+                    $params[] = $tanggal;
+                    $params[] = $hari;
+                    $params[] = $plainHari;
+                } else {
+                    $checkSql .= " AND (hari = ? OR hari = ?)";
+                    $params[] = $hari;
+                    $params[] = $plainHari;
+                }
                 if ($topik_id) {
                     $checkSql .= " AND (topik_id = ? OR topik_id IS NULL)";
                     $params[] = $topik_id;
@@ -960,11 +1112,11 @@ class CbtController {
                 $existingId = $stmtCheck->fetchColumn();
 
                 if ($existingId) {
-                    $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, mapel_nama = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ? WHERE id = ?");
-                    $stmtUp->execute([$topik_id, $ujian_id, $mapel_nama, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
+                    $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, mapel_nama = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ?, hari = ? WHERE id = ?");
+                    $stmtUp->execute([$topik_id, $ujian_id, $mapel_nama, $kelas_id, $pengawas, $ruang, $tanggal, $plainHari, $existingId]);
                 } else {
                     $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmtIns->execute([$topik_id, $ujian_id, $mapel_nama, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
+                    $stmtIns->execute([$topik_id, $ujian_id, $mapel_nama, $plainHari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
                 }
 
                 if ($ujian_id) {
@@ -1007,22 +1159,37 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['id'] ?? 0);
+            $topik_id = (int)($_POST['topik_id'] ?? 0);
             $urutan = (int)($_POST['urutan'] ?? 1);
             $label_sesi = trim($_POST['label_sesi'] ?? 'Sesi');
             $jam_mulai = trim($_POST['jam_mulai'] ?? '');
             $jam_selesai = trim($_POST['jam_selesai'] ?? '');
             $is_istirahat = !empty($_POST['is_istirahat']) ? 1 : 0;
 
+            if ($topik_id <= 0) {
+                $tp = $db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                $topik_id = $tp ? (int)$tp['id'] : null;
+            }
+
             if (!empty($jam_mulai) && !empty($jam_selesai)) {
                 if ($id > 0) {
-                    $stmt = $db->prepare("UPDATE cbt_jam_slot SET urutan = ?, label_sesi = ?, jam_mulai = ?, jam_selesai = ?, is_istirahat = ? WHERE id = ?");
-                    $stmt->execute([$urutan, $label_sesi, $jam_mulai, $jam_selesai, $is_istirahat, $id]);
+                    $stmt = $db->prepare("UPDATE cbt_jam_slot SET topik_id = ?, urutan = ?, label_sesi = ?, jam_mulai = ?, jam_selesai = ?, is_istirahat = ? WHERE id = ?");
+                    $stmt->execute([$topik_id, $urutan, $label_sesi, $jam_mulai, $jam_selesai, $is_istirahat, $id]);
                 } else {
-                    $stmt = $db->prepare("INSERT INTO cbt_jam_slot (urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES (?, ?, ?, ?, ?)");
-                    $stmt->execute([$urutan, $label_sesi, $jam_mulai, $jam_selesai, $is_istirahat]);
+                    $stmt = $db->prepare("INSERT INTO cbt_jam_slot (topik_id, urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$topik_id, $urutan, $label_sesi, $jam_mulai, $jam_selesai, $is_istirahat]);
+                }
+
+                // ATURAN EKSPLISIT: Ketika jam diedit, maka data jadwal sebelumnya otomatis terhapus
+                // agar data jam lama tidak nyangkut!
+                if ($topik_id > 0) {
+                    $db->prepare("DELETE FROM cbt_jadwal_grid WHERE topik_id = ?")->execute([$topik_id]);
+                    $db->prepare("DELETE FROM cbt_absensi WHERE topik_id = ? AND tanggal >= CURDATE()")->execute([$topik_id]);
                 }
             }
-            redirect('/cbt/jadwal?msg=slot_saved');
+            $redir = '/cbt/jadwal?msg=slot_saved_reset_jadwal';
+            if ($topik_id > 0) $redir .= '&topik_id=' . $topik_id;
+            redirect($redir);
             exit;
         }
         redirect('/cbt/jadwal');
@@ -1038,10 +1205,21 @@ class CbtController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['id'] ?? 0);
+            $topik_id = (int)($_POST['topik_id'] ?? 0);
             if ($id > 0) {
+                if ($topik_id <= 0) {
+                    $topik_id = (int)$db->query("SELECT topik_id FROM cbt_jam_slot WHERE id = {$id}")->fetchColumn();
+                }
                 $db->prepare("DELETE FROM cbt_jam_slot WHERE id = ?")->execute([$id]);
+
+                // Bersihkan jadwal lama topik ini
+                if ($topik_id > 0) {
+                    $db->prepare("DELETE FROM cbt_jadwal_grid WHERE topik_id = ?")->execute([$topik_id]);
+                }
             }
-            redirect('/cbt/jadwal?msg=slot_deleted');
+            $redir = '/cbt/jadwal?msg=slot_deleted';
+            if ($topik_id > 0) $redir .= '&topik_id=' . $topik_id;
+            redirect($redir);
             exit;
         }
         redirect('/cbt/jadwal');
@@ -1056,15 +1234,32 @@ class CbtController {
         self::ensureTables($db);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $db->exec("TRUNCATE TABLE cbt_jam_slot");
-            $db->exec("INSERT INTO cbt_jam_slot (urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES
-                (1, 'Sesi 1', '07:30', '08:45', 0),
-                (2, 'Sesi 2', '09:00', '10:15', 0),
-                (3, 'Istirahat', '10:15', '10:45', 1),
-                (4, 'Sesi 3', '10:45', '12:00', 0),
-                (5, 'Sesi 4', '12:30', '13:45', 0)
-            ");
-            redirect('/cbt/jadwal?msg=slot_reset');
+            $topik_id = (int)($_POST['topik_id'] ?? 0);
+            if ($topik_id > 0) {
+                $db->prepare("DELETE FROM cbt_jam_slot WHERE topik_id = ?")->execute([$topik_id]);
+                $stmt = $db->prepare("INSERT INTO cbt_jam_slot (topik_id, urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES
+                    (?, 1, 'Sesi 1', '07:30', '08:45', 0),
+                    (?, 2, 'Sesi 2', '09:00', '10:15', 0),
+                    (?, 3, 'Istirahat', '10:15', '10:45', 1),
+                    (?, 4, 'Sesi 3', '10:45', '12:00', 0),
+                    (?, 5, 'Sesi 4', '12:30', '13:45', 0)
+                ");
+                $stmt->execute([$topik_id, $topik_id, $topik_id, $topik_id, $topik_id]);
+                // Bersihkan juga jadwal grid topik ini
+                $db->prepare("DELETE FROM cbt_jadwal_grid WHERE topik_id = ?")->execute([$topik_id]);
+            } else {
+                $db->exec("TRUNCATE TABLE cbt_jam_slot");
+                $db->exec("INSERT INTO cbt_jam_slot (urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES
+                    (1, 'Sesi 1', '07:30', '08:45', 0),
+                    (2, 'Sesi 2', '09:00', '10:15', 0),
+                    (3, 'Istirahat', '10:15', '10:45', 1),
+                    (4, 'Sesi 3', '10:45', '12:00', 0),
+                    (5, 'Sesi 4', '12:30', '13:45', 0)
+                ");
+            }
+            $redir = '/cbt/jadwal?msg=slot_reset';
+            if ($topik_id > 0) $redir .= '&topik_id=' . $topik_id;
+            redirect($redir);
             exit;
         }
         redirect('/cbt/jadwal');
@@ -1283,6 +1478,11 @@ class CbtController {
                     $ruang = trim($sc['ruang'] ?? '');
                     $tanggal = !empty($sc['tanggal']) ? $sc['tanggal'] : null;
 
+                    $plainHari = $hari;
+                    if (strpos($hari, '(') !== false) {
+                        $plainHari = trim(explode('(', $hari)[0]);
+                    }
+
                     if (!empty($hari) && !empty($jam_slot)) {
                         if (!empty($mapel_nama) || !empty($ujian_id)) {
                             if (empty($mapel_nama) && $ujian_id) {
@@ -1292,8 +1492,18 @@ class CbtController {
                                 } catch (\Exception $e) {}
                             }
 
-                            $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
-                            $params = [$hari, $jam_slot, $kelas_nama];
+                            $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE jam_slot = ? AND kelas_nama = ?";
+                            $params = [$jam_slot, $kelas_nama];
+                            if (!empty($tanggal)) {
+                                $checkSql .= " AND (tanggal = ? OR (tanggal IS NULL AND (hari = ? OR hari = ?)))";
+                                $params[] = $tanggal;
+                                $params[] = $hari;
+                                $params[] = $plainHari;
+                            } else {
+                                $checkSql .= " AND (hari = ? OR hari = ?)";
+                                $params[] = $hari;
+                                $params[] = $plainHari;
+                            }
                             if ($topik_id) {
                                 $checkSql .= " AND (topik_id = ? OR topik_id IS NULL)";
                                 $params[] = $topik_id;
@@ -1303,19 +1513,29 @@ class CbtController {
                             $existingId = $stmtCheck->fetchColumn();
 
                             if ($existingId) {
-                                $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, mapel_nama = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = COALESCE(?, tanggal) WHERE id = ?");
-                                $stmtUp->execute([$topik_id, $ujian_id, $mapel_nama, $kelas_id, $pengawas, $ruang, $tanggal, $existingId]);
+                                $stmtUp = $db->prepare("UPDATE cbt_jadwal_grid SET topik_id = ?, ujian_id = ?, mapel_nama = ?, kelas_id = ?, pengawas = ?, ruang = ?, tanggal = ?, hari = ? WHERE id = ?");
+                                $stmtUp->execute([$topik_id, $ujian_id, $mapel_nama, $kelas_id, $pengawas, $ruang, $tanggal, $plainHari, $existingId]);
                             } else {
                                 $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                                $stmtIns->execute([$topik_id, $ujian_id, $mapel_nama, $hari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
+                                $stmtIns->execute([$topik_id, $ujian_id, $mapel_nama, $plainHari, $jam_slot, $kelas_id, $kelas_nama, $pengawas, $ruang, $tanggal]);
                             }
 
                             if ($ujian_id) {
                                 $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', kelas_nama = ? WHERE id = ?")->execute([$kelas_nama, $ujian_id]);
                             }
                         } else {
-                            $delSql = "DELETE FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
-                            $delParams = [$hari, $jam_slot, $kelas_nama];
+                            $delSql = "DELETE FROM cbt_jadwal_grid WHERE jam_slot = ? AND kelas_nama = ?";
+                            $delParams = [$jam_slot, $kelas_nama];
+                            if (!empty($tanggal)) {
+                                $delSql .= " AND (tanggal = ? OR (tanggal IS NULL AND (hari = ? OR hari = ?)))";
+                                $delParams[] = $tanggal;
+                                $delParams[] = $hari;
+                                $delParams[] = $plainHari;
+                            } else {
+                                $delSql .= " AND (hari = ? OR hari = ?)";
+                                $delParams[] = $hari;
+                                $delParams[] = $plainHari;
+                            }
                             if ($topik_id) {
                                 $delSql .= " AND (topik_id = ? OR topik_id IS NULL)";
                                 $delParams[] = $topik_id;
@@ -1355,20 +1575,30 @@ class CbtController {
             }
 
             if (!empty($target_kelas) && is_array($target_kelas) && !empty($schedules) && is_array($schedules)) {
-                // Ambil pemetaan tanggal dari topik_id jika ada
+                // Ambil pemetaan tanggal dari rentang tgl_mulai sampai tgl_selesai topik
                 $hariTanggal = [];
                 if ($topik_id) {
-                    $tp = $db->query("SELECT tgl_mulai FROM bs_topik WHERE id = " . (int)$topik_id)->fetch(PDO::FETCH_ASSOC);
+                    $tp = $db->query("SELECT tgl_mulai, tgl_selesai FROM bs_topik WHERE id = " . (int)$topik_id)->fetch(PDO::FETCH_ASSOC);
                     if (!empty($tp['tgl_mulai'])) {
                         $sDate = new \DateTime($tp['tgl_mulai']);
-                        $sIdx = (int)$sDate->format('N');
-                        $mon = clone $sDate;
-                        if ($sIdx > 1) $mon->modify('-' . ($sIdx - 1) . ' days');
-                        $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-                        foreach ($days as $idx => $d) {
-                            $dD = clone $mon;
-                            $dD->modify("+{$idx} days");
-                            $hariTanggal[$d] = $dD->format('Y-m-d');
+                        $eDate = !empty($tp['tgl_selesai']) ? new \DateTime($tp['tgl_selesai']) : clone $sDate;
+                        $cDate = clone $sDate;
+                        $bulanIndoShort = [1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'];
+                        $namaHariMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+                        while ($cDate <= $eDate) {
+                            $dN = (int)$cDate->format('N');
+                            if ($dN <= 6 || $cDate == $sDate || $cDate == $eDate) {
+                                $hName = $namaHariMap[$dN];
+                                $dStr = $cDate->format('Y-m-d');
+                                $mN = (int)$cDate->format('n');
+                                $sLabel = $hName . ' (' . $cDate->format('d') . ' ' . ($bulanIndoShort[$mN] ?? '') . ')';
+                                $hariTanggal[$sLabel] = $dStr;
+                                if (!isset($hariTanggal[$hName])) {
+                                    $hariTanggal[$hName] = $dStr;
+                                }
+                                $hariTanggal[$dStr] = $dStr;
+                            }
+                            $cDate->modify('+1 day');
                         }
                     }
                 }
@@ -1383,14 +1613,29 @@ class CbtController {
                         $jam_slot = trim($sc['jam_slot'] ?? '');
                         $mapel_nama = trim($sc['mapel_nama'] ?? '');
                         $pengawas = trim($sc['pengawas'] ?? '');
-                        $tgl = $hariTanggal[$hari] ?? null;
+                        $tgl = !empty($sc['tanggal']) ? $sc['tanggal'] : ($hariTanggal[$hari] ?? null);
+
+                        $plainHari = $hari;
+                        if (strpos($hari, '(') !== false) {
+                            $plainHari = trim(explode('(', $hari)[0]);
+                        }
 
                         if (empty($hari) || empty($jam_slot)) continue;
 
                         if (!empty($mapel_nama)) {
                             // Cek apakah slot sudah ada untuk kelas ini
-                            $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE hari = ? AND jam_slot = ? AND kelas_nama = ?";
-                            $params = [$hari, $jam_slot, $kNama];
+                            $checkSql = "SELECT id FROM cbt_jadwal_grid WHERE jam_slot = ? AND kelas_nama = ?";
+                            $params = [$jam_slot, $kNama];
+                            if (!empty($tgl)) {
+                                $checkSql .= " AND (tanggal = ? OR (tanggal IS NULL AND (hari = ? OR hari = ?)))";
+                                $params[] = $tgl;
+                                $params[] = $hari;
+                                $params[] = $plainHari;
+                            } else {
+                                $checkSql .= " AND (hari = ? OR hari = ?)";
+                                $params[] = $hari;
+                                $params[] = $plainHari;
+                            }
                             if ($topik_id) {
                                 $checkSql .= " AND (topik_id = ? OR topik_id IS NULL)";
                                 $params[] = $topik_id;
@@ -1400,8 +1645,8 @@ class CbtController {
                             $existingId = $stmtCheck->fetchColumn();
 
                             if ($existingId) {
-                                $sqlUp = "UPDATE cbt_jadwal_grid SET topik_id = ?, mapel_nama = ?, kelas_id = ?, tanggal = COALESCE(?, tanggal)";
-                                $upParams = [$topik_id, $mapel_nama, $kId, $tgl];
+                                $sqlUp = "UPDATE cbt_jadwal_grid SET topik_id = ?, mapel_nama = ?, kelas_id = ?, tanggal = COALESCE(?, tanggal), hari = ?";
+                                $upParams = [$topik_id, $mapel_nama, $kId, $tgl, $plainHari];
                                 if (!empty($pengawas)) {
                                     $sqlUp .= ", pengawas = ?";
                                     $upParams[] = $pengawas;
@@ -1412,7 +1657,7 @@ class CbtController {
                                 $stmtUp->execute($upParams);
                             } else {
                                 $stmtIns = $db->prepare("INSERT INTO cbt_jadwal_grid (topik_id, mapel_nama, hari, jam_slot, kelas_id, kelas_nama, pengawas, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                                $stmtIns->execute([$topik_id, $mapel_nama, $hari, $jam_slot, $kId, $kNama, $pengawas, $tgl]);
+                                $stmtIns->execute([$topik_id, $mapel_nama, $plainHari, $jam_slot, $kId, $kNama, $pengawas, $tgl]);
                             }
                         }
                     }
@@ -3496,6 +3741,54 @@ class CbtController {
         }
 
         include __DIR__ . '/../../resources/views/cbt/peserta_khusus_cetak.php';
+    }
+
+    /**
+     * Cetak Kartu Identitas Pengawas / Proktor CBT Kelas Jauh & QR Login
+     */
+    public static function cetakKartuPengawasKhusus() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $id = (int)($_GET['id'] ?? 0);
+
+        $sql = "SELECT * FROM cbt_pengawas_kj WHERE status = 'Aktif'";
+        $params = [];
+
+        if ($id > 0) {
+            $sql .= " AND id = ?";
+            $params[] = $id;
+        }
+
+        $sql .= " ORDER BY nama ASC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $pengawasList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Ambil data institusi untuk Kop dan TTD Kepala Madrasah
+        $inst = null;
+        try {
+            $inst = $db->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        if (!$inst) {
+            $inst = [];
+        }
+        if (empty($inst['nama_kepala']) || stripos($inst['nama_kepala'], 'Ulfah') !== false) {
+            $inst['nama_kepala'] = 'Drs. Hamim Hasyim';
+        }
+        if (empty($inst['nip_kepala'])) {
+            $inst['nip_kepala'] = '-';
+        }
+        if (empty($inst['kota'])) {
+            $inst['kota'] = 'Lampung Barat';
+        }
+        if (empty($inst['nama']) && empty($inst['nama_institusi'])) {
+            $inst['nama'] = 'MAS MIFTAHUL HUDA';
+        }
+
+        include __DIR__ . '/../../resources/views/cbt/pengawas_khusus_cetak.php';
     }
 
     // =========================================================================

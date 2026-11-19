@@ -292,7 +292,15 @@ foreach ($ujianListRaw as $u) {
             $stmtToday = $core_db->prepare("
                 SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
                 FROM cbt_jadwal_grid g 
-                LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+                LEFT JOIN cbt_jam_slot s ON (
+                    (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
+                    AND (
+                        g.jam_slot = s.label_sesi 
+                        OR g.jam_slot = s.urutan
+                        OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
+                        OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
+                    )
+                )
                 WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND g.hari = :curHari))
                   AND (
                       g.ujian_id = :uid 
@@ -365,7 +373,15 @@ foreach ($ujianListRaw as $u) {
                 $stmtOther = $core_db->prepare("
                     SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
                     FROM cbt_jadwal_grid g 
-                    LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+                    LEFT JOIN cbt_jam_slot s ON (
+                        (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
+                        AND (
+                            g.jam_slot = s.label_sesi 
+                            OR g.jam_slot = s.urutan
+                            OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
+                            OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
+                        )
+                    )
                     WHERE g.ujian_id = :uid 
                        OR (
                            (g.mapel_nama = :mapel OR :mapel LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', :mapel, '%'))

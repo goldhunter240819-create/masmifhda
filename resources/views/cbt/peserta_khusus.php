@@ -22,6 +22,9 @@ $activeTab = $_GET['tab'] ?? 'siswa';
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <?php if ($activeTab === 'pengawas'): ?>
+                            <a href="<?php echo base_url('cbt/pengawas_khusus/cetak'); ?>" target="_blank" class="e-btn e-btn-glass" style="background: rgba(255,255,255,0.9); color: #059669; font-weight: 800; border: 1.5px solid #a7f3d0; box-shadow: 0 2px 8px rgba(5,150,105,0.1);">
+                                <i data-lucide="printer"></i> Cetak Kartu Pengawas
+                            </a>
                             <button type="button" onclick="bukaModalTambahPengawas()" class="e-btn e-btn-primary" style="background: #059669;">
                                 <i data-lucide="user-plus"></i> Tambah Akun Pengawas
                             </button>
@@ -178,6 +181,9 @@ $activeTab = $_GET['tab'] ?? 'siswa';
                                         </td>
                                         <td style="text-align: right;">
                                             <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                                <a href="<?php echo base_url('cbt/pengawas_khusus/cetak?id=' . $pkj['id']); ?>" target="_blank" class="e-btn e-btn-glass" style="padding: 6px 10px; font-size: 0.78rem; color: #059669;" title="Cetak Kartu Pengawas & QR Login">
+                                                    <i data-lucide="printer" style="width: 14px; height: 14px;"></i>
+                                                </a>
                                                 <button type="button" onclick="bukaModalEditPengawas(<?php echo htmlspecialchars(json_encode($pkj), ENT_QUOTES, 'UTF-8'); ?>)" class="e-btn e-btn-glass" style="padding: 6px 10px; font-size: 0.78rem;" title="Edit Akun Pengawas">
                                                     <i data-lucide="edit-3" style="width: 14px; height: 14px; color: #0284c7;"></i>
                                                 </button>

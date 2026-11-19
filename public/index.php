@@ -2526,6 +2526,7 @@ $router->add('POST', '/cbt/pengawas_kj/save', [\App\Controllers\CbtController::c
 $router->add('POST', '/cbt/pengawas_kj/delete', [\App\Controllers\CbtController::class, 'deletePengawasKj']);
 $router->add('POST', '/cbt/peserta_khusus/import', [\App\Controllers\CbtController::class, 'importPesertaKhusus']);
 $router->add('GET', '/cbt/peserta_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPesertaKhusus']);
+$router->add('GET', '/cbt/pengawas_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPengawasKhusus']);
 
 
 // ─── Kurikulum & Supervisi Suite (Full Port from Mismifhda) ─────────────────

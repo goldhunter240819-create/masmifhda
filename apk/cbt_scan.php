@@ -300,9 +300,14 @@ include 'header.php';
         .then(res => res.json())
         .then(res => {
             if (res.success) {
-                playBeep(true);
-                showResult(true, res);
-                addLogItem(true, res);
+                if (res.already) {
+                    playBeep(false);
+                    alert("⚠️ SISWA SUDAH SCAN SEBELUMNYA!\n\n" + (res.siswa ? res.siswa.nama : 'Siswa') + " (" + (res.siswa ? res.siswa.kelas_nama : '-') + ")\nSudah tercatat hadir pada mapel " + (res.mapel_nama || '-') + " (" + (res.jam_slot || '') + ") pukul " + (res.waktu || '') + " WIB.\n\nBelum waktunya ganti jam/sesi ujian!");
+                } else {
+                    playBeep(true);
+                    showResult(true, res);
+                    addLogItem(true, res);
+                }
             } else {
                 playBeep(false);
                 showResult(false, res);

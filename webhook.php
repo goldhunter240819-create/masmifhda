@@ -126,6 +126,9 @@ try {
     $dbCore = \App\Core\Database::connect('core');
     require_once __DIR__ . '/app/Controllers/CbtController.php';
     \App\Controllers\CbtController::ensureTables($dbCore);
+    // Pastikan kolom topik_id ada di cbt_jam_slot
+    try { $dbCore->exec("ALTER TABLE cbt_jam_slot ADD COLUMN topik_id INT DEFAULT NULL AFTER id, ADD INDEX (topik_id)"); } catch (\Throwable $e) {}
+
     // Bersihkan data absensi tes siswa 414 atau absensi hari ini yang nyangkut
     $dbCore->exec("DELETE FROM cbt_absensi WHERE siswa_id = 414 OR tanggal = CURDATE() OR waktu_scan >= CURDATE()");
 

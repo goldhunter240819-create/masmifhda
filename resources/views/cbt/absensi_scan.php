@@ -478,7 +478,47 @@ function submitAbsenCode(code) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Tampilkan kartu hasil di sisi kanan
+            if (data.already) {
+                // Notifikasi MERAH POPUP saja yang tidak mempengaruhi halaman agar rapih
+                playErrorBuzzer();
+
+                Swal.fire({
+                    icon: 'warning',
+                    iconColor: '#ef4444',
+                    title: '<span style="color:#dc2626; font-size:1.2rem; font-weight:900;">⚠️ Siswa Sudah Scan Sebelumnya!</span>',
+                    html: `
+                        <div style="font-size:1.05rem; color:#0f172a; margin-top:8px; font-weight:800;">
+                            ${escapeHtml(data.siswa.nama)}
+                        </div>
+                        <div style="font-size:0.85rem; color:#64748b; margin-top:3px;">
+                            NIS: <b style="font-family:monospace; color:#0f172a;">${escapeHtml(data.siswa.nis)}</b> &bull; Kelas: <b style="color:#0284c7;">${escapeHtml(data.siswa.kelas_nama)}</b>
+                        </div>
+                        <div style="background:#fef2f2; border:1.5px solid #fecaca; border-radius:12px; padding:12px 14px; margin-top:14px; text-align:left;">
+                            <div style="color:#991b1b; font-size:0.86rem; font-weight:700; line-height:1.45;">
+                                Siswa ini telah tercatat hadir untuk mapel <strong>${escapeHtml(data.mapel || data.mapel_nama)}</strong> (${escapeHtml(data.sesi || data.jam_slot)}) pada pukul <strong>${escapeHtml(data.waktu)} WIB</strong>.
+                            </div>
+                            <div style="margin-top:8px; font-size:0.8rem; color:#b91c1c; font-weight:800; border-top:1px dashed #fca5a5; padding-top:6px;">
+                                ⏱️ Belum waktunya ganti sesi/jam ujian. Tidak perlu scan ulang!
+                            </div>
+                        </div>
+                    `,
+                    timer: 3500,
+                    timerProgressBar: true,
+                    confirmButtonText: 'Tutup (Siap Scan Lagi)',
+                    confirmButtonColor: '#dc2626',
+                    customClass: { popup: 'cbt-swal' }
+                }).then(() => {
+                    lastScanCode = '';
+                });
+
+                setTimeout(() => {
+                    lastScanCode = '';
+                }, 3500);
+
+                return; // Selesai! Tidak mengubah kartu / layout halaman
+            }
+
+            // Tampilkan kartu hasil di sisi kanan (HANYA untuk absensi baru)
             const card = document.getElementById('cardSuccessScan');
             const iconBox = document.getElementById('lblScanIconBox');
             const badge = document.getElementById('lblScanStatusBadge');
@@ -487,27 +527,15 @@ function submitAbsenCode(code) {
             card.style.animation = 'none';
             void card.offsetWidth; // Trigger reflow
             card.style.animation = 'popIn 0.3s ease-out';
-
-            if (data.already) {
-                card.style.background = '#fffbeb';
-                card.style.borderColor = '#fde68a';
-                iconBox.style.background = '#fef3c7';
-                iconBox.style.color = '#b45309';
-                iconBox.textContent = 'ℹ';
-                badge.textContent = 'SUDAH TERABSEN SEBELUMNYA';
-                badge.style.color = '#b45309';
-                playAlreadyBeep();
-            } else {
-                card.style.background = '#f0fdf4';
-                card.style.borderColor = '#86efac';
-                iconBox.style.background = '#dcfce7';
-                iconBox.style.color = '#15803d';
-                iconBox.textContent = '✓';
-                const statusTxt = (data.status || 'HADIR').toUpperCase();
-                badge.textContent = 'BERHASIL ABSENSI CBT (' + statusTxt + ')';
-                badge.style.color = '#15803d';
-                playSuccessChime();
-            }
+            card.style.background = '#f0fdf4';
+            card.style.borderColor = '#86efac';
+            iconBox.style.background = '#dcfce7';
+            iconBox.style.color = '#15803d';
+            iconBox.textContent = '✓';
+            const statusTxt = (data.status || 'HADIR').toUpperCase();
+            badge.textContent = 'BERHASIL ABSENSI CBT (' + statusTxt + ')';
+            badge.style.color = '#15803d';
+            playSuccessChime();
 
             document.getElementById('lblScanNamaSiswa').textContent = data.siswa.nama;
             document.getElementById('lblScanNis').textContent = data.siswa.nis;
@@ -526,40 +554,38 @@ function submitAbsenCode(code) {
             });
 
             Toast.fire({
-                icon: data.already ? 'info' : 'success',
-                title: data.already ? 'Sudah Terabsen' : 'Absensi Berhasil!',
+                icon: 'success',
+                title: 'Absensi Berhasil!',
                 text: `${data.siswa.nama} (${data.siswa.kelas_nama})`
             });
 
             // Tambahkan ke log realtime jika absensi baru
-            if (!data.already) {
-                const emptyMsg = document.getElementById('emptyAbsenMsg');
-                if (emptyMsg) emptyMsg.style.display = 'none';
+            const emptyMsg = document.getElementById('emptyAbsenMsg');
+            if (emptyMsg) emptyMsg.style.display = 'none';
 
-                const list = document.getElementById('listRecentAbsen');
-                const row = document.createElement('div');
-                row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 10px; border-bottom: 1px solid #f1f5f9; animation: popIn 0.3s ease-out;';
-                row.innerHTML = `
-                    <div>
-                        <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a;">${escapeHtml(data.siswa.nama)}</div>
-                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
-                            <span style="font-weight: 700; color: #0284c7;">${escapeHtml(data.siswa.kelas_nama)}</span> &bull; NIS: <span style="font-family: monospace; font-weight: 700;">${escapeHtml(data.siswa.nis)}</span> &bull; ${escapeHtml(data.mapel || data.mapel_nama || '')}
-                        </div>
+            const list = document.getElementById('listRecentAbsen');
+            const row = document.createElement('div');
+            row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 10px; border-bottom: 1px solid #f1f5f9; animation: popIn 0.3s ease-out;';
+            row.innerHTML = `
+                <div>
+                    <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a;">${escapeHtml(data.siswa.nama)}</div>
+                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                        <span style="font-weight: 700; color: #0284c7;">${escapeHtml(data.siswa.kelas_nama)}</span> &bull; NIS: <span style="font-family: monospace; font-weight: 700;">${escapeHtml(data.siswa.nis)}</span> &bull; ${escapeHtml(data.mapel || data.mapel_nama || '')}
                     </div>
-                    <div style="text-align: right;">
-                        <span style="font-size: 0.72rem; font-weight: 800; background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px;">
-                            ${escapeHtml(data.waktu)} WIB
-                        </span>
-                    </div>
-                `;
-                list.insertBefore(row, list.firstChild);
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 0.72rem; font-weight: 800; background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px;">
+                        ${escapeHtml(data.waktu)} WIB
+                    </span>
+                </div>
+            `;
+            list.insertBefore(row, list.firstChild);
 
-                // Update counter total
-                const totalEl = document.getElementById('lblTotalAbsenToday');
-                if (totalEl) {
-                    const currentCount = parseInt(totalEl.innerText) || 0;
-                    totalEl.innerText = (currentCount + 1) + ' Siswa';
-                }
+            // Update counter total
+            const totalEl = document.getElementById('lblTotalAbsenToday');
+            if (totalEl) {
+                const currentCount = parseInt(totalEl.innerText) || 0;
+                totalEl.innerText = (currentCount + 1) + ' Siswa';
             }
 
         } else {
