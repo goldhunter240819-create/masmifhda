@@ -206,10 +206,22 @@ try {
           AND (u.kelas_nama IS NULL OR u.kelas_nama = '' OR u.kelas_nama IN ($inPlaceholders))
         ORDER BY 
             CASE WHEN u.topik_id = {$nearestTopikId} THEN 0 ELSE 1 END ASC,
+            CASE 
+                WHEN u.kelas_nama = ? THEN 0
+                WHEN u.kelas_nama IN (?, ?, 'Semua Kelas', '') OR u.kelas_nama IS NULL THEN 1
+                ELSE 2
+            END ASC,
             (total_soal > 0) DESC, 
             u.id DESC
     ";
-    $params = array_merge([$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')], $allowedKelas);
+    $params = array_merge([
+        $siswa_id, 
+        (string)($siswa['nis'] ?? ''), 
+        (string)($siswa['nis'] ?? ''),
+        (string)($siswa['nama_kelas'] ?? ''),
+        (string)$tingkat_kelas,
+        (string)$short_tingkat
+    ], $allowedKelas);
     $stmtUjian = $core_db->prepare($sqlUjian);
     $stmtUjian->execute($params);
     $ujianListRaw = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
@@ -376,7 +388,9 @@ foreach ($ujianListRaw as $u) {
     if (!empty($u['nama_topik'])) {
         $curTopikName = trim($u['nama_topik']);
         if (stripos($u['nama_ujian'], 'Simulasi ') === 0 || stripos($u['nama_ujian'], $curTopikName) === false) {
-            $klsDisplay = !empty($u['kelas_nama']) && $u['kelas_nama'] !== 'Semua Kelas' ? $u['kelas_nama'] : ($siswa['nama_kelas'] ?? $tingkat_kelas);
+            $klsDisplay = ($u['kelas_nama'] === $siswa['nama_kelas'] || in_array($u['kelas_nama'], [$tingkat_kelas, $short_tingkat])) 
+                ? $u['kelas_nama'] 
+                : ($siswa['nama_kelas'] ?? $tingkat_kelas);
             $u['nama_ujian'] = $curTopikName . ' - ' . $u['mapel_nama'] . ' (' . $klsDisplay . ')';
         }
     }
@@ -396,6 +410,8 @@ foreach ($ujianListRaw as $u) {
     $scheduleState = 'open'; // 'open', 'early', 'expired'
     $scheduleNotice = '';
     $jadwalSlotLabel = '';
+    $jMulaiStr = '';
+    $jSelesaiStr = '';
     $isHariIni = false;
 
     if ($lockSchedule) {
@@ -405,13 +421,11 @@ foreach ($ujianListRaw as $u) {
                 SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
                 FROM cbt_jadwal_grid g 
                 LEFT JOIN cbt_jam_slot s ON (
-                    (s.topik_id = g.topik_id OR s.topik_id IS NULL OR g.topik_id IS NULL)
-                    AND (
-                        g.jam_slot = s.label_sesi 
-                        OR g.jam_slot = s.urutan
-                        OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
-                        OR g.jam_slot LIKE CONCAT('%', SUBSTRING(s.jam_mulai, 1, 5), '%')
-                    )
+                    g.jam_slot = s.label_sesi 
+                    OR g.jam_slot = CAST(s.urutan AS CHAR)
+                    OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
+                    OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - %')
+                    OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), '%')
                 )
                 WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND g.hari = :curHari))
                   AND (
@@ -428,7 +442,7 @@ foreach ($ujianListRaw as $u) {
                           )
                       )
                   )
-                ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, g.id DESC LIMIT 1
+                ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, (g.kelas_nama = :tingkat2) DESC, g.id ASC LIMIT 1
             ");
             $stmtToday->execute([
                 ':today' => $todayDate,
@@ -439,23 +453,40 @@ foreach ($ujianListRaw as $u) {
                 ':tingkat' => $tingkat_kelas,
                 ':short_tingkat' => $short_tingkat,
                 ':uid2' => $u['id'],
-                ':kelas2' => $siswa['nama_kelas']
+                ':kelas2' => $siswa['nama_kelas'],
+                ':tingkat2' => $tingkat_kelas
             ]);
             $jGrid = $stmtToday->fetch(PDO::FETCH_ASSOC);
 
             if ($jGrid) {
                 // Terjadwal HARI INI!
                 $isHariIni = true;
-                $slotLabel = $jGrid['label_sesi'] ?: $jGrid['jam_slot'];
+                $rawSlot = trim($jGrid['jam_slot'] ?? '');
                 
-                $jMulaiStr = !empty($jGrid['jam_mulai']) ? $jGrid['jam_mulai'] : '';
-                $jSelesaiStr = !empty($jGrid['jam_selesai']) ? $jGrid['jam_selesai'] : '';
+                $parsedStart = '';
+                $parsedEnd = '';
+                if (preg_match('/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/', $rawSlot, $mTimes)) {
+                    $parsedStart = $mTimes[1];
+                    $parsedEnd = $mTimes[2];
+                }
 
-                if ((empty($jMulaiStr) || empty($jSelesaiStr)) && !empty($jGrid['jam_slot'])) {
-                    if (preg_match('/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/', $jGrid['jam_slot'], $mTimes)) {
-                        $jMulaiStr = $mTimes[1];
-                        $jSelesaiStr = $mTimes[2];
-                    }
+                $jMulaiStr = $parsedStart ?: (!empty($jGrid['jam_mulai']) ? substr(trim($jGrid['jam_mulai']), 0, 5) : '');
+                $jSelesaiStr = $parsedEnd ?: (!empty($jGrid['jam_selesai']) ? substr(trim($jGrid['jam_selesai']), 0, 5) : '');
+
+                // Tentukan Label Sesi yang tepat & akurat
+                $slotLabel = '';
+                if ($jMulaiStr === '08:00') {
+                    $slotLabel = 'Sesi 1';
+                } elseif ($jMulaiStr === '09:00') {
+                    $slotLabel = 'Sesi 2';
+                } elseif ($jMulaiStr === '10:10') {
+                    $slotLabel = 'Sesi 3';
+                } elseif (!empty($jGrid['label_sesi']) && stripos($jGrid['label_sesi'], 'sesi') !== false) {
+                    $slotLabel = $jGrid['label_sesi'];
+                } elseif (!empty($rawSlot)) {
+                    $slotLabel = $rawSlot;
+                } else {
+                    $slotLabel = 'Sesi Ujian';
                 }
 
                 $timeRange = (!empty($jMulaiStr) && !empty($jSelesaiStr)) ? $jMulaiStr . ' - ' . $jSelesaiStr . ' WIB' : '';
@@ -499,7 +530,7 @@ foreach ($ujianListRaw as $u) {
                                OR g.kelas_nama LIKE CONCAT('%', :short_tingkat, '%')
                            )
                        )
-                    ORDER BY (g.ujian_id = :uid2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, g.jam_slot ASC, g.id ASC LIMIT 1
+                    ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, g.jam_slot ASC, g.id ASC LIMIT 1
                 ");
                 $stmtOther->execute([
                     ':uid' => $u['id'],
@@ -509,7 +540,8 @@ foreach ($ujianListRaw as $u) {
                     ':kelas' => $siswa['nama_kelas'],
                     ':tingkat' => $tingkat_kelas,
                     ':short_tingkat' => $short_tingkat,
-                    ':uid2' => $u['id']
+                    ':uid2' => $u['id'],
+                    ':kelas2' => $siswa['nama_kelas']
                 ]);
                 $otherGrid = $stmtOther->fetch(PDO::FETCH_ASSOC);
 
@@ -595,6 +627,8 @@ foreach ($ujianListRaw as $u) {
     $u['schedule_state'] = $scheduleState;
     $u['schedule_notice'] = $scheduleNotice;
     $u['jadwal_slot_label'] = $jadwalSlotLabel;
+    $u['jam_mulai'] = $jMulaiStr;
+    $u['jam_selesai'] = $jSelesaiStr;
     $u['upcoming_date'] = $otherGrid['tanggal'] ?? '';
     $u['upcoming_time'] = $otherGrid['jam_mulai'] ?? '';
     $u['grid_topik_id'] = $otherGrid['topik_id'] ?? 0;
@@ -621,7 +655,7 @@ foreach ($allEvaluatedUjian as $u) {
     }
 }
 
-// Urutkan paket ujian hari ini agar sesi yang aktif/siap selalu di atas, disusul yang akan datang, dan yang expired di bawah
+// Urutkan paket ujian hari ini agar sesi yang aktif/siap selalu di atas, disusul yang akan datang (terawal di atas), dan yang expired di bawah
 usort($ujianHariIni, function($a, $b) {
     $rank = function($x) {
         if (in_array($x['status_pengerjaan'] ?? '', ['Mengerjakan', 'Sedang Mengerjakan'])) return 1;
@@ -630,7 +664,13 @@ usort($ujianHariIni, function($a, $b) {
         if (($x['schedule_state'] ?? '') === 'expired') return 4;
         return 5;
     };
-    return $rank($a) <=> $rank($b);
+    $rA = $rank($a);
+    $rB = $rank($b);
+    if ($rA !== $rB) return $rA <=> $rB;
+
+    $tA = !empty($a['jam_mulai']) ? $a['jam_mulai'] : '99:99';
+    $tB = !empty($b['jam_mulai']) ? $b['jam_mulai'] : '99:99';
+    return strcmp($tA, $tB);
 });
 
 $ujianTersedia = array_merge($ujianHariIni, $ujianLainnya);
@@ -658,13 +698,21 @@ if (!$activeOngoingUjian) {
     }
 }
 
-// Prioritas 3: Jadwal hari ini tapi jam mulai belum tiba
+// Prioritas 3: Jadwal hari ini tapi jam mulai belum tiba (pilih yang paling awal jam mulainya)
 if (!$activeOngoingUjian) {
+    $earlyToday = [];
     foreach ($allEvaluatedUjian as $uItem) {
         if (!empty($uItem['is_hari_ini']) && $uItem['schedule_state'] === 'early') {
-            $upcomingUjian = $uItem;
-            break;
+            $earlyToday[] = $uItem;
         }
+    }
+    if (!empty($earlyToday)) {
+        usort($earlyToday, function($a, $b) {
+            $tA = !empty($a['jam_mulai']) ? $a['jam_mulai'] : '99:99';
+            $tB = !empty($b['jam_mulai']) ? $b['jam_mulai'] : '99:99';
+            return strcmp($tA, $tB);
+        });
+        $upcomingUjian = $earlyToday[0];
     }
 }
 
