@@ -7,6 +7,8 @@ if ($_ghtech_ip == "127.0.0.1" || $_ghtech_ip == "::1") {
 }
 
 require_once 'koneksi.php';
+require_once __DIR__ . '/apk_version_guard.php';
+check_apk_version_guard();
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once __DIR__ . '/../vendor/autoload.php';
 }

@@ -5,6 +5,10 @@ if (session_status() === PHP_SESSION_NONE) {
 // Ambil judul halaman dari variabel $page_title jika ada
 $title = isset($page_title) ? $page_title : 'Portal Wali Murid';
 
+// Cek Versi APK Wajib (Force Update)
+require_once __DIR__ . '/apk_version_guard.php';
+check_apk_version_guard();
+
 // Cek Maintenance Mode
 $apk_settings_file = __DIR__ . '/apk_settings.json';
 if (file_exists($apk_settings_file)) {

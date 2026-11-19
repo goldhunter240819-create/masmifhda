@@ -1,6 +1,8 @@
 <?php
 require_once 'koneksi.php';
 require_once __DIR__ . '/../app/Services/AuditLogger.php';
+require_once __DIR__ . '/apk_version_guard.php';
+check_apk_version_guard();
 
 // Jika sudah login, langsung ke dashboard yang sesuai
 if (!empty($_SESSION['is_cbt_only'])) {
