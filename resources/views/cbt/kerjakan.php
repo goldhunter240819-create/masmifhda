@@ -431,6 +431,20 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             60% { transform: scale(1.1) rotate(-6deg); }
             80% { transform: scale(1.1) rotate(6deg); }
         }
+        /* Proteksi Anti-Screenshot / Anti-Print / Anti-Select */
+        @media print {
+            html, body {
+                display: none !important;
+                visibility: hidden !important;
+            }
+        }
+        body, .soal-text, .opsi-item, .cbt-main-card {
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+            -webkit-touch-callout: none !important;
+        }
         .cbt-watermark-overlay {
             position: fixed;
             inset: 0;
@@ -441,7 +455,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             justify-content: space-around;
             align-content: space-around;
             overflow: hidden;
-            opacity: 0.045;
+            opacity: 0.085;
             user-select: none;
         }
         .cbt-watermark-overlay span {
@@ -1124,6 +1138,44 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
     </div>
 
     <!-- Modal Peringatan Pelanggaran Keluar Tab (Danger Alarm Meme) -->
+        <!-- Shield Penutup Layar Saat Jendela Mengambang / Popup / Fokus Hilang -->
+    <div id="cbtSecurityShield" style="display: none; position: fixed; inset: 0; z-index: 999998; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); color: white; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;">
+        <div style="width: 76px; height: 76px; border-radius: 50%; background: rgba(239, 68, 68, 0.2); border: 2.5px solid #ef4444; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin-bottom: 16px; animation: shakeIcon 0.8s infinite;">
+            ⚠️
+        </div>
+        <div style="display: inline-block; background: #dc2626; color: white; font-weight: 900; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; padding: 4px 14px; border-radius: 99px; margin-bottom: 10px;">
+            LAYAR UJIAN DISAMARKAN
+        </div>
+        <h3 id="cbtShieldTitle" style="font-size: 1.25rem; font-weight: 900; color: #f87171; margin-bottom: 8px;">
+            Aplikasi Mengambang / Jendela Popup Terdeteksi!
+        </h3>
+        <p id="cbtShieldDesc" style="font-size: 0.88rem; color: #cbd5e1; max-width: 420px; line-height: 1.5; margin-bottom: 20px;">
+            Soal ujian otomatis disamarkan demi keamanan ujian. Harap <strong>tutup WhatsApp, aplikasi mengambang (floating window), atau kembali ke layar ujian</strong> untuk melanjutkan.
+        </p>
+        <button type="button" onclick="resumeFromShield()" class="btn-cbt" style="background: #2563eb; color: white; border: none; border-radius: 12px; padding: 12px 28px; font-weight: 800; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);">
+            Sentuh Layar Untuk Kembali Ujian
+        </button>
+    </div>
+
+    <!-- Modal Layar Belah (Split Screen Blocker) -->
+    <div id="cbtSplitScreenModal" style="display: none; position: fixed; inset: 0; z-index: 999997; background: #0f172a; color: white; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;">
+        <div style="width: 76px; height: 76px; border-radius: 50%; background: #450a0a; border: 2.5px solid #ef4444; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin-bottom: 16px; color: #ef4444;">
+            📱
+        </div>
+        <div style="display: inline-block; background: #dc2626; color: white; font-weight: 900; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; padding: 4px 14px; border-radius: 99px; margin-bottom: 10px;">
+            DILARANG LAYAR BELAH (SPLIT SCREEN)
+        </div>
+        <h3 style="font-size: 1.25rem; font-weight: 900; color: #f87171; margin-bottom: 8px;">
+            Mode Layar Belah Terdeteksi!
+        </h3>
+        <p style="font-size: 0.88rem; color: #cbd5e1; max-width: 420px; line-height: 1.5; margin-bottom: 15px;">
+            Sistem mendeteksi layar gawai Anda sedang dibelah menjadi 2 bagian. Ujian CBT MAS MIFTAHUL HUDA mewajibkan <strong>1 layar penuh (Single Fullscreen)</strong>.
+        </p>
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; padding: 10px 16px; font-size: 0.8rem; color: #fca5a5; max-width: 420px; line-height: 1.4;">
+            Tarik pembatas layar ke bawah atau ke atas untuk menutup aplikasi kedua dan jadikan ujian 1 layar penuh kembali!
+        </div>
+    </div>
+
     <div id="modalViolation" class="cbt-modal-backdrop" style="z-index: 99999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px);">
         <div class="cbt-modal-box" style="border: 3px solid #ef4444; box-shadow: 0 25px 60px rgba(239, 68, 68, 0.45); text-align: center; max-width: 500px; animation: pulseBorder 1.5s infinite;">
             
@@ -2317,10 +2369,85 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             });
         }
 
-        // Listener pindah tab & keluar layar
+        // ─── PRIVACY SHIELD & MULTI-WINDOW / FLOATING APP PROTECTION ─────────
+        let isShieldActive = false;
+        let shieldTimer = null;
+        let isSplitScreenActive = false;
+        let splitScreenTimer = null;
+
+        function activateSecurityShield(reason = 'Fokus Hilang') {
+            if (!isAntiCheat || isExamSubmitted) return;
+            const shield = document.getElementById('cbtSecurityShield');
+            if (shield && !isShieldActive) {
+                isShieldActive = true;
+                shield.style.display = 'flex';
+                playDangerAlarm();
+
+                // Jika shield dibiarkan aktif lebih dari 3.5 detik, catat sebagai pelanggaran
+                clearTimeout(shieldTimer);
+                shieldTimer = setTimeout(() => {
+                    if (isShieldActive && !isExamSubmitted) {
+                        handleTabViolation(reason);
+                    }
+                }, 3500);
+            }
+        }
+
+        function resumeFromShield() {
+            isShieldActive = false;
+            clearTimeout(shieldTimer);
+            const shield = document.getElementById('cbtSecurityShield');
+            if (shield) shield.style.display = 'none';
+            stopDangerAlarm();
+
+            if (forceFullscreen && !document.fullscreenElement) {
+                requestFullscreenMode();
+            }
+        }
+
+        // Deteksi Split Screen (Layar Belah)
+        function checkSplitScreenMode() {
+            if (!isAntiCheat || isExamSubmitted) return;
+
+            // Abaikan jika siswa sedang mengetik pada input / textarea
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+            // Jika tinggi viewport kurang dari 62% tinggi layar fisik di HP (Split Screen aktif)
+            const availH = window.screen.availHeight || window.screen.height || 0;
+            if (availH > 500 && window.innerWidth <= 800) {
+                const ratio = window.innerHeight / availH;
+                const splitModal = document.getElementById('cbtSplitScreenModal');
+
+                if (ratio < 0.62) {
+                    if (!isSplitScreenActive) {
+                        isSplitScreenActive = true;
+                        if (splitModal) splitModal.style.display = 'flex';
+                        playDangerAlarm();
+
+                        clearTimeout(splitScreenTimer);
+                        splitScreenTimer = setTimeout(() => {
+                            if (isSplitScreenActive && !isExamSubmitted) {
+                                handleTabViolation('Menggunakan Mode Layar Belah (Split Screen)');
+                            }
+                        }, 4000);
+                    }
+                } else {
+                    if (isSplitScreenActive) {
+                        isSplitScreenActive = false;
+                        clearTimeout(splitScreenTimer);
+                        if (splitModal) splitModal.style.display = 'none';
+                        stopDangerAlarm();
+                    }
+                }
+            }
+        }
+
+        // Listener pindah tab & keluar layar & floating window
         if (isAntiCheat && blockTab) {
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
+                    activateSecurityShield('Tab Berpindah');
                     handleTabViolation('Tab Berpindah');
                 } else {
                     // Siswa kembali ke tab ujian
@@ -2333,10 +2460,51 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
             window.addEventListener('blur', function() {
                 if (!isViolationModalOpen && !isExamSubmitted) {
+                    activateSecurityShield('Jendela Mengambang / Aplikasi Lain Aktif');
                     handleTabViolation('Fokus Hilang');
                 }
             });
+
+            window.addEventListener('focus', function() {
+                if (isShieldActive) {
+                    resumeFromShield();
+                }
+            });
+
+            // Focus Heartbeat: deteksi jendela mengambang yang tidak memicu blur standar
+            setInterval(() => {
+                if (!isExamSubmitted && isAntiCheat) {
+                    checkSplitScreenMode();
+                    if (!document.hasFocus() || document.hidden) {
+                        activateSecurityShield('Aplikasi Mengambang / Popup Terdeteksi');
+                    }
+                }
+            }, 600);
         }
+
+        // ─── BLOKIR SCREENSHOT GESTUR 3 JARI DI HP ANDROID ───────────────────
+        window.addEventListener('touchstart', function(e) {
+            if (e.touches && e.touches.length >= 3) {
+                e.preventDefault();
+                e.stopPropagation();
+                activateSecurityShield('Gestur Tangkapan Layar (3 Jari)');
+                handleTabViolation('Mencoba Tangkapan Layar (Gestur 3 Jari)');
+                return false;
+            }
+        }, { passive: false });
+
+        // Blokir tombol PrintScreen & shortcut screenshot keyboard
+        window.addEventListener('keyup', function(e) {
+            if (e.key === 'PrintScreen' || e.keyCode === 44) {
+                try { navigator.clipboard.writeText(''); } catch(err) {}
+                activateSecurityShield('Tombol PrintScreen / Screenshot');
+                handleTabViolation('Menekan Tombol Screenshot');
+            }
+        });
+
+        // Blokir seleksi teks & drag soal
+        document.addEventListener('selectstart', function(e) { e.preventDefault(); return false; });
+        document.addEventListener('dragstart', function(e) { e.preventDefault(); return false; });
 
         // Blokir klik kanan & inspect element / shortcut
         if (isAntiCheat && disableRightClick) {
