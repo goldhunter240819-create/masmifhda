@@ -88,7 +88,89 @@ class CbtBiologiArabGenerator {
     }
 
     /**
+     * Membersihkan topik duplikat tak terpakai & butir soal yang nyasar di topik non-simulasi
+     */
+    public static function cleanupUnwantedTopics($db_siakad, $db_core) {
+        // 1. Deduplikasi Topik: Hapus baris duplikat yang memiliki nama sama (misal SAS kosong, duplikat SAS baru)
+        try {
+            $all = $db_siakad->query("
+                SELECT t.id, t.nama_topik, t.tgl_mulai, 
+                       (SELECT COUNT(*) FROM bs_paket WHERE topik_id = t.id) as cnt_paket,
+                       (SELECT COUNT(*) FROM bs_soal WHERE topik_id = t.id) as cnt_soal
+                FROM bs_topik t
+                ORDER BY t.id ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            $grouped = [];
+            foreach ($all as $item) {
+                $name = trim($item['nama_topik']);
+                $grouped[$name][] = $item;
+            }
+
+            foreach ($grouped as $name => $items) {
+                if (count($items) > 1) {
+                    // Urutkan: utamakan yang memiliki tgl_mulai, lalu paket terbanyak, lalu id terkecil
+                    usort($items, function($a, $b) {
+                        $hasDateA = !empty($a['tgl_mulai']) ? 1 : 0;
+                        $hasDateB = !empty($b['tgl_mulai']) ? 1 : 0;
+                        if ($hasDateA !== $hasDateB) return $hasDateB - $hasDateA;
+                        if ((int)$a['cnt_paket'] !== (int)$b['cnt_paket']) return (int)$b['cnt_paket'] - (int)$a['cnt_paket'];
+                        return (int)$a['id'] - (int)$b['id'];
+                    });
+
+                    // Item pertama dipertahankan, sisanya dihapus
+                    array_shift($items);
+                    foreach ($items as $del) {
+                        $dId = (int)$del['id'];
+                        $db_siakad->exec("DELETE FROM bs_soal WHERE topik_id = {$dId}");
+                        $db_siakad->exec("DELETE FROM bs_paket WHERE topik_id = {$dId}");
+                        $db_siakad->exec("DELETE FROM bs_topik WHERE id = {$dId}");
+                        try { $db_core->exec("DELETE FROM bs_soal WHERE topik_id = {$dId}"); } catch (\Exception $e) {}
+                        try { $db_core->exec("DELETE FROM bs_paket WHERE topik_id = {$dId}"); } catch (\Exception $e) {}
+                        try { $db_core->exec("DELETE FROM bs_topik WHERE id = {$dId}"); } catch (\Exception $e) {}
+                        try { $db_core->exec("DELETE FROM cbt_jadwal_grid WHERE topik_id = {$dId}"); } catch (\Exception $e) {}
+                    }
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // 2. Hapus juga topik yang periodenya kosong dan bukan topik SIMULASI
+        try {
+            $emptyDateDups = $db_siakad->query("
+                SELECT id FROM bs_topik 
+                WHERE (tgl_mulai IS NULL OR tgl_mulai = '') 
+                  AND nama_topik NOT LIKE '%SIMULASI%'
+            ")->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($emptyDateDups as $dId) {
+                $dId = (int)$dId;
+                $db_siakad->exec("DELETE FROM bs_soal WHERE topik_id = {$dId}");
+                $db_siakad->exec("DELETE FROM bs_paket WHERE topik_id = {$dId}");
+                $db_siakad->exec("DELETE FROM bs_topik WHERE id = {$dId}");
+                try { $db_core->exec("DELETE FROM bs_soal WHERE topik_id = {$dId}"); } catch (\Exception $e) {}
+                try { $db_core->exec("DELETE FROM bs_paket WHERE topik_id = {$dId}"); } catch (\Exception $e) {}
+                try { $db_core->exec("DELETE FROM bs_topik WHERE id = {$dId}"); } catch (\Exception $e) {}
+            }
+        } catch (\Exception $e) {}
+
+        // 3. Bersihkan butir soal Biologi & Arab yang nyasar di topik NON-SIMULASI (seperti STS, UM, SAS resmi)
+        try {
+            $nonSimTopiks = $db_siakad->query("SELECT id FROM bs_topik WHERE nama_topik NOT LIKE '%SIMULASI%'")->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($nonSimTopiks)) {
+                $inNonSim = implode(',', array_map('intval', $nonSimTopiks));
+                $db_siakad->exec("DELETE FROM bs_soal WHERE topik_id IN ({$inNonSim}) AND (mapel_nama LIKE '%Biologi%' OR mapel_nama LIKE '%Arab%')");
+                if ($db_core !== $db_siakad) {
+                    $db_core->exec("DELETE FROM bs_soal WHERE topik_id IN ({$inNonSim}) AND (mapel_nama LIKE '%Biologi%' OR mapel_nama LIKE '%Arab%')");
+                }
+                $db_core->exec("DELETE FROM cbt_soal WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE topik_id IN ({$inNonSim}) AND (mapel_nama LIKE '%Biologi%' OR mapel_nama LIKE '%Arab%'))");
+                $db_core->exec("DELETE FROM cbt_ujian WHERE topik_id IN ({$inNonSim}) AND (mapel_nama LIKE '%Biologi%' OR mapel_nama LIKE '%Arab%')");
+            }
+        } catch (\Exception $e) {}
+    }
+
+    /**
      * Generate 50 Soal Biologi & 50 Soal Bahasa Arab per Tingkat (Kelas X, XI, XII)
+     * KHUSUS & HANYA UNTUK TOPIK SIMULASI (SIMULASI CBT NEW)!
      */
     public static function generateAll($topikId = null) {
         $db_siakad = Database::connect('siakad');
@@ -101,35 +183,37 @@ class CbtBiologiArabGenerator {
             \App\Controllers\BankSoalController::ensureTables($db_core);
         }
 
-        // Tentukan daftar topik yang akan digenerate
+        // 1. Bersihkan topik duplikat & soal yang nyasar di topik non-simulasi
+        self::cleanupUnwantedTopics($db_siakad, $db_core);
+
+        // 2. Tentukan target topik: HANYA TOPIK SIMULASI!
         $targetTopiks = [];
-        if ($topikId) {
+        if ($topikId && (int)$topikId > 0) {
             $targetTopiks[] = (int)$topikId;
         } else {
-            // Ambil semua topik aktif dari bs_topik siakad dan core
+            // Cari topik yang namanya memuat kata 'SIMULASI'
             try {
-                $t1 = $db_siakad->query("SELECT id FROM bs_topik WHERE status = 'Aktif' OR nama_topik LIKE '%SIMULASI%' ORDER BY id DESC")->fetchAll(PDO::FETCH_COLUMN);
-                foreach ($t1 as $id) {
-                    $targetTopiks[] = (int)$id;
+                $simId = $db_siakad->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetchColumn();
+                if ($simId) {
+                    $targetTopiks[] = (int)$simId;
                 }
             } catch (\Exception $e) {}
 
-            try {
-                $t2 = $db_core->query("SELECT id FROM bs_topik WHERE status = 'Aktif' OR nama_topik LIKE '%SIMULASI%' ORDER BY id DESC")->fetchAll(PDO::FETCH_COLUMN);
-                foreach ($t2 as $id) {
-                    $targetTopiks[] = (int)$id;
-                }
-            } catch (\Exception $e) {}
+            if (empty($targetTopiks)) {
+                try {
+                    $simId2 = $db_core->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetchColumn();
+                    if ($simId2) {
+                        $targetTopiks[] = (int)$simId2;
+                    }
+                } catch (\Exception $e) {}
+            }
 
-            // Sertakan juga Topik ID 1 dan ID 7 jika ada
-            $targetTopiks[] = 1;
-            $targetTopiks[] = 7;
-            $targetTopiks = array_unique(array_filter($targetTopiks));
+            if (empty($targetTopiks)) {
+                $targetTopiks = [7]; // Default ID SIMULASI CBT NEW
+            }
         }
 
-        if (empty($targetTopiks)) {
-            $targetTopiks = [1];
-        }
+        $targetTopiks = array_unique(array_filter($targetTopiks));
 
         $totalInserted = 0;
 
@@ -137,12 +221,8 @@ class CbtBiologiArabGenerator {
             // Cek apakah topik ada di database
             $cekT = (int)$db_siakad->query("SELECT COUNT(*) FROM bs_topik WHERE id = {$tId}")->fetchColumn();
             if ($cekT === 0) {
-                // Buat topik jika belum ada di siakad
-                try {
-                    $namaTopik = ($tId === 7) ? 'SIMULASI CBT NEW' : 'Sumatif Akhir Semester (SAS) Ganjil 2026/2027';
-                    $stmtInsT = $db_siakad->prepare("INSERT INTO bs_topik (id, jenis, nama_topik, tahun_ajaran, semester, status) VALUES (?, 'SAS', ?, '2026/2027', 'Ganjil', 'Aktif')");
-                    $stmtInsT->execute([$tId, $namaTopik]);
-                } catch (\Exception $e) {}
+                // Jangan buat topik acak selain SIMULASI
+                continue;
             }
 
             // Bersihkan butir soal lama Biologi & Bahasa Arab untuk topik ini agar fresh & tidak double

@@ -99,7 +99,7 @@ try {
     $output .= "\nPerangkat migration error: " . $e->getMessage() . "\n";
 }
 
-// 3.9 Generate Otomatis 50 Soal Biologi & 50 Soal Bahasa Arab per Tingkat (Kelas X, XI, XII)
+// 3.9 Generate Otomatis 50 Soal Biologi & 50 Soal Bahasa Arab Khusus di Topik SIMULASI CBT NEW
 try {
     if (file_exists(__DIR__ . '/app/Services/CbtBiologiArabGenerator.php')) {
         require_once __DIR__ . '/app/Services/CbtBiologiArabGenerator.php';
@@ -108,6 +108,17 @@ try {
     }
 } catch (\Throwable $e) {
     $output .= "\nCBT Biologi & Arab generator error: " . $e->getMessage() . "\n";
+}
+
+// 3.10 Seed 34 Peserta Khusus / Kelas Jauh (Kelas X, XI, XII)
+try {
+    if (file_exists(__DIR__ . '/app/Services/CbtPesertaKhususSeeder.php')) {
+        require_once __DIR__ . '/app/Services/CbtPesertaKhususSeeder.php';
+        $resKj = \App\Services\CbtPesertaKhususSeeder::seed();
+        $output .= "\nPeserta Kelas Jauh seeded: {$resKj['total']} siswa ({$resKj['inserted']} baru, {$resKj['updated']} diupdate).\n";
+    }
+} catch (\Throwable $e) {
+    $output .= "\nPeserta Kelas Jauh seed error: " . $e->getMessage() . "\n";
 }
 
 // 4. Catat riwayat ke log

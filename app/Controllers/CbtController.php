@@ -255,17 +255,20 @@ class CbtController {
             } catch (\Exception $e) {}
 
             try {
-                $cntSas = (int)$db->query("SELECT COUNT(*) FROM bs_topik WHERE jenis = 'SAS'")->fetchColumn();
-                if ($cntSas === 0) {
-                    $insertSql = "INSERT INTO bs_topik (jenis, nama_topik, keterangan, tahun_ajaran, semester, tgl_mulai, tgl_selesai, status) VALUES
-                        ('SAS', 'Sumatif Akhir Semester (SAS) Ganjil 2026/2027', 'Asesmen Sumatif Akhir Semester Ganjil TA 2026/2027 seluruh tingkat kelas.', '2026/2027', 'Ganjil', '2026-12-01', '2026-12-08', 'Aktif'),
-                        ('STS', 'Sumatif Tengah Semester (STS) Ganjil 2026/2027', 'Asesmen Sumatif Tengah Semester Ganjil TA 2026/2027.', '2026/2027', 'Ganjil', '2026-09-21', '2026-09-26', 'Selesai'),
-                        ('UM', 'Ujian Madrasah (UM) 2026/2027', 'Ujian Akhir Madrasah Aliyah Miftahul Huda Mathla\'ul Anwar Tahun Pelajaran 2026/2027.', '2026/2027', 'Genap', '2027-03-15', '2027-03-22', 'Terjadwal'),
-                        ('Try Out', 'Try Out Ujian Madrasah 2026/2027', 'Simulasi CBT dan pemantapan materi persiapan Ujian Madrasah.', '2026/2027', 'Genap', '2027-02-15', '2027-02-18', 'Terjadwal')
-                    ";
+                $insertSql = "INSERT INTO bs_topik (jenis, nama_topik, keterangan, tahun_ajaran, semester, tgl_mulai, tgl_selesai, status) VALUES
+                    ('SAS', 'Sumatif Akhir Semester (SAS) Ganjil 2026/2027', 'Asesmen Sumatif Akhir Semester Ganjil TA 2026/2027 seluruh tingkat kelas.', '2026/2027', 'Ganjil', '2026-12-01', '2026-12-08', 'Aktif'),
+                    ('STS', 'Sumatif Tengah Semester (STS) Ganjil 2026/2027', 'Asesmen Sumatif Tengah Semester Ganjil TA 2026/2027.', '2026/2027', 'Ganjil', '2026-09-21', '2026-09-26', 'Selesai'),
+                    ('UM', 'Ujian Madrasah (UM) 2026/2027', 'Ujian Akhir Madrasah Aliyah Miftahul Huda Mathla\'ul Anwar Tahun Pelajaran 2026/2027.', '2026/2027', 'Genap', '2027-03-15', '2027-03-22', 'Terjadwal'),
+                    ('Try Out', 'Try Out Ujian Madrasah 2026/2027', 'Simulasi CBT dan pemantapan materi persiapan Ujian Madrasah.', '2026/2027', 'Genap', '2027-02-15', '2027-02-18', 'Terjadwal')
+                ";
+                $cntCore = (int)$db->query("SELECT COUNT(*) FROM bs_topik WHERE jenis = 'SAS'")->fetchColumn();
+                if ($cntCore === 0) {
                     $db->exec($insertSql);
-                    if (isset($dbS) && $dbS) {
-                        try { $dbS->exec($insertSql); } catch (\Exception $e) {}
+                }
+                if (isset($dbS) && $dbS && $dbS !== $db) {
+                    $cntSiakad = (int)$dbS->query("SELECT COUNT(*) FROM bs_topik WHERE jenis = 'SAS'")->fetchColumn();
+                    if ($cntSiakad === 0) {
+                        $dbS->exec($insertSql);
                     }
                 }
             } catch (\Exception $e) {}
