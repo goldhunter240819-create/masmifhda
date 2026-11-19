@@ -318,8 +318,10 @@ function render_force_update_screen($current_ver, $required_ver, $download_url, 
                 </div>
             </div>
 
-            <a href="<?= htmlspecialchars($download_url) ?>" class="btn-update">
-                <i class="fa-solid fa-download"></i> Unduh Pembaruan (.APK)
+            <a href="<?= htmlspecialchars($download_url) ?>" 
+               onclick="if (typeof Android !== 'undefined' && typeof Android.startInAppUpdate === 'function') { Android.startInAppUpdate('https://apk.masmifhda.sch.id/download.php?action=file'); return false; } else if (typeof AndroidOneSignal !== 'undefined' && typeof AndroidOneSignal.startInAppUpdate === 'function') { AndroidOneSignal.startInAppUpdate('https://apk.masmifhda.sch.id/download.php?action=file'); return false; }"
+               class="btn-update">
+                <i class="fa-solid fa-download"></i> Unduh & Pasang Otomatis (.APK)
             </a>
 
             <a href="<?= htmlspecialchars($direct_apk_url) ?>" class="btn-direct">

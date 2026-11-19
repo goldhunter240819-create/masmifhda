@@ -1438,6 +1438,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         }
 
         function loadQuestion(idx) {
+            isNavigatingQuestion = true;
+            lastUserActionTime = Date.now();
+            setTimeout(() => { isNavigatingQuestion = false; }, 800);
             if (idx < 0 || idx >= totalSoal) return;
             const q = (Array.isArray(soalList) && soalList[idx]) ? soalList[idx] : null;
             if (!q) {
@@ -1986,10 +1989,13 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         }
 
         function navigateQuestion(step) {
+            isNavigatingQuestion = true;
+            lastUserActionTime = Date.now();
             const nextIdx = currentIndex + step;
             if (nextIdx >= 0 && nextIdx < totalSoal) {
                 loadQuestion(nextIdx);
             }
+            setTimeout(() => { isNavigatingQuestion = false; }, 800);
         }
 
         function renderPalette() {
@@ -2220,12 +2226,14 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }, 1200);
         }
 
-        // Auto-lock Android Screen Pinning / Kiosk Mode via Native Bridge
+        // Auto-lock Android Screen Pinning / Kiosk Mode via Native Bridge & Kunci Volume Penuh
         try {
-            if (typeof AndroidOneSignal !== "undefined" && typeof AndroidOneSignal.startExamLock === "function") {
-                AndroidOneSignal.startExamLock();
-            } else if (typeof Android !== "undefined" && typeof Android.startExamLock === "function") {
-                Android.startExamLock();
+            if (typeof AndroidOneSignal !== "undefined") {
+                if (typeof AndroidOneSignal.startExamLock === "function") AndroidOneSignal.startExamLock();
+                if (typeof AndroidOneSignal.forceMaxVolume === "function") AndroidOneSignal.forceMaxVolume();
+            } else if (typeof Android !== "undefined") {
+                if (typeof Android.startExamLock === "function") Android.startExamLock();
+                if (typeof Android.forceMaxVolume === "function") Android.forceMaxVolume();
             }
         } catch(e) {}
 
@@ -2261,6 +2269,10 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         document.addEventListener('touchstart', unlockAudio, { once: true });
 
         function playDangerAlarm() {
+            try {
+                if (typeof Android !== "undefined" && typeof Android.forceMaxVolume === "function") Android.forceMaxVolume();
+                if (typeof AndroidOneSignal !== "undefined" && typeof AndroidOneSignal.forceMaxVolume === "function") AndroidOneSignal.forceMaxVolume();
+            } catch(e) {}
             if (!soundAlarm || !alarmAudio) return;
             try {
                 alarmAudio.loop = true;
@@ -2401,9 +2413,18 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         let shieldTimer = null;
         let isSplitScreenActive = false;
         let splitScreenTimer = null;
+        let lastUserActionTime = Date.now();
+        let isNavigatingQuestion = false;
+
+        window.addEventListener('pointerdown', function() { lastUserActionTime = Date.now(); }, { passive: true });
+        window.addEventListener('click', function() { lastUserActionTime = Date.now(); }, { passive: true });
+        window.addEventListener('touchstart', function() { lastUserActionTime = Date.now(); }, { passive: true });
 
         function activateSecurityShield(reason = 'Fokus Hilang') {
             if (!isAntiCheat || isExamSubmitted) return;
+            // Cegah false alarm jika siswa baru saja menekan tombol navigasi (Next/Prev/Ragu)
+            if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1000)) return;
+
             const shield = document.getElementById('cbtSecurityShield');
             if (shield && !isShieldActive) {
                 isShieldActive = true;
@@ -2434,7 +2455,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
         // Deteksi Split Screen (Layar Belah)
         function checkSplitScreenMode() {
-            if (!isAntiCheat || isExamSubmitted) return;
+            if (!isAntiCheat || isExamSubmitted || isNavigatingQuestion) return;
 
             // Abaikan jika siswa sedang mengetik pada input / textarea
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
@@ -2485,11 +2506,24 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
             });
 
+            let blurDebounceTimer = null;
             window.addEventListener('blur', function() {
-                if (!isViolationModalOpen && !isExamSubmitted) {
-                    activateSecurityShield('Jendela Mengambang / Aplikasi Lain Aktif');
-                    handleTabViolation('Fokus Hilang');
+                // Abaikan jika baru saja ada klik tombol Selanjutnya / Sebelumnya / Opsi
+                if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1200)) {
+                    return;
                 }
+                clearTimeout(blurDebounceTimer);
+                blurDebounceTimer = setTimeout(() => {
+                    if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1200)) {
+                        return;
+                    }
+                    if (document.hidden) {
+                        if (!isViolationModalOpen && !isExamSubmitted) {
+                            activateSecurityShield('Jendela Mengambang / Aplikasi Lain Aktif');
+                            handleTabViolation('Fokus Hilang');
+                        }
+                    }
+                }, 600);
             });
 
             window.addEventListener('focus', function() {
@@ -2498,15 +2532,15 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
             });
 
-            // Focus Heartbeat: deteksi jendela mengambang yang tidak memicu blur standar
+            // Focus Heartbeat: deteksi jendela mengambang / split screen tanpa mengganggu navigasi soal
             setInterval(() => {
                 if (!isExamSubmitted && isAntiCheat) {
                     checkSplitScreenMode();
-                    if (!document.hasFocus() || document.hidden) {
+                    if (document.hidden && !isNavigatingQuestion && (Date.now() - lastUserActionTime > 1500)) {
                         activateSecurityShield('Aplikasi Mengambang / Popup Terdeteksi');
                     }
                 }
-            }, 600);
+            }, 1200);
         }
 
         // ─── BLOKIR SCREENSHOT GESTUR 3 JARI DI HP ANDROID ───────────────────

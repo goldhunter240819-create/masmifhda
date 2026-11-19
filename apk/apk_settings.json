@@ -5,7 +5,7 @@
     "show_holiday_banner": false,
     "maintenance_mode": false,
     "elearning_enabled": true,
-    "min_apk_version": "26.2.2.2",
-    "min_apk_version_code": 26222,
+    "min_apk_version": "26.2.2.3",
+    "min_apk_version_code": 26223,
     "force_update": true
 }
