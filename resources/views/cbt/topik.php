@@ -589,19 +589,32 @@ function formatTanggalIndo($dateStr) {
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
-                title: 'Hapus Topik Ujian?',
-                html: `Apakah Anda yakin ingin menghapus topik <b>"${nama}"</b>?<br><span style="font-size:0.8rem;color:#ef4444;">Paket ujian, jadwal matriks, dan absensi terkait topik ini akan ikut dibersihkan.</span>`,
+                title: 'Hapus Topik Ujian & Bersihkan Total?',
+                html: `
+                    <div style="text-align: left; font-size: 0.88rem; color: #334155; line-height: 1.5;">
+                        <p style="margin-bottom: 8px;">Apakah Anda yakin ingin menghapus topik <b>"${nama}"</b>?</p>
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 12px; color: #991b1b; font-size: 0.8rem;">
+                            <strong>🛡️ Pembersihan Otomatis (Anti-Nyangkut):</strong>
+                            <ul style="margin: 4px 0 0 16px; padding: 0;">
+                                <li>Seluruh paket ujian di bawah topik ini akan dihapus</li>
+                                <li>Seluruh jadwal sesi di matriks jadwal akan dibersihkan</li>
+                                <li>Seluruh riwayat scan absensi & pengerjaan siswa akan dihapus</li>
+                                <li>Aplikasi siswa (APK) langsung bersih & tidak ada data nyangkut</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Hapus Topik!',
+                confirmButtonText: 'Ya, Hapus & Bersihkan Semua!',
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) doDelete();
             });
         } else {
-            if (confirm(`Apakah Anda yakin ingin menghapus topik ujian "${nama}"? Paket ujian dan sesi jadwal terkait juga akan dibersihkan.`)) {
+            if (confirm(`Apakah Anda yakin ingin menghapus topik "${nama}"?\nSemua paket ujian, butir soal, jadwal matriks, dan absensi terkait akan dibersihkan total agar tidak nyangkut di HP siswa.`)) {
                 doDelete();
             }
         }
