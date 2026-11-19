@@ -156,6 +156,7 @@ try {
 
     $sqlUjian = "
         SELECT u.*,
+               t.nama_topik,
                COALESCE((SELECT COUNT(*) FROM cbt_soal s WHERE s.ujian_id = u.id), 0) as total_soal,
                p.id as peserta_id,
                p.status_pengerjaan,
@@ -238,6 +239,14 @@ if ($requireAttendance) {
 }
 
 foreach ($ujianListRaw as $u) {
+    // 0. Seragamkan format nama ujian mengikuti topik aktif: [Topik] - [Mapel] ([Kelas/Tingkat])
+    if (!empty($u['nama_topik'])) {
+        $curTopikName = trim($u['nama_topik']);
+        if (stripos($u['nama_ujian'], 'Simulasi ') === 0 || stripos($u['nama_ujian'], $curTopikName) === false) {
+            $klsDisplay = !empty($u['kelas_nama']) && $u['kelas_nama'] !== 'Semua Kelas' ? $u['kelas_nama'] : ($siswa['nama_kelas'] ?? $tingkat_kelas);
+            $u['nama_ujian'] = $curTopikName . ' - ' . $u['mapel_nama'] . ' (' . $klsDisplay . ')';
+        }
+    }
     // 1. Jamin Token Spesifik per Mapel & Kelas
     if (empty($u['token'])) {
         $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $u['mapel_nama'] ?: 'CBT'), 0, 3));

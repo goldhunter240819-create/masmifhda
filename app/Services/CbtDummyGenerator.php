@@ -27,6 +27,18 @@ class CbtDummyGenerator {
             $topikId = $tp ? (int)$tp['id'] : 1;
         }
 
+        // Ambil nama topik asli agar nama ujian seragam dan konsisten
+        $topikNama = 'SIMULASI CBT';
+        try {
+            $tpRow = $db_siakad->query("SELECT nama_topik FROM bs_topik WHERE id = {$topikId}")->fetch(PDO::FETCH_ASSOC);
+            if (!$tpRow && $db_core !== $db_siakad) {
+                $tpRow = $db_core->query("SELECT nama_topik FROM bs_topik WHERE id = {$topikId}")->fetch(PDO::FETCH_ASSOC);
+            }
+            if ($tpRow && !empty($tpRow['nama_topik'])) {
+                $topikNama = trim($tpRow['nama_topik']);
+            }
+        } catch (\Exception $e) {}
+
         // 1. Bersihkan butir soal lama Matematika pada topik ini (agar tidak ganda)
         try {
             $db_siakad->prepare("DELETE FROM bs_soal WHERE topik_id = ? AND mapel_nama = 'Matematika'")->execute([$topikId]);
@@ -115,13 +127,13 @@ class CbtDummyGenerator {
             $stmtU->execute([$topikId, $tingkat, $rombel]);
             $ujianId = (int)$stmtU->fetchColumn();
 
+            $namaUjian = "{$topikNama} - Matematika ({$tingkat})";
             if (!$ujianId) {
-                $namaUjian = "Simulasi Matematika - {$tingkat}";
                 $stmtInsU = $db_core->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, status) VALUES (?, ?, ?, 'Matematika', ?, 90, 75, 1, 1, 'Aktif')");
                 $stmtInsU->execute([$topikId, $kode, $namaUjian, $tingkat]);
                 $ujianId = (int)$db_core->lastInsertId();
             } else {
-                $db_core->prepare("UPDATE cbt_ujian SET status = 'Aktif', durasi_menit = 90, kkm = 75 WHERE id = ?")->execute([$ujianId]);
+                $db_core->prepare("UPDATE cbt_ujian SET status = 'Aktif', durasi_menit = 90, kkm = 75, nama_ujian = ? WHERE id = ?")->execute([$namaUjian, $ujianId]);
             }
 
             // Hubungkan juga ke jadwal_grid jika ada slot kelas ini

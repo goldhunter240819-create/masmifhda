@@ -128,7 +128,23 @@ try {
     \App\Controllers\CbtController::ensureTables($dbCore);
     // Bersihkan data absensi tes siswa 414 atau absensi hari ini yang nyangkut
     $dbCore->exec("DELETE FROM cbt_absensi WHERE siswa_id = 414 OR tanggal = CURDATE() OR waktu_scan >= CURDATE()");
-    $output .= "\nCBT Tables ensured and simulation attendance cleaned.\n";
+
+    // Seragamkan seluruh nama ujian di cbt_ujian agar selalu konsisten dengan format [Nama Topik] - [Mapel] ([Kelas])
+    $dbCore->exec("
+        UPDATE cbt_ujian u
+        INNER JOIN bs_topik t ON u.topik_id = t.id
+        SET u.nama_ujian = CONCAT(t.nama_topik, ' - ', u.mapel_nama, ' (', u.kelas_nama, ')')
+        WHERE (u.nama_ujian LIKE 'Simulasi %' OR u.nama_ujian NOT LIKE CONCAT(t.nama_topik, '%'))
+          AND u.topik_id IS NOT NULL AND u.topik_id > 0
+    ");
+
+    // Sinkronkan jadwal topik aktif
+    $tpRow = $dbCore->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    if ($tpRow) {
+        $dbSiakad = \App\Core\Database::connect('siakad');
+        \App\Controllers\CbtController::syncJadwalWithUjian($dbCore, $dbSiakad, (int)$tpRow['id']);
+    }
+    $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";
 } catch (\Throwable $e) {
     $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";
 }

@@ -229,6 +229,18 @@ class CbtBiologiArabGenerator {
                 continue;
             }
 
+            // Ambil nama topik asli agar nama ujian seragam dan konsisten
+            $topikNama = 'SIMULASI CBT';
+            try {
+                $tpRow = $db_siakad->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
+                if (!$tpRow && $db_core !== $db_siakad) {
+                    $tpRow = $db_core->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
+                }
+                if ($tpRow && !empty($tpRow['nama_topik'])) {
+                    $topikNama = trim($tpRow['nama_topik']);
+                }
+            } catch (\Exception $e) {}
+
             // Bersihkan butir soal lama Biologi & Bahasa Arab untuk topik ini agar fresh & tidak double
             try {
                 $db_siakad->prepare("DELETE FROM bs_soal WHERE topik_id = ? AND (mapel_nama LIKE '%Biologi%' OR mapel_nama LIKE '%Arab%')")->execute([$tId]);
@@ -291,7 +303,7 @@ class CbtBiologiArabGenerator {
                     $inserted = self::insertSubjectPackage(
                         $db_siakad, $db_core, $tId, $bMapel,
                         $lvl['tingkat'], $lvl['rombel'], $lvl['kode'], $lvl['guru'],
-                        'Simulasi ' . $bMapel . ' - ' . $lvl['tingkat'], $lvl['dataset']
+                        $topikNama . ' - ' . $bMapel . ' (' . $lvl['tingkat'] . ')', $lvl['dataset']
                     );
                     $totalInserted += $inserted;
                 }
@@ -343,7 +355,7 @@ class CbtBiologiArabGenerator {
                     $inserted = self::insertSubjectPackage(
                         $db_siakad, $db_core, $tId, $aMapel,
                         $lvl['tingkat'], $lvl['rombel'], $lvl['kode'], $lvl['guru'],
-                        'Simulasi ' . $aMapel . ' - ' . $lvl['tingkat'], $lvl['dataset']
+                        $topikNama . ' - ' . $aMapel . ' (' . $lvl['tingkat'] . ')', $lvl['dataset']
                     );
                     $totalInserted += $inserted;
                 }

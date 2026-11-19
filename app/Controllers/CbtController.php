@@ -1123,21 +1123,21 @@ class CbtController {
                     $existingUjian = $stmtFind->fetch(PDO::FETCH_ASSOC);
                 }
 
+                $namaUjian = "Ujian {$mapel} - {$kelasNama}";
+                if ($tId) {
+                    try {
+                        $tpRow = $db_siakad->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
+                        if (!$tpRow && $db !== $db_siakad) {
+                            $tpRow = $db->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
+                        }
+                        if ($tpRow && !empty($tpRow['nama_topik'])) {
+                            $namaUjian = $tpRow['nama_topik'] . " - " . $mapel . " (" . $kelasNama . ")";
+                        }
+                    } catch (\Exception $e) {}
+                }
+
                 if (!$existingUjian) {
                     $kode = 'UJN-' . strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $mapel), 0, 3)) . '-' . strtoupper(substr(uniqid(), -4));
-                    $namaUjian = "Ujian {$mapel} - {$kelasNama}";
-                    
-                    if ($tId) {
-                        try {
-                            $tpRow = $db_siakad->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
-                            if (!$tpRow && $db !== $db_siakad) {
-                                $tpRow = $db->query("SELECT nama_topik FROM bs_topik WHERE id = {$tId}")->fetch(PDO::FETCH_ASSOC);
-                            }
-                            if ($tpRow && !empty($tpRow['nama_topik'])) {
-                                $namaUjian = $tpRow['nama_topik'] . " - " . $mapel . " (" . $kelasNama . ")";
-                            }
-                        } catch (\Exception $e) {}
-                    }
 
                     $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $mapel ?: 'CBT'), 0, 3));
                     if (strlen($prefix) < 3) $prefix = str_pad($prefix, 3, 'X');
@@ -1159,7 +1159,11 @@ class CbtController {
                     if (empty($g['ujian_id']) || $g['ujian_id'] != $existingUjian['id']) {
                         $db->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE id = ?")->execute([$existingUjian['id'], $g['id']]);
                     }
-                    $db->prepare("UPDATE cbt_ujian SET status = 'Aktif' WHERE id = ?")->execute([$existingUjian['id']]);
+                    if (!empty($namaUjian)) {
+                        $db->prepare("UPDATE cbt_ujian SET status = 'Aktif', nama_ujian = ? WHERE id = ?")->execute([$namaUjian, $existingUjian['id']]);
+                    } else {
+                        $db->prepare("UPDATE cbt_ujian SET status = 'Aktif' WHERE id = ?")->execute([$existingUjian['id']]);
+                    }
                 }
 
                 // Sinkronkan butir soal jika cbt_soal masih 0
