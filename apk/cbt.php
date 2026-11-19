@@ -164,9 +164,11 @@ try {
                p.waktu_selesai
         FROM cbt_ujian u
         LEFT JOIN cbt_peserta p ON p.ujian_id = u.id AND (p.siswa_id = ? OR (p.nis = ? AND ? != ''))
+        LEFT JOIN bs_topik t ON u.topik_id = t.id
         WHERE u.status = 'Aktif'
+          AND (u.topik_id IS NULL OR u.topik_id = 0 OR (t.id IS NOT NULL AND t.status = 'Aktif'))
           AND (u.kelas_nama IS NULL OR u.kelas_nama = '' OR u.kelas_nama IN ($inPlaceholders))
-        ORDER BY (u.topik_id = 7 OR u.nama_ujian LIKE '%SIMULASI%') DESC, (total_soal > 0) DESC, u.id DESC
+        ORDER BY (total_soal > 0) DESC, u.id DESC
     ";
     $params = array_merge([$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')], $allowedKelas);
     $stmtUjian = $core_db->prepare($sqlUjian);
@@ -448,6 +450,19 @@ foreach ($allEvaluatedUjian as $u) {
         $ujianHariIni[] = $u;
     }
 }
+
+// Urutkan paket ujian hari ini agar sesi yang aktif/siap selalu di atas, disusul yang akan datang, dan yang expired di bawah
+usort($ujianHariIni, function($a, $b) {
+    $rank = function($x) {
+        if (in_array($x['status_pengerjaan'] ?? '', ['Mengerjakan', 'Sedang Mengerjakan'])) return 1;
+        if (!empty($x['can_take'])) return 2;
+        if (($x['schedule_state'] ?? '') === 'early') return 3;
+        if (($x['schedule_state'] ?? '') === 'expired') return 4;
+        return 5;
+    };
+    return $rank($a) <=> $rank($b);
+});
+
 $ujianTersedia = array_merge($ujianHariIni, $ujianLainnya);
 
 // 4b. Tentukan Asesmen yang Sedang Berlangsung Saat Ini
@@ -882,7 +897,13 @@ include 'header.php';
                     <?= htmlspecialchars($activeOngoingUjian['nama_ujian'] ?: $activeOngoingUjian['mapel_nama']) ?>
                 </h3>
                 <p style="color: #cbd5e1; font-size: 0.76rem;">
-                    <?= in_array($activeOngoingUjian['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']) ? 'Sesi sedang berjalan. Silakan lanjutkan pengerjaan di bawah.' : 'Sesi telah dibuka sesuai jadwal. Silakan klik "Mulai Ujian" di bawah.' ?>
+                    <?php if (in_array($activeOngoingUjian['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan'])): ?>
+                        Sesi sedang berjalan. Silakan lanjutkan pengerjaan di bawah.
+                    <?php elseif ($requireAttendance && empty($activeOngoingUjian['has_absen'])): ?>
+                        Sesi sedang berlangsung. Silakan lakukan scan absensi ke pengawas ujian terlebih dahulu.
+                    <?php else: ?>
+                        Sesi telah dibuka sesuai jadwal. Silakan klik "Mulai Kerjakan Ujian" di bawah.
+                    <?php endif; ?>
                 </p>
             </div>
             <div style="font-size: 2.2rem; opacity: 0.4; margin-left: 14px; color: #38bdf8; flex-shrink: 0;">

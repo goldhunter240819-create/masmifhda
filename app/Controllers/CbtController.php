@@ -1618,6 +1618,109 @@ class CbtController {
     }
 
     /**
+     * Hapus Topik Ujian Beserta Seluruh Paket Ujian, Jadwal Grid, & Absensi Terkait
+     */
+    public static function deleteTopik() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
+
+        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
+        if ($id > 0) {
+            $ujianIds = [];
+
+            // 1. Ambil data nama topik
+            $namaTopik = '';
+            try {
+                $stmtNama = ($db_siakad ?: $db)->prepare("SELECT nama_topik FROM bs_topik WHERE id = ?");
+                $stmtNama->execute([$id]);
+                $namaTopik = $stmtNama->fetchColumn();
+            } catch (\Exception $e) {}
+
+            // 2. Ambil seluruh ujian dengan topik_id ini
+            try {
+                $u1 = $db->query("SELECT id FROM cbt_ujian WHERE topik_id = {$id}")->fetchAll(\PDO::FETCH_COLUMN);
+                foreach ($u1 as $uid) {
+                    $ujianIds[] = (int)$uid;
+                }
+            } catch (\Exception $e) {}
+
+            // 3. Ambil juga ujian yang terjadwal di cbt_jadwal_grid untuk topik ini
+            try {
+                $u2 = $db->query("SELECT DISTINCT ujian_id FROM cbt_jadwal_grid WHERE topik_id = {$id} AND ujian_id IS NOT NULL AND ujian_id > 0")->fetchAll(\PDO::FETCH_COLUMN);
+                foreach ($u2 as $uid) {
+                    $ujianIds[] = (int)$uid;
+                }
+            } catch (\Exception $e) {}
+
+            // 4. Jika nama topik ada, cari juga cbt_ujian yang memuat nama topik
+            if (!empty($namaTopik)) {
+                try {
+                    $stmtMatch = $db->prepare("SELECT id FROM cbt_ujian WHERE nama_ujian LIKE ?");
+                    $stmtMatch->execute(['%' . $namaTopik . '%']);
+                    foreach ($stmtMatch->fetchAll(\PDO::FETCH_COLUMN) as $uid) {
+                        $ujianIds[] = (int)$uid;
+                    }
+                } catch (\Exception $e) {}
+            }
+
+            $ujianIds = array_unique(array_filter($ujianIds));
+
+            if (!empty($ujianIds)) {
+                $inIds = implode(',', array_map('intval', $ujianIds));
+
+                // Hapus data jawaban peserta & pengerjaan
+                try { $db->exec("DELETE FROM cbt_peserta_jawaban WHERE peserta_id IN (SELECT id FROM cbt_peserta WHERE ujian_id IN ({$inIds}))"); } catch (\Exception $e) {}
+                try { $db->exec("DELETE FROM cbt_peserta WHERE ujian_id IN ({$inIds})"); } catch (\Exception $e) {}
+
+                // Hapus token ujian
+                try { $db->exec("DELETE FROM cbt_token WHERE ujian_id IN ({$inIds})"); } catch (\Exception $e) {}
+
+                // Hapus absensi ujian
+                try { $db->exec("DELETE FROM cbt_absensi WHERE topik_id = {$id} OR ujian_id IN ({$inIds})"); } catch (\Exception $e) {}
+
+                // Hapus soal di cbt_soal untuk ujian ini
+                try { $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN ({$inIds})"); } catch (\Exception $e) {}
+
+                // Hapus paket ujian cbt_ujian
+                try { $db->exec("DELETE FROM cbt_ujian WHERE id IN ({$inIds}) OR topik_id = {$id}"); } catch (\Exception $e) {}
+            } else {
+                try { $db->exec("DELETE FROM cbt_absensi WHERE topik_id = {$id}"); } catch (\Exception $e) {}
+            }
+
+            // Hapus juga data absensi berdasarkan nama topik jika ada
+            if (!empty($namaTopik)) {
+                try {
+                    $stmtDelM = $db->prepare("DELETE FROM cbt_absensi WHERE mapel_nama LIKE ?");
+                    $stmtDelM->execute(['%' . $namaTopik . '%']);
+                } catch (\Exception $e) {}
+            }
+
+            // Hapus jadwal grid terkait topik ini
+            try {
+                $db->exec("DELETE FROM cbt_jadwal_grid WHERE topik_id = {$id}");
+            } catch (\Exception $e) {}
+
+            // Hapus topik dari bs_topik
+            try {
+                $db->prepare("DELETE FROM bs_topik WHERE id = ?")->execute([$id]);
+            } catch (\Exception $e) {}
+
+            if ($db_siakad) {
+                try {
+                    $db_siakad->prepare("DELETE FROM bs_topik WHERE id = ?")->execute([$id]);
+                } catch (\Exception $e) {}
+            }
+
+            redirect('/cbt/topik?msg=deleted');
+            exit;
+        }
+
+        redirect('/cbt/topik');
+    }
+
+    /**
      * Quick Update Tanggal Mulai & Selesai Topik Ujian dari Halaman Jadwal
      */
     public static function saveTopikDates() {

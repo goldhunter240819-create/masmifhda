@@ -47,7 +47,7 @@ function formatTanggalIndo($dateStr) {
                     </div>
                 <?php elseif($_GET['msg'] === 'deleted'): ?>
                     <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-weight: 700;">
-                        <i data-lucide="trash-2" style="width: 20px; height: 20px; color: #ef4444;"></i> Topik ujian berhasil dihapus.
+                        <i data-lucide="trash-2" style="width: 20px; height: 20px; color: #ef4444;"></i> Topik ujian beserta paket soal, jadwal ujian, dan riwayat terkait berhasil dihapus bersih dari sistem!
                     </div>
                 <?php elseif($_GET['msg'] === 'exam_reset'): ?>
                     <div style="background: #fff7ed; border: 1.5px solid #fdba74; color: #9a3412; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.08);">
@@ -320,12 +320,9 @@ function formatTanggalIndo($dateStr) {
                                                 </button>
 
                                                 <!-- Hapus Topik -->
-                                                <form method="POST" action="<?php echo base_url('cbt/topik/delete'); ?>" onsubmit="return confirm('Apakah Anda yakin ingin menghapus topik ujian <?php echo addslashes($row['nama_topik']); ?>? Sesi jadwal terkait juga akan dibersihkan.');" style="display: inline;">
-                                                    <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
-                                                    <button type="submit" class="e-btn" style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 6px 9px; border-radius: 8px; font-size: 0.78rem; cursor: pointer;" title="Hapus Topik">
-                                                        <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" onclick="konfirmasiHapusTopik(<?php echo (int)$row['id']; ?>, '<?php echo htmlspecialchars(addslashes($row['nama_topik'])); ?>')" class="e-btn" style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 6px 9px; border-radius: 8px; font-size: 0.78rem; cursor: pointer;" title="Hapus Topik Ujian">
+                                                    <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -573,6 +570,41 @@ function formatTanggalIndo($dateStr) {
                 btn.style.borderColor = '#cbd5e1';
             }
         });
+    }
+
+    // Hapus Topik dengan SweetAlert2
+    function konfirmasiHapusTopik(id, nama) {
+        const doDelete = () => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<?php echo base_url('cbt/topik/delete'); ?>';
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'id';
+            input.value = id;
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        };
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Hapus Topik Ujian?',
+                html: `Apakah Anda yakin ingin menghapus topik <b>"${nama}"</b>?<br><span style="font-size:0.8rem;color:#ef4444;">Paket ujian, jadwal matriks, dan absensi terkait topik ini akan ikut dibersihkan.</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Hapus Topik!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) doDelete();
+            });
+        } else {
+            if (confirm(`Apakah Anda yakin ingin menghapus topik ujian "${nama}"? Paket ujian dan sesi jadwal terkait juga akan dibersihkan.`)) {
+                doDelete();
+            }
+        }
     }
 
     // Close on outside click

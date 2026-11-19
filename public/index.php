@@ -2457,6 +2457,7 @@ $router->add('GET', '/cbt', [\App\Controllers\CbtController::class, 'dashboard']
 $router->add('GET', '/cbt/dashboard', [\App\Controllers\CbtController::class, 'dashboard']);
 $router->add('GET', '/cbt/topik', [\App\Controllers\CbtController::class, 'topik']);
 $router->add('POST', '/cbt/topik/save', [\App\Controllers\CbtController::class, 'saveTopik']);
+$router->add('GET', '/cbt/topik/delete', [\App\Controllers\CbtController::class, 'deleteTopik']);
 $router->add('POST', '/cbt/topik/delete', [\App\Controllers\CbtController::class, 'deleteTopik']);
 $router->add('POST', '/cbt/topik/reset', [\App\Controllers\CbtController::class, 'resetTopik']);
 $router->add('POST', '/cbt/topik/dates/save', [\App\Controllers\CbtController::class, 'saveTopikDates']);
