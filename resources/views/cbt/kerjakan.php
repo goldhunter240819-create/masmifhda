@@ -1440,7 +1440,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         function loadQuestion(idx) {
             isNavigatingQuestion = true;
             lastUserActionTime = Date.now();
-            setTimeout(() => { isNavigatingQuestion = false; }, 800);
+            setTimeout(() => { isNavigatingQuestion = false; }, 1500);
             if (idx < 0 || idx >= totalSoal) return;
             const q = (Array.isArray(soalList) && soalList[idx]) ? soalList[idx] : null;
             if (!q) {
@@ -1995,7 +1995,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             if (nextIdx >= 0 && nextIdx < totalSoal) {
                 loadQuestion(nextIdx);
             }
-            setTimeout(() => { isNavigatingQuestion = false; }, 800);
+            setTimeout(() => { isNavigatingQuestion = false; }, 1500);
         }
 
         function renderPalette() {
@@ -2423,7 +2423,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         function activateSecurityShield(reason = 'Fokus Hilang') {
             if (!isAntiCheat || isExamSubmitted) return;
             // Cegah false alarm jika siswa baru saja menekan tombol navigasi (Next/Prev/Ragu)
-            if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1000)) return;
+            if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1500)) return;
 
             const shield = document.getElementById('cbtSecurityShield');
             if (shield && !isShieldActive) {
@@ -2431,13 +2431,13 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 shield.style.display = 'flex';
                 playDangerAlarm();
 
-                // Jika shield dibiarkan aktif lebih dari 3.5 detik, catat sebagai pelanggaran
+                // Jika shield dibiarkan aktif lebih dari 4.5 detik, catat sebagai pelanggaran
                 clearTimeout(shieldTimer);
                 shieldTimer = setTimeout(() => {
                     if (isShieldActive && !isExamSubmitted) {
                         handleTabViolation(reason);
                     }
-                }, 3500);
+                }, 4500);
             }
         }
 
@@ -2467,7 +2467,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 const ratio = window.innerHeight / availH;
                 const splitModal = document.getElementById('cbtSplitScreenModal');
 
-                if (ratio < 0.62) {
+                if (ratio < 0.52) {
                     if (!isSplitScreenActive) {
                         isSplitScreenActive = true;
                         if (splitModal) splitModal.style.display = 'flex';
@@ -2509,12 +2509,12 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             let blurDebounceTimer = null;
             window.addEventListener('blur', function() {
                 // Abaikan jika baru saja ada klik tombol Selanjutnya / Sebelumnya / Opsi
-                if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1200)) {
+                if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1500)) {
                     return;
                 }
                 clearTimeout(blurDebounceTimer);
                 blurDebounceTimer = setTimeout(() => {
-                    if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1200)) {
+                    if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1500)) {
                         return;
                     }
                     if (document.hidden) {
@@ -2523,7 +2523,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                             handleTabViolation('Fokus Hilang');
                         }
                     }
-                }, 600);
+                }, 1000);
             });
 
             window.addEventListener('focus', function() {

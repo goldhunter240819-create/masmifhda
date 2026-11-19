@@ -18,13 +18,6 @@ if (!isset($_SESSION['siswa_id'])) {
     exit;
 }
 
-// Track active student username to GHTech Developer Monitor
-$_ghtech_user = $_SESSION['siswa_nama'] ?? ($_SESSION['nama'] ?? '');
-if (!empty($_ghtech_user)) {
-    $ctx = stream_context_create(['http' => ['timeout' => 1]]);
-    @file_get_contents("http://localhost/ghtech/api/track.php?key=" . $_ghtech_key . "&ip=" . urlencode($_ghtech_ip) . "&user=" . urlencode($_ghtech_user), false, $ctx);
-}
-
 $siswa_id = (int)$_SESSION['siswa_id'];
 $is_cbt_only = !empty($_SESSION['is_cbt_only']);
 
@@ -90,13 +83,6 @@ if ($is_cbt_only) {
 
 // Inisialisasi info tempat duduk (akan ditentukan setelah evaluasi topik aktif/terdekat)
 $seatingInfo = null;
-
-// 1. Jalankan Auto-Sync Matriks Jadwal ke CBT Ujian
-try {
-    if (class_exists('\App\Controllers\CbtController')) {
-        \App\Controllers\CbtController::syncJadwalWithUjian($core_db, $siakad_db);
-    }
-} catch (\Exception $e) {}
 
 // 2. Ambil Pengaturan CBT Terpusat
 $cbtSettings = [];
@@ -254,7 +240,16 @@ try {
         FROM cbt_jadwal_grid g
         LEFT JOIN bs_topik t ON g.topik_id = t.id
         LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
-        WHERE (g.kelas_nama = :kelas OR g.kelas_nama = 'Semua Kelas')
+        WHERE (
+            g.kelas_nama = :kelas 
+            OR g.kelas_nama = :tingkat 
+            OR g.kelas_nama = :short_tingkat
+            OR g.kelas_nama = 'Semua Kelas'
+            OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
+            OR g.kelas_nama LIKE CONCAT('%', :short_tingkat, '%')
+            OR g.kelas_nama IS NULL 
+            OR g.kelas_nama = ''
+        )
     ";
     if ($nearestTopikId > 0) {
         $sqlJadwalSiswa .= " AND (g.topik_id = :topik_id OR g.topik_id IS NULL OR g.topik_id = 0)";
@@ -263,7 +258,9 @@ try {
 
     $stmtJadwalSiswa = $core_db->prepare($sqlJadwalSiswa);
     $paramsJadwal = [
-        ':kelas' => $siswa['nama_kelas']
+        ':kelas' => $siswa['nama_kelas'],
+        ':tingkat' => $tingkat_kelas,
+        ':short_tingkat' => $short_tingkat
     ];
     if ($nearestTopikId > 0) {
         $paramsJadwal[':topik_id'] = $nearestTopikId;
@@ -1093,7 +1090,7 @@ include 'header.php';
         </button>
         <button type="button" onclick="bukaModalJadwalSiswa()" class="btn-tatatertib-top" style="border-color: #cbd5e1; background: #ffffff;">
             <i class="fa-solid fa-calendar-days" style="color: #059669; font-size: 0.95rem;"></i>
-            <span>Jadwal Ujian</span>
+            <span>Jadwal Ujian <?= !empty($jadwalSiswaList) ? '(' . count($jadwalSiswaList) . ' Mapel)' : '' ?></span>
         </button>
         <?php if ($lockSchedule): ?>
             <span class="badge-sched-mode mode-normal">
@@ -1182,23 +1179,31 @@ include 'header.php';
             </div>
         </div>
     <?php else: ?>
-        <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(255, 255, 255, 0.08);">
+        <?php
+        $firstJadwal = !empty($jadwalSiswaList) ? $jadwalSiswaList[0] : null;
+        ?>
+        <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(56, 189, 248, 0.25);">
             <div style="flex: 1; min-width: 0;">
                 <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
-                    <span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0.5px;">
-                        <i class="fa-solid fa-circle-pause" style="font-size: 0.65rem;"></i>
-                        ASESMEN BERLANGSUNG
+                    <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-calendar-days" style="font-size: 0.65rem;"></i>
+                        JADWAL UJIAN RESMI
                     </span>
+                    <?php if ($firstJadwal): ?>
+                        <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">
+                            <?= htmlspecialchars(($firstJadwal['hari'] ?? '') . (!empty($firstJadwal['tanggal']) ? ' (' . date('d M Y', strtotime($firstJadwal['tanggal'])) . ')' : '')) ?>
+                        </span>
+                    <?php endif; ?>
                 </div>
-                <h3 style="font-size: 1.05rem; font-weight: 900; color: #94a3b8; margin: 0 0 3px 0;">
-                    Tidak Ada
+                <h3 style="font-size: 1.05rem; font-weight: 900; color: #38bdf8; margin: 0 0 3px 0;">
+                    <?= $firstJadwal ? htmlspecialchars($firstJadwal['mapel_nama'] . ' - ' . ($firstJadwal['label_sesi'] ?: $firstJadwal['jam_slot'])) : 'Tidak Ada Ujian Aktif Saat Ini' ?>
                 </h3>
-                <p style="color: #64748b; font-size: 0.76rem;">
-                    Tidak ada sesi asesmen aktif saat ini sesuai jadwal.
+                <p style="color: #cbd5e1; font-size: 0.76rem;">
+                    <?= $firstJadwal ? ('Waktu: ' . ($firstJadwal['jam_mulai'] ? substr($firstJadwal['jam_mulai'], 0, 5) : '08:00') . ' - ' . ($firstJadwal['jam_selesai'] ? substr($firstJadwal['jam_selesai'], 0, 5) : '10:00') . ' WIB') : 'Silakan klik tombol "Jadwal Ujian" di atas untuk melihat rincian agenda pelaksanaan.' ?>
                 </p>
             </div>
-            <div style="font-size: 2rem; opacity: 0.25; margin-left: 14px; color: #94a3b8; flex-shrink: 0;">
-                <i class="fa-solid fa-calendar-xmark"></i>
+            <div style="font-size: 2rem; opacity: 0.45; margin-left: 14px; color: #38bdf8; flex-shrink: 0; cursor: pointer;" onclick="bukaModalJadwalSiswa()" title="Buka Jadwal Lengkap">
+                <i class="fa-solid fa-calendar-days"></i>
             </div>
         </div>
     <?php endif; ?>
@@ -1630,12 +1635,11 @@ function konfirmasiMulaiUjian(ujianId, namaUjian, mapelNama, durasi, totalSoal, 
     }
 
     const inp = document.getElementById('inputTokenUjian');
-    inp.value = '';
-    inp.style.borderColor = '#cbd5e1';
+    inp.value = curExpectedToken; // Otomatis isi token resmi agar tidak terpotong oleh keyboard di HP!
+    inp.style.borderColor = '#22c55e';
     document.getElementById('tokenErrorMsg').style.display = 'none';
 
     document.getElementById('modalStartExam').style.display = 'flex';
-    setTimeout(() => inp.focus(), 250);
 }
 
 function tutupModalMulai() {

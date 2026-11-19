@@ -3079,6 +3079,10 @@ class CbtController {
 
         // Jika Pengawas/Guru melakukan uji coba CBT
         if (!$pesertaInfo) {
+            $sessKeyWaktu = 'cbt_trial_waktu_mulai_' . $ujian_id;
+            if (empty($_SESSION[$sessKeyWaktu])) {
+                $_SESSION[$sessKeyWaktu] = date('Y-m-d H:i:s');
+            }
             $pesertaInfo = [
                 'id' => 0,
                 'ujian_id' => $ujian_id,
@@ -3086,7 +3090,7 @@ class CbtController {
                 'nis' => 'GURU-TRIAL',
                 'nama_siswa' => ($_SESSION['nama'] ?? 'Pengawas / Guru (Simulasi)'),
                 'kelas_nama' => ($ujianInfo['kelas_nama'] ?: 'Simulasi'),
-                'waktu_mulai' => date('Y-m-d H:i:s'),
+                'waktu_mulai' => $_SESSION[$sessKeyWaktu],
                 'status_pengerjaan' => 'Mengerjakan',
                 'jawaban_json' => null
             ];
