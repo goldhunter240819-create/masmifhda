@@ -336,6 +336,7 @@ class CbtController {
                 ['token_mode', 'manual', 'ujian', 'Mode Perilisan Token Ujian (manual/auto)'],
                 ['token_refresh_interval', '120', 'ujian', 'Masa Berlaku Token (Menit)'],
                 ['lock_by_schedule_time', '1', 'aturan', 'Kunci Pengerjaan Sesuai Jadwal (Waktu Sesi)'],
+                ['require_all_answered_no_doubt', '1', 'aturan', 'Wajib Jawab Semua Soal & Bebas Ragu-Ragu Sebelum Selesai'],
                 ['institution_name', 'MAS MIFTAHUL HUDA', 'umum', 'Nama Institusi / Madrasah'],
                 ['cbt_app_title', 'CBT Online v2.5 Online', 'umum', 'Label Branding Sistem CBT']
             ];
@@ -3405,7 +3406,7 @@ class CbtController {
                     'disable_right_click', 'disable_copy_paste', 'lock_single_device',
                     'watermark_student_nis', 'sound_alarm_on_violation', 'block_back_button',
                     'lock_by_schedule_time', 'require_cbt_attendance', 'acak_soal_default', 'acak_opsi_default',
-                    'show_score_to_student', 'show_discussion_to_student', 'allow_student_review'
+                    'show_score_to_student', 'show_discussion_to_student', 'allow_student_review', 'require_all_answered_no_doubt'
                 ];
                 foreach ($booleanKeys as $bk) {
                     if (!isset($submitted[$bk])) {

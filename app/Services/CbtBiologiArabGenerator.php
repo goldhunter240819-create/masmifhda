@@ -244,11 +244,20 @@ class CbtBiologiArabGenerator {
             // Bersihkan butir soal lama Biologi & Bahasa Arab untuk topik ini agar fresh & tidak double
             try {
                 $db_siakad->prepare("DELETE FROM bs_soal WHERE topik_id = ? AND (mapel_nama LIKE '%Biologi%' OR mapel_nama LIKE '%Arab%')")->execute([$tId]);
+                $db_siakad->prepare("DELETE FROM bs_soal WHERE mapel_nama LIKE '%Peminatan%'")->execute();
+                $db_siakad->prepare("DELETE FROM bs_paket WHERE mapel_nama LIKE '%Peminatan%'")->execute();
             } catch (\Exception $e) {}
             try {
                 if ($db_core !== $db_siakad) {
                     $db_core->prepare("DELETE FROM bs_soal WHERE topik_id = ? AND (mapel_nama LIKE '%Biologi%' OR mapel_nama LIKE '%Arab%')")->execute([$tId]);
                 }
+                $pemUjianIds = $db_core->query("SELECT id FROM cbt_ujian WHERE mapel_nama LIKE '%Peminatan%'")->fetchAll(PDO::FETCH_COLUMN);
+                if (!empty($pemUjianIds)) {
+                    $inPem = implode(',', array_map('intval', $pemUjianIds));
+                    $db_core->exec("DELETE FROM cbt_soal WHERE ujian_id IN ({$inPem})");
+                    $db_core->exec("DELETE FROM cbt_ujian WHERE id IN ({$inPem})");
+                }
+                $db_core->exec("DELETE FROM cbt_jadwal_grid WHERE mapel_nama LIKE '%Peminatan%'");
             } catch (\Exception $e) {}
 
             // Bersihkan cbt_soal untuk ujian biologi & arab topik ini
@@ -339,19 +348,20 @@ class CbtBiologiArabGenerator {
             ];
 
             foreach ($arabLevels as $lvl) {
-                // Ambil semua varian nama Bahasa Arab di bs_paket untuk tingkat ini
+                // Ambil semua varian nama Bahasa Arab di bs_paket untuk tingkat ini (kecuali Peminatan)
                 $arabMapelList = [];
                 try {
-                    $stmtCekArab = $db_siakad->prepare("SELECT DISTINCT mapel_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Arab%' AND (kelas_nama = ? OR kelas_nama LIKE ?)");
+                    $stmtCekArab = $db_siakad->prepare("SELECT DISTINCT mapel_nama FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Arab%' AND mapel_nama NOT LIKE '%Peminatan%' AND (kelas_nama = ? OR kelas_nama LIKE ?)");
                     $stmtCekArab->execute([$tId, $lvl['tingkat'], '%' . $lvl['tingkat'] . '%']);
                     $arabMapelList = $stmtCekArab->fetchAll(PDO::FETCH_COLUMN);
                 } catch (\Exception $e) {}
 
                 if (empty($arabMapelList)) {
-                    $arabMapelList = ['Bahasa Arab', 'Bahasa Arab Peminatan'];
+                    $arabMapelList = ['Bahasa Arab'];
                 }
 
                 foreach ($arabMapelList as $aMapel) {
+                    if (stripos($aMapel, 'peminatan') !== false) continue;
                     $inserted = self::insertSubjectPackage(
                         $db_siakad, $db_core, $tId, $aMapel,
                         $lvl['tingkat'], $lvl['rombel'], $lvl['kode'], $lvl['guru'],

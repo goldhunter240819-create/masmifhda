@@ -1104,60 +1104,13 @@ include 'header.php';
     <div class="cbt-actions-bar" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
         <button type="button" onclick="bukaModalTataTertib()" class="btn-tatatertib-top">
             <i class="fa-solid fa-file-shield" style="color: #2563eb; font-size: 0.95rem;"></i>
-            <span>Tata Tertib & Larangan Ujian</span>
+            <span>Tata Tertib</span>
         </button>
         <button type="button" onclick="bukaModalJadwalSiswa()" class="btn-tatatertib-top" style="border-color: #cbd5e1; background: #ffffff;">
             <i class="fa-solid fa-calendar-days" style="color: #059669; font-size: 0.95rem;"></i>
-            <span>Jadwal Ujian <?= !empty($jadwalSiswaList) ? '(' . count($jadwalSiswaList) . ' Mapel)' : '' ?></span>
+            <span>Jadwal Ujian</span>
         </button>
-        <?php if ($lockSchedule): ?>
-            <span class="badge-sched-mode mode-normal">
-                <i class="fa-solid fa-calendar-check"></i> Sesuai Jadwal
-            </span>
-        <?php else: ?>
-            <span class="badge-sched-mode mode-susulan">
-                <i class="fa-solid fa-clock-rotate-left"></i> Mode Susulan
-            </span>
-        <?php endif; ?>
     </div>
-
-    <!-- Banner Info Topik Ujian & Jadwal Hari Ini (Jadwal Ujian Aktif Siswa) -->
-    <?php if (!empty($nearestTopik)): ?>
-        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #a7f3d0; border-radius: 16px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.06);">
-            <div style="min-width: 0; flex: 1;">
-                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap;">
-                    <span style="background: #10b981; color: white; font-size: 0.62rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        TOPIK AKTIF
-                    </span>
-                    <?php if (!empty($nearestTopik['tgl_mulai']) && !empty($nearestTopik['tgl_selesai'])): ?>
-                        <span style="font-size: 0.68rem; color: #047857; font-weight: 700;">
-                            <?= date('d M', strtotime($nearestTopik['tgl_mulai'])) ?> - <?= date('d M Y', strtotime($nearestTopik['tgl_selesai'])) ?>
-                        </span>
-                    <?php endif; ?>
-                </div>
-                <div style="font-size: 0.94rem; font-weight: 900; color: #065f46; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    <?= htmlspecialchars($nearestTopik['nama_topik']) ?>
-                </div>
-                <div style="font-size: 0.72rem; color: #059669; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-                    <span><i class="fa-solid fa-calendar-day"></i> Hari ini: <b><?= $curHari ?>, <?= date('d M Y') ?></b></span>
-                    <?php 
-                    $todayCount = 0;
-                    foreach ($jadwalSiswaList as $jsItem) {
-                        if ((!empty($jsItem['tanggal']) && $jsItem['tanggal'] === $todayDate) || ($jsItem['hari'] === $curHari)) {
-                            $todayCount++;
-                        }
-                    }
-                    if ($todayCount > 0): ?>
-                        • <span><b><?= $todayCount ?> Mapel</b> Terjadwal</span>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <button type="button" onclick="bukaModalJadwalSiswa()" style="background: #059669; color: white; border: none; border-radius: 10px; padding: 8px 14px; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.25);">
-                <i class="fa-solid fa-calendar-week"></i>
-                <span>Jadwal</span>
-            </button>
-        </div>
-    <?php endif; ?>
 
     <!-- Banner Status Asesmen Berlangsung -->
     <?php if ($activeOngoingUjian): ?>

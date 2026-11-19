@@ -642,10 +642,12 @@ class BankSoalController {
             self::cleanMILeftovers($this->db_core);
         }
 
-        // Hapus paket legacy yang kelas sasaran masih 'Semua Kelas'
-        $this->db->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '')")->execute([$topikId]);
+        // Hapus paket legacy yang kelas sasaran masih 'Semua Kelas' serta Bahasa Arab Peminatan
+        $this->db->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '' OR mapel_nama LIKE '%Peminatan%')")->execute([$topikId]);
+        $this->db->prepare("DELETE FROM bs_soal WHERE topik_id = ? AND mapel_nama LIKE '%Peminatan%'")->execute([$topikId]);
         if ($this->db_core !== $this->db) {
-            $this->db_core->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '')")->execute([$topikId]);
+            $this->db_core->prepare("DELETE FROM bs_paket WHERE topik_id = ? AND (kelas_nama = 'Semua Kelas' OR kelas_nama IS NULL OR kelas_nama = '' OR mapel_nama LIKE '%Peminatan%')")->execute([$topikId]);
+            $this->db_core->prepare("DELETE FROM bs_soal WHERE topik_id = ? AND mapel_nama LIKE '%Peminatan%'")->execute([$topikId]);
         }
 
         // 2. Ambil referensi nama guru dari database core & siakad
@@ -685,6 +687,7 @@ class BankSoalController {
                   AND (m.tahun_ajaran_id = :thn_id OR m.tahun_ajaran_id IS NULL)
                   AND (m.semester = :smt OR m.semester IS NULL OR m.semester = 0)
                   AND mp.nama_mapel NOT IN ('Upacara', 'Senam', 'Pramuka', 'Sholat Dhuha', 'Juz Amma - Asmaul Husna', 'BTQ', 'IPAS', 'SBdP', 'Baca Tulis Qur\'an', 'Ilmu Pengetahuan Alam Sosial', 'Seni Budaya dan Prakarya')
+                  AND mp.nama_mapel NOT LIKE '%Peminatan%'
                 ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
             ";
             $stmtM = $this->db->prepare($sql);
@@ -700,6 +703,8 @@ class BankSoalController {
                     JOIN mapel mp ON m.mapel_id = mp.id
                     WHERE m.guru_id IS NOT NULL AND m.guru_id > 0
                       AND mp.nama_mapel NOT IN ('Upacara', 'Senam', 'Pramuka', 'Sholat Dhuha', 'Juz Amma - Asmaul Husna', 'BTQ', 'IPAS', 'SBdP', 'Baca Tulis Qur\'an', 'Ilmu Pengetahuan Alam Sosial', 'Seni Budaya dan Prakarya')
+                  AND mp.nama_mapel NOT LIKE '%Peminatan%'
+                   AND mp.nama_mapel NOT LIKE '%Peminatan%'
                     ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC
                 ";
                 $assignments = $this->db->query($sqlFallback)->fetchAll(PDO::FETCH_ASSOC);

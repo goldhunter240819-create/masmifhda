@@ -14,6 +14,7 @@ $disableCopyPaste = ($cbtSettings['disable_copy_paste'] ?? '1') === '1';
 $soundAlarm = ($cbtSettings['sound_alarm_on_violation'] ?? '1') === '1';
 $blockBackButton = ($cbtSettings['block_back_button'] ?? '1') === '1';
 $watermark = ($cbtSettings['watermark_student_nis'] ?? '1') === '1';
+$requireAllAnswered = ($cbtSettings['require_all_answered_no_doubt'] ?? '1') === '1';
 $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 ?>
 <!DOCTYPE html>
@@ -1112,10 +1113,10 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
     <!-- Modal Konfirmasi Selesai Ujian -->
     <div id="modalConfirm" class="cbt-modal-backdrop">
         <div class="cbt-modal-box">
-            <div style="width: 60px; height: 60px; border-radius: 16px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+            <div id="modalConfirmIconBox" style="width: 60px; height: 60px; border-radius: 16px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
                 <i data-lucide="check-check" style="width: 32px; height: 32px;"></i>
             </div>
-            <h3 style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Kumpulkan Jawaban Ujian?</h3>
+            <h3 id="modalConfirmTitle" style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Kumpulkan Jawaban Ujian?</h3>
             <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5; margin-bottom: 1.5rem;" id="modalSummaryText">
                 Pastikan Anda telah memeriksa seluruh jawaban sebelum mengakhiri sesi ujian ini.
             </p>
@@ -1125,11 +1126,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 <input type="hidden" name="peserta_id" value="<?php echo $pesertaInfo['id'] ?? 0; ?>">
                 <input type="hidden" name="jawaban_payload" id="jawabanPayloadInput" value="">
 
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button type="button" onclick="document.getElementById('modalConfirm').classList.remove('open')" class="btn-cbt btn-prev">
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button type="button" id="btnCancelConfirm" onclick="document.getElementById('modalConfirm').classList.remove('open')" class="btn-cbt btn-prev">
                         Periksa Lagi
                     </button>
-                    <button type="submit" class="btn-cbt btn-finish" style="background: #4f46e5;">
+                    <button type="submit" id="btnSubmitConfirm" class="btn-cbt btn-finish" style="background: #4f46e5;">
                         Ya, Selesai & Kirim
                     </button>
                 </div>
@@ -2163,23 +2164,97 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }, 1000);
         }
 
+        const requireAllAnsweredNoDoubt = <?= json_encode($requireAllAnswered) ?>;
+
         function openConfirmModal() {
             let answered = 0;
+            const unansweredList = [];
+            const raguList = [];
+
             for (let i = 0; i < totalSoal; i++) {
                 const ans = userAnswers[i];
+                let isAns = false;
                 if (ans !== undefined && ans !== null && ans !== '') {
                     if (typeof ans === 'object') {
-                        if (Object.keys(ans).length > 0) answered++;
+                        if (Object.keys(ans).length > 0) isAns = true;
                     } else if (String(ans).trim().length > 0) {
-                        answered++;
+                        isAns = true;
                     }
                 }
+                if (isAns) {
+                    answered++;
+                } else {
+                    unansweredList.push(i + 1);
+                }
+
+                if (raguStates[i]) {
+                    raguList.push(i + 1);
+                }
             }
+
             let unanswered = totalSoal - answered;
-            document.getElementById('modalSummaryText').innerHTML = `
-                Anda telah menjawab <strong>${answered}</strong> dari <strong>${totalSoal}</strong> butir soal.<br>
-                ${unanswered > 0 ? `<span style="color:#dc2626;font-weight:700;">Masih ada ${unanswered} butir soal yang belum dijawab!</span>` : '<span style="color:#16a34a;font-weight:700;">Seluruh soal telah selesai Anda jawab.</span>'}
-            `;
+            const isBlocked = requireAllAnsweredNoDoubt && (unanswered > 0 || raguList.length > 0);
+
+            const btnSubmit = document.getElementById('btnSubmitConfirm');
+            const btnCancel = document.getElementById('btnCancelConfirm');
+            const modalTitle = document.getElementById('modalConfirmTitle');
+            const iconBox = document.getElementById('modalConfirmIconBox');
+
+            if (isBlocked) {
+                if (iconBox) {
+                    iconBox.style.background = '#fee2e2';
+                    iconBox.style.color = '#dc2626';
+                    iconBox.innerHTML = '<i data-lucide="alert-triangle" style="width: 32px; height: 32px;"></i>';
+                }
+                if (modalTitle) modalTitle.innerText = 'Belum Dapat Diselesaikan!';
+
+                let alertDetails = `Anda telah menjawab <strong>${answered}</strong> dari <strong>${totalSoal}</strong> butir soal.<br>`;
+                alertDetails += `<div style="background:#fef2f2; border:1.5px solid #fecaca; border-radius:12px; padding:12px 14px; margin-top:12px; text-align:left; font-size:0.84rem; color:#991b1b; line-height:1.5;">`;
+                alertDetails += `<div style="font-weight:800; margin-bottom:6px; display:flex; align-items:center; gap:6px;"><i data-lucide="alert-circle" style="width:16px;height:16px;"></i> Syarat Menyelesaikan Ujian:</div>`;
+                if (unanswered > 0) {
+                    alertDetails += `<div style="margin-bottom:4px;">• <b>${unanswered} Soal Belum Dijawab:</b> No. ${unansweredList.join(', ')}</div>`;
+                }
+                if (raguList.length > 0) {
+                    alertDetails += `<div>• <b>${raguList.length} Soal Masih Ragu-Ragu:</b> No. ${raguList.join(', ')}</div>`;
+                }
+                alertDetails += `<div style="margin-top:8px; color:#475569; font-size:0.78rem;">Sesuai aturan panitia, seluruh butir soal <strong>wajib dijawab</strong> dan <strong>tidak boleh ada yang masih ditandai Ragu-Ragu</strong>.</div></div>`;
+
+                document.getElementById('modalSummaryText').innerHTML = alertDetails;
+                if (btnSubmit) btnSubmit.style.display = 'none';
+                if (btnCancel) {
+                    btnCancel.innerText = 'Kembali & Lengkapi Soal';
+                    btnCancel.style.background = '#2563eb';
+                    btnCancel.style.color = '#ffffff';
+                    btnCancel.onclick = function() {
+                        document.getElementById('modalConfirm').classList.remove('open');
+                        const jumpIdx = (unansweredList.length > 0 ? unansweredList[0] : raguList[0]) - 1;
+                        if (jumpIdx >= 0 && jumpIdx < totalSoal) {
+                            renderSoal(jumpIdx);
+                        }
+                    };
+                }
+            } else {
+                if (iconBox) {
+                    iconBox.style.background = '#e0e7ff';
+                    iconBox.style.color = '#4338ca';
+                    iconBox.innerHTML = '<i data-lucide="check-check" style="width: 32px; height: 32px;"></i>';
+                }
+                if (modalTitle) modalTitle.innerText = 'Kumpulkan Jawaban Ujian?';
+
+                document.getElementById('modalSummaryText').innerHTML = `
+                    Anda telah menjawab <strong>${answered}</strong> dari <strong>${totalSoal}</strong> butir soal.<br>
+                    ${unanswered > 0 ? `<span style="color:#d97706;font-weight:700;">Masih ada ${unanswered} butir soal yang belum dijawab!</span>` : '<span style="color:#16a34a;font-weight:700;">Seluruh soal telah selesai Anda jawab tanpa ragu-ragu.</span>'}
+                `;
+                if (btnSubmit) btnSubmit.style.display = 'inline-flex';
+                if (btnCancel) {
+                    btnCancel.innerText = 'Periksa Lagi';
+                    btnCancel.style.background = '';
+                    btnCancel.style.color = '';
+                    btnCancel.onclick = function() {
+                        document.getElementById('modalConfirm').classList.remove('open');
+                    };
+                }
+            }
 
             // Siapkan payload final berdasar ID soal
             const payload = {};

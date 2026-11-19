@@ -23,6 +23,7 @@ $acakOpsi = ($settings['acak_opsi_default'] ?? '1') === '1';
 $showScore = ($settings['show_score_to_student'] ?? '1') === '1';
 $showDiscussion = ($settings['show_discussion_to_student'] ?? '0') === '1';
 $allowReview = ($settings['allow_student_review'] ?? '1') === '1';
+$requireAllAnswered = ($settings['require_all_answered_no_doubt'] ?? '1') === '1';
 $requireAttendance = ($settings['require_cbt_attendance'] ?? '0') === '1';
 $tokenMode = $settings['token_mode'] ?? 'manual';
 $tokenInterval = (int)($settings['token_refresh_interval'] ?? 120);
@@ -574,6 +575,24 @@ $listTerkunci = $listTerkunci ?? [];
                                 <label class="cbt-switch">
                                     <input type="hidden" name="settings[allow_student_review]" value="0">
                                     <input type="checkbox" name="settings[allow_student_review]" value="1" <?php echo $allowReview ? 'checked' : ''; ?>>
+                                    <span class="cbt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 8. Wajib Jawab Semua Soal & Bebas Ragu-Ragu Sebelum Selesai -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-emerald" style="background: #ecfdf5; color: #059669;"><i data-lucide="list-checks"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Wajib Jawab Semua Soal & Bebas Ragu-Ragu</div>
+                                    </div>
+                                    <p class="setting-desc">Jika AKTIF: Siswa <b>TIDAK DAPAT</b> mengumpulkan/menyelesaikan ujian jika masih ada soal yang belum dijawab atau masih berstatus "Ragu-Ragu". Tombol Selesai otomatis terkunci.</p>
+                                </div>
+                                <label class="cbt-switch">
+                                    <input type="hidden" name="settings[require_all_answered_no_doubt]" value="0">
+                                    <input type="checkbox" name="settings[require_all_answered_no_doubt]" value="1" <?php echo $requireAllAnswered ? 'checked' : ''; ?>>
                                     <span class="cbt-slider"></span>
                                 </label>
                             </div>

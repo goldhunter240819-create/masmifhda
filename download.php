@@ -499,7 +499,7 @@ $isAuto = isset($_GET['auto']) && $_GET['auto'] == '1';
                     </div>
                     <div class="step-item">
                         <div class="step-num">3</div>
-                        <div>Jika muncul peringatan keamanan, pilih <b>Tetap Instal / Install Anyway</b> atau aktifkan izin <i>"Sumber Tidak Dikenal"</i> di pengaturan Chrome/Browser.</div>
+                        <div>Jika muncul Google Play Protect (Aplikasi tidak dikenal), ketuk <b>"Detail / Rincian selengkapnya"</b> lalu pilih <b>"Tetap instal (aman)"</b> atau izinkan <i>"Pasang aplikasi dari sumber ini"</i>.</div>
                     </div>
                 </div>
             </div>
