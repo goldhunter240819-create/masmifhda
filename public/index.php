@@ -2539,6 +2539,7 @@ $router->add('POST', '/cbt/semi-online/import-file', [\App\Controllers\CbtContro
 $router->add('GET', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
 $router->add('POST', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
 $router->add('POST', '/cbt/semi-online/api/import-hasil', [\App\Controllers\CbtController::class, 'apiImportHasilOnline']);
+$router->add('GET', '/cbt/semi-online/download-standalone', [\App\Controllers\CbtController::class, 'downloadStandaloneZip']);
 
 
 // ─── Kurikulum & Supervisi Suite (Full Port from Mismifhda) ─────────────────

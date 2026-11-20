@@ -516,6 +516,61 @@ class CbtController {
                 ");
             } catch (\Exception $e) {}
 
+            // 13. Minimal Users, Siswa, Kelas & Guru for Standalone CBT Mode
+            try {
+                $db->exec("CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    username VARCHAR(100) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL,
+                    plain_password VARCHAR(100) DEFAULT NULL,
+                    role_id INT DEFAULT 3,
+                    status VARCHAR(20) DEFAULT 'active',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX (role_id),
+                    INDEX (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $db->exec("CREATE TABLE IF NOT EXISTS kelas (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nama_kelas VARCHAR(100) NOT NULL,
+                    tingkat VARCHAR(20) DEFAULT 'X',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $db->exec("CREATE TABLE IF NOT EXISTS siswa (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT DEFAULT NULL,
+                    nis VARCHAR(50) NOT NULL,
+                    nik VARCHAR(50) DEFAULT NULL,
+                    nama VARCHAR(150) NOT NULL,
+                    kelas_id INT DEFAULT NULL,
+                    jenis_kelamin VARCHAR(10) DEFAULT 'L',
+                    status VARCHAR(20) DEFAULT 'Aktif',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX (nis),
+                    INDEX (nik),
+                    INDEX (user_id),
+                    INDEX (kelas_id),
+                    INDEX (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $db->exec("CREATE TABLE IF NOT EXISTS guru (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT DEFAULT NULL,
+                    nama VARCHAR(150) NOT NULL,
+                    nip VARCHAR(50) DEFAULT NULL,
+                    nik VARCHAR(50) DEFAULT NULL,
+                    is_kamad TINYINT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $hasAdmin = (int)$db->query("SELECT COUNT(*) FROM users WHERE role_id = 1")->fetchColumn();
+                if ($hasAdmin === 0) {
+                    $pwHash = password_hash('proktor123', PASSWORD_BCRYPT);
+                    $db->exec("INSERT INTO users (username, password_hash, plain_password, role_id, status) VALUES ('proktor', '{$pwHash}', 'proktor123', 1, 'active')");
+                }
+            } catch (\Exception $e) {}
+
         } catch (\Exception $e) {
             // Silence exception
         }
@@ -5603,9 +5658,25 @@ class CbtController {
      */
     public static function apiExportPaketOnline() {
         header('Content-Type: application/json');
-        $ctx = self::getAuthContext();
-        $db = $ctx['db_core'];
-        $dbSiakad = $ctx['db_siakad'] ?? $db;
+        
+        $syncSecret = 'MIFHDA_CBT_SYNC_2026';
+        $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
+        $isTokenValid = ($providedToken === $syncSecret);
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_name("AULA_SYSTEM_PORTAL");
+            session_start();
+        }
+        $isSessionValid = !empty($_SESSION['user_id']);
+
+        if (!$isTokenValid && !$isSessionValid) {
+            http_response_code(401);
+            echo json_encode(['status' => 'error', 'message' => 'Akses ditolak: Token sinkronisasi tidak valid.']);
+            exit;
+        }
+
+        $db = \App\Core\Database::connect('core');
+        $dbSiakad = \App\Core\Database::connect('siakad');
         self::ensureTables($db);
 
         $payload = [
@@ -5619,16 +5690,47 @@ class CbtController {
             'token' => $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC),
             'peserta_khusus' => $db->query("SELECT * FROM cbt_peserta_khusus WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'denah' => $db->query("SELECT * FROM cbt_denah_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'ruang' => $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'pengaturan' => $db->query("SELECT * FROM cbt_pengaturan")->fetchAll(PDO::FETCH_ASSOC),
+            'pengawas_kj' => $db->query("SELECT * FROM cbt_pengawas_kj WHERE status = 'Aktif'")->fetchAll(PDO::FETCH_ASSOC),
         ];
 
-        // Ambil data siswa reguler dari SIAKAD agar bisa login di server lokal
+        // Export data kelas
         try {
-            $payload['siswa'] = $dbSiakad->query("
-                SELECT id, nis, nisn, nama_lengkap, kelas_id, username, password, password_plain, status 
+            $payload['kelas'] = $dbSiakad->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            try {
+                $payload['kelas'] = $db->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {
+                $payload['kelas'] = [];
+            }
+        }
+
+        // Export data siswa reguler (hanya data identitas ujian, tanpa informasi keuangan / rapor)
+        try {
+            $payload['siswa'] = $db->query("
+                SELECT id, user_id, nis, nik, nama, status, kelas_id, jenis_kelamin
                 FROM siswa WHERE status = 'Aktif'
             ")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
-            $payload['siswa'] = [];
+            try {
+                $payload['siswa'] = $dbSiakad->query("
+                    SELECT id, user_id, nis, nik, nama_lengkap as nama, status, kelas_id, jenis_kelamin
+                    FROM siswa WHERE status = 'Aktif'
+                ")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {
+                $payload['siswa'] = [];
+            }
+        }
+
+        // Export akun login siswa & proktor
+        try {
+            $payload['users'] = $db->query("
+                SELECT id, username, password_hash, plain_password, role_id, status
+                FROM users WHERE role_id IN (1, 3, 6, 7)
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $payload['users'] = [];
         }
 
         echo json_encode($payload);
@@ -5646,7 +5748,7 @@ class CbtController {
         self::ensureTables($db);
 
         $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
-        $targetEndpoint = $serverUrl . '/cbt/semi-online/api/export-paket';
+        $targetEndpoint = $serverUrl . '/cbt/semi-online/api/export-paket?token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
         $ch = curl_init($targetEndpoint);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -5692,8 +5794,24 @@ class CbtController {
      */
     public static function apiImportHasilOnline() {
         header('Content-Type: application/json');
-        $ctx = self::getAuthContext();
-        $db = $ctx['db_core'];
+        
+        $syncSecret = 'MIFHDA_CBT_SYNC_2026';
+        $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
+        $isTokenValid = ($providedToken === $syncSecret);
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_name("AULA_SYSTEM_PORTAL");
+            session_start();
+        }
+        $isSessionValid = !empty($_SESSION['user_id']);
+
+        if (!$isTokenValid && !$isSessionValid) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Akses ditolak: Token sinkronisasi tidak valid.']);
+            exit;
+        }
+
+        $db = \App\Core\Database::connect('core');
         self::ensureTables($db);
 
         $rawInput = file_get_contents('php://input');
@@ -5714,24 +5832,30 @@ class CbtController {
         if (!empty($payload['peserta'])) {
             $stmtP = $db->prepare("
                 INSERT INTO cbt_peserta 
-                (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, nomor_meja, waktu_mulai, waktu_selesai, sisa_waktu_detik, status_pengerjaan, total_dijawab, total_ragu, nilai_akhir, jml_benar, jml_salah, catatan_pelanggaran)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, nomor_meja, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json, reset_count, violation_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                     waktu_selesai = VALUES(waktu_selesai),
                     status_pengerjaan = VALUES(status_pengerjaan),
-                    total_dijawab = VALUES(total_dijawab),
+                    jumlah_benar = VALUES(jumlah_benar),
+                    jumlah_salah = VALUES(jumlah_salah),
                     nilai_akhir = VALUES(nilai_akhir),
-                    jml_benar = VALUES(jml_benar),
-                    jml_salah = VALUES(jml_salah)
+                    jawaban_json = VALUES(jawaban_json),
+                    reset_count = VALUES(reset_count),
+                    violation_count = VALUES(violation_count)
             ");
             foreach ($payload['peserta'] as $p) {
                 try {
                     $stmtP->execute([
-                        $p['ujian_id'], $p['siswa_id'] ?? null, $p['nis'], $p['nama_siswa'], $p['kelas_nama'],
+                        $p['ujian_id'], $p['siswa_id'] ?? null, $p['nis'], $p['nama_siswa'], $p['kelas_nama'] ?? null,
                         $p['nomor_meja'] ?? null, $p['waktu_mulai'] ?? null, $p['waktu_selesai'] ?? null,
-                        $p['sisa_waktu_detik'] ?? 0, $p['status_pengerjaan'] ?? 'Selesai',
-                        $p['total_dijawab'] ?? 0, $p['total_ragu'] ?? 0, $p['nilai_akhir'] ?? 0,
-                        $p['jml_benar'] ?? 0, $p['jml_salah'] ?? 0, $p['catatan_pelanggaran'] ?? null
+                        $p['status_pengerjaan'] ?? 'Selesai',
+                        $p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0),
+                        $p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0),
+                        $p['nilai_akhir'] ?? 0,
+                        $p['jawaban_json'] ?? null,
+                        $p['reset_count'] ?? 0,
+                        $p['violation_count'] ?? 0
                     ]);
                     $importedPeserta++;
                 } catch (\Exception $e) {}
@@ -5782,7 +5906,7 @@ class CbtController {
         self::ensureTables($db);
 
         $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
-        $targetEndpoint = $serverUrl . '/cbt/semi-online/api/import-hasil';
+        $targetEndpoint = $serverUrl . '/cbt/semi-online/api/import-hasil?token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
         // Ambil data hasil lokal
         $peserta = $db->query("SELECT * FROM cbt_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -5840,14 +5964,14 @@ class CbtController {
      * Helper untuk memasukkan payload data sinkronisasi ke database lokal
      */
     private static function importDataPayload($db, $dbSiakad, $data) {
-        $details = ['topik' => 0, 'jadwal' => 0, 'soal' => 0, 'siswa' => 0];
+        $details = ['topik' => 0, 'jadwal' => 0, 'soal' => 0, 'siswa' => 0, 'kelas' => 0];
 
         // 1. Topik
         if (!empty($data['topik'])) {
-            $stmtT = $dbSiakad->prepare("INSERT INTO bs_topik (id, tahun_ajaran_id, semester_id, nama_topik, kode_topik, jenis_topik, tanggal_mulai, tanggal_selesai, deskripsi, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_topik = VALUES(nama_topik), status = VALUES(status), tanggal_mulai = VALUES(tanggal_mulai), tanggal_selesai = VALUES(tanggal_selesai)");
+            $stmtT = $dbSiakad->prepare("INSERT INTO bs_topik (id, tahun_ajaran, semester, nama_topik, jenis, tgl_mulai, tgl_selesai, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_topik = VALUES(nama_topik), status = VALUES(status), tgl_mulai = VALUES(tgl_mulai), tgl_selesai = VALUES(tgl_selesai)");
             foreach ($data['topik'] as $t) {
                 try {
-                    $stmtT->execute([$t['id'], $t['tahun_ajaran_id'] ?? null, $t['semester_id'] ?? null, $t['nama_topik'], $t['kode_topik'] ?? null, $t['jenis_topik'] ?? 'TRY OUT', $t['tanggal_mulai'] ?? null, $t['tanggal_selesai'] ?? null, $t['deskripsi'] ?? null, $t['status'] ?? 'Aktif']);
+                    $stmtT->execute([$t['id'], $t['tahun_ajaran'] ?? '2026/2027', $t['semester'] ?? 'Ganjil', $t['nama_topik'], $t['jenis'] ?? ($t['jenis_topik'] ?? 'SAS'), $t['tgl_mulai'] ?? null, $t['tgl_selesai'] ?? null, $t['keterangan'] ?? ($t['deskripsi'] ?? null), $t['status'] ?? 'Aktif']);
                     $details['topik']++;
                 } catch (\Exception $e) {}
             }
@@ -5882,10 +6006,10 @@ class CbtController {
 
         // 5. Soal
         if (!empty($data['soal'])) {
-            $stmtSoal = $db->prepare("INSERT INTO cbt_soal (id, ujian_id, nomor_urut, tipe_soal, pertanyaan, stimulus, gambar, audio, video, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot_nilai) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban)");
+            $stmtSoal = $db->prepare("INSERT INTO cbt_soal (id, ujian_id, nomor_urut, tipe_soal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan)");
             foreach ($data['soal'] as $so) {
                 try {
-                    $stmtSoal->execute([$so['id'], $so['ujian_id'], $so['nomor_urut'], $so['tipe_soal'] ?? 'PG', $so['pertanyaan'], $so['stimulus'] ?? null, $so['gambar'] ?? null, $so['audio'] ?? null, $so['video'] ?? null, $so['opsi_a'] ?? null, $so['opsi_b'] ?? null, $so['opsi_c'] ?? null, $so['opsi_d'] ?? null, $so['opsi_e'] ?? null, $so['kunci_jawaban'], $so['bobot_nilai'] ?? 1]);
+                    $stmtSoal->execute([$so['id'], $so['ujian_id'], $so['nomor_urut'], $so['tipe_soal'] ?? 'sec_pg', $so['pertanyaan'], $so['opsi_a'] ?? null, $so['opsi_b'] ?? null, $so['opsi_c'] ?? null, $so['opsi_d'] ?? null, $so['opsi_e'] ?? null, $so['kunci_jawaban'] ?? null, $so['bobot'] ?? 1.00, $so['konten_tambahan'] ?? null]);
                     $details['soal']++;
                 } catch (\Exception $e) {}
             }
@@ -5901,28 +6025,65 @@ class CbtController {
 
         // 7. Peserta Khusus & Denah
         if (!empty($data['peserta_khusus'])) {
-            $stmtKj = $db->prepare("INSERT INTO cbt_peserta_khusus (id, nama_siswa, no_peserta, nis, tingkat, kelas_nama, username, password_plain, password_hash, sesi, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), no_peserta = VALUES(no_peserta), status = VALUES(status)");
+            $stmtKj = $db->prepare("INSERT INTO cbt_peserta_khusus (id, nama_siswa, no_peserta, nis, tingkat, kelas_nama, username, password_plain, password_hash, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), no_peserta = VALUES(no_peserta), status = VALUES(status)");
             foreach ($data['peserta_khusus'] as $pk) {
                 try {
-                    $stmtKj->execute([$pk['id'], $pk['nama_siswa'], $pk['no_peserta'], $pk['nis'] ?? $pk['no_peserta'], $pk['tingkat'], $pk['kelas_nama'], $pk['username'], $pk['password_plain'], $pk['password_hash'], $pk['sesi'] ?? 1, $pk['status'] ?? 'Aktif']);
+                    $stmtKj->execute([$pk['id'], $pk['nama_siswa'], $pk['no_peserta'], $pk['nis'] ?? $pk['no_peserta'], $pk['tingkat'], $pk['kelas_nama'], $pk['username'], $pk['password_plain'], $pk['password_hash'], $pk['status'] ?? 'Aktif']);
                     $details['siswa']++;
                 } catch (\Exception $e) {}
             }
         }
         if (!empty($data['denah'])) {
-            $stmtD = $db->prepare("INSERT INTO cbt_denah_peserta (id, topik_id, ruang_id, nomor_meja, siswa_id, nis, nama_siswa, kelas_id, kelas_nama, tingkat, status_kehadiran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), nomor_meja = VALUES(nomor_meja)");
+            $stmtD = $db->prepare("INSERT INTO cbt_denah_peserta (id, topik_id, ruang_id, nomor_meja, siswa_id, nis, nama_siswa, kelas_id, kelas_nama, tingkat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), nomor_meja = VALUES(nomor_meja)");
             foreach ($data['denah'] as $dn) {
-                try { $stmtD->execute([$dn['id'], $dn['topik_id'] ?? null, $dn['ruang_id'], $dn['nomor_meja'], $dn['siswa_id'] ?? null, $dn['nis'], $dn['nama_siswa'], $dn['kelas_id'] ?? null, $dn['kelas_nama'], $dn['tingkat'], $dn['status_kehadiran'] ?? 'Belum Hadir']); } catch (\Exception $e) {}
+                try { $stmtD->execute([$dn['id'], $dn['topik_id'] ?? null, $dn['ruang_id'], $dn['nomor_meja'], $dn['siswa_id'] ?? null, $dn['nis'], $dn['nama_siswa'], $dn['kelas_id'] ?? null, $dn['kelas_nama'], $dn['tingkat'] ?? null]); } catch (\Exception $e) {}
             }
         }
 
-        // 8. Siswa Reguler
+        // 8. Ruang Ujian
+        if (!empty($data['ruang'])) {
+            $stmtR = $db->prepare("INSERT INTO cbt_ruang (id, kode_ruang, nama_ruang, tipe_meja, baris_samping, baris_belakang, kapasitas, lokasi, pengawas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_ruang = VALUES(nama_ruang), kapasitas = VALUES(kapasitas)");
+            foreach ($data['ruang'] as $rg) {
+                try { $stmtR->execute([$rg['id'], $rg['kode_ruang'], $rg['nama_ruang'], $rg['tipe_meja'] ?? 1, $rg['baris_samping'] ?? 4, $rg['baris_belakang'] ?? 5, $rg['kapasitas'] ?? 20, $rg['lokasi'] ?? null, $rg['pengawas'] ?? null]); } catch (\Exception $e) {}
+            }
+        }
+
+        // 9. Pengaturan CBT
+        if (!empty($data['pengaturan'])) {
+            $stmtCfg = $db->prepare("INSERT INTO cbt_pengaturan (setting_key, setting_value, kategori, keterangan) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
+            foreach ($data['pengaturan'] as $cfg) {
+                try { $stmtCfg->execute([$cfg['setting_key'], $cfg['setting_value'], $cfg['kategori'] ?? 'keamanan', $cfg['keterangan'] ?? null]); } catch (\Exception $e) {}
+            }
+        }
+
+        // 10. Data Kelas
+        if (!empty($data['kelas'])) {
+            $stmtK = $db->prepare("INSERT INTO kelas (id, nama_kelas, tingkat) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE nama_kelas = VALUES(nama_kelas), tingkat = VALUES(tingkat)");
+            foreach ($data['kelas'] as $k) {
+                try {
+                    $stmtK->execute([$k['id'], $k['nama_kelas'], $k['tingkat'] ?? 'X']);
+                    $details['kelas']++;
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 11. Data Siswa Reguler
         if (!empty($data['siswa'])) {
-            $stmtSsw = $dbSiakad->prepare("INSERT INTO siswa (id, nis, nisn, nama_lengkap, kelas_id, username, password, password_plain, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_lengkap = VALUES(nama_lengkap), status = VALUES(status)");
+            $stmtSsw = $db->prepare("INSERT INTO siswa (id, user_id, nis, nik, nama, status, kelas_id, jenis_kelamin) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama), nis = VALUES(nis), nik = VALUES(nik), status = VALUES(status), kelas_id = VALUES(kelas_id)");
             foreach ($data['siswa'] as $sw) {
                 try {
-                    $stmtSsw->execute([$sw['id'], $sw['nis'], $sw['nisn'] ?? null, $sw['nama_lengkap'], $sw['kelas_id'] ?? null, $sw['username'], $sw['password'], $sw['password_plain'] ?? null, $sw['status'] ?? 'Aktif']);
+                    $stmtSsw->execute([$sw['id'], $sw['user_id'] ?? null, $sw['nis'], $sw['nik'] ?? null, $sw['nama'] ?? ($sw['nama_lengkap'] ?? ''), $sw['status'] ?? 'Aktif', $sw['kelas_id'] ?? null, $sw['jenis_kelamin'] ?? 'L']);
                     $details['siswa']++;
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 12. Data User Akun Login Siswa & Proktor
+        if (!empty($data['users'])) {
+            $stmtU = $db->prepare("INSERT INTO users (id, username, password_hash, plain_password, role_id, status) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), plain_password = VALUES(plain_password), role_id = VALUES(role_id), status = VALUES(status)");
+            foreach ($data['users'] as $u) {
+                try {
+                    $stmtU->execute([$u['id'], $u['username'], $u['password_hash'], $u['plain_password'] ?? null, $u['role_id'], $u['status'] ?? 'active']);
                 } catch (\Exception $e) {}
             }
         }
@@ -5946,6 +6107,8 @@ class CbtController {
             'token' => $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC),
             'peserta_khusus' => $db->query("SELECT * FROM cbt_peserta_khusus WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'denah' => $db->query("SELECT * FROM cbt_denah_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'ruang' => $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'pengaturan' => $db->query("SELECT * FROM cbt_pengaturan")->fetchAll(PDO::FETCH_ASSOC),
         ];
 
         $json = json_encode($payload, JSON_PRETTY_PRINT);
@@ -5972,5 +6135,27 @@ class CbtController {
             }
         }
         redirect('/cbt/semi-online?err=1');
+    }
+
+    /**
+     * Download Paket Standalone Server CBT Madrasah (.zip)
+     */
+    public static function downloadStandaloneZip() {
+        $zipFile = __DIR__ . '/../../public/downloads/cbt_standalone_madrasah.zip';
+        if (!file_exists($zipFile) || (time() - filemtime($zipFile) > 86400)) {
+            require_once __DIR__ . '/../../tools/build_cbt_standalone.php';
+            build_cbt_standalone_package();
+        }
+
+        if (!file_exists($zipFile)) {
+            die("File paket standalone belum berhasil digenerate.");
+        }
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="cbt_standalone_madrasah.zip"');
+        header('Content-Length: ' . filesize($zipFile));
+        header('Pragma: no-cache');
+        readfile($zipFile);
+        exit;
     }
 }

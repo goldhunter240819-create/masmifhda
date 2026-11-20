@@ -214,6 +214,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 \App\Services\AuditLogger::loginSuccess($siswa_nama, 'Siswa (APK Manual)');
 
+                                if (file_exists(__DIR__ . '/../.cbt_standalone') || !file_exists(__DIR__ . '/index.php')) {
+                                    header("Location: cbt.php");
+                                    exit;
+                                }
+
                                 if ($siswa_status === 'Alumni') {
                                     header("Location: alumni_dashboard.php");
                                 } else {
@@ -280,6 +285,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['username'] = $user['username'];
                             $_SESSION['nama'] = $user['username'];
                             \App\Services\AuditLogger::loginSuccess($user['username'], 'Admin/Dev (APK Manual)');
+                            if (file_exists(__DIR__ . '/../.cbt_standalone')) {
+                                header("Location: /cbt/semi-online");
+                                exit;
+                            }
                             header("Location: /portal");
                             exit;
                         }

@@ -1472,8 +1472,11 @@ include 'header.php';
                 <?php endif; ?>
 
                 <!-- Action Button -->
+                <?php
+                $cbtKerjakanBase = (isset($_SERVER['SCRIPT_NAME']) && strpos($_SERVER['SCRIPT_NAME'], '/masmifhda/') !== false) ? '/masmifhda/cbt/kerjakan' : '/cbt/kerjakan';
+                ?>
                 <?php if ($isMengerjakan): ?>
-                    <a href="/cbt/kerjakan?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
+                    <a href="<?= $cbtKerjakanBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
                 <?php elseif ($u['can_take']): ?>
@@ -1874,7 +1877,9 @@ function verifikasiDanMulaiUjian() {
     }
 
     // Token cocok -> Redirect ke kerjakan ujian dengan token resmi yang valid!
-    window.location.href = '/cbt/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken);
+    let curPath = window.location.pathname;
+    let pathPrefix = (curPath.indexOf('/masmifhda/') !== -1) ? '/masmifhda' : '';
+    window.location.href = pathPrefix + '/cbt/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken);
 }
 
 // Enter key submit on input token

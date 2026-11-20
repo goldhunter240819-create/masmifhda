@@ -93,6 +93,31 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                 </div>
             </div>
 
+            <!-- PAKET STANDALONE LAPTOP SERVER MADRASAH -->
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 20px; padding: 1.75rem 2rem; color: white; margin-bottom: 2rem; border: 1px solid #334155; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 300px;">
+                    <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
+                        <i data-lucide="package-check"></i>
+                    </div>
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.2); color: #7dd3fc; padding: 3px 10px; border-radius: 100px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">
+                            Khusus Server Proktor Madrasah
+                        </div>
+                        <h3 style="font-size: 1.18rem; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">Paket Standalone CBT (Tanpa SIAKAD / Keuangan)</h3>
+                        <p style="font-size: 0.82rem; color: #94a3b8; margin: 0; line-height: 1.4;">
+                            Unduh zip ini untuk dipasang di <b>laptop lain di madrasah</b>. Berisi <b>hanya engine CBT, soal, dan akun peserta</b> tanpa data keuangan, SPP, buku kasir, rapor, atau modul madrasah sensitif lainnya.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="<?= base_url('cbt/semi-online/download-standalone') ?>" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; text-decoration: none; padding: 12px 22px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4); transition: 0.2s;">
+                        <i data-lucide="download"></i>
+                        <span>Unduh Server CBT (.zip)</span>
+                    </a>
+                </div>
+            </div>
+
             <!-- Two Main Action Panels (Tahap 1 & Tahap 2) -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                 
