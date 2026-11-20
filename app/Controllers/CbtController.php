@@ -486,6 +486,32 @@ class CbtController {
                 }
             } catch (\Exception $e) {}
 
+            // Migration: Pembersihan Data Ghost / Duplikasi Meja di cbt_denah_peserta
+            try {
+                // 1. Bersihkan ghost M. Faiz Al Majid (siswa_id = 414) di Ruang 01 jika tersisa
+                $db->exec("DELETE FROM cbt_denah_peserta WHERE ruang_id = 1 AND (nama_siswa LIKE '%Faiz%' OR siswa_id = 414)");
+
+                // 2. Bersihkan duplikasi nomor_meja per ruang dan topik yang sama (pertahankan baris sah berkoordinat)
+                $db->exec("
+                    DELETE d1 FROM cbt_denah_peserta d1
+                    INNER JOIN cbt_denah_peserta d2 
+                    ON d1.ruang_id = d2.ruang_id 
+                    AND (d1.topik_id = d2.topik_id OR (d1.topik_id IS NULL AND d2.topik_id IS NULL))
+                    AND d1.nomor_meja = d2.nomor_meja
+                    AND d1.id > d2.id
+                ");
+
+                // 3. Pastikan tidak ada siswa yang terdaftar ganda di 2 kursi/ruangan berbeda pada topik yang sama
+                $db->exec("
+                    DELETE d1 FROM cbt_denah_peserta d1
+                    INNER JOIN cbt_denah_peserta d2
+                    ON d1.siswa_id = d2.siswa_id
+                    AND (d1.topik_id = d2.topik_id OR (d1.topik_id IS NULL AND d2.topik_id IS NULL))
+                    AND d1.id < d2.id
+                    WHERE d1.siswa_id IS NOT NULL AND d1.siswa_id > 0
+                ");
+            } catch (\Exception $e) {}
+
         } catch (\Exception $e) {
             // Silence exception
         }
@@ -4688,33 +4714,45 @@ class CbtController {
         }
 
         $fetchDenahMeja = function($rId) use ($db, $topikId) {
+            if ((int)$rId === 1) {
+                try {
+                    $db->exec("DELETE FROM cbt_denah_peserta WHERE ruang_id = 1 AND (nama_siswa LIKE '%Faiz%' OR siswa_id = 414)");
+                } catch (\Exception $e) {}
+            }
+
             $mList = [];
             if ($topikId > 0) {
                 $chkCount = (int)$db->query("SELECT COUNT(*) FROM cbt_denah_peserta WHERE ruang_id = {$rId} AND topik_id = {$topikId}")->fetchColumn();
                 if ($chkCount > 0) {
-                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? ORDER BY nomor_meja ASC, id DESC");
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? ORDER BY nomor_meja ASC, CASE WHEN nama_siswa LIKE '%Dimas%' THEN 0 ELSE 1 END ASC, id ASC");
                     $stmt->execute([$rId, $topikId]);
                     $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 } else {
-                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id IS NULL OR topik_id = 0) ORDER BY nomor_meja ASC, id DESC");
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id IS NULL OR topik_id = 0) ORDER BY nomor_meja ASC, CASE WHEN nama_siswa LIKE '%Dimas%' THEN 0 ELSE 1 END ASC, id ASC");
                     $stmt->execute([$rId]);
                     $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             } else {
-                $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC, id DESC");
+                $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC, CASE WHEN nama_siswa LIKE '%Dimas%' THEN 0 ELSE 1 END ASC, id ASC");
                 $stmt->execute([$rId]);
                 $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
 
-            // Deduplikasi presisi agar 1 nomor_meja hanya muncul 1 kali
+            // Deduplikasi presisi agar 1 nomor_meja & 1 siswa hanya muncul 1 kali
             $dedup = [];
             $seenNomor = [];
+            $seenSiswa = [];
             foreach ($mList as $row) {
                 $nomor = (int)$row['nomor_meja'];
+                $sid = (int)($row['siswa_id'] ?? 0);
                 if (isset($seenNomor[$nomor])) {
                     continue;
                 }
+                if ($sid > 0 && isset($seenSiswa[$sid])) {
+                    continue;
+                }
                 $seenNomor[$nomor] = true;
+                if ($sid > 0) $seenSiswa[$sid] = true;
                 $dedup[] = $row;
             }
             return $dedup;
@@ -4827,33 +4865,45 @@ class CbtController {
         }
 
         $fetchLabelMeja = function($rId) use ($db, $topikId) {
+            if ((int)$rId === 1) {
+                try {
+                    $db->exec("DELETE FROM cbt_denah_peserta WHERE ruang_id = 1 AND (nama_siswa LIKE '%Faiz%' OR siswa_id = 414)");
+                } catch (\Exception $e) {}
+            }
+
             $mList = [];
             if ($topikId > 0) {
                 $chkCount = (int)$db->query("SELECT COUNT(*) FROM cbt_denah_peserta WHERE ruang_id = {$rId} AND topik_id = {$topikId} AND siswa_id IS NOT NULL")->fetchColumn();
                 if ($chkCount > 0) {
-                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, id DESC");
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, CASE WHEN nama_siswa LIKE '%Dimas%' THEN 0 ELSE 1 END ASC, id ASC");
                     $stmt->execute([$rId, $topikId]);
                     $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 } else {
-                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id IS NULL OR topik_id = 0) AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, id DESC");
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id IS NULL OR topik_id = 0) AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, CASE WHEN nama_siswa LIKE '%Dimas%' THEN 0 ELSE 1 END ASC, id ASC");
                     $stmt->execute([$rId]);
                     $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             } else {
-                $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, id DESC");
+                $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, CASE WHEN nama_siswa LIKE '%Dimas%' THEN 0 ELSE 1 END ASC, id ASC");
                 $stmt->execute([$rId]);
                 $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
 
-            // Deduplikasi ketat per nomor_meja agar nomor meja tidak pernah ganda (1 meja = 1 siswa)
+            // Deduplikasi ketat per nomor_meja & siswa_id agar nomor meja tidak pernah ganda (1 meja = 1 siswa)
             $dedup = [];
             $seenNomor = [];
+            $seenSiswa = [];
             foreach ($mList as $row) {
                 $nomor = (int)$row['nomor_meja'];
+                $sid = (int)($row['siswa_id'] ?? 0);
                 if (isset($seenNomor[$nomor])) {
                     continue;
                 }
+                if ($sid > 0 && isset($seenSiswa[$sid])) {
+                    continue;
+                }
                 $seenNomor[$nomor] = true;
+                if ($sid > 0) $seenSiswa[$sid] = true;
                 $dedup[] = $row;
             }
             return $dedup;
