@@ -22,7 +22,7 @@ function build_cbt_standalone_package() {
     $apkFiles = [
         'cbt.php', 'cbt_scan.php', 'hasil_ujian.php', 'login.php', 'logout.php',
         'koneksi.php', 'header.php', 'footer.php', 'profil_cbt.php',
-        'apk_version_guard.php', 'ping_tracker.php', 'sw.js', 'manifest.json'
+        'apk_version_guard.php', 'ping_tracker.php', 'sw.js', 'manifest.json', 'cbt_sync_api.php'
     ];
     foreach ($apkFiles as $f) {
         $fullPath = $baseDir . '/apk/' . $f;

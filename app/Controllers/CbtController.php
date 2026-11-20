@@ -5748,7 +5748,7 @@ class CbtController {
         self::ensureTables($db);
 
         $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
-        $targetEndpoint = $serverUrl . '/cbt/semi-online/api/export-paket?token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+        $targetEndpoint = $serverUrl . '/apk/cbt_sync_api.php?action=export&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
         $ch = curl_init($targetEndpoint);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -5906,7 +5906,7 @@ class CbtController {
         self::ensureTables($db);
 
         $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
-        $targetEndpoint = $serverUrl . '/cbt/semi-online/api/import-hasil?token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+        $targetEndpoint = $serverUrl . '/apk/cbt_sync_api.php?action=import&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
         // Ambil data hasil lokal
         $peserta = $db->query("SELECT * FROM cbt_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
