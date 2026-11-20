@@ -5138,8 +5138,20 @@ class CbtController {
 
         // 2. Tentukan Jadwal Mapel & Sesi Aktif saat ini untuk kelas siswa tersebut
         $targetKelas = $siswa['kelas_nama'];
+        $tingkatKelas = (string)($siswa['tingkat'] ?? '');
+        $shortTingkat = 'X';
+        if (stripos($targetKelas, 'XII') !== false || stripos($targetKelas, '12') !== false || stripos($tingkatKelas, 'XII') !== false || $tingkatKelas === '12') {
+            $shortTingkat = 'XII';
+            $tingkatLabel = 'Kelas XII';
+        } elseif (stripos($targetKelas, 'XI') !== false || stripos($targetKelas, '11') !== false || stripos($tingkatKelas, 'XI') !== false || $tingkatKelas === '11') {
+            $shortTingkat = 'XI';
+            $tingkatLabel = 'Kelas XI';
+        } else {
+            $shortTingkat = 'X';
+            $tingkatLabel = 'Kelas X';
+        }
 
-        // Ambil seluruh jadwal ujian hari ini untuk kelas siswa tersebut
+        // Ambil seluruh jadwal ujian hari ini untuk kelas siswa tersebut (mendukung kelas reguler & kelas jauh)
         $stmtJadwal = $db->prepare("
             SELECT g.*, u.nama_ujian, s.jam_mulai, s.jam_selesai, s.label_sesi
             FROM cbt_jadwal_grid g
@@ -5150,16 +5162,32 @@ class CbtController {
                 OR g.jam_slot = CONCAT(s.jam_mulai, ' - ', s.jam_selesai)
                 OR g.jam_slot LIKE CONCAT('%', s.jam_mulai, '%')
             )
-            WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND g.hari = ?))
+            WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND g.hari = :curHari))
               AND (
-                  g.kelas_nama = ? 
-                  OR ? LIKE CONCAT('%', g.kelas_nama, '%') 
+                  g.kelas_nama = :kelas 
+                  OR :kelas2 LIKE CONCAT('%', g.kelas_nama, '%') 
+                  OR g.kelas_nama = :tingkatLabel
                   OR g.kelas_nama = 'Semua Kelas'
+                  OR g.kelas_nama = ''
                   OR g.kelas_nama IS NULL
+                  OR (
+                      (:shortTingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
+                      OR (:shortTingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                      OR (:shortTingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%' OR g.kelas_nama LIKE 'X E%' OR g.kelas_nama = 'X'))
+                  )
               )
-            ORDER BY g.id ASC
+            ORDER BY (g.kelas_nama = :kelas3) DESC, (g.kelas_nama = :tingkatLabel2) DESC, s.jam_mulai ASC, g.id ASC
         ");
-        $stmtJadwal->execute([$todayDate, $curHari, $targetKelas, $targetKelas]);
+        $stmtJadwal->execute([
+            ':today' => $todayDate,
+            ':curHari' => $curHari,
+            ':kelas' => $targetKelas,
+            ':kelas2' => $targetKelas,
+            ':kelas3' => $targetKelas,
+            ':tingkatLabel' => $tingkatLabel,
+            ':tingkatLabel2' => $tingkatLabel,
+            ':shortTingkat' => $shortTingkat
+        ]);
         $allJadwalGrid = $stmtJadwal->fetchAll(PDO::FETCH_ASSOC);
 
         $activeJadwal = null;
@@ -5185,11 +5213,13 @@ class CbtController {
                 $jg['parsed_jam_selesai'] = $jSelesai;
 
                 if (!empty($jMulai) && !empty($jSelesai)) {
-                    if ($curTime >= $jMulai && $curTime <= $jSelesai) {
+                    // Beri buffer scan awal 15 menit sebelum jam mulai sesi agar siswa yang antre di pintu bisa scan masuk
+                    $earlyBuffer = date('H:i:s', strtotime($todayDate . ' ' . $jMulai) - 900);
+                    if ($curTime >= $earlyBuffer && $curTime <= $jSelesai) {
                         $activeJadwal = $jg;
                         $allExpired = false;
                         break;
-                    } elseif ($curTime < $jMulai) {
+                    } elseif ($curTime < $earlyBuffer) {
                         $allExpired = false;
                         if (!$upcomingJadwal) {
                             $upcomingJadwal = $jg;
@@ -5241,11 +5271,19 @@ class CbtController {
         $ruangNama = trim($_POST['ruang_nama'] ?? ($jadwal['ruang'] ?? 'Gerbang / 1 Pintu'));
 
         // 3. Cek apakah sudah absen untuk mapel & tanggal ini
-        $stmtCheck = $db->prepare("
-            SELECT id, waktu_scan FROM cbt_absensi 
-            WHERE tanggal = ? AND nis = ? AND mapel_nama = ?
-        ");
-        $stmtCheck->execute([$todayDate, $siswa['nis'], $mapelNama]);
+        if ($tipePeserta === 'khusus') {
+            $stmtCheck = $db->prepare("
+                SELECT id, waktu_scan FROM cbt_absensi 
+                WHERE tanggal = ? AND (nis = ? OR (nis = ? AND ? != '') OR nama_siswa = ?) AND (mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+            ");
+            $stmtCheck->execute([$todayDate, $siswa['nis'], $siswa['nis'], $siswa['nis'], $siswa['nama'], $mapelNama, $mapelNama, $mapelNama]);
+        } else {
+            $stmtCheck = $db->prepare("
+                SELECT id, waktu_scan FROM cbt_absensi 
+                WHERE tanggal = ? AND (siswa_id = ? OR (nis = ? AND ? != '')) AND (mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+            ");
+            $stmtCheck->execute([$todayDate, $siswa['id'], $siswa['nis'], $siswa['nis'], $mapelNama, $mapelNama, $mapelNama]);
+        }
         $exist = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
         if ($exist) {
@@ -5276,6 +5314,7 @@ class CbtController {
         }
 
         $petugasNama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengawas CBT');
+        $saveSiswaId = ($tipePeserta === 'khusus') ? null : $siswa['id'];
 
         // 4. Catat ke cbt_absensi
         $stmtIns = $db->prepare("
@@ -5285,7 +5324,7 @@ class CbtController {
         ");
         $stmtIns->execute([
             $todayDate,
-            $siswa['id'],
+            $saveSiswaId,
             $siswa['nis'],
             $siswa['nama'],
             $siswa['kelas_nama'],
