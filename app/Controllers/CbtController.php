@@ -4698,6 +4698,13 @@ class CbtController {
                 $stmtTp->execute([$topikId]);
                 $topik = $stmtTp->fetch(PDO::FETCH_ASSOC);
             } catch (\Exception $e) {}
+            if (!$topik && isset($db)) {
+                try {
+                    $stmtTp = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+                    $stmtTp->execute([$topikId]);
+                    $topik = $stmtTp->fetch(PDO::FETCH_ASSOC);
+                } catch (\Exception $e) {}
+            }
         }
 
         // Ambil Data Kop Surat Resmi dari SIAKAD (pengaturan_kop_surat)
@@ -4849,6 +4856,13 @@ class CbtController {
                 $stmtTp->execute([$topikId]);
                 $topik = $stmtTp->fetch(PDO::FETCH_ASSOC);
             } catch (\Exception $e) {}
+            if (!$topik && isset($db)) {
+                try {
+                    $stmtTp = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+                    $stmtTp->execute([$topikId]);
+                    $topik = $stmtTp->fetch(PDO::FETCH_ASSOC);
+                } catch (\Exception $e) {}
+            }
         }
 
         // Ambil Data Kop Surat Resmi dari SIAKAD (pengaturan_kop_surat)

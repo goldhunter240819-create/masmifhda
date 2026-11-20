@@ -22,6 +22,9 @@ $telepon = $kop['telepon'] ?? '';
 $email = $kop['email'] ?? '';
 $website = $kop['website'] ?? '';
 
+$topikNama = !empty($topik['nama_topik']) ? trim($topik['nama_topik']) : 'SIMULASI NEW CBT';
+$topikTA = !empty($topik['tahun_ajaran']) ? trim($topik['tahun_ajaran']) : '2026/2027';
+
 // Jika bukan cetak semua ruangan, bungkus $ruang dan $mejaList ke dalam format array standar
 if (!$isAllRooms) {
     $roomsData = [
@@ -441,8 +444,8 @@ if (!$isAllRooms) {
 
         <!-- JUDUL DOKUMEN -->
         <div class="doc-title-box">
-            <h3>DENAH TEMPAT DUDUK PESERTA ASESMEN CBT</h3>
-            <p>TAHUN AJARAN 2026/2027</p>
+            <h3>DENAH TEMPAT DUDUK (<?= htmlspecialchars($topikNama) ?>)</h3>
+            <p>TAHUN AJARAN <?= htmlspecialchars($topikTA) ?></p>
         </div>
 
         <!-- METADATA RUANGAN (PENGAWAS RUANG SUDAH DIHAPUS) -->

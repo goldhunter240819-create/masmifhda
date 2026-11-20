@@ -118,7 +118,7 @@ include 'header.php';
             <p><i class="fa-solid fa-satellite-dish"></i> Portal Mandiri Kelas Jauh</p>
             <h1>Pengawas CBT Kelas Jauh</h1>
         </div>
-        <div class="avatar" style="color: #059669; background: white;" onclick="window.location.href='logout.php'">
+        <div class="avatar" style="color: #ef4444; background: white; cursor: pointer;" onclick="confirmLogoutPengawasKJ(event)" title="Keluar">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </div>
     </div>
@@ -438,6 +438,47 @@ include 'header.php';
         .catch(() => {
             alert('Gagal menghubungi server.');
         });
+    function confirmLogoutPengawasKJ(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        Swal.fire({
+            title: '<div style="font-size: 1.25rem; font-weight: 900; color: #0f172a; margin-top: 4px;">Keluar Akun Pengawas?</div>',
+            html: `
+                <div style="font-size: 0.88rem; color: #64748b; line-height: 1.5; margin: 8px 0 14px;">
+                    Bapak/Ibu <b><?= htmlspecialchars($pengawas_kj['nama'] ?? 'Pengawas CBT') ?></b>, Anda akan mengakhiri sesi pada <b>Portal Pengawas Kelas Jauh</b>.
+                </div>
+                <div style="background: #fef2f2; border: 1.5px dashed #fca5a5; border-radius: 12px; padding: 10px 14px; font-size: 0.78rem; color: #b91c1c; display: flex; align-items: center; gap: 10px; text-align: left;">
+                    <i class="fa-solid fa-shield-halved" style="font-size: 1.2rem; flex-shrink: 0; color: #ef4444;"></i>
+                    <span>Pastikan Anda telah selesai memantau ujian & seluruh absensi siswa cabang telah tersimpan.</span>
+                </div>
+            `,
+            icon: 'warning',
+            iconColor: '#ef4444',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: '<i class="fa-solid fa-arrow-right-from-bracket" style="margin-right: 6px;"></i> Ya, Keluar Sekarang',
+            cancelButtonText: '<i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Batal',
+            reverseButtons: true,
+            background: '#ffffff',
+            padding: '24px 20px',
+            borderRadius: '20px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: '<span style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">Menutup Sesi...</span>',
+                    html: '<span style="font-size: 0.82rem; color: #64748b;">Terima kasih atas dedikasi pengawasan ujian Anda!</span>',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    timer: 900,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                setTimeout(() => {
+                    window.location.href = 'logout.php';
+                }, 750);
+            }
+        });
     }
 </script>
 
@@ -455,7 +496,7 @@ include 'header.php';
         <i class="fa-solid fa-chart-line" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
         <span style="font-size: 0.72rem; font-weight: 700;">Hasil Nilai</span>
     </a>
-    <a href="javascript:void(0)" onclick="if(confirm('Yakin ingin keluar / logout dari akun pengawas?')) window.location.href='logout.php';" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
+    <a href="javascript:void(0)" onclick="confirmLogoutPengawasKJ(event)" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
         <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
         <span style="font-size: 0.72rem; font-weight: 700;">Keluar</span>
     </a>

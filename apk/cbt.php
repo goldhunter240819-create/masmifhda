@@ -189,6 +189,20 @@ try {
     $allowedKelas = array_values(array_unique(array_filter($allowedKelas)));
     $inPlaceholders = implode(',', array_fill(0, count($allowedKelas), '?'));
 
+    // Khusus Siswa CBT Kelas Jauh (is_cbt_only):
+    // Jangan match ke p.siswa_id karena ID cbt_peserta_khusus BUKAN id tabel siswa reguler!
+    // Matching siswa kelas jauh menggunakan no_peserta, nis, atau nama_siswa.
+    if ($is_cbt_only) {
+        $noPesertaKj = (string)($cbtStudent['no_peserta'] ?? '');
+        $nisKj = (string)($cbtStudent['nis'] ?? '');
+        $namaKj = (string)($cbtStudent['nama_siswa'] ?? '');
+        $joinPesertaSql = "(p.siswa_id IS NULL AND (p.nis = ? OR (p.nis = ? AND ? != '') OR p.nama_siswa = ?))";
+        $joinPesertaParams = [$noPesertaKj, $nisKj, $nisKj, $namaKj];
+    } else {
+        $joinPesertaSql = "(p.siswa_id = ? OR (p.nis = ? AND ? != ''))";
+        $joinPesertaParams = [$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')];
+    }
+
     $sqlUjian = "
         SELECT u.*,
                t.nama_topik,
@@ -199,7 +213,7 @@ try {
                p.waktu_mulai,
                p.waktu_selesai
         FROM cbt_ujian u
-        LEFT JOIN cbt_peserta p ON p.ujian_id = u.id AND (p.siswa_id = ? OR (p.nis = ? AND ? != ''))
+        LEFT JOIN cbt_peserta p ON p.ujian_id = u.id AND {$joinPesertaSql}
         LEFT JOIN bs_topik t ON u.topik_id = t.id
         WHERE u.status = 'Aktif'
           AND (u.topik_id IS NULL OR u.topik_id = 0 OR (t.id IS NOT NULL AND t.status = 'Aktif'))
@@ -214,14 +228,15 @@ try {
             (total_soal > 0) DESC, 
             u.id DESC
     ";
-    $params = array_merge([
-        $siswa_id, 
-        (string)($siswa['nis'] ?? ''), 
-        (string)($siswa['nis'] ?? ''),
-        (string)($siswa['nama_kelas'] ?? ''),
-        (string)$tingkat_kelas,
-        (string)$short_tingkat
-    ], $allowedKelas);
+    $params = array_merge(
+        $joinPesertaParams,
+        [
+            (string)($siswa['nama_kelas'] ?? ''),
+            (string)$tingkat_kelas,
+            (string)$short_tingkat
+        ], 
+        $allowedKelas
+    );
     $stmtUjian = $core_db->prepare($sqlUjian);
     $stmtUjian->execute($params);
     $ujianListRaw = $stmtUjian->fetchAll(PDO::FETCH_ASSOC);
@@ -273,12 +288,15 @@ try {
         WHERE (
             g.kelas_nama = :kelas 
             OR g.kelas_nama = :tingkat 
-            OR g.kelas_nama = :short_tingkat
             OR g.kelas_nama = 'Semua Kelas'
-            OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
-            OR g.kelas_nama LIKE CONCAT('%', :short_tingkat, '%')
             OR g.kelas_nama IS NULL 
             OR g.kelas_nama = ''
+            OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
+            OR (
+                (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%'))
+                OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%'))
+                OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama = 'X'))
+            )
         )
     ";
     if ($nearestTopikId > 0) {
@@ -358,19 +376,36 @@ try {
 $absenHariIniMap = [];
 if ($requireAttendance) {
     try {
-        $stmtAbs = $core_db->prepare("
-            SELECT ujian_id, mapel_nama, status, waktu_scan 
-            FROM cbt_absensi 
-            WHERE (siswa_id = :sid OR (nis = :nis AND :nis != '')) 
-              AND (tanggal = :today OR DATE(waktu_scan) = :today2)
-              AND status IN ('Hadir', 'Terlambat')
-        ");
-        $stmtAbs->execute([
-            ':sid' => $siswa_id,
-            ':nis' => (string)($siswa['nis'] ?? ''),
-            ':today' => $todayDate,
-            ':today2' => $todayDate
-        ]);
+        if ($is_cbt_only) {
+            $stmtAbs = $core_db->prepare("
+                SELECT ujian_id, mapel_nama, status, waktu_scan 
+                FROM cbt_absensi 
+                WHERE (nis = :no_peserta OR (nis = :nis AND :nis != '') OR nama_siswa = :nama_kj) 
+                  AND (tanggal = :today OR DATE(waktu_scan) = :today2)
+                  AND status IN ('Hadir', 'Terlambat')
+            ");
+            $stmtAbs->execute([
+                ':no_peserta' => (string)($cbtStudent['no_peserta'] ?? ''),
+                ':nis' => (string)($cbtStudent['nis'] ?? ''),
+                ':nama_kj' => (string)($cbtStudent['nama_siswa'] ?? ''),
+                ':today' => $todayDate,
+                ':today2' => $todayDate
+            ]);
+        } else {
+            $stmtAbs = $core_db->prepare("
+                SELECT ujian_id, mapel_nama, status, waktu_scan 
+                FROM cbt_absensi 
+                WHERE (siswa_id = :sid OR (nis = :nis AND :nis != '')) 
+                  AND (tanggal = :today OR DATE(waktu_scan) = :today2)
+                  AND status IN ('Hadir', 'Terlambat')
+            ");
+            $stmtAbs->execute([
+                ':sid' => $siswa_id,
+                ':nis' => (string)($siswa['nis'] ?? ''),
+                ':today' => $todayDate,
+                ':today2' => $todayDate
+            ]);
+        }
         while ($abRow = $stmtAbs->fetch(PDO::FETCH_ASSOC)) {
             if (!empty($abRow['ujian_id'])) {
                 $absenHariIniMap['uid_' . $abRow['ujian_id']] = $abRow;
@@ -435,10 +470,15 @@ foreach ($ujianListRaw as $u) {
                           AND (
                               g.kelas_nama = :kelas 
                               OR g.kelas_nama = :tingkat 
-                              OR g.kelas_nama = :short_tingkat
                               OR g.kelas_nama = 'Semua Kelas' 
+                              OR g.kelas_nama = ''
+                              OR g.kelas_nama IS NULL
                               OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
-                              OR g.kelas_nama LIKE CONCAT('%', :short_tingkat, '%')
+                              OR (
+                                  (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%'))
+                                  OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%'))
+                                  OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama = 'X'))
+                              )
                           )
                       )
                   )
@@ -524,10 +564,15 @@ foreach ($ujianListRaw as $u) {
                            AND (
                                g.kelas_nama = :kelas 
                                OR g.kelas_nama = :tingkat 
-                               OR g.kelas_nama = :short_tingkat
                                OR g.kelas_nama = 'Semua Kelas' 
+                               OR g.kelas_nama = ''
+                               OR g.kelas_nama IS NULL
                                OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
-                               OR g.kelas_nama LIKE CONCAT('%', :short_tingkat, '%')
+                               OR (
+                                   (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%'))
+                                   OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%'))
+                                   OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama = 'X'))
+                               )
                            )
                        )
                     ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, g.jam_slot ASC, g.id ASC LIMIT 1
@@ -799,18 +844,35 @@ if (!$is_cbt_only && !empty($siswa['id'])) {
 // 5. Riwayat Ujian yang Sudah Selesai
 $riwayatUjian = [];
 try {
-    $stmtRiw = $core_db->prepare("
-        SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit
-        FROM cbt_peserta p
-        JOIN cbt_ujian u ON p.ujian_id = u.id
-        WHERE (p.siswa_id = :sid OR (p.nis = :nis AND :nis != ''))
-          AND p.status_pengerjaan = 'Selesai'
-        ORDER BY p.waktu_selesai DESC
-    ");
-    $stmtRiw->execute([
-        'sid' => $siswa_id,
-        'nis' => (string)($siswa['nis'] ?? '')
-    ]);
+    if ($is_cbt_only) {
+        $stmtRiw = $core_db->prepare("
+            SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit
+            FROM cbt_peserta p
+            JOIN cbt_ujian u ON p.ujian_id = u.id
+            WHERE p.siswa_id IS NULL 
+              AND (p.nis = :no_peserta OR (p.nis = :nis AND :nis != '') OR p.nama_siswa = :nama_kj)
+              AND p.status_pengerjaan = 'Selesai'
+            ORDER BY p.waktu_selesai DESC
+        ");
+        $stmtRiw->execute([
+            ':no_peserta' => (string)($cbtStudent['no_peserta'] ?? ''),
+            ':nis' => (string)($cbtStudent['nis'] ?? ''),
+            ':nama_kj' => (string)($cbtStudent['nama_siswa'] ?? '')
+        ]);
+    } else {
+        $stmtRiw = $core_db->prepare("
+            SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit
+            FROM cbt_peserta p
+            JOIN cbt_ujian u ON p.ujian_id = u.id
+            WHERE (p.siswa_id = :sid OR (p.nis = :nis AND :nis != ''))
+              AND p.status_pengerjaan = 'Selesai'
+            ORDER BY p.waktu_selesai DESC
+        ");
+        $stmtRiw->execute([
+            'sid' => $siswa_id,
+            'nis' => (string)($siswa['nis'] ?? '')
+        ]);
+    }
     $riwayatUjian = $stmtRiw->fetchAll(PDO::FETCH_ASSOC);
 } catch (\Exception $e) {}
 
