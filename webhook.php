@@ -196,15 +196,6 @@ try {
         $dbSiakad = \App\Core\Database::connect('siakad');
         \App\Controllers\CbtController::syncJadwalWithUjian($dbCore, $dbSiakad, (int)$tpRow['id']);
     }
-
-    try {
-        $stmtG = $dbCore->query("SELECT id, topik_id, hari, tanggal, jam_slot, kelas_nama, mapel_nama, ujian_id FROM cbt_jadwal_grid WHERE hari LIKE '%Jumat%' OR tanggal = '2026-11-20' OR tanggal = CURDATE() ORDER BY id ASC");
-        $output .= "\nGRID JUMAT:\n" . print_r($stmtG->fetchAll(PDO::FETCH_ASSOC), true) . "\n";
-        $stmtS = $dbCore->query("SELECT * FROM cbt_jam_slot ORDER BY id ASC");
-        $output .= "\nJAM SLOTS:\n" . print_r($stmtS->fetchAll(PDO::FETCH_ASSOC), true) . "\n";
-    } catch (\Throwable $e) {
-        $output .= "\nDiagnostic error: " . $e->getMessage() . "\n";
-    }
     $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";
 } catch (\Throwable $e) {
     $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";

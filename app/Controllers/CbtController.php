@@ -3043,18 +3043,27 @@ class CbtController {
                 exit;
             }
 
-            if (!empty($jGrid['jam_mulai'])) {
-                $startTs = strtotime($todayDate . ' ' . $jGrid['jam_mulai']);
+            $jMulai = !empty($jGrid['jam_mulai']) ? trim($jGrid['jam_mulai']) : null;
+            $jSelesai = !empty($jGrid['jam_selesai']) ? trim($jGrid['jam_selesai']) : null;
+            if ((empty($jMulai) || empty($jSelesai)) && !empty($jGrid['jam_slot'])) {
+                if (preg_match('/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/', $jGrid['jam_slot'], $m)) {
+                    $jMulai = sprintf('%05s', $m[1]);
+                    $jSelesai = sprintf('%05s', $m[2]);
+                }
+            }
+
+            if (!empty($jMulai)) {
+                $startTs = strtotime($todayDate . ' ' . $jMulai);
                 if ($nowTs < $startTs) {
-                    echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai hari ini pukul " . $jGrid['jam_mulai'] . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                    echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai hari ini pukul " . substr($jMulai, 0, 5) . " WIB.'); window.location.href='/apk/cbt.php';</script>";
                     exit;
                 }
             }
 
-            if (!empty($jGrid['jam_selesai'])) {
-                $endTs = strtotime($todayDate . ' ' . $jGrid['jam_selesai']);
+            if (!empty($jSelesai)) {
+                $endTs = strtotime($todayDate . ' ' . $jSelesai);
                 if ($nowTs > $endTs) {
-                    echo "<script>alert('Waktu pelaksanaan sesi ujian ini telah berakhir pada pukul " . $jGrid['jam_selesai'] . " WIB! Anda tidak dapat mengerjakan di luar jam sesi resmi. Hubungi proktor jika Anda membutuhkan ujian susulan.'); window.location.href='/apk/cbt.php';</script>";
+                    echo "<script>alert('Waktu pelaksanaan sesi ujian ini telah berakhir pada pukul " . substr($jSelesai, 0, 5) . " WIB! Anda tidak dapat mengerjakan di luar jam sesi resmi. Hubungi proktor jika Anda membutuhkan ujian susulan.'); window.location.href='/apk/cbt.php';</script>";
                     exit;
                 }
             }
@@ -5190,17 +5199,17 @@ class CbtController {
                 $tingkatSql = "((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%')";
             }
 
+            // Ambil master slot jam untuk resolusi label sesi & jam
+            $allSlots = [];
+            try {
+                $allSlots = $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+
             // Ambil seluruh jadwal ujian hari ini untuk kelas siswa tersebut (mendukung kelas reguler & kelas jauh)
             $stmtJadwal = $db->prepare("
-                SELECT g.*, u.nama_ujian, s.jam_mulai, s.jam_selesai, s.label_sesi
+                SELECT g.*, u.nama_ujian
                 FROM cbt_jadwal_grid g
                 LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
-                LEFT JOIN cbt_jam_slot s ON (
-                    g.jam_slot = s.label_sesi 
-                    OR g.jam_slot = s.urutan 
-                    OR g.jam_slot = CONCAT(s.jam_mulai, ' - ', s.jam_selesai)
-                    OR g.jam_slot LIKE CONCAT('%', s.jam_mulai, '%')
-                )
                 WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND (g.hari = ? OR g.hari LIKE ?)))
                   AND (
                       g.kelas_nama = ? 
@@ -5211,7 +5220,7 @@ class CbtController {
                       OR g.kelas_nama IS NULL
                       OR {$tingkatSql}
                   )
-                ORDER BY (g.kelas_nama = ?) DESC, (g.kelas_nama = ?) DESC, s.jam_mulai ASC, g.id ASC
+                ORDER BY (g.kelas_nama = ?) DESC, (g.kelas_nama = ?) DESC, g.id ASC
             ");
             $curHariLike = $curHari . '%';
             $stmtJadwal->execute([
@@ -5226,37 +5235,90 @@ class CbtController {
             ]);
             $allJadwalGrid = $stmtJadwal->fetchAll(PDO::FETCH_ASSOC);
 
-            $activeJadwal = null;
+            // Parsing akurat jam_mulai, jam_selesai, dan label_sesi per baris jadwal
+            foreach ($allJadwalGrid as &$jg) {
+                $rawSlot = trim($jg['jam_slot'] ?? '');
+                $jMulai = null;
+                $jSelesai = null;
+
+                if (preg_match('/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/', $rawSlot, $mTimes)) {
+                    $jMulai = sprintf('%05s', $mTimes[1]);
+                    $jSelesai = sprintf('%05s', $mTimes[2]);
+                } else {
+                    foreach ($allSlots as $sl) {
+                        if ($rawSlot === $sl['label_sesi'] || $rawSlot === (string)$sl['urutan']) {
+                            $jMulai = substr(trim($sl['jam_mulai']), 0, 5);
+                            $jSelesai = substr(trim($sl['jam_selesai']), 0, 5);
+                            break;
+                        }
+                    }
+                }
+
+                if (!empty($jMulai) && strlen($jMulai) === 5) $jMulai .= ':00';
+                if (!empty($jSelesai) && strlen($jSelesai) === 5) $jSelesai .= ':00';
+
+                $jg['parsed_jam_mulai'] = $jMulai;
+                $jg['parsed_jam_selesai'] = $jSelesai;
+
+                // Tentukan Label Sesi yang tepat
+                $labelSesi = '';
+                $jMulaiShort = !empty($jMulai) ? substr($jMulai, 0, 5) : '';
+                if ($jMulaiShort === '08:00') {
+                    $labelSesi = 'Sesi 1';
+                } elseif ($jMulaiShort === '09:00') {
+                    $labelSesi = 'Sesi 2';
+                } elseif ($jMulaiShort === '10:10') {
+                    $labelSesi = 'Sesi 3';
+                } else {
+                    foreach ($allSlots as $sl) {
+                        $slMulai = substr(trim($sl['jam_mulai']), 0, 5);
+                        if ($slMulai === $jMulaiShort || $rawSlot === $sl['label_sesi']) {
+                            $labelSesi = $sl['label_sesi'];
+                            break;
+                        }
+                    }
+                    if (empty($labelSesi)) {
+                        $labelSesi = !empty($rawSlot) ? $rawSlot : 'Sesi Ujian';
+                    }
+                }
+                $jg['label_sesi'] = $labelSesi;
+            }
+            unset($jg);
+
+            // Urutkan jadwal berdasarkan jam mulai sesi secara kronologis
+            usort($allJadwalGrid, function($a, $b) {
+                return strcmp($a['parsed_jam_mulai'] ?? '99:99:99', $b['parsed_jam_mulai'] ?? '99:99:99');
+            });
+
+            $strictlyActiveJadwal = null;
+            $bufferActiveJadwal = null;
             $upcomingJadwal = null;
             $allExpired = true;
 
             if (!empty($allJadwalGrid)) {
                 foreach ($allJadwalGrid as $jg) {
-                    // Ekstraksi jam_mulai dan jam_selesai dengan cerdas
-                    $jMulai = !empty($jg['jam_mulai']) ? trim($jg['jam_mulai']) : null;
-                    $jSelesai = !empty($jg['jam_selesai']) ? trim($jg['jam_selesai']) : null;
-
-                    if ((empty($jMulai) || empty($jSelesai)) && !empty($jg['jam_slot'])) {
-                        if (preg_match('/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/', $jg['jam_slot'], $m)) {
-                            $jMulai = sprintf('%05s', $m[1]);
-                            $jSelesai = sprintf('%05s', $m[2]);
-                        }
-                    }
-                    if (!empty($jMulai) && strlen($jMulai) === 5) $jMulai .= ':00';
-                    if (!empty($jSelesai) && strlen($jSelesai) === 5) $jSelesai .= ':00';
-
-                    $jg['parsed_jam_mulai'] = $jMulai;
-                    $jg['parsed_jam_selesai'] = $jSelesai;
+                    $jMulai = $jg['parsed_jam_mulai'];
+                    $jSelesai = $jg['parsed_jam_selesai'];
 
                     if (!empty($jMulai) && !empty($jSelesai)) {
-                        // Beri buffer scan awal 15 menit sebelum jam mulai sesi agar siswa yang antre di pintu bisa scan masuk
+                        if ($curTime <= $jSelesai) {
+                            $allExpired = false;
+                        }
+
+                        // Prioritas 1: Sesi yang benar-benar SEDANG BERLANGSUNG pada jam saat ini
+                        if ($curTime >= $jMulai && $curTime <= $jSelesai) {
+                            if (!$strictlyActiveJadwal) {
+                                $strictlyActiveJadwal = $jg;
+                            }
+                        }
+
+                        // Prioritas 2: Buffer scan awal 15 menit sebelum jam mulai sesi
                         $earlyBuffer = date('H:i:s', strtotime($todayDate . ' ' . $jMulai) - 900);
                         if ($curTime >= $earlyBuffer && $curTime <= $jSelesai) {
-                            $activeJadwal = $jg;
-                            $allExpired = false;
-                            break;
+                            if (!$bufferActiveJadwal) {
+                                $bufferActiveJadwal = $jg;
+                            }
                         } elseif ($curTime < $earlyBuffer) {
-                            $allExpired = false;
                             if (!$upcomingJadwal) {
                                 $upcomingJadwal = $jg;
                             }
@@ -5265,6 +5327,10 @@ class CbtController {
                         $allExpired = false;
                     }
                 }
+
+                // Utamakan sesi yang saat ini jam resminya sedang berlangsung.
+                // Jika tidak ada (misal siswa datang 15 menit sebelum sesi 1 mulai atau saat istirahat), gunakan buffer sesi berikutnya.
+                $activeJadwal = $strictlyActiveJadwal ?: $bufferActiveJadwal;
 
                 // ATURAN KETAT JAM SESI:
                 if (!$activeJadwal) {

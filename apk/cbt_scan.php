@@ -443,11 +443,36 @@ include 'header.php';
         <i class="fa-solid fa-chart-line" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
         <span style="font-size: 0.72rem; font-weight: 700;">Hasil Nilai</span>
     </a>
-    <a href="javascript:void(0)" onclick="if(confirm('Yakin ingin keluar / logout dari akun pengawas?')) window.location.href='logout.php';" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
+    <a href="javascript:void(0)" onclick="confirmLogoutPengawas()" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
         <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
         <span style="font-size: 0.72rem; font-weight: 700;">Keluar</span>
     </a>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmLogoutPengawas() {
+    Swal.fire({
+        title: 'Keluar Pengawas?',
+        text: 'Apakah Bapak/Ibu pengawas yakin ingin logout dari sesi scan CBT ini?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-arrow-right-from-bracket"></i> Ya, Keluar',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+        background: '#ffffff',
+        customClass: {
+            popup: 'swal2-border-radius'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'logout.php';
+        }
+    });
+}
+</script>
 
 </div> <!-- .mobile-wrapper -->
 </body>
