@@ -168,12 +168,23 @@ try {
     if ($short_tingkat === 'XII') {
         $allowedKelas[] = 'Kelas 12';
         $allowedKelas[] = '12';
+        $allowedKelas[] = 'Kelas XII';
+        $allowedKelas[] = 'XII F.1';
+        $allowedKelas[] = 'XII F.2';
     } elseif ($short_tingkat === 'XI') {
         $allowedKelas[] = 'Kelas 11';
         $allowedKelas[] = '11';
+        $allowedKelas[] = 'Kelas XI';
+        $allowedKelas[] = 'XI F.1';
+        $allowedKelas[] = 'XI F.2';
     } else {
         $allowedKelas[] = 'Kelas 10';
         $allowedKelas[] = '10';
+        $allowedKelas[] = 'Kelas X';
+        $allowedKelas[] = 'X E.1';
+        $allowedKelas[] = 'X E.2';
+        $allowedKelas[] = 'X E';
+        $allowedKelas[] = 'X - Kelas Jauh';
     }
 
     try {
@@ -183,6 +194,25 @@ try {
         $rombelNames = $stmtK->fetchAll(PDO::FETCH_COLUMN);
         if (!empty($rombelNames)) {
             $allowedKelas = array_merge($allowedKelas, $rombelNames);
+        }
+    } catch (\Exception $e) {}
+
+    // Ambil juga kelas-kelas unik dari cbt_ujian yang beririsan dengan tingkat ini
+    try {
+        $stmtAllU = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_ujian WHERE kelas_nama IS NOT NULL AND kelas_nama != ''");
+        if ($stmtAllU) {
+            $allUKelas = $stmtAllU->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($allUKelas as $uk) {
+                if ($short_tingkat === 'XII' && (stripos($uk, 'XII') !== false || stripos($uk, '12') !== false)) {
+                    $allowedKelas[] = $uk;
+                } elseif ($short_tingkat === 'XI' && (stripos($uk, 'XI') !== false || stripos($uk, '11') !== false)) {
+                    $allowedKelas[] = $uk;
+                } elseif ($short_tingkat === 'X' && (preg_match('/^X\b/i', $uk) || stripos($uk, 'Kelas 10') !== false || stripos($uk, 'Kelas X') !== false || stripos($uk, 'X E') !== false)) {
+                    if (stripos($uk, 'XI') === false && stripos($uk, 'XII') === false) {
+                        $allowedKelas[] = $uk;
+                    }
+                }
+            }
         }
     } catch (\Exception $e) {}
 
@@ -228,14 +258,18 @@ try {
             (total_soal > 0) DESC, 
             u.id DESC
     ";
+    // Urutan parameter PDO HARUS persis sesuai posisi '?' di dalam query SQL:
+    // 1. $joinPesertaParams (di LEFT JOIN cbt_peserta)
+    // 2. $allowedKelas (di WHERE u.kelas_nama IN ($inPlaceholders))
+    // 3. ORDER BY placeholders (u.kelas_nama = ?, u.kelas_nama IN (?, ?))
     $params = array_merge(
         $joinPesertaParams,
+        $allowedKelas,
         [
             (string)($siswa['nama_kelas'] ?? ''),
             (string)$tingkat_kelas,
             (string)$short_tingkat
-        ], 
-        $allowedKelas
+        ]
     );
     $stmtUjian = $core_db->prepare($sqlUjian);
     $stmtUjian->execute($params);
@@ -256,9 +290,9 @@ try {
             $mKeyNorm = $mRaw;
         }
 
-        $mKey = ($uRaw['topik_id'] ?? 0) . '_' . $mKeyNorm;
+        $mKey = $mKeyNorm;
         if (isset($seenMapelKeys[$mKey])) {
-            continue; // Lewati duplikat mapel yang sama dalam satu topik
+            continue; // Lewati duplikat mapel yang sama
         }
         $seenMapelKeys[$mKey] = true;
         $dedupedList[] = $uRaw;
@@ -293,9 +327,9 @@ try {
             OR g.kelas_nama = ''
             OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
             OR (
-                (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%'))
-                OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%'))
-                OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama = 'X'))
+                (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
+                OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%' OR g.kelas_nama LIKE 'X E%' OR g.kelas_nama = 'X'))
             )
         )
     ";
@@ -475,9 +509,9 @@ foreach ($ujianListRaw as $u) {
                               OR g.kelas_nama IS NULL
                               OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
                               OR (
-                                  (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%'))
-                                  OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%'))
-                                  OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama = 'X'))
+                                  (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
+                                  OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                                  OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%' OR g.kelas_nama LIKE 'X E%' OR g.kelas_nama = 'X'))
                               )
                           )
                       )
@@ -569,9 +603,9 @@ foreach ($ujianListRaw as $u) {
                                OR g.kelas_nama IS NULL
                                OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
                                OR (
-                                   (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%'))
-                                   OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%'))
-                                   OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama = 'X'))
+                                   (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
+                                   OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                                   OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%' OR g.kelas_nama LIKE 'X E%' OR g.kelas_nama = 'X'))
                                )
                            )
                        )
