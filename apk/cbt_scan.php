@@ -297,7 +297,14 @@ include 'header.php';
                 ruang_nama: ruang
             })
         })
-        .then(res => res.json())
+        .then(async res => {
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch(e) {
+                return { success: false, message: 'Respon server: ' + (text ? text.replace(/<[^>]*>?/gm, '').substring(0, 160) : 'Koneksi terputus') };
+            }
+        })
         .then(res => {
             if (res.success) {
                 if (res.already) {

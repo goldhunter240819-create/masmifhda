@@ -171,46 +171,53 @@ try {
         $allowedKelas[] = 'Kelas XII';
         $allowedKelas[] = 'XII F.1';
         $allowedKelas[] = 'XII F.2';
+        $allowedKelas[] = 'XIIF.1';
+        $allowedKelas[] = 'XIIF.2';
+        $allowedKelas[] = 'XII - Kelas Jauh';
     } elseif ($short_tingkat === 'XI') {
         $allowedKelas[] = 'Kelas 11';
         $allowedKelas[] = '11';
         $allowedKelas[] = 'Kelas XI';
         $allowedKelas[] = 'XI F.1';
         $allowedKelas[] = 'XI F.2';
+        $allowedKelas[] = 'XIF.1';
+        $allowedKelas[] = 'XIF.2';
+        $allowedKelas[] = 'XI - Kelas Jauh';
     } else {
         $allowedKelas[] = 'Kelas 10';
         $allowedKelas[] = '10';
         $allowedKelas[] = 'Kelas X';
         $allowedKelas[] = 'X E.1';
         $allowedKelas[] = 'X E.2';
+        $allowedKelas[] = 'XE.1';
+        $allowedKelas[] = 'XE.2';
         $allowedKelas[] = 'X E';
+        $allowedKelas[] = 'XE';
         $allowedKelas[] = 'X - Kelas Jauh';
     }
 
     try {
         $numTingkat = ($short_tingkat === 'XII') ? 12 : (($short_tingkat === 'XI') ? 11 : 10);
-        $stmtK = $core_db->prepare("SELECT nama_kelas FROM kelas WHERE tingkat = ?");
-        $stmtK->execute([$numTingkat]);
+        $stmtK = $core_db->prepare("SELECT nama_kelas FROM kelas WHERE tingkat = ? OR tingkat = ?");
+        $stmtK->execute([$numTingkat, $short_tingkat]);
         $rombelNames = $stmtK->fetchAll(PDO::FETCH_COLUMN);
         if (!empty($rombelNames)) {
             $allowedKelas = array_merge($allowedKelas, $rombelNames);
         }
     } catch (\Exception $e) {}
 
-    // Ambil juga kelas-kelas unik dari cbt_ujian yang beririsan dengan tingkat ini
+    // Ambil juga kelas-kelas unik dari cbt_ujian & cbt_jadwal_grid yang beririsan dengan tingkat ini
     try {
-        $stmtAllU = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_ujian WHERE kelas_nama IS NOT NULL AND kelas_nama != ''");
+        $stmtAllU = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_ujian WHERE kelas_nama IS NOT NULL AND kelas_nama != '' UNION SELECT DISTINCT kelas_nama FROM cbt_jadwal_grid WHERE kelas_nama IS NOT NULL AND kelas_nama != ''");
         if ($stmtAllU) {
             $allUKelas = $stmtAllU->fetchAll(PDO::FETCH_COLUMN);
             foreach ($allUKelas as $uk) {
                 if ($short_tingkat === 'XII' && (stripos($uk, 'XII') !== false || stripos($uk, '12') !== false)) {
                     $allowedKelas[] = $uk;
-                } elseif ($short_tingkat === 'XI' && (stripos($uk, 'XI') !== false || stripos($uk, '11') !== false)) {
+                } elseif ($short_tingkat === 'XI' && ((stripos($uk, 'XI') !== false && stripos($uk, 'XII') === false) || stripos($uk, '11') !== false)) {
                     $allowedKelas[] = $uk;
-                } elseif ($short_tingkat === 'X' && (preg_match('/^X\b/i', $uk) || stripos($uk, 'Kelas 10') !== false || stripos($uk, 'Kelas X') !== false || stripos($uk, 'X E') !== false)) {
-                    if (stripos($uk, 'XI') === false && stripos($uk, 'XII') === false) {
-                        $allowedKelas[] = $uk;
-                    }
+                } elseif ($short_tingkat === 'X' && stripos($uk, 'XI') === false && stripos($uk, 'XII') === false && (stripos($uk, 'X') !== false || stripos($uk, '10') !== false)) {
+                    $allowedKelas[] = $uk;
                 }
             }
         }
@@ -328,8 +335,8 @@ try {
             OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
             OR (
                 (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
-                OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
-                OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%' OR g.kelas_nama LIKE 'X E%' OR g.kelas_nama = 'X'))
+                OR (:short_tingkat = 'XI' AND ((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                OR (:short_tingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
             )
         )
     ";
@@ -496,7 +503,7 @@ foreach ($ujianListRaw as $u) {
                     OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - %')
                     OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), '%')
                 )
-                WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND g.hari = :curHari))
+                WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND (g.hari = :curHari OR g.hari LIKE CONCAT(:curHari2, '%'))))
                   AND (
                       g.ujian_id = :uid 
                       OR (
@@ -510,8 +517,8 @@ foreach ($ujianListRaw as $u) {
                               OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
                               OR (
                                   (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
-                                  OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
-                                  OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%' OR g.kelas_nama LIKE 'X E%' OR g.kelas_nama = 'X'))
+                                  OR (:short_tingkat = 'XI' AND ((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                                  OR (:short_tingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
                               )
                           )
                       )
@@ -521,6 +528,7 @@ foreach ($ujianListRaw as $u) {
             $stmtToday->execute([
                 ':today' => $todayDate,
                 ':curHari' => $curHari,
+                ':curHari2' => $curHari,
                 ':uid' => $u['id'],
                 ':mapel' => $u['mapel_nama'],
                 ':kelas' => $siswa['nama_kelas'],
@@ -604,8 +612,8 @@ foreach ($ujianListRaw as $u) {
                                OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
                                OR (
                                    (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
-                                   OR (:short_tingkat = 'XI' AND (g.kelas_nama LIKE 'XI%' OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
-                                   OR (:short_tingkat = 'X' AND (g.kelas_nama LIKE 'X %' OR g.kelas_nama LIKE 'X.%' OR g.kelas_nama LIKE 'X-%' OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%' OR g.kelas_nama LIKE 'X E%' OR g.kelas_nama = 'X'))
+                                   OR (:short_tingkat = 'XI' AND ((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                                   OR (:short_tingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
                                )
                            )
                        )
@@ -883,12 +891,13 @@ try {
             SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit
             FROM cbt_peserta p
             JOIN cbt_ujian u ON p.ujian_id = u.id
-            WHERE p.siswa_id IS NULL 
+            WHERE (p.siswa_id IS NULL OR p.siswa_id = 0 OR p.siswa_id = :sid) 
               AND (p.nis = :no_peserta OR (p.nis = :nis AND :nis != '') OR p.nama_siswa = :nama_kj)
               AND p.status_pengerjaan = 'Selesai'
             ORDER BY p.waktu_selesai DESC
         ");
         $stmtRiw->execute([
+            ':sid' => $siswa_id,
             ':no_peserta' => (string)($cbtStudent['no_peserta'] ?? ''),
             ':nis' => (string)($cbtStudent['nis'] ?? ''),
             ':nama_kj' => (string)($cbtStudent['nama_siswa'] ?? '')
@@ -1333,7 +1342,17 @@ include 'header.php';
         </div>
     <?php else: ?>
         <?php
-        $firstJadwal = !empty($jadwalSiswaList) ? $jadwalSiswaList[0] : null;
+        $todayJadwal = null;
+        foreach ($jadwalSiswaList as $js) {
+            if (!empty($js['tanggal']) && $js['tanggal'] === $todayDate) {
+                $todayJadwal = $js;
+                break;
+            } elseif (empty($js['tanggal']) && !empty($js['hari']) && stripos($js['hari'], $curHari) === 0) {
+                $todayJadwal = $js;
+                break;
+            }
+        }
+        $firstJadwal = $todayJadwal ?: (!empty($jadwalSiswaList) ? $jadwalSiswaList[0] : null);
         ?>
         <div class="cbt-banner-pro" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(56, 189, 248, 0.25);">
             <div style="flex: 1; min-width: 0;">
