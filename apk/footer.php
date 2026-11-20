@@ -69,7 +69,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     </style>
-    <?php if (isset($_SESSION['siswa_id']) && empty($_SESSION['is_cbt_only'])): ?>
+    <?php 
+    $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
+    // Jangan jalankan background polling chat jika sedang berada di ruang ujian CBT agar server sangat ringan
+    if (isset($_SESSION['siswa_id']) && empty($_SESSION['is_cbt_only']) && $currentScript !== 'cbt.php' && $currentScript !== 'cbt_scan.php'): 
+    ?>
     <script>
         function checkUnreadChat() {
             fetch('api_chat.php?action=check_unread')
@@ -88,7 +92,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             }).catch(e => console.log(e));
         }
         checkUnreadChat();
-        setInterval(checkUnreadChat, 5000);
+        setInterval(checkUnreadChat, 20000); // Ringankan polling menjadi setiap 20 detik
     </script>
     <?php endif; ?>
 

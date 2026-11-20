@@ -2530,6 +2530,16 @@ $router->add('POST', '/cbt/peserta_khusus/import', [\App\Controllers\CbtControll
 $router->add('GET', '/cbt/peserta_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPesertaKhusus']);
 $router->add('GET', '/cbt/pengawas_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPengawasKhusus']);
 
+// CBT Semi-Online Sync System
+$router->add('GET', '/cbt/semi-online', [\App\Controllers\CbtController::class, 'semiOnlineDashboard']);
+$router->add('POST', '/cbt/semi-online/pull', [\App\Controllers\CbtController::class, 'ajaxPullDataOnline']);
+$router->add('POST', '/cbt/semi-online/push', [\App\Controllers\CbtController::class, 'ajaxPushHasilOnline']);
+$router->add('POST', '/cbt/semi-online/export-file', [\App\Controllers\CbtController::class, 'exportBackupFile']);
+$router->add('POST', '/cbt/semi-online/import-file', [\App\Controllers\CbtController::class, 'importBackupFile']);
+$router->add('GET', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
+$router->add('POST', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
+$router->add('POST', '/cbt/semi-online/api/import-hasil', [\App\Controllers\CbtController::class, 'apiImportHasilOnline']);
+
 
 // ─── Kurikulum & Supervisi Suite (Full Port from Mismifhda) ─────────────────
 $router->add('GET', '/kurikulum', [\App\Controllers\KurikulumController::class, 'dashboard']);

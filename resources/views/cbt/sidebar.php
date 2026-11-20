@@ -159,6 +159,12 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis']);
                 <span>Pengaturan CBT</span>
             </a>
 
+            <!-- 8. Sinkronisasi CBT Semi-Online -->
+            <a href="<?php echo base_url('cbt/semi-online'); ?>" class="z-nav-item <?php echo $active_menu === 'semi_online' ? 'active' : ''; ?>">
+                <i data-lucide="refresh-cw"></i>
+                <span>Sinkron Semi-Online</span>
+            </a>
+
             <div class="z-nav-label" style="margin-top: 1rem;">Integrasi</div>
 
             <!-- Portal Utama -->
