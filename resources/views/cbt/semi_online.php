@@ -43,7 +43,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
             </div>
 
             <!-- Status Card Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
                 <!-- Card 1 -->
                 <div style="background: white; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
@@ -71,7 +71,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                 <!-- Card 3 -->
                 <div style="background: white; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                        <span style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Peserta Lokal</span>
+                        <span style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Peserta Siswa</span>
                         <div style="width: 36px; height: 36px; border-radius: 10px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center;">
                             <i data-lucide="users"></i>
                         </div>
@@ -80,7 +80,19 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                     <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 4px;">Akun & kredensial login aktif</div>
                 </div>
 
-                <!-- Card 4 -->
+                <!-- Card 4: Presensi Hari Ini -->
+                <div style="background: white; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                        <span style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Presensi Hari Ini</span>
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: #fdf4ff; color: #a855f7; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="scan-line"></i>
+                        </div>
+                    </div>
+                    <div style="font-size: 1.5rem; font-weight: 900; color: #1e1b4b;"><?= number_format($countAbsenToday) ?> <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Hadir</span></div>
+                    <div style="font-size: 0.75rem; color: #a855f7; font-weight: 700; margin-top: 4px;">Tersinkron di server lokal</div>
+                </div>
+
+                <!-- Card 5 -->
                 <div style="background: white; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
                         <span style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Hasil Ujian Lokal</span>
@@ -88,7 +100,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                             <i data-lucide="award"></i>
                         </div>
                     </div>
-                    <div style="font-size: 1.5rem; font-weight: 900; color: #1e1b4b;"><?= number_format($countHasil) ?> <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Siswa Selesai</span></div>
+                    <div style="font-size: 1.5rem; font-weight: 900; color: #1e1b4b;"><?= number_format($countHasil) ?> <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Selesai</span></div>
                     <div style="font-size: 0.75rem; color: #2563eb; font-weight: 700; margin-top: 4px;">Siap diunggah ke Pusat</div>
                 </div>
             </div>
@@ -145,10 +157,19 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                     </div>
 
                     <div>
-                        <button type="button" id="btnPullData" onclick="executePullData()" style="width: 100%; background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: white; border: none; padding: 13px 20px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35); transition: 0.2s;">
+                        <button type="button" id="btnPullData" onclick="executePullData()" style="width: 100%; background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: white; border: none; padding: 13px 20px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35); transition: 0.2s; margin-bottom: 0.75rem;">
                             <i data-lucide="download"></i>
-                            <span>Mulai Tarik Data dari Pusat</span>
+                            <span>Tarik Paket Lengkap (Soal, Jadwal & Siswa)</span>
                         </button>
+
+                        <button type="button" id="btnPullAbsen" onclick="executePullAbsen()" style="width: 100%; background: #fdf4ff; color: #7e22ce; border: 1.5px solid #d8b4fe; padding: 11px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;">
+                            <i data-lucide="zap" style="color: #a855f7;"></i>
+                            <span>⚡ Tarik Presensi Hari Ini Saja (Kilat)</span>
+                        </button>
+
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 10px; line-height: 1.45; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                            <span style="color: #4338ca; font-weight: 800;"><i data-lucide="info" style="width: 12px; height: 12px; display: inline;"></i> Info Alur Presensi:</span> Siswa scan kartu di gerbang madrasah via Server Online (<a href="https://apk.masmifhda.sch.id/apk/cbt_scan.php" target="_blank" style="color: #4f46e5; font-weight: 700; text-decoration: underline;">Scan Online</a>). Setelah anak-anak masuk ruangan, proktor cukup klik <b>Tarik Presensi (Kilat)</b> di laptop ini agar kuncian soal langsung terbuka!
+                        </div>
                     </div>
                 </div>
 
@@ -287,7 +308,8 @@ function executePullData() {
                             • Topik Ujian: <b>${res.details ? res.details.topik : '-'}</b><br>
                             • Sesi Jadwal: <b>${res.details ? res.details.jadwal : '-'}</b><br>
                             • Butir Soal CBT: <b>${res.details ? res.details.soal : '-'}</b><br>
-                            • Data Siswa: <b>${res.details ? res.details.siswa : '-'}</b>
+                            • Data Siswa: <b>${res.details ? res.details.siswa : '-'}</b><br>
+                            • Presensi Hari Ini: <b>${res.details ? (res.details.absensi || 0) : 0} Siswa</b>
                         </div>`,
                         icon: 'success',
                         confirmButtonText: 'Selesai'
@@ -300,6 +322,65 @@ function executePullData() {
             })
             .catch(err => {
                 Swal.fire('Koneksi Gagal', 'Tidak dapat menghubungi server pusat. Pastikan URL benar dan server pusat aktif.', 'error');
+            });
+        }
+    });
+}
+
+function executePullAbsen() {
+    const serverUrl = document.getElementById('targetServerUrl').value.trim();
+    if (!serverUrl) {
+        Swal.fire('Perhatian', 'URL server pusat tidak boleh kosong!', 'warning');
+        return;
+    }
+
+    Swal.fire({
+        title: 'Tarik Presensi Hari Ini?',
+        text: 'Sistem akan menarik data kehadiran siswa yang baru saja scan di server online agar kuncian soal terbuka di server lokal.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#7e22ce',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-bolt"></i> Ya, Tarik Presensi',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Menarik Presensi Kilat...',
+                text: 'Mohon tunggu beberapa detik...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('<?= base_url('cbt/semi-online/pull-absen') ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ server_url: serverUrl })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    Swal.fire({
+                        title: 'Presensi Berhasil Ditarik!',
+                        html: `<div style="text-align: left; font-size: 0.88rem; line-height: 1.6;">
+                            <b>${res.message}</b><br><br>
+                            👥 <b>Jumlah Presensi Diterima:</b> <b>${res.details ? (res.details.absensi || 0) : 0} Siswa</b><br>
+                            Kuncian ujian siswa yang telah hadir kini otomatis terbuka di jaringan Wi-Fi lokal madrasah!
+                        </div>`,
+                        icon: 'success',
+                        confirmButtonText: 'Alhamdulillah, Selesai'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Gagal Menarik Presensi', res.message || 'Terjadi kesalahan saat menarik data presensi.', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Koneksi Gagal', 'Gagal menghubungi server pusat. Pastikan server pusat online aktif.', 'error');
             });
         }
     });

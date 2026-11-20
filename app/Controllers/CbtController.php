@@ -5737,7 +5737,113 @@ class CbtController {
             $payload['users'] = [];
         }
 
+        // Export data absensi hari ini (agar siswa yang scan online di gerbang bisa langsung buka soal di laptop madrasah)
+        try {
+            $payload['absensi'] = $db->query("
+                SELECT * FROM cbt_absensi 
+                WHERE tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE()
+                ORDER BY id ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $payload['absensi'] = [];
+        }
+
         echo json_encode($payload);
+        exit;
+    }
+
+    /**
+     * API Export Kilat Absensi Hari Ini dari Server Pusat
+     */
+    public static function apiExportAbsensiOnline() {
+        header('Content-Type: application/json');
+        
+        $syncSecret = 'MIFHDA_CBT_SYNC_2026';
+        $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
+        $isTokenValid = ($providedToken === $syncSecret);
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_name("AULA_SYSTEM_PORTAL");
+            session_start();
+        }
+        $isSessionValid = !empty($_SESSION['user_id']);
+
+        if (!$isTokenValid && !$isSessionValid) {
+            http_response_code(401);
+            echo json_encode(['status' => 'error', 'message' => 'Akses ditolak: Token sinkronisasi tidak valid.']);
+            exit;
+        }
+
+        $db = \App\Core\Database::connect('core');
+        self::ensureTables($db);
+
+        try {
+            $absensi = $db->query("
+                SELECT * FROM cbt_absensi 
+                WHERE tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE()
+                ORDER BY id ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $absensi = [];
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'exported_at' => date('Y-m-d H:i:s'),
+            'absensi' => $absensi
+        ]);
+        exit;
+    }
+
+    /**
+     * AJAX Tarik Kilat Absensi Hari Ini dari Server Pusat ke Server Lokal
+     */
+    public static function ajaxPullAbsensiOnline() {
+        header('Content-Type: application/json');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $dbSiakad = $ctx['db_siakad'] ?? $db;
+        self::ensureTables($db);
+
+        $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
+        $targetEndpoint = $serverUrl . '/apk/cbt_sync_api.php?action=export_absen&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+
+        $ch = curl_init($targetEndpoint);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['action' => 'export_absen']));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlErr || $httpCode !== 200 || empty($response)) {
+            echo json_encode([
+                'success' => false,
+                'message' => "Gagal terhubung ke server pusat ({$targetEndpoint}). HTTP Code: {$httpCode}. Error: {$curlErr}"
+            ]);
+            exit;
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || ($data['status'] ?? '') !== 'success') {
+            echo json_encode([
+                'success' => false,
+                'message' => "Format data absensi dari server pusat tidak valid!"
+            ]);
+            exit;
+        }
+
+        $resDetails = self::importDataPayload($db, $dbSiakad, ['absensi' => $data['absensi'] ?? []]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Berhasil menarik data presensi siswa hari ini dari Server Pusat!",
+            'details' => $resDetails
+        ]);
         exit;
     }
 
@@ -5832,58 +5938,108 @@ class CbtController {
         $importedPeserta = 0;
         $importedAbsensi = 0;
 
-        // 1. Simpan Peserta Ujian Lokal
+        // 1. Simpan Peserta Ujian Lokal (Aman, hanya update/insert siswa lokal madrasah, kelas jauh online tidak disentuh)
         if (!empty($payload['peserta'])) {
-            $stmtP = $db->prepare("
+            $stmtChkP = $db->prepare("SELECT id FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
+            $stmtUpdP = $db->prepare("
+                UPDATE cbt_peserta SET 
+                    waktu_mulai = COALESCE(waktu_mulai, ?),
+                    waktu_selesai = ?,
+                    status_pengerjaan = ?,
+                    jumlah_benar = ?,
+                    jumlah_salah = ?,
+                    nilai_akhir = ?,
+                    jawaban_json = ?,
+                    reset_count = ?,
+                    violation_count = ?
+                WHERE id = ?
+            ");
+            $stmtInsP = $db->prepare("
                 INSERT INTO cbt_peserta 
                 (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, nomor_meja, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json, reset_count, violation_count)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                    waktu_selesai = VALUES(waktu_selesai),
-                    status_pengerjaan = VALUES(status_pengerjaan),
-                    jumlah_benar = VALUES(jumlah_benar),
-                    jumlah_salah = VALUES(jumlah_salah),
-                    nilai_akhir = VALUES(nilai_akhir),
-                    jawaban_json = VALUES(jawaban_json),
-                    reset_count = VALUES(reset_count),
-                    violation_count = VALUES(violation_count)
             ");
+
             foreach ($payload['peserta'] as $p) {
                 try {
-                    $stmtP->execute([
-                        $p['ujian_id'], $p['siswa_id'] ?? null, $p['nis'], $p['nama_siswa'], $p['kelas_nama'] ?? null,
-                        $p['nomor_meja'] ?? null, $p['waktu_mulai'] ?? null, $p['waktu_selesai'] ?? null,
-                        $p['status_pengerjaan'] ?? 'Selesai',
-                        $p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0),
-                        $p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0),
-                        $p['nilai_akhir'] ?? 0,
-                        $p['jawaban_json'] ?? null,
-                        $p['reset_count'] ?? 0,
-                        $p['violation_count'] ?? 0
-                    ]);
+                    $uId = (int)$p['ujian_id'];
+                    $nis = trim((string)($p['nis'] ?? ''));
+                    $sId = !empty($p['siswa_id']) ? (int)$p['siswa_id'] : null;
+
+                    $stmtChkP->execute([$uId, $nis, $sId ?: -1]);
+                    $existPid = $stmtChkP->fetchColumn();
+
+                    if ($existPid) {
+                        $stmtUpdP->execute([
+                            $p['waktu_mulai'] ?? null,
+                            $p['waktu_selesai'] ?? null,
+                            $p['status_pengerjaan'] ?? 'Selesai',
+                            $p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0),
+                            $p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0),
+                            $p['nilai_akhir'] ?? 0,
+                            $p['jawaban_json'] ?? null,
+                            $p['reset_count'] ?? 0,
+                            $p['violation_count'] ?? 0,
+                            $existPid
+                        ]);
+                    } else {
+                        $stmtInsP->execute([
+                            $uId, $sId, $nis, $p['nama_siswa'], $p['kelas_nama'] ?? null,
+                            $p['nomor_meja'] ?? null, $p['waktu_mulai'] ?? null, $p['waktu_selesai'] ?? null,
+                            $p['status_pengerjaan'] ?? 'Selesai',
+                            $p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0),
+                            $p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0),
+                            $p['nilai_akhir'] ?? 0,
+                            $p['jawaban_json'] ?? null,
+                            $p['reset_count'] ?? 0,
+                            $p['violation_count'] ?? 0
+                        ]);
+                    }
                     $importedPeserta++;
                 } catch (\Exception $e) {}
             }
         }
 
-        // 2. Simpan Rekap Absensi Lokal
+        // 2. Simpan Rekap Absensi Lokal (Aman, hanya update/insert data absensi yang dikirim)
         if (!empty($payload['absensi'])) {
-            $stmtA = $db->prepare("
+            $stmtChkA = $db->prepare("SELECT id FROM cbt_absensi WHERE tanggal = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
+            $stmtUpdA = $db->prepare("UPDATE cbt_absensi SET waktu_scan = ?, status = ?, kelas_nama = ?, mapel_nama = ?, jam_slot = ?, petugas_nama = ?, ruang_nama = ? WHERE id = ?");
+            $stmtInsA = $db->prepare("
                 INSERT INTO cbt_absensi 
                 (tanggal, siswa_id, nis, nama_siswa, kelas_nama, tipe_peserta, topik_id, ujian_id, mapel_nama, jam_slot, waktu_scan, status, metode_scan, petugas_nama, ruang_nama)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE status = VALUES(status), waktu_scan = VALUES(waktu_scan)
             ");
+
             foreach ($payload['absensi'] as $a) {
                 try {
-                    $stmtA->execute([
-                        $a['tanggal'] ?? date('Y-m-d'), $a['siswa_id'] ?? null, $a['nis'], $a['nama_siswa'],
-                        $a['kelas_nama'], $a['tipe_peserta'] ?? 'reguler', $a['topik_id'] ?? null,
-                        $a['ujian_id'] ?? null, $a['mapel_nama'], $a['jam_slot'] ?? 'Sesi 1',
-                        $a['waktu_scan'] ?? date('Y-m-d H:i:s'), $a['status'] ?? 'Hadir',
-                        $a['metode_scan'] ?? 'SEMI_ONLINE', $a['petugas_nama'] ?? 'Proktor Lokal',
-                        $a['ruang_nama'] ?? 'Lokal Madrasah'
-                    ]);
+                    $tgl = $a['tanggal'] ?? date('Y-m-d');
+                    $nis = trim((string)($a['nis'] ?? ''));
+                    $sId = !empty($a['siswa_id']) ? (int)$a['siswa_id'] : null;
+
+                    $stmtChkA->execute([$tgl, $nis, $sId ?: -1]);
+                    $existAid = $stmtChkA->fetchColumn();
+
+                    if ($existAid) {
+                        $stmtUpdA->execute([
+                            $a['waktu_scan'] ?? date('Y-m-d H:i:s'),
+                            $a['status'] ?? 'Hadir',
+                            $a['kelas_nama'] ?? '',
+                            $a['mapel_nama'] ?? '',
+                            $a['jam_slot'] ?? 'Sesi 1',
+                            $a['petugas_nama'] ?? 'Proktor Lokal',
+                            $a['ruang_nama'] ?? 'Lokal Madrasah',
+                            $existAid
+                        ]);
+                    } else {
+                        $stmtInsA->execute([
+                            $tgl, $sId, $nis, $a['nama_siswa'],
+                            $a['kelas_nama'] ?? '', $a['tipe_peserta'] ?? 'reguler', $a['topik_id'] ?? null,
+                            $a['ujian_id'] ?? null, $a['mapel_nama'] ?? '', $a['jam_slot'] ?? 'Sesi 1',
+                            $a['waktu_scan'] ?? date('Y-m-d H:i:s'), $a['status'] ?? 'Hadir',
+                            $a['metode_scan'] ?? 'SEMI_ONLINE', $a['petugas_nama'] ?? 'Proktor Lokal',
+                            $a['ruang_nama'] ?? 'Lokal Madrasah'
+                        ]);
+                    }
                     $importedAbsensi++;
                 } catch (\Exception $e) {}
             }
@@ -5968,7 +6124,7 @@ class CbtController {
      * Helper untuk memasukkan payload data sinkronisasi ke database lokal
      */
     private static function importDataPayload($db, $dbSiakad, $data) {
-        $details = ['topik' => 0, 'jadwal' => 0, 'soal' => 0, 'siswa' => 0, 'kelas' => 0];
+        $details = ['topik' => 0, 'jadwal' => 0, 'soal' => 0, 'siswa' => 0, 'kelas' => 0, 'absensi' => 0];
 
         // 1. Topik
         if (!empty($data['topik'])) {
@@ -6092,6 +6248,65 @@ class CbtController {
             }
         }
 
+        // 13. Data Presensi / Absensi CBT Hari Ini
+        if (!empty($data['absensi'])) {
+            $stmtInsAbs = $db->prepare("
+                INSERT INTO cbt_absensi 
+                (tanggal, siswa_id, nis, nama_siswa, kelas_nama, tipe_peserta, topik_id, ujian_id, mapel_nama, jam_slot, waktu_scan, status, metode_scan, petugas_nama, ruang_nama)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmtUpdAbs = $db->prepare("
+                UPDATE cbt_absensi 
+                SET waktu_scan = ?, status = ?, kelas_nama = ?, mapel_nama = ?, jam_slot = ?, petugas_nama = ?, ruang_nama = ?
+                WHERE id = ?
+            ");
+
+            foreach ($data['absensi'] as $a) {
+                try {
+                    $tgl = $a['tanggal'] ?? date('Y-m-d');
+                    $nis = trim((string)($a['nis'] ?? ''));
+                    $sid = !empty($a['siswa_id']) ? (int)$a['siswa_id'] : null;
+                    $mapel = $a['mapel_nama'] ?? '';
+
+                    $chk = $db->prepare("SELECT id FROM cbt_absensi WHERE tanggal = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
+                    $chk->execute([$tgl, $nis, $sid ?: -1]);
+                    $existId = $chk->fetchColumn();
+
+                    if ($existId) {
+                        $stmtUpdAbs->execute([
+                            $a['waktu_scan'] ?? date('Y-m-d H:i:s'),
+                            $a['status'] ?? 'Hadir',
+                            $a['kelas_nama'] ?? '',
+                            $mapel,
+                            $a['jam_slot'] ?? 'Sesi 1',
+                            $a['petugas_nama'] ?? 'Online Scan',
+                            $a['ruang_nama'] ?? 'Gerbang Madrasah',
+                            $existId
+                        ]);
+                    } else {
+                        $stmtInsAbs->execute([
+                            $tgl,
+                            $sid,
+                            $nis,
+                            $a['nama_siswa'],
+                            $a['kelas_nama'] ?? '',
+                            $a['tipe_peserta'] ?? 'reguler',
+                            $a['topik_id'] ?? null,
+                            $a['ujian_id'] ?? null,
+                            $mapel,
+                            $a['jam_slot'] ?? 'Sesi 1',
+                            $a['waktu_scan'] ?? date('Y-m-d H:i:s'),
+                            $a['status'] ?? 'Hadir',
+                            $a['metode_scan'] ?? 'ONLINE_SYNC',
+                            $a['petugas_nama'] ?? 'Online Scan',
+                            $a['ruang_nama'] ?? 'Gerbang Madrasah'
+                        ]);
+                    }
+                    $details['absensi']++;
+                } catch (\Exception $e) {}
+            }
+        }
+
         return $details;
     }
 
@@ -6113,6 +6328,7 @@ class CbtController {
             'denah' => $db->query("SELECT * FROM cbt_denah_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'ruang' => $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'pengaturan' => $db->query("SELECT * FROM cbt_pengaturan")->fetchAll(PDO::FETCH_ASSOC),
+            'absensi' => $db->query("SELECT * FROM cbt_absensi WHERE tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE()")->fetchAll(PDO::FETCH_ASSOC),
         ];
 
         $json = json_encode($payload, JSON_PRETTY_PRINT);

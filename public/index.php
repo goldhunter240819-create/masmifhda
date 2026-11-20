@@ -2533,11 +2533,14 @@ $router->add('GET', '/cbt/pengawas_khusus/cetak', [\App\Controllers\CbtControlle
 // CBT Semi-Online Sync System
 $router->add('GET', '/cbt/semi-online', [\App\Controllers\CbtController::class, 'semiOnlineDashboard']);
 $router->add('POST', '/cbt/semi-online/pull', [\App\Controllers\CbtController::class, 'ajaxPullDataOnline']);
+$router->add('POST', '/cbt/semi-online/pull-absen', [\App\Controllers\CbtController::class, 'ajaxPullAbsensiOnline']);
 $router->add('POST', '/cbt/semi-online/push', [\App\Controllers\CbtController::class, 'ajaxPushHasilOnline']);
 $router->add('POST', '/cbt/semi-online/export-file', [\App\Controllers\CbtController::class, 'exportBackupFile']);
 $router->add('POST', '/cbt/semi-online/import-file', [\App\Controllers\CbtController::class, 'importBackupFile']);
 $router->add('GET', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
 $router->add('POST', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
+$router->add('GET', '/cbt/semi-online/api/export-absen', [\App\Controllers\CbtController::class, 'apiExportAbsensiOnline']);
+$router->add('POST', '/cbt/semi-online/api/export-absen', [\App\Controllers\CbtController::class, 'apiExportAbsensiOnline']);
 $router->add('POST', '/cbt/semi-online/api/import-hasil', [\App\Controllers\CbtController::class, 'apiImportHasilOnline']);
 $router->add('GET', '/cbt/semi-online/download-standalone', [\App\Controllers\CbtController::class, 'downloadStandaloneZip']);
 

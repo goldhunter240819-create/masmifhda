@@ -21,6 +21,8 @@ $action = $_REQUEST['action'] ?? 'export';
 
 if ($action === 'export') {
     \App\Controllers\CbtController::apiExportPaketOnline();
+} elseif ($action === 'export_absen') {
+    \App\Controllers\CbtController::apiExportAbsensiOnline();
 } elseif ($action === 'import') {
     \App\Controllers\CbtController::apiImportHasilOnline();
 } else {
