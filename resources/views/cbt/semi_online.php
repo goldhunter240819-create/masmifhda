@@ -111,7 +111,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                 </div>
 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <a href="<?= base_url('cbt/semi-online/download-standalone') ?>" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; text-decoration: none; padding: 12px 22px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4); transition: 0.2s;">
+                    <a href="/apk/download_standalone.php" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; text-decoration: none; padding: 12px 22px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4); transition: 0.2s;">
                         <i data-lucide="download"></i>
                         <span>Unduh Server CBT (.zip)</span>
                     </a>
