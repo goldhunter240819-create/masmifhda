@@ -8,89 +8,505 @@ if (class_exists('\App\Core\Branding')) {
         $faviconUrl = \App\Core\Branding::getInstitusiFavicon();
     } catch (\Throwable $e) {}
 }
+
+$topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+$allRuang = $allRuang ?? [];
+$isAllRooms = !empty($isAllRooms);
+$roomsData = $roomsData ?? [];
+
+// Jika bukan cetak semua ruangan, bungkus $ruang dan $mejaList ke dalam format standar
+if (!$isAllRooms) {
+    $roomsData = [
+        [
+            'ruang' => $ruang,
+            'mejaList' => $mejaList ?? []
+        ]
+    ];
+}
+
+$totalSemuaLabel = 0;
+foreach ($roomsData as $rd) {
+    $totalSemuaLabel += count($rd['mejaList']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Label Meja Peserta - <?= htmlspecialchars($ruang['nama_ruang']) ?></title>
+    <title>Label Meja Peserta <?= $isAllRooms ? 'Semua Ruangan' : htmlspecialchars($ruang['nama_ruang']) ?> - CBT</title>
     <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&family=JetBrains+Mono:wght@800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #f1f5f9; font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; padding: 20px; }
-        .no-print-bar { max-width: 900px; margin: 0 auto 20px; background: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; border: 1px solid #cbd5e1; }
-        .btn-ctrl { padding: 9px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 800; text-decoration: none; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; }
-        .btn-print { background: #2563eb; color: white; }
-        .btn-back { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-        .label-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .meja-card { background: white; border: 2px dashed #0f172a; border-radius: 12px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); page-break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; height: 180px; position: relative; }
-        .card-top { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 8px; }
-        .card-logo { width: 34px; height: 34px; object-fit: contain; }
-        .card-inst { font-size: 0.72rem; font-weight: 800; color: #0f172a; text-transform: uppercase; }
-        .card-ruang { font-size: 0.65rem; font-weight: 700; color: #475569; }
-        .no-meja-badge { background: #0f172a; color: white; font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 900; padding: 4px 12px; border-radius: 8px; }
-        .siswa-nama { font-size: 1.05rem; font-weight: 900; color: #0f172a; line-height: 1.2; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .siswa-meta { font-size: 0.78rem; font-weight: 700; color: #475569; display: flex; gap: 10px; align-items: center; }
-        .card-footer { border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; color: #64748b; font-weight: 700; }
+        body { 
+            background: #0f172a; 
+            font-family: 'Plus Jakarta Sans', Arial, sans-serif; 
+            color: #0f172a; 
+            padding: 20px; 
+            min-height: 100vh;
+        }
+
+        /* Top Control Bar (Screen Only) */
+        .no-print-bar { 
+            max-width: 960px; 
+            margin: 0 auto 20px; 
+            background: #ffffff; 
+            padding: 12px 20px; 
+            border-radius: 14px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            gap: 15px; 
+            flex-wrap: wrap;
+            border: 1px solid #cbd5e1; 
+        }
+        .btn-ctrl { 
+            padding: 9px 16px; 
+            border-radius: 10px; 
+            font-size: 0.85rem; 
+            font-weight: 800; 
+            text-decoration: none; 
+            cursor: pointer; 
+            border: none; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 8px; 
+            transition: all 0.2s;
+        }
+        .btn-print { 
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .btn-print:hover { 
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            transform: translateY(-1px);
+        }
+        .btn-back { 
+            background: #f1f5f9; 
+            color: #475569; 
+            border: 1px solid #cbd5e1; 
+        }
+        .btn-back:hover { 
+            background: #e2e8f0; 
+            color: #0f172a;
+        }
+        .select-filter-ruang {
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #0f172a;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .select-filter-ruang:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        /* Lembar A4 Preview & Print Wrapper */
+        .page-sheet {
+            max-width: 960px;
+            margin: 0 auto 30px;
+            background: #ffffff;
+            padding: 12mm 10mm;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+        .room-header-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #0f172a;
+        }
+
+        /* Grid Layout: 2 Kolom x 4 Baris (8 Kartu Kotak Presisi per Halaman A4) */
+        .label-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 12px; 
+        }
+
+        /* Kartu Meja Desain Kotak Premium dengan Nomor Besar */
+        .meja-card { 
+            background: #ffffff; 
+            border: 2px dashed #0f172a; 
+            border-radius: 14px; 
+            padding: 12px 14px; 
+            page-break-inside: avoid; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            min-height: 155px; 
+            position: relative; 
+            box-sizing: border-box;
+            background-clip: padding-box;
+        }
+        .meja-card::before {
+            content: '✂';
+            position: absolute;
+            top: -10px;
+            right: 18px;
+            background: #ffffff;
+            padding: 0 4px;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        /* Bagian Atas Kartu */
+        .card-top { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-bottom: 1.5px solid #0f172a; 
+            padding-bottom: 6px; 
+            margin-bottom: 8px; 
+            gap: 8px;
+        }
+        .card-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            flex: 1;
+        }
+        .card-logo { 
+            width: 30px; 
+            height: 30px; 
+            object-fit: contain; 
+            flex-shrink: 0;
+        }
+        .card-inst { 
+            font-size: 0.68rem; 
+            font-weight: 900; 
+            color: #0f172a; 
+            text-transform: uppercase; 
+            letter-spacing: 0.3px;
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-subinst {
+            font-size: 0.58rem;
+            font-weight: 800;
+            color: #0284c7;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .card-room-badge {
+            font-size: 0.65rem;
+            font-weight: 900;
+            background: #f1f5f9;
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+            padding: 2px 7px;
+            border-radius: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Bagian Tengah: Split Siswa (Kiri) & Nomor Meja Besar (Kanan) */
+        .card-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex: 1;
+            margin: 4px 0;
+        }
+        .siswa-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .siswa-label {
+            font-size: 0.55rem;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1px;
+        }
+        .siswa-nama { 
+            font-size: 1rem; 
+            font-weight: 900; 
+            color: #0f172a; 
+            line-height: 1.25; 
+            margin-bottom: 6px; 
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+        .siswa-meta { 
+            display: flex; 
+            gap: 5px; 
+            flex-wrap: wrap; 
+            align-items: center; 
+        }
+        .meta-pill {
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .pill-nis {
+            background: #f8fafc;
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .pill-kelas {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        /* KOTAK NOMOR MEJA BESAR (Star Feature) */
+        .big-meja-box {
+            width: 76px;
+            height: 72px;
+            background: #0f172a;
+            border: 2px solid #0f172a;
+            color: #ffffff;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .big-meja-box::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #38bdf8;
+        }
+        .big-meja-label {
+            font-size: 0.55rem;
+            font-weight: 900;
+            color: #94a3b8;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin-top: 2px;
+            line-height: 1;
+        }
+        .big-meja-num {
+            font-family: 'Plus Jakarta Sans', 'JetBrains Mono', sans-serif;
+            font-size: 2.25rem;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -1px;
+            color: #ffffff;
+            margin-top: 1px;
+        }
+
+        /* Bagian Bawah Kartu */
+        .card-footer { 
+            border-top: 1px dashed #cbd5e1; 
+            padding-top: 5px; 
+            margin-top: 6px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 0.58rem; 
+            color: #64748b; 
+            font-weight: 800; 
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* Print Specific Styles */
         @media print {
-            body { background: white !important; padding: 0 !important; margin: 0 !important; }
-            .no-print-bar { display: none !important; }
-            .label-grid { max-width: 100% !important; gap: 10px !important; }
-            .meja-card { border: 2px dashed #000000 !important; box-shadow: none !important; }
-            .no-meja-badge { background: #000000 !important; color: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            @page { size: A4 portrait; margin: 10mm; }
+            body { 
+                background: #ffffff !important; 
+                padding: 0 !important; 
+                margin: 0 !important; 
+            }
+            .no-print-bar { 
+                display: none !important; 
+            }
+            .page-sheet { 
+                box-shadow: none !important; 
+                border: none !important; 
+                padding: 0 !important; 
+                margin: 0 0 20mm 0 !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                page-break-after: always;
+                break-after: page;
+            }
+            .room-header-title {
+                display: none !important;
+            }
+            .label-grid { 
+                gap: 8px !important; 
+            }
+            .meja-card { 
+                border: 2px dashed #000000 !important; 
+                box-shadow: none !important; 
+            }
+            .big-meja-box { 
+                background: #000000 !important; 
+                border-color: #000000 !important;
+                color: #ffffff !important; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
+            .big-meja-num {
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
+            .pill-kelas {
+                background: #eff6ff !important;
+                color: #1d4ed8 !important;
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
+            @page { 
+                size: A4 portrait; 
+                margin: 8mm 10mm; 
+            }
         }
     </style>
 </head>
 <body>
 
+<!-- Bar Kontrol Atas (Layar Saja) -->
 <div class="no-print-bar">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <button type="button" onclick="history.back()" class="btn-ctrl btn-back"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
-        <span style="font-size: 0.85rem; font-weight: 700;">Cetak Label Meja: <b><?= htmlspecialchars($ruang['nama_ruang']) ?> (<?= count($mejaList) ?> Label)</b></span>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <button type="button" onclick="history.back()" class="btn-ctrl btn-back">
+            <i class="fa-solid fa-arrow-left"></i> Kembali
+        </button>
+
+        <!-- Filter Ruangan Cepat (Bisa Pilih Langsung Tanpa Bolak-Balik) -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="filterRuang" style="font-size: 0.82rem; font-weight: 800; color: #475569; display: flex; align-items: center; gap: 5px;">
+                <i class="fa-solid fa-door-open" style="color: #2563eb;"></i> Filter Ruangan:
+            </label>
+            <select id="filterRuang" onchange="gantiRuangan(this.value)" class="select-filter-ruang">
+                <?php foreach ($allRuang as $ar): ?>
+                    <option value="<?= $ar['id'] ?>" <?= (!$isAllRooms && (int)($ruang['id'] ?? 0) === (int)$ar['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($ar['nama_ruang']) ?> (<?= (int)$ar['total_peserta'] ?> Label Meja)
+                    </option>
+                <?php endforeach; ?>
+                <option value="all" <?= ($isAllRooms) ? 'selected' : '' ?>>
+                    ⭐ Cetak Semua Ruangan (<?= $totalSemuaLabel ?> Label Sekaligus)
+                </option>
+            </select>
+        </div>
     </div>
-    <button type="button" onclick="window.print()" class="btn-ctrl btn-print"><i class="fa-solid fa-print"></i> Cetak Label Meja A4</button>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <button type="button" onclick="window.print()" class="btn-ctrl btn-print">
+            <i class="fa-solid fa-print"></i> Cetak Label Meja A4
+        </button>
+    </div>
 </div>
 
-<div class="label-grid">
-    <?php if (empty($mejaList)): ?>
-        <div style="grid-column: span 2; text-align: center; padding: 40px; color: #94a3b8; background: white; border-radius: 12px;">
-            Belum ada siswa yang ditempatkan di kursi ruangan ini. Silakan tata siswa terlebih dahulu.
-        </div>
-    <?php else: ?>
-        <?php foreach ($mejaList as $m): ?>
-            <div class="meja-card">
-                <div class="card-top">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="<?= $logoUrl ?>" class="card-logo" onerror="this.src='/public/uploads/logo/logo.png'">
-                        <div>
-                            <div class="card-inst"><?= htmlspecialchars($namaInstitusi) ?></div>
-                            <div class="card-ruang">KARTU MEJA • <?= htmlspecialchars($ruang['nama_ruang']) ?></div>
+<!-- Daftar Lembar Label per Ruangan -->
+<?php foreach ($roomsData as $index => $rd): ?>
+    <?php 
+    $rInfo = $rd['ruang'];
+    $mList = $rd['mejaList'];
+    ?>
+    <div class="page-sheet">
+        <?php if ($isAllRooms): ?>
+            <div class="room-header-title">
+                <span style="font-size: 0.95rem; font-weight: 900; color: #0f172a;">
+                    <i class="fa-solid fa-door-open" style="color: #2563eb;"></i> <?= htmlspecialchars($rInfo['nama_ruang']) ?> (<?= count($mList) ?> Meja)
+                </span>
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 700;">Halaman Ruang <?= $index + 1 ?> dari <?= count($roomsData) ?></span>
+            </div>
+        <?php endif; ?>
+
+        <?php if (empty($mList)): ?>
+            <div style="text-align: center; padding: 50px 20px; color: #94a3b8; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                <i class="fa-solid fa-chair" style="font-size: 2rem; margin-bottom: 10px; color: #cbd5e1; display: block;"></i>
+                Belum ada siswa yang ditempatkan di kursi <b><?= htmlspecialchars($rInfo['nama_ruang']) ?></b>.<br>Silakan tata siswa di menu Denah Tempat Duduk.
+            </div>
+        <?php else: ?>
+            <div class="label-grid">
+                <?php foreach ($mList as $m): ?>
+                    <div class="meja-card">
+                        <!-- Top Bar: Logo & Nama Madrasah -->
+                        <div class="card-top">
+                            <div class="card-brand">
+                                <img src="<?= $logoUrl ?>" class="card-logo" onerror="this.src='/public/uploads/logo/logo.png'">
+                                <div style="min-width: 0;">
+                                    <div class="card-inst"><?= htmlspecialchars($namaInstitusi) ?></div>
+                                    <div class="card-subinst">KARTU MEJA PESERTA CBT</div>
+                                </div>
+                            </div>
+                            <div class="card-room-badge"><?= htmlspecialchars($rInfo['nama_ruang']) ?></div>
+                        </div>
+
+                        <!-- Card Body: Identitas Siswa & Kotak Nomor Meja Besar -->
+                        <div class="card-body">
+                            <div class="siswa-info">
+                                <div class="siswa-label">Peserta Ujian</div>
+                                <div class="siswa-nama" title="<?= htmlspecialchars($m['nama_siswa']) ?>">
+                                    <?= htmlspecialchars($m['nama_siswa']) ?>
+                                </div>
+                                <div class="siswa-meta">
+                                    <span class="meta-pill pill-nis">
+                                        NIS: <b><?= htmlspecialchars($m['nis'] ?: '-') ?></b>
+                                    </span>
+                                    <span class="meta-pill pill-kelas">
+                                        Kelas: <b><?= htmlspecialchars($m['kelas_nama'] ?: 'X') ?></b>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- NOMOR MEJA BESAR DALAM KOTAK EKSKLUSIF -->
+                            <div class="big-meja-box">
+                                <span class="big-meja-label">MEJA</span>
+                                <span class="big-meja-num"><?= str_pad($m['nomor_meja'], 2, '0', STR_PAD_LEFT) ?></span>
+                            </div>
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="card-footer">
+                            <span>ASESMEN CBT 2026/2027</span>
+                            <span>✂ TEMPEL PADA MEJA PESERTA</span>
                         </div>
                     </div>
-                    <div class="no-meja-badge">MEJA <?= str_pad($m['nomor_meja'], 2, '0', STR_PAD_LEFT) ?></div>
-                </div>
-
-                <div>
-                    <div class="siswa-nama" title="<?= htmlspecialchars($m['nama_siswa']) ?>"><?= htmlspecialchars($m['nama_siswa']) ?></div>
-                    <div class="siswa-meta">
-                        <span>NIS: <b style="font-family: monospace; color: #0f172a;"><?= htmlspecialchars($m['nis'] ?: '-') ?></b></span>
-                        <span>&bull;</span>
-                        <span>Kelas: <b style="color: #2563eb;"><?= htmlspecialchars($m['kelas_nama'] ?: 'X') ?></b></span>
-                    </div>
-                </div>
-
-                <div class="card-footer">
-                    <span>ASESMEN CBT 2026/2027</span>
-                    <span>TEMPEL PADA MEJA PESERTA</span>
-                </div>
+                <?php endforeach; ?>
             </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</div>
+        <?php endif; ?>
+    </div>
+<?php endforeach; ?>
+
+<script>
+function gantiRuangan(ruangId) {
+    var topikId = <?= $topikId ?>;
+    var url = '?ruang_id=' + encodeURIComponent(ruangId);
+    if (topikId > 0) {
+        url += '&topik_id=' + topikId;
+    }
+    window.location.href = url;
+}
+</script>
 
 </body>
 </html>

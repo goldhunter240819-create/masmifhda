@@ -2506,6 +2506,7 @@ $router->add('POST', '/cbt/denah/assign-manual', [\App\Controllers\CbtController
 $router->add('POST', '/cbt/denah/remove-seat', [\App\Controllers\CbtController::class, 'removeSeatDenah']);
 $router->add('GET', '/cbt/denah/cetak', [\App\Controllers\CbtController::class, 'cetakDenah']);
 $router->add('GET', '/cbt/denah/cetak-label', [\App\Controllers\CbtController::class, 'cetakLabelMeja']);
+$router->add('GET', '/cbt/denah/cetak_label', [\App\Controllers\CbtController::class, 'cetakLabelMeja']);
 
 // CBT Absensi Scan 1 Pintu & Rekap
 $router->add('GET', '/cbt/scan', [\App\Controllers\CbtController::class, 'absensiScan']);
