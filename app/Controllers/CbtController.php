@@ -2983,6 +2983,14 @@ class CbtController {
                 $tingkatLabel = 'Kelas XI';
             }
 
+            if ($shortTingkat === 'XII') {
+                $tingkatSql = "(g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%')";
+            } elseif ($shortTingkat === 'XI') {
+                $tingkatSql = "((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%')";
+            } else {
+                $tingkatSql = "((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%')";
+            }
+
             // Ambil nama mapel ujian
             $stmtU = $db->prepare("SELECT mapel_nama, nama_ujian FROM cbt_ujian WHERE id = ? LIMIT 1");
             $stmtU->execute([$ujian_id]);
@@ -2994,42 +3002,38 @@ class CbtController {
                 SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
                 FROM cbt_jadwal_grid g 
                 LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
-                WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND (g.hari = :curHari OR g.hari LIKE CONCAT(:curHari2, '%'))))
+                WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND (g.hari = ? OR g.hari LIKE ?)))
                   AND (
-                      g.ujian_id = :uid 
+                      g.ujian_id = ? 
                       OR (
-                          (g.mapel_nama = :mapel OR :mapel2 LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', :mapel3, '%'))
+                          (g.mapel_nama = ? OR ? LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', ?, '%'))
                           AND (
-                              g.kelas_nama = :kelas 
-                              OR :kelas2 LIKE CONCAT('%', g.kelas_nama, '%')
-                              OR g.kelas_nama = :tingkatLabel
+                              g.kelas_nama = ? 
+                              OR ? LIKE CONCAT('%', g.kelas_nama, '%')
+                              OR g.kelas_nama = ?
                               OR g.kelas_nama = 'Semua Kelas'
                               OR g.kelas_nama IS NULL
                               OR g.kelas_nama = ''
-                              OR (
-                                  (:shortTingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
-                                  OR (:shortTingkat = 'XI' AND ((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
-                                  OR (:shortTingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
-                              )
+                              OR {$tingkatSql}
                           )
                       )
                   )
-                ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas3) DESC, g.id DESC LIMIT 1
+                ORDER BY (g.ujian_id = ?) DESC, (g.kelas_nama = ?) DESC, g.id DESC LIMIT 1
             ");
+            $curHariLike = $curHari . '%';
             $stmtToday->execute([
-                ':today' => $todayDate,
-                ':curHari' => $curHari,
-                ':curHari2' => $curHari,
-                ':uid' => $ujian_id,
-                ':mapel' => $mapelNama,
-                ':mapel2' => $mapelNama,
-                ':mapel3' => $mapelNama,
-                ':kelas' => $studentClass,
-                ':kelas2' => $studentClass,
-                ':tingkatLabel' => $tingkatLabel,
-                ':shortTingkat' => $shortTingkat,
-                ':uid2' => $ujian_id,
-                ':kelas3' => $studentClass
+                $todayDate,
+                $curHari,
+                $curHariLike,
+                $ujian_id,
+                $mapelNama,
+                $mapelNama,
+                $mapelNama,
+                $studentClass,
+                $studentClass,
+                $tingkatLabel,
+                $ujian_id,
+                $studentClass
             ]);
             $jGrid = $stmtToday->fetch(PDO::FETCH_ASSOC);
 
@@ -5178,6 +5182,14 @@ class CbtController {
                 $tingkatLabel = 'Kelas X';
             }
 
+            if ($shortTingkat === 'XII') {
+                $tingkatSql = "(g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%')";
+            } elseif ($shortTingkat === 'XI') {
+                $tingkatSql = "((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%')";
+            } else {
+                $tingkatSql = "((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%')";
+            }
+
             // Ambil seluruh jadwal ujian hari ini untuk kelas siswa tersebut (mendukung kelas reguler & kelas jauh)
             $stmtJadwal = $db->prepare("
                 SELECT g.*, u.nama_ujian, s.jam_mulai, s.jam_selesai, s.label_sesi
@@ -5189,32 +5201,28 @@ class CbtController {
                     OR g.jam_slot = CONCAT(s.jam_mulai, ' - ', s.jam_selesai)
                     OR g.jam_slot LIKE CONCAT('%', s.jam_mulai, '%')
                 )
-                WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND (g.hari = :curHari OR g.hari LIKE CONCAT(:curHari2, '%'))))
+                WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND (g.hari = ? OR g.hari LIKE ?)))
                   AND (
-                      g.kelas_nama = :kelas 
-                      OR :kelas2 LIKE CONCAT('%', g.kelas_nama, '%') 
-                      OR g.kelas_nama = :tingkatLabel
+                      g.kelas_nama = ? 
+                      OR ? LIKE CONCAT('%', g.kelas_nama, '%') 
+                      OR g.kelas_nama = ?
                       OR g.kelas_nama = 'Semua Kelas'
                       OR g.kelas_nama = ''
                       OR g.kelas_nama IS NULL
-                      OR (
-                          (:shortTingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
-                          OR (:shortTingkat = 'XI' AND ((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
-                          OR (:shortTingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
-                      )
+                      OR {$tingkatSql}
                   )
-                ORDER BY (g.kelas_nama = :kelas3) DESC, (g.kelas_nama = :tingkatLabel2) DESC, s.jam_mulai ASC, g.id ASC
+                ORDER BY (g.kelas_nama = ?) DESC, (g.kelas_nama = ?) DESC, s.jam_mulai ASC, g.id ASC
             ");
+            $curHariLike = $curHari . '%';
             $stmtJadwal->execute([
-                ':today' => $todayDate,
-                ':curHari' => $curHari,
-                ':curHari2' => $curHari,
-                ':kelas' => $targetKelas,
-                ':kelas2' => $targetKelas,
-                ':kelas3' => $targetKelas,
-                ':tingkatLabel' => $tingkatLabel,
-                ':tingkatLabel2' => $tingkatLabel,
-                ':shortTingkat' => $shortTingkat
+                $todayDate,
+                $curHari,
+                $curHariLike,
+                $targetKelas,
+                $targetKelas,
+                $tingkatLabel,
+                $targetKelas,
+                $tingkatLabel
             ]);
             $allJadwalGrid = $stmtJadwal->fetchAll(PDO::FETCH_ASSOC);
 
