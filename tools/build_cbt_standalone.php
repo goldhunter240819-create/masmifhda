@@ -53,6 +53,9 @@ function build_cbt_standalone_package() {
     $zip->addFile($baseDir . '/app/Controllers/CbtController.php', 'app/Controllers/CbtController.php');
     $zip->addFile($baseDir . '/app/Core/Database.php', 'app/Core/Database.php');
     $zip->addFile($baseDir . '/app/Core/Router.php', 'app/Core/Router.php');
+    if (file_exists($baseDir . '/app/Core/Branding.php')) {
+        $zip->addFile($baseDir . '/app/Core/Branding.php', 'app/Core/Branding.php');
+    }
     $zip->addFile($baseDir . '/app/Services/AuditLogger.php', 'app/Services/AuditLogger.php');
 
     // 3. Config Database Local Default
@@ -91,10 +94,13 @@ return [
 PHP;
     $zip->addFromString('config/database.php', $dbConfigContent);
 
-    // 4. Resources Views CBT
+    // 4. Resources Views CBT & Master Layout
     $cbtViews = glob($baseDir . '/resources/views/cbt/*.php');
     foreach ($cbtViews as $cv) {
         $zip->addFile($cv, 'resources/views/cbt/' . basename($cv));
+    }
+    if (file_exists($baseDir . '/resources/views/siakad/layout.php')) {
+        $zip->addFile($baseDir . '/resources/views/siakad/layout.php', 'resources/views/siakad/layout.php');
     }
 
     // 5. Minimal Standalone public/index.php (Hanya rute CBT & auth proktor, bersih dari modul SIAKAD lain)
@@ -238,6 +244,20 @@ PHP;
     }
     if (file_exists($baseDir . '/public/logo_kemenag.png')) {
         $zip->addFile($baseDir . '/public/logo_kemenag.png', 'public/logo_kemenag.png');
+    }
+
+    // Assets css/js/fonts
+    if (is_dir($baseDir . '/public/assets')) {
+        $assetsIterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($baseDir . '/public/assets', RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($assetsIterator as $item) {
+            $subPath = str_replace('\\', '/', substr($item->getPathname(), strlen($baseDir . '/public/assets/')));
+            if ($item->isFile()) {
+                $zip->addFile($item->getPathname(), 'public/assets/' . $subPath);
+            }
+        }
     }
 
     // 6. Vendor Autoload & Composer

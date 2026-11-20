@@ -5650,7 +5650,11 @@ class CbtController {
         $countHasil = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE status_pengerjaan = 'Selesai'")->fetchColumn();
         $countAbsenToday = (int)$db->query("SELECT COUNT(*) FROM cbt_absensi WHERE tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE()")->fetchColumn();
 
+        $title = "Sinkronisasi CBT Semi-Online - MAS MIFTAHUL HUDA";
+        ob_start();
         include __DIR__ . '/../../resources/views/cbt/semi_online.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
     }
 
     /**
