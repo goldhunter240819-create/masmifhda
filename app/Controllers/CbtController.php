@@ -4608,22 +4608,42 @@ class CbtController {
         $db_siakad = $ctx['db_siakad'];
         self::ensureTables($db);
 
+        $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        if ($topikId <= 0) {
+            try {
+                $topikId = (int)($db_siakad->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 0);
+            } catch (\Exception $e) {}
+            if ($topikId <= 0) {
+                try {
+                    $topikId = (int)($db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 0);
+                } catch (\Exception $e) {}
+            }
+        }
+
         $allRuang = [];
         try {
-            $stmtAllR = $db->query("
-                SELECT r.*, COUNT(d.id) as total_peserta 
+            $stmtAllR = $db->prepare("
+                SELECT r.*, 
+                       (
+                           SELECT COUNT(*) 
+                           FROM cbt_denah_peserta d 
+                           WHERE d.ruang_id = r.id 
+                             AND d.siswa_id IS NOT NULL 
+                             AND (
+                                 (:tid1 > 0 AND d.topik_id = :tid2)
+                                 OR (:tid3 <= 0 AND (d.topik_id IS NULL OR d.topik_id = 0))
+                             )
+                       ) as total_peserta 
                 FROM cbt_ruang r 
-                LEFT JOIN cbt_denah_peserta d ON d.ruang_id = r.id AND d.siswa_id IS NOT NULL 
-                GROUP BY r.id 
                 ORDER BY r.nama_ruang ASC
             ");
-            if ($stmtAllR) $allRuang = $stmtAllR->fetchAll(PDO::FETCH_ASSOC);
+            $stmtAllR->execute([':tid1' => $topikId, ':tid2' => $topikId, ':tid3' => $topikId]);
+            $allRuang = $stmtAllR->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
         $rawRuangId = $_GET['ruang_id'] ?? '';
         $isAllRooms = ($rawRuangId === 'all');
         $ruangId = (int)$rawRuangId;
-        $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
 
         if (!$isAllRooms && $ruangId <= 0 && !empty($allRuang)) {
             $ruangId = (int)$allRuang[0]['id'];
@@ -4654,45 +4674,64 @@ class CbtController {
             } catch (\Exception $e) {}
         }
 
-        $institusi = null;
+        // Ambil Data Kop Surat Resmi dari SIAKAD (pengaturan_kop_surat)
+        $kop = null;
         try {
-            $stmtInst = $db_siakad->query("SELECT * FROM institusi LIMIT 1");
-            if ($stmtInst) $institusi = $stmtInst->fetch(PDO::FETCH_ASSOC);
+            $stmtKop = $db->query("SELECT * FROM pengaturan_kop_surat LIMIT 1");
+            if ($stmtKop) $kop = $stmtKop->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
-        if (!$institusi) {
+        if (!$kop && isset($db_siakad)) {
             try {
-                $stmtInst = $db->query("SELECT * FROM institusi LIMIT 1");
-                if ($stmtInst) $institusi = $stmtInst->fetch(PDO::FETCH_ASSOC);
+                $stmtKop = $db_siakad->query("SELECT * FROM pengaturan_kop_surat LIMIT 1");
+                if ($stmtKop) $kop = $stmtKop->fetch(PDO::FETCH_ASSOC);
             } catch (\Exception $e) {}
         }
+
+        $fetchDenahMeja = function($rId) use ($db, $topikId) {
+            $mList = [];
+            if ($topikId > 0) {
+                $chkCount = (int)$db->query("SELECT COUNT(*) FROM cbt_denah_peserta WHERE ruang_id = {$rId} AND topik_id = {$topikId}")->fetchColumn();
+                if ($chkCount > 0) {
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? ORDER BY nomor_meja ASC, id DESC");
+                    $stmt->execute([$rId, $topikId]);
+                    $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } else {
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id IS NULL OR topik_id = 0) ORDER BY nomor_meja ASC, id DESC");
+                    $stmt->execute([$rId]);
+                    $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+            } else {
+                $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC, id DESC");
+                $stmt->execute([$rId]);
+                $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            // Deduplikasi presisi agar 1 nomor_meja hanya muncul 1 kali
+            $dedup = [];
+            $seenNomor = [];
+            foreach ($mList as $row) {
+                $nomor = (int)$row['nomor_meja'];
+                if (isset($seenNomor[$nomor])) {
+                    continue;
+                }
+                $seenNomor[$nomor] = true;
+                $dedup[] = $row;
+            }
+            return $dedup;
+        };
 
         $roomsData = [];
         if ($isAllRooms) {
             foreach ($allRuang as $ar) {
                 $rid = (int)$ar['id'];
-                if ($topikId > 0) {
-                    $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) ORDER BY nomor_meja ASC");
-                    $stmtMeja->execute([$rid, $topikId]);
-                } else {
-                    $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
-                    $stmtMeja->execute([$rid]);
-                }
-                $mList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
                 $roomsData[] = [
                     'ruang' => $ar,
-                    'mejaList' => $mList
+                    'mejaList' => $fetchDenahMeja($rid)
                 ];
             }
             $mejaList = [];
         } else {
-            if ($topikId > 0) {
-                $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) ORDER BY nomor_meja ASC");
-                $stmtMeja->execute([$ruangId, $topikId]);
-            } else {
-                $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? ORDER BY nomor_meja ASC");
-                $stmtMeja->execute([$ruangId]);
-            }
-            $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
+            $mejaList = $fetchDenahMeja($ruangId);
         }
 
         include __DIR__ . '/../../resources/views/cbt/cetak_denah.php';
@@ -4708,22 +4747,42 @@ class CbtController {
         $db_siakad = $ctx['db_siakad'];
         self::ensureTables($db);
 
+        $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        if ($topikId <= 0) {
+            try {
+                $topikId = (int)($db_siakad->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 0);
+            } catch (\Exception $e) {}
+            if ($topikId <= 0) {
+                try {
+                    $topikId = (int)($db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 0);
+                } catch (\Exception $e) {}
+            }
+        }
+
         $allRuang = [];
         try {
-            $stmtAllR = $db->query("
-                SELECT r.*, COUNT(d.id) as total_peserta 
+            $stmtAllR = $db->prepare("
+                SELECT r.*, 
+                       (
+                           SELECT COUNT(*) 
+                           FROM cbt_denah_peserta d 
+                           WHERE d.ruang_id = r.id 
+                             AND d.siswa_id IS NOT NULL 
+                             AND (
+                                 (:tid1 > 0 AND d.topik_id = :tid2)
+                                 OR (:tid3 <= 0 AND (d.topik_id IS NULL OR d.topik_id = 0))
+                             )
+                       ) as total_peserta 
                 FROM cbt_ruang r 
-                LEFT JOIN cbt_denah_peserta d ON d.ruang_id = r.id AND d.siswa_id IS NOT NULL 
-                GROUP BY r.id 
                 ORDER BY r.nama_ruang ASC
             ");
-            if ($stmtAllR) $allRuang = $stmtAllR->fetchAll(PDO::FETCH_ASSOC);
+            $stmtAllR->execute([':tid1' => $topikId, ':tid2' => $topikId, ':tid3' => $topikId]);
+            $allRuang = $stmtAllR->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
 
         $rawRuangId = $_GET['ruang_id'] ?? '';
         $isAllRooms = ($rawRuangId === 'all');
         $ruangId = (int)$rawRuangId;
-        $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
 
         if (!$isAllRooms && $ruangId <= 0 && !empty($allRuang)) {
             $ruangId = (int)$allRuang[0]['id'];
@@ -4754,30 +4813,57 @@ class CbtController {
             } catch (\Exception $e) {}
         }
 
-        $institusi = null;
+        // Ambil Data Kop Surat Resmi dari SIAKAD (pengaturan_kop_surat)
+        $kop = null;
         try {
-            $stmtInst = $db_siakad->query("SELECT * FROM institusi LIMIT 1");
-            if ($stmtInst) $institusi = $stmtInst->fetch(PDO::FETCH_ASSOC);
+            $stmtKop = $db->query("SELECT * FROM pengaturan_kop_surat LIMIT 1");
+            if ($stmtKop) $kop = $stmtKop->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
-        if (!$institusi) {
+        if (!$kop && isset($db_siakad)) {
             try {
-                $stmtInst = $db->query("SELECT * FROM institusi LIMIT 1");
-                if ($stmtInst) $institusi = $stmtInst->fetch(PDO::FETCH_ASSOC);
+                $stmtKop = $db_siakad->query("SELECT * FROM pengaturan_kop_surat LIMIT 1");
+                if ($stmtKop) $kop = $stmtKop->fetch(PDO::FETCH_ASSOC);
             } catch (\Exception $e) {}
         }
+
+        $fetchLabelMeja = function($rId) use ($db, $topikId) {
+            $mList = [];
+            if ($topikId > 0) {
+                $chkCount = (int)$db->query("SELECT COUNT(*) FROM cbt_denah_peserta WHERE ruang_id = {$rId} AND topik_id = {$topikId} AND siswa_id IS NOT NULL")->fetchColumn();
+                if ($chkCount > 0) {
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND topik_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, id DESC");
+                    $stmt->execute([$rId, $topikId]);
+                    $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } else {
+                    $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id IS NULL OR topik_id = 0) AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, id DESC");
+                    $stmt->execute([$rId]);
+                    $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+            } else {
+                $stmt = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC, id DESC");
+                $stmt->execute([$rId]);
+                $mList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            // Deduplikasi ketat per nomor_meja agar nomor meja tidak pernah ganda (1 meja = 1 siswa)
+            $dedup = [];
+            $seenNomor = [];
+            foreach ($mList as $row) {
+                $nomor = (int)$row['nomor_meja'];
+                if (isset($seenNomor[$nomor])) {
+                    continue;
+                }
+                $seenNomor[$nomor] = true;
+                $dedup[] = $row;
+            }
+            return $dedup;
+        };
 
         $roomsData = [];
         if ($isAllRooms) {
             foreach ($allRuang as $ar) {
                 $rid = (int)$ar['id'];
-                if ($topikId > 0) {
-                    $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
-                    $stmtMeja->execute([$rid, $topikId]);
-                } else {
-                    $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
-                    $stmtMeja->execute([$rid]);
-                }
-                $mList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
+                $mList = $fetchLabelMeja($rid);
                 if (!empty($mList)) {
                     $roomsData[] = [
                         'ruang' => $ar,
@@ -4787,14 +4873,7 @@ class CbtController {
             }
             $mejaList = [];
         } else {
-            if ($topikId > 0) {
-                $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND (topik_id = ? OR topik_id IS NULL) AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
-                $stmtMeja->execute([$ruangId, $topikId]);
-            } else {
-                $stmtMeja = $db->prepare("SELECT * FROM cbt_denah_peserta WHERE ruang_id = ? AND siswa_id IS NOT NULL ORDER BY nomor_meja ASC");
-                $stmtMeja->execute([$ruangId]);
-            }
-            $mejaList = $stmtMeja->fetchAll(PDO::FETCH_ASSOC);
+            $mejaList = $fetchLabelMeja($ruangId);
         }
 
         include __DIR__ . '/../../resources/views/cbt/cetak_label_meja.php';

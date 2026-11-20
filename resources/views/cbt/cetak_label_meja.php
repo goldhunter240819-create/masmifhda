@@ -50,7 +50,7 @@ foreach ($roomsData as $rd) {
 
         /* Top Control Bar (Screen Only) */
         .no-print-bar { 
-            max-width: 960px; 
+            max-width: 900px; 
             margin: 0 auto 20px; 
             background: #ffffff; 
             padding: 12px 20px; 
@@ -113,7 +113,7 @@ foreach ($roomsData as $rd) {
 
         /* Lembar A4 Preview & Print Wrapper */
         .page-sheet {
-            max-width: 960px;
+            max-width: 900px;
             margin: 0 auto 30px;
             background: #ffffff;
             padding: 12mm 10mm;
@@ -129,24 +129,27 @@ foreach ($roomsData as $rd) {
             border-bottom: 2px solid #0f172a;
         }
 
-        /* Grid Layout: 2 Kolom x 4 Baris (8 Kartu Kotak Presisi per Halaman A4) */
+        /* Grid Layout: 2 Kolom Kotak Presisi */
         .label-grid { 
             display: grid; 
             grid-template-columns: repeat(2, 1fr); 
-            gap: 12px; 
+            gap: 16px; 
+            max-width: 780px;
+            margin: 0 auto;
         }
 
-        /* Kartu Meja Desain Kotak Premium dengan Nomor Besar */
+        /* KARTU MEJA BENTUK KOTAK (SQUARE 1:1) */
         .meja-card { 
             background: #ffffff; 
             border: 2px dashed #0f172a; 
-            border-radius: 14px; 
-            padding: 12px 14px; 
+            border-radius: 16px; 
+            padding: 14px 16px; 
             page-break-inside: avoid; 
             display: flex; 
             flex-direction: column; 
             justify-content: space-between; 
-            min-height: 155px; 
+            aspect-ratio: 1 / 1;
+            min-height: 310px;
             position: relative; 
             box-sizing: border-box;
             background-clip: padding-box;
@@ -158,7 +161,7 @@ foreach ($roomsData as $rd) {
             right: 18px;
             background: #ffffff;
             padding: 0 4px;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             color: #64748b;
         }
 
@@ -168,7 +171,7 @@ foreach ($roomsData as $rd) {
             align-items: center; 
             justify-content: space-between; 
             border-bottom: 1.5px solid #0f172a; 
-            padding-bottom: 6px; 
+            padding-bottom: 8px; 
             margin-bottom: 8px; 
             gap: 8px;
         }
@@ -180,13 +183,13 @@ foreach ($roomsData as $rd) {
             flex: 1;
         }
         .card-logo { 
-            width: 30px; 
-            height: 30px; 
+            width: 32px; 
+            height: 32px; 
             object-fit: contain; 
             flex-shrink: 0;
         }
         .card-inst { 
-            font-size: 0.68rem; 
+            font-size: 0.72rem; 
             font-weight: 900; 
             color: #0f172a; 
             text-transform: uppercase; 
@@ -203,41 +206,102 @@ foreach ($roomsData as $rd) {
             letter-spacing: 0.5px;
             text-transform: uppercase;
         }
-        .card-room-badge {
-            font-size: 0.65rem;
+
+        /* NAMA RUANGAN BESAR & MENONJOL */
+        .card-room-badge-large {
+            font-size: 0.88rem;
             font-weight: 900;
-            background: #f1f5f9;
-            color: #0f172a;
-            border: 1px solid #cbd5e1;
-            padding: 2px 7px;
-            border-radius: 6px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1.5px solid #93c5fd;
+            padding: 4px 10px;
+            border-radius: 8px;
             white-space: nowrap;
             flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            letter-spacing: 0.3px;
         }
 
-        /* Bagian Tengah: Split Siswa (Kiri) & Nomor Meja Besar (Kanan) */
-        .card-body {
+        /* Bagian Tengah: Susunan Kotak Nomor Meja Besar & Siswa */
+        .card-middle {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            flex: 1;
-            margin: 4px 0;
+            gap: 12px;
+            margin: 6px 0;
+            padding: 6px 0;
         }
-        .siswa-info {
+        .middle-left-info {
             flex: 1;
             min-width: 0;
         }
+
+        /* KOTAK NOMOR MEJA BESAR (Star Feature) */
+        .big-meja-box {
+            width: 86px;
+            height: 82px;
+            background: #0f172a;
+            border: 2px solid #0f172a;
+            color: #ffffff;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+        .big-meja-box::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3.5px;
+            background: #38bdf8;
+        }
+        .big-meja-label {
+            font-size: 0.6rem;
+            font-weight: 900;
+            color: #94a3b8;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-top: 2px;
+        }
+        .big-meja-num {
+            font-family: 'Plus Jakarta Sans', 'JetBrains Mono', sans-serif;
+            font-size: 2.7rem;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -1.5px;
+            color: #ffffff;
+            margin-top: 2px;
+        }
+
+        /* Detail Identitas Siswa */
+        .siswa-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-top: auto;
+            margin-bottom: 6px;
+        }
         .siswa-label {
-            font-size: 0.55rem;
+            font-size: 0.58rem;
             font-weight: 800;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
         }
         .siswa-nama { 
-            font-size: 1rem; 
+            font-size: 1.05rem; 
             font-weight: 900; 
             color: #0f172a; 
             line-height: 1.25; 
@@ -250,21 +314,21 @@ foreach ($roomsData as $rd) {
         }
         .siswa-meta { 
             display: flex; 
-            gap: 5px; 
+            gap: 6px; 
             flex-wrap: wrap; 
             align-items: center; 
         }
         .meta-pill {
-            font-size: 0.68rem;
+            font-size: 0.72rem;
             font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 5px;
+            padding: 3px 8px;
+            border-radius: 6px;
             display: inline-flex;
             align-items: center;
             gap: 4px;
         }
         .pill-nis {
-            background: #f8fafc;
+            background: #ffffff;
             color: #0f172a;
             border: 1px solid #cbd5e1;
             font-family: 'JetBrains Mono', monospace;
@@ -275,60 +339,14 @@ foreach ($roomsData as $rd) {
             border: 1px solid #bfdbfe;
         }
 
-        /* KOTAK NOMOR MEJA BESAR (Star Feature) */
-        .big-meja-box {
-            width: 76px;
-            height: 72px;
-            background: #0f172a;
-            border: 2px solid #0f172a;
-            color: #ffffff;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-        .big-meja-box::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: #38bdf8;
-        }
-        .big-meja-label {
-            font-size: 0.55rem;
-            font-weight: 900;
-            color: #94a3b8;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            margin-top: 2px;
-            line-height: 1;
-        }
-        .big-meja-num {
-            font-family: 'Plus Jakarta Sans', 'JetBrains Mono', sans-serif;
-            font-size: 2.25rem;
-            font-weight: 900;
-            line-height: 1;
-            letter-spacing: -1px;
-            color: #ffffff;
-            margin-top: 1px;
-        }
-
         /* Bagian Bawah Kartu */
         .card-footer { 
             border-top: 1px dashed #cbd5e1; 
-            padding-top: 5px; 
-            margin-top: 6px;
+            padding-top: 6px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            font-size: 0.58rem; 
+            font-size: 0.62rem; 
             color: #64748b; 
             font-weight: 800; 
             text-transform: uppercase;
@@ -359,11 +377,19 @@ foreach ($roomsData as $rd) {
                 display: none !important;
             }
             .label-grid { 
-                gap: 8px !important; 
+                max-width: 100% !important;
+                gap: 10mm !important; 
             }
             .meja-card { 
                 border: 2px dashed #000000 !important; 
                 box-shadow: none !important; 
+                aspect-ratio: 1 / 1 !important;
+                height: 88mm !important;
+                min-height: 88mm !important;
+                max-height: 88mm !important;
+                width: 88mm !important;
+                padding: 10px 12px !important;
+                page-break-inside: avoid !important;
             }
             .big-meja-box { 
                 background: #000000 !important; 
@@ -377,6 +403,13 @@ foreach ($roomsData as $rd) {
                 -webkit-print-color-adjust: exact !important; 
                 print-color-adjust: exact !important; 
             }
+            .card-room-badge-large {
+                background: #eff6ff !important;
+                color: #1d4ed8 !important;
+                border-color: #93c5fd !important;
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
             .pill-kelas {
                 background: #eff6ff !important;
                 color: #1d4ed8 !important;
@@ -385,7 +418,7 @@ foreach ($roomsData as $rd) {
             }
             @page { 
                 size: A4 portrait; 
-                margin: 8mm 10mm; 
+                margin: 8mm 12mm; 
             }
         }
     </style>
@@ -433,7 +466,7 @@ foreach ($roomsData as $rd) {
     <div class="page-sheet">
         <?php if ($isAllRooms): ?>
             <div class="room-header-title">
-                <span style="font-size: 0.95rem; font-weight: 900; color: #0f172a;">
+                <span style="font-size: 1rem; font-weight: 900; color: #0f172a;">
                     <i class="fa-solid fa-door-open" style="color: #2563eb;"></i> <?= htmlspecialchars($rInfo['nama_ruang']) ?> (<?= count($mList) ?> Meja)
                 </span>
                 <span style="font-size: 0.75rem; color: #64748b; font-weight: 700;">Halaman Ruang <?= $index + 1 ?> dari <?= count($roomsData) ?></span>
@@ -449,46 +482,60 @@ foreach ($roomsData as $rd) {
             <div class="label-grid">
                 <?php foreach ($mList as $m): ?>
                     <div class="meja-card">
-                        <!-- Top Bar: Logo & Nama Madrasah -->
+                        <!-- Top Bar: Logo & Nama Ruang BESAR -->
                         <div class="card-top">
                             <div class="card-brand">
                                 <img src="<?= $logoUrl ?>" class="card-logo" onerror="this.src='/public/uploads/logo/logo.png'">
                                 <div style="min-width: 0;">
                                     <div class="card-inst"><?= htmlspecialchars($namaInstitusi) ?></div>
-                                    <div class="card-subinst">KARTU MEJA PESERTA CBT</div>
+                                    <div class="card-subinst">KARTU MEJA CBT</div>
                                 </div>
                             </div>
-                            <div class="card-room-badge"><?= htmlspecialchars($rInfo['nama_ruang']) ?></div>
+                            <!-- NAMA RUANGAN BESAR -->
+                            <div class="card-room-badge-large">
+                                <i class="fa-solid fa-door-open" style="font-size: 0.8rem;"></i>
+                                <?= htmlspecialchars($rInfo['nama_ruang']) ?>
+                            </div>
                         </div>
 
-                        <!-- Card Body: Identitas Siswa & Kotak Nomor Meja Besar -->
-                        <div class="card-body">
-                            <div class="siswa-info">
-                                <div class="siswa-label">Peserta Ujian</div>
-                                <div class="siswa-nama" title="<?= htmlspecialchars($m['nama_siswa']) ?>">
-                                    <?= htmlspecialchars($m['nama_siswa']) ?>
+                        <!-- Card Middle: Nomor Meja Besar + Sesi Info -->
+                        <div class="card-middle">
+                            <div class="middle-left-info">
+                                <div style="font-size: 0.7rem; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 3px;">
+                                    MEJA UJIAN RESMI
                                 </div>
-                                <div class="siswa-meta">
-                                    <span class="meta-pill pill-nis">
-                                        NIS: <b><?= htmlspecialchars($m['nis'] ?: '-') ?></b>
-                                    </span>
-                                    <span class="meta-pill pill-kelas">
-                                        Kelas: <b><?= htmlspecialchars($m['kelas_nama'] ?: 'X') ?></b>
-                                    </span>
+                                <div style="font-size: 0.65rem; color: #64748b; line-height: 1.3;">
+                                    Silakan duduk sesuai nomor meja yang tertera pada kartu ini.
                                 </div>
                             </div>
 
-                            <!-- NOMOR MEJA BESAR DALAM KOTAK EKSKLUSIF -->
+                            <!-- KOTAK NOMOR MEJA BESAR -->
                             <div class="big-meja-box">
                                 <span class="big-meja-label">MEJA</span>
                                 <span class="big-meja-num"><?= str_pad($m['nomor_meja'], 2, '0', STR_PAD_LEFT) ?></span>
                             </div>
                         </div>
 
+                        <!-- Identitas Peserta Ujian -->
+                        <div class="siswa-section">
+                            <div class="siswa-label">Peserta Ujian</div>
+                            <div class="siswa-nama" title="<?= htmlspecialchars($m['nama_siswa']) ?>">
+                                <?= htmlspecialchars($m['nama_siswa']) ?>
+                            </div>
+                            <div class="siswa-meta">
+                                <span class="meta-pill pill-nis">
+                                    NIS: <b><?= htmlspecialchars($m['nis'] ?: '-') ?></b>
+                                </span>
+                                <span class="meta-pill pill-kelas">
+                                    Kelas: <b><?= htmlspecialchars($m['kelas_nama'] ?: 'X') ?></b>
+                                </span>
+                            </div>
+                        </div>
+
                         <!-- Card Footer -->
                         <div class="card-footer">
                             <span>ASESMEN CBT 2026/2027</span>
-                            <span>✂ TEMPEL PADA MEJA PESERTA</span>
+                            <span>✂ TEMPEL PADA MEJA</span>
                         </div>
                     </div>
                 <?php endforeach; ?>

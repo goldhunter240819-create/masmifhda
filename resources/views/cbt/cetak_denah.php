@@ -1,20 +1,26 @@
 <?php
-$namaInstitusi = 'MADRASAH ALIYAH MIFTAHUL HUDA';
-$logoUrl = function_exists('base_url') ? base_url('public/uploads/logo/logo.png') : '/public/uploads/logo/logo.png';
-$faviconUrl = $logoUrl;
-if (class_exists('\App\Core\Branding')) {
-    try { 
-        $logoUrl = \App\Core\Branding::getInstitusiLogo(); 
-        $faviconUrl = \App\Core\Branding::getInstitusiFavicon();
-    } catch (\Throwable $e) {}
-}
-
-$kemenagLogo = function_exists('base_url') ? base_url('logo_kemenag.png') : '/logo_kemenag.png';
-
 $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
 $allRuang = $allRuang ?? [];
 $isAllRooms = !empty($isAllRooms);
 $roomsData = $roomsData ?? [];
+$kop = $kop ?? [];
+
+// Logo resmi kop surat dari SIAKAD
+$kopLogoUrl = '/assets/images/logo.png';
+if (!empty($kop['logo'])) {
+    $kopLogoUrl = function_exists('base_url') ? base_url('assets/images/' . $kop['logo']) : ('/assets/images/' . $kop['logo']);
+} elseif (class_exists('\App\Core\Branding')) {
+    try { 
+        $kopLogoUrl = \App\Core\Branding::getInstitusiLogo(); 
+    } catch (\Throwable $e) {}
+}
+
+$namaYayasan = $kop['nama_yayasan'] ?? 'YAYASAN PONDOK PESANTREN MIFTAHUL HUDA';
+$namaMadrasah = $kop['nama_madrasah'] ?? 'MADRASAH ALIYAH MIFTAHUL HUDA';
+$alamatJalan = $kop['alamat_jalan'] ?? 'Jl. Tirtomoyo, No. 083, Margorahayu';
+$telepon = $kop['telepon'] ?? '';
+$email = $kop['email'] ?? '';
+$website = $kop['website'] ?? '';
 
 // Jika bukan cetak semua ruangan, bungkus $ruang dan $mejaList ke dalam format array standar
 if (!$isAllRooms) {
@@ -32,7 +38,7 @@ if (!$isAllRooms) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Denah Ruang Ujian <?= $isAllRooms ? 'Semua Ruangan' : htmlspecialchars($ruang['nama_ruang']) ?> - CBT</title>
-    <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
+    <link rel="icon" type="image/png" href="<?= $kopLogoUrl ?>">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -119,53 +125,54 @@ if (!$isAllRooms) {
             border: 1px solid #e2e8f0; 
         }
 
-        /* Kop Surat Resmi Madrasah */
-        .kop-header { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            border-bottom: 3.5px double #0f172a; 
-            padding-bottom: 12px; 
-            margin-bottom: 16px; 
-            gap: 15px;
+        /* KOP SURAT RESMI IDENTIK SIAKAD */
+        .kop-wrapper-siakad {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            border-bottom: 3.5px double #000000;
         }
-        .kop-logo { 
-            width: 72px; 
-            height: 72px; 
-            object-fit: contain; 
-            flex-shrink: 0;
+        .kop-logo-img {
+            width: 82px;
+            height: auto;
+            max-height: 85px;
+            object-fit: contain;
+            position: absolute;
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
         }
-        .kop-title-box { 
-            flex: 1; 
-            text-align: center; 
-            padding: 0 8px; 
+        .kop-content-center {
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+            color: #000000;
+            line-height: 1.25;
+            padding: 0 85px;
+            width: 100%;
         }
-        .kop-title-box h4 { 
-            font-size: 0.88rem; 
-            font-weight: 800; 
-            color: #1e293b; 
-            text-transform: uppercase; 
-            letter-spacing: 0.8px;
-            margin-bottom: 2px; 
-        }
-        .kop-title-box h2 { 
-            font-size: 1.32rem; 
-            font-weight: 900; 
-            color: #0f172a; 
-            text-transform: uppercase; 
+        .kop-yayasan {
+            font-size: 13pt;
+            font-weight: bold;
+            text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 3px; 
+            margin-bottom: 2px;
         }
-        .kop-title-box .kop-meta { 
-            font-size: 0.72rem; 
-            font-weight: 700;
-            color: #334155; 
-            line-height: 1.35;
+        .kop-madrasah {
+            font-size: 19pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
         }
-        .kop-title-box .kop-address {
-            font-size: 0.68rem;
-            color: #64748b;
-            font-weight: 600;
+        .kop-alamat {
+            font-size: 9.5pt;
+            line-height: 1.3;
+        }
+        .kop-kontak {
+            font-size: 9.5pt;
             margin-top: 1px;
         }
 
@@ -367,7 +374,7 @@ if (!$isAllRooms) {
             <select id="filterRuang" onchange="gantiRuangan(this.value)" class="select-filter-ruang">
                 <?php foreach ($allRuang as $ar): ?>
                     <option value="<?= $ar['id'] ?>" <?= (!$isAllRooms && (int)($ruang['id'] ?? 0) === (int)$ar['id']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($ar['nama_ruang']) ?> (Kapasitas <?= (int)$ar['kapasitas'] ?> Meja)
+                        <?= htmlspecialchars($ar['nama_ruang']) ?> (<?= (int)$ar['total_peserta'] ?> Peserta)
                     </option>
                 <?php endforeach; ?>
                 <option value="all" <?= ($isAllRooms) ? 'selected' : '' ?>>
@@ -416,16 +423,20 @@ if (!$isAllRooms) {
     $pesertaTerisi = count(array_filter($curMejaList, fn($x) => !empty($x['siswa_id'])));
     ?>
     <div class="paper-sheet">
-        <!-- KOP SURAT RESMI MADRASAH (ELEGAN & RAPI DENGAN DUA LOGO) -->
-        <div class="kop-header">
-            <img src="<?= $logoUrl ?>" class="kop-logo" onerror="this.src='/public/uploads/logo/logo.png'" alt="Logo Madrasah">
-            <div class="kop-title-box">
-                <h4>KEMENTERIAN AGAMA REPUBLIK INDONESIA</h4>
-                <h2><?= htmlspecialchars($namaInstitusi) ?></h2>
-                <div class="kop-meta">STATUS TERAKREDITASI &bull; NSM: 111218040083 &bull; NPSN: 60728316</div>
-                <div class="kop-address">Jalan Raya Sindangjaya, Kec. Mangunjaya, Kab. Pangandaran, Jawa Barat</div>
+        <!-- KOP SURAT RESMI IDENTIK SIAKAD (pengaturan_kop_surat) -->
+        <div class="kop-wrapper-siakad">
+            <img src="<?= $kopLogoUrl ?>" class="kop-logo-img" onerror="this.src='/public/uploads/logo/logo.png'; this.onerror=function(){this.src='/logo.png';};" alt="Logo Madrasah">
+            <div class="kop-content-center">
+                <div class="kop-yayasan"><?= htmlspecialchars($namaYayasan) ?></div>
+                <div class="kop-madrasah"><?= htmlspecialchars($namaMadrasah) ?></div>
+                <div class="kop-alamat"><?= nl2br(htmlspecialchars($alamatJalan)) ?></div>
+                <div class="kop-kontak">
+                    <?php if (!empty($telepon)): ?><span>Telp: <?= htmlspecialchars($telepon) ?></span><?php endif; ?>
+                    <?php if (!empty($telepon) && !empty($email)): ?><span> &bull; </span><?php endif; ?>
+                    <?php if (!empty($email)): ?><span>Email: <?= htmlspecialchars($email) ?></span><?php endif; ?>
+                    <?php if (!empty($website)): ?><span> &bull; Web: <?= htmlspecialchars($website) ?></span><?php endif; ?>
+                </div>
             </div>
-            <img src="<?= $kemenagLogo ?>" class="kop-logo" onerror="this.src='/public/logo_kemenag.png'; this.onerror=function(){this.style.visibility='hidden';};" alt="Logo Kemenag">
         </div>
 
         <!-- JUDUL DOKUMEN -->
