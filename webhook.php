@@ -1,6 +1,38 @@
 <?php
 echo "Menerima request webhook MAS Mifhda...\n";
 
+require_once __DIR__ . '/app/Core/Database.php';
+try {
+    $dbCore = \App\Core\Database::connect('core');
+    $dbSiakad = \App\Core\Database::connect('siakad');
+
+    // DUMP ALFIAN
+    $alfian = $dbCore->query("SELECT * FROM cbt_peserta_khusus WHERE nama_siswa LIKE '%Alfian%' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    echo "=== ALFIAN ROW ===\n" . json_encode($alfian) . "\n";
+
+    // DUMP CBT_UJIAN
+    $ujians = $dbCore->query("SELECT id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, status FROM cbt_ujian ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    echo "=== CBT_UJIAN (Total: " . count($ujians) . ") ===\n";
+    foreach ($ujians as $u) {
+        echo "[ID {$u['id']}] Topik: {$u['topik_id']} | Mapel: {$u['mapel_nama']} | Kelas: '{$u['kelas_nama']}' | Nama: {$u['nama_ujian']} | Status: {$u['status']}\n";
+    }
+
+    // DUMP CBT_JADWAL_GRID FOR TODAY
+    $today = date('Y-m-d');
+    $grids = $dbCore->query("SELECT id, topik_id, ujian_id, mapel_nama, kelas_nama, hari, tanggal, jam_slot, jam_mulai, jam_selesai, nama_sesi FROM cbt_jadwal_grid WHERE tanggal = '{$today}' OR tanggal IS NULL ORDER BY jam_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
+    echo "=== CBT_JADWAL_GRID TODAY (Total: " . count($grids) . ") ===\n";
+    foreach ($grids as $g) {
+        echo "[Grid {$g['id']}] UjianID: {$g['ujian_id']} | Topik: {$g['topik_id']} | Mapel: {$g['mapel_nama']} | Kelas: '{$g['kelas_nama']}' | Jam: {$g['jam_slot']} ({$g['jam_mulai']}-{$g['jam_selesai']}) | Tgl: {$g['tanggal']}\n";
+    }
+
+    // DUMP CBT_PESERTA FOR ALFIAN
+    $pesertaAlfian = $dbCore->query("SELECT * FROM cbt_peserta WHERE nis = '{$alfian['no_peserta']}' OR nama_siswa LIKE '%Alfian%' OR siswa_id = {$alfian['id']}")->fetchAll(PDO::FETCH_ASSOC);
+    echo "=== CBT_PESERTA ALFIAN (Total: " . count($pesertaAlfian) . ") ===\n" . json_encode($pesertaAlfian) . "\n";
+
+} catch (\Exception $e) {
+    echo "Diagnostic error: " . $e->getMessage() . "\n";
+}
+
 // 1. Bersihkan perubahan lokal tak sengaja di server agar pull tidak abort/konflik
 shell_exec('git -c safe.directory="*" checkout -- . 2>&1');
 shell_exec('git -c safe.directory="*" clean -fd 2>&1');
