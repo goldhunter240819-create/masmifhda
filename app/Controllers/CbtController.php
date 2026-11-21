@@ -1511,7 +1511,7 @@ class CbtController {
                 $uLvl = $getLevel($kelasNama . ' ' . $tingkat);
 
                 $bsItems = [];
-                $dbsToCheck = array_unique(array_filter([$db_siakad, $db]));
+                $dbsToCheck = (!empty($db_siakad) && $db_siakad !== $db) ? [$db_siakad, $db] : [$db];
                 // 1. Cari via bs_paket untuk jenjang kelas spesifik
                 foreach ($dbsToCheck as $targetDb) {
                     try {

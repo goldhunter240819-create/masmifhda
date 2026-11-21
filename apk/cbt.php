@@ -525,7 +525,7 @@ foreach ($ujianListRaw as $u) {
 
         $cleanMapel = trim($u['mapel_nama']);
         $uTopik = (int)($u['topik_id'] ?: $nearestTopikId);
-        $dbsToCheck = array_unique(array_filter([$siakad_db ?? null, $core_db]));
+        $dbsToCheck = (!empty($siakad_db) && $siakad_db !== $core_db) ? [$siakad_db, $core_db] : [$core_db];
         $freshBs = [];
         
         // 1. Prioritaskan pencarian paket spesifik di bs_paket untuk jenjang kelas siswa ini
