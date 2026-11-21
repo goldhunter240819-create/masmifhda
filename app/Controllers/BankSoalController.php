@@ -274,6 +274,11 @@ class BankSoalController {
 
         $userId = (int)$_SESSION['user_id'];
         $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+        if ($roleId === 3 || !empty($_SESSION['cbt_student_id'])) {
+            $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+            header("Location: {$cbtApkUrl}");
+            exit;
+        }
 
         // Ambil data guru dari user_id
         $guru = $this->db_core->query("SELECT id, nama FROM guru WHERE user_id = {$userId} LIMIT 1")->fetch(PDO::FETCH_ASSOC);
@@ -350,8 +355,15 @@ class BankSoalController {
             exit;
         }
 
+        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+        if ($roleId === 3 || !empty($_SESSION['cbt_student_id'])) {
+            $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+            header("Location: {$cbtApkUrl}");
+            exit;
+        }
+
         // Jika Guru mengakses, arahkan ke Bank Soal Guru
-        if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 2) {
+        if ($roleId === 2) {
             $this->guruIndex();
             return;
         }

@@ -514,32 +514,66 @@ foreach ($ujianListRaw as $u) {
 
     // 0b. Auto-Sync Butir Soal: Jamin butir soal cbt_soal selaras 100% dengan Bank Soal (bs_soal)
     try {
+        $getLevel = function($str) {
+            $s = strtoupper((string)$str);
+            if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
+            if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
+            if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
+            return 0;
+        };
+        $uLvl = $getLevel($u['kelas_nama'] ?: $tingkat_kelas);
+
         $cleanMapel = trim($u['mapel_nama']);
         $uTopik = (int)($u['topik_id'] ?: $nearestTopikId);
-        $dbsToCheck = array_unique(array_filter([$core_db, $siakad_db ?? null]));
+        $dbsToCheck = array_unique(array_filter([$siakad_db ?? null, $core_db]));
         $freshBs = [];
+        
+        // 1. Prioritaskan pencarian paket spesifik di bs_paket untuk jenjang kelas siswa ini
         foreach ($dbsToCheck as $targetDb) {
-            $stmtChkBs = $targetDb->prepare("
-                SELECT * FROM bs_soal 
-                WHERE (mapel_nama = ? OR mapel_nama LIKE ?)
-                  AND (topik_id = ? OR topik_id = ? OR ? = 0)
-                  AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '')
-                ORDER BY nomor_urut ASC, id ASC LIMIT 50
+            $stmtAllPaket = $targetDb->prepare("
+                SELECT id, kelas_nama, kelas_sasaran FROM bs_paket 
+                WHERE (topik_id = ? OR ? = 0)
+                  AND (mapel_nama = ? OR mapel_nama LIKE ?)
+                ORDER BY id ASC
             ");
-            $stmtChkBs->execute([
-                $cleanMapel,
-                '%' . $cleanMapel . '%',
-                $uTopik,
-                (int)($u['topik_id'] ?? 0),
-                $uTopik,
-                $u['kelas_nama'],
-                $tingkat_kelas,
-                '%' . $short_tingkat . '%'
-            ]);
-            $rowsBs = $stmtChkBs->fetchAll(PDO::FETCH_ASSOC);
-            if (!empty($rowsBs)) {
-                $freshBs = $rowsBs;
-                break;
+            $stmtAllPaket->execute([$uTopik, $uTopik, $cleanMapel, '%' . $cleanMapel . '%']);
+            $allPkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($allPkts as $pkt) {
+                $pLvl = $getLevel($pkt['kelas_nama'] . ' ' . ($pkt['kelas_sasaran'] ?? ''));
+                if ($pLvl === $uLvl || $uLvl === 0) {
+                    $stmtBS = $targetDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stmtBS->execute([$pkt['id']]);
+                    $rows = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                    if (!empty($rows)) {
+                        $freshBs = $rows;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        // 2. Fallback jika tidak lewat bs_paket: ambil dari bs_soal dengan filter level yang sama persis
+        if (empty($freshBs)) {
+            foreach ($dbsToCheck as $targetDb) {
+                $stmtAllSoal = $targetDb->prepare("
+                    SELECT * FROM bs_soal 
+                    WHERE (topik_id = ? OR ? = 0)
+                      AND (mapel_nama = ? OR mapel_nama LIKE ?)
+                    ORDER BY nomor_urut ASC, id ASC
+                ");
+                $stmtAllSoal->execute([$uTopik, $uTopik, $cleanMapel, '%' . $cleanMapel . '%']);
+                $allSoals = $stmtAllSoal->fetchAll(PDO::FETCH_ASSOC);
+                $matched = [];
+                foreach ($allSoals as $sRow) {
+                    $sLvl = $getLevel($sRow['kelas_nama']);
+                    if ($sLvl === $uLvl || $uLvl === 0) {
+                        $matched[] = $sRow;
+                    }
+                }
+                if (!empty($matched)) {
+                    $freshBs = $matched;
+                    break;
+                }
             }
         }
 
@@ -800,11 +834,7 @@ foreach ($ujianListRaw as $u) {
     $absenInfo = null;
     if ($requireAttendance) {
         $hasAbsen = false;
-        // Khusus Topik / Judul SIMULASI: Lolos otomatis agar simulasi & uji coba mandiri bebas hambatan gerbang fisik
-        if (stripos($u['nama_topik'] ?? '', 'SIMULASI') !== false || stripos($u['nama_ujian'] ?? '', 'SIMULASI') !== false) {
-            $hasAbsen = true;
-            $absenInfo = ['waktu_scan' => date('Y-m-d H:i:s'), 'metode_scan' => 'SIMULASI_AUTO'];
-        } elseif (!empty($u['id']) && isset($absenHariIniMap['uid_' . $u['id']])) {
+        if (!empty($u['id']) && isset($absenHariIniMap['uid_' . $u['id']])) {
             $hasAbsen = true;
             $absenInfo = $absenHariIniMap['uid_' . $u['id']];
         } elseif ($mKeyNorm && isset($absenHariIniMap['mapel_' . $mKeyNorm])) {
@@ -1591,20 +1621,12 @@ include 'header.php';
                     </a>
                 <?php elseif ($u['can_take']): ?>
                     <?php if ($requireAttendance && empty($u['has_absen'])): ?>
-                        <div style="font-size: 0.73rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 6px; background: #fff1f2; padding: 7px 10px; border-radius: 8px; border: 1px solid #fecdd3;">
-                            <span><i class="fa-solid fa-triangle-exclamation" style="color: #e11d48;"></i> Belum absen. Scan kartu di pengawas atau verifikasi mandiri.</span>
-                            <a href="cbt.php?self_checkin=1" style="background: #e11d48; color: #ffffff; padding: 3px 8px; border-radius: 6px; text-decoration: none; font-size: 0.7rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 4px rgba(225,29,72,0.25);">
-                                <i class="fa-solid fa-qrcode"></i> Absen Sekarang
-                            </a>
+                        <div style="font-size: 0.73rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; background: #fff1f2; padding: 7px 10px; border-radius: 8px; border: 1px solid #fecdd3;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color: #e11d48;"></i> Anda belum absen. Silakan scan barcode kartu Anda ke pengawas ujian.
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #94a3b8; color: #ffffff; cursor: not-allowed; border: none; box-shadow: none; flex: 1;" disabled title="Silakan lakukan absensi terlebih dahulu">
-                                <i class="fa-solid fa-qrcode"></i> Belum Absen
-                            </button>
-                            <a href="cbt.php?self_checkin=1" class="btn-ujian btn-ujian-start" style="padding: 10px 14px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.78rem;">
-                                <i class="fa-solid fa-circle-check"></i> Masuk Ujian
-                            </a>
-                        </div>
+                        <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #94a3b8; color: #ffffff; cursor: not-allowed; border: none; box-shadow: none;" disabled title="Silakan lakukan absensi terlebih dahulu ke pengawas ruang">
+                            <i class="fa-solid fa-qrcode"></i> Silakan Absensi Terlebih Dahulu
+                        </button>
                     <?php else: ?>
                         <?php if ($requireAttendance && !empty($u['absen_info'])): ?>
                             <div style="font-size: 0.72rem; color: #059669; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #ecfdf5; padding: 6px 10px; border-radius: 8px; border: 1px solid #a7f3d0;">

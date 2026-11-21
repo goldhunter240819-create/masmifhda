@@ -28,6 +28,25 @@ class AuthMiddleware {
             }
         }
 
+        // Security Guard: Jika Siswa (role_id = 3 / akun CBT siswa) iseng membuka portal proktor/admin/bank soal
+        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+        $isCbtPeserta = !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta']);
+        if (($roleId === 3 || $isCbtPeserta) && isset($_SESSION['user_id'])) {
+            $isManagementPath = (
+                strpos($path, '/cbt') !== false 
+                && strpos($path, '/cbt/kerjakan') === false 
+                && strpos($path, '/apk/') === false
+            ) || strpos($path, '/bank_soal') !== false 
+              || strpos($path, '/admin') !== false 
+              || strpos($path, '/kurikulum') !== false;
+
+            if ($isManagementPath) {
+                $cbtUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+                header("Location: {$cbtUrl}");
+                exit;
+            }
+        }
+
         if (!$isAllowed && !isset($_SESSION['user_id'])) {
             \App\Services\AuditLogger::securityAlert("Akses tanpa login diblokir — path: {$path}");
             

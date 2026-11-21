@@ -783,12 +783,21 @@ class CbtController {
             exit;
         }
 
+        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+        $isCbtPeserta = !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta']);
+
+        // Siswa (role_id = 3 / akun CBT siswa) DILARANG masuk ke portal manajemen proktor/admin
+        if ($roleId === 3 || $isCbtPeserta) {
+            $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+            header("Location: {$cbtApkUrl}");
+            exit;
+        }
+
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
 
         self::ensureTables($db_core);
 
-        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
         $isKamad = !empty($_SESSION['is_kamad']);
         $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || $isKamad);
 
@@ -1492,27 +1501,68 @@ class CbtController {
                 $targetUjianId = (int)$existingUjian['id'];
                 $soalCount = (int)$db->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$targetUjianId}")->fetchColumn();
 
-                $bsItems = [];
-                try {
-                    $stmtBS = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
-                    $stmtBS->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
-                    $bsItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
-                } catch (\Exception $e) {}
+                $getLevel = function($str) {
+                    $s = strtoupper((string)$str);
+                    if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
+                    if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
+                    if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
+                    return 0;
+                };
+                $uLvl = $getLevel($kelasNama . ' ' . $tingkat);
 
-                if (empty($bsItems) && $db !== $db_siakad) {
+                $bsItems = [];
+                $dbsToCheck = array_unique(array_filter([$db_siakad, $db]));
+                // 1. Cari via bs_paket untuk jenjang kelas spesifik
+                foreach ($dbsToCheck as $targetDb) {
                     try {
-                        $stmtBSCore = $db->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
-                        $stmtBSCore->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
-                        $bsItems = $stmtBSCore->fetchAll(PDO::FETCH_ASSOC);
+                        $stmtAllPaket = $targetDb->prepare("
+                            SELECT id, kelas_nama, kelas_sasaran FROM bs_paket 
+                            WHERE (topik_id = ? OR ? = 0)
+                              AND (mapel_nama = ? OR mapel_nama LIKE ?)
+                            ORDER BY id ASC
+                        ");
+                        $stmtAllPaket->execute([$tId, $tId, $mapel, '%' . $mapel . '%']);
+                        $allPkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($allPkts as $pkt) {
+                            $pLvl = $getLevel($pkt['kelas_nama'] . ' ' . ($pkt['kelas_sasaran'] ?? ''));
+                            if ($pLvl === $uLvl || $uLvl === 0) {
+                                $stmtBS = $targetDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                                $stmtBS->execute([$pkt['id']]);
+                                $rows = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                                if (!empty($rows)) {
+                                    $bsItems = $rows;
+                                    break 2;
+                                }
+                            }
+                        }
                     } catch (\Exception $e) {}
                 }
 
+                // 2. Fallback per jenjang kelas yang sama persis (tanpa campur aduk X, XI, XII)
                 if (empty($bsItems)) {
-                    try {
-                        $stmtBSAll = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) ORDER BY nomor_urut ASC, id ASC LIMIT 50");
-                        $stmtBSAll->execute([$mapel, $tId, $tId]);
-                        $bsItems = $stmtBSAll->fetchAll(PDO::FETCH_ASSOC);
-                    } catch (\Exception $e) {}
+                    foreach ($dbsToCheck as $targetDb) {
+                        try {
+                            $stmtAllSoal = $targetDb->prepare("
+                                SELECT * FROM bs_soal 
+                                WHERE (topik_id = ? OR ? = 0)
+                                  AND (mapel_nama = ? OR mapel_nama LIKE ?)
+                                ORDER BY nomor_urut ASC, id ASC
+                            ");
+                            $stmtAllSoal->execute([$tId, $tId, $mapel, '%' . $mapel . '%']);
+                            $allSoals = $stmtAllSoal->fetchAll(PDO::FETCH_ASSOC);
+                            $matched = [];
+                            foreach ($allSoals as $sRow) {
+                                $sLvl = $getLevel($sRow['kelas_nama']);
+                                if ($sLvl === $uLvl || $uLvl === 0) {
+                                    $matched[] = $sRow;
+                                }
+                            }
+                            if (!empty($matched)) {
+                                $bsItems = $matched;
+                                break;
+                            }
+                        } catch (\Exception $e) {}
+                    }
                 }
 
                 $shouldSyncSoal = ($soalCount === 0) || (!empty($bsItems) && $soalCount !== count($bsItems));
@@ -5700,11 +5750,20 @@ class CbtController {
                 $cleanM = trim($uExp['mapel_nama']);
                 $tId = (int)($uExp['topik_id'] ?? 0);
                 
+                $getLevel = function($str) {
+                    $s = strtoupper((string)$str);
+                    if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
+                    if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
+                    if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
+                    return 0;
+                };
+                $uLvl = $getLevel($uExp['kelas_nama']);
                 $bsSrc = !empty($bsSoalList) ? $bsSoalList : [];
-                $matchedBs = array_filter($bsSrc, function($b) use ($cleanM, $tId, $uExp) {
+                $matchedBs = array_filter($bsSrc, function($b) use ($cleanM, $tId, $uLvl, $getLevel) {
                     $mMatch = ($b['mapel_nama'] === $cleanM || stripos($b['mapel_nama'], $cleanM) !== false || stripos($cleanM, $b['mapel_nama']) !== false);
                     $tMatch = ($tId === 0 || (int)($b['topik_id'] ?? 0) === $tId);
-                    $kMatch = empty($uExp['kelas_nama']) || empty($b['kelas_nama']) || stripos($uExp['kelas_nama'], $b['kelas_nama']) !== false || stripos($b['kelas_nama'], $uExp['kelas_nama']) !== false;
+                    $bLvl = $getLevel($b['kelas_nama'] ?? '');
+                    $kMatch = ($uLvl === 0 || $bLvl === 0 || $uLvl === $bLvl);
                     return $mMatch && $tMatch && $kMatch;
                 });
                 
@@ -6698,11 +6757,20 @@ class CbtController {
                 $cleanM = trim($uExp['mapel_nama']);
                 $tId = (int)($uExp['topik_id'] ?? 0);
                 
+                $getLevel = function($str) {
+                    $s = strtoupper((string)$str);
+                    if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
+                    if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
+                    if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
+                    return 0;
+                };
+                $uLvl = $getLevel($uExp['kelas_nama']);
                 $bsSrc = !empty($bsSoalList) ? $bsSoalList : [];
-                $matchedBs = array_filter($bsSrc, function($b) use ($cleanM, $tId, $uExp) {
+                $matchedBs = array_filter($bsSrc, function($b) use ($cleanM, $tId, $uLvl, $getLevel) {
                     $mMatch = ($b['mapel_nama'] === $cleanM || stripos($b['mapel_nama'], $cleanM) !== false || stripos($cleanM, $b['mapel_nama']) !== false);
                     $tMatch = ($tId === 0 || (int)($b['topik_id'] ?? 0) === $tId);
-                    $kMatch = empty($uExp['kelas_nama']) || empty($b['kelas_nama']) || stripos($uExp['kelas_nama'], $b['kelas_nama']) !== false || stripos($b['kelas_nama'], $uExp['kelas_nama']) !== false;
+                    $bLvl = $getLevel($b['kelas_nama'] ?? '');
+                    $kMatch = ($uLvl === 0 || $bLvl === 0 || $uLvl === $bLvl);
                     return $mMatch && $tMatch && $kMatch;
                 });
                 
