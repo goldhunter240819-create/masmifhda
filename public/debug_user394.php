@@ -1,6 +1,6 @@
 <?php
 // Temporary endpoint to debug user 394
-require_once __DIR__ . '/app/Core/Database.php';
+require_once __DIR__ . '/../app/Core/Database.php';
 
 header('Content-Type: application/json');
 $secret = $_GET['secret'] ?? '';
