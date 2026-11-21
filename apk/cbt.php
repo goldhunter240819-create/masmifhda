@@ -18,6 +18,10 @@ if (!isset($_SESSION['siswa_id'])) {
     exit;
 }
 
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 $siswa_id = (int)$_SESSION['siswa_id'];
 $is_cbt_only = !empty($_SESSION['is_cbt_only']);
 
@@ -627,55 +631,61 @@ foreach ($ujianListRaw as $u) {
     $jSelesaiStr = '';
     $isHariIni = false;
 
-    if ($lockSchedule) {
-        try {
-            // 1. Cek apakah ada jadwal spesifik untuk HARI INI
-            $stmtToday = $core_db->prepare("
-                SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
-                FROM cbt_jadwal_grid g 
-                LEFT JOIN cbt_jam_slot s ON (
-                    g.jam_slot = s.label_sesi 
-                    OR g.jam_slot = CAST(s.urutan AS CHAR)
-                    OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
-                    OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - %')
-                    OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), '%')
-                )
-                WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND (g.hari = :curHari OR g.hari LIKE CONCAT(:curHari2, '%'))))
-                  AND (
-                      g.ujian_id = :uid 
-                      OR (
-                          (g.mapel_nama = :mapel OR :mapel LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', :mapel, '%'))
-                          AND (
-                              g.kelas_nama = :kelas 
-                              OR g.kelas_nama = :tingkat 
-                              OR g.kelas_nama = 'Semua Kelas' 
-                              OR g.kelas_nama = ''
-                              OR g.kelas_nama IS NULL
-                              OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
-                              OR (
-                                  (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
-                                  OR (:short_tingkat = 'XI' AND ((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
-                                  OR (:short_tingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
-                              )
-                          )
-                      )
+    $otherGrid = null;
+    $uTopikId = (int)($u['topik_id'] ?? 0);
+    $uMapel = trim($u['mapel_nama'] ?? '');
+
+    try {
+        // 1. Cek apakah ada jadwal spesifik untuk HARI INI yang SESUAI MAPEL & KELAS SISWA
+        $stmtToday = $core_db->prepare("
+            SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
+            FROM cbt_jadwal_grid g 
+            LEFT JOIN cbt_jam_slot s ON (
+                g.jam_slot = s.label_sesi 
+                OR g.jam_slot = CAST(s.urutan AS CHAR)
+                OR g.jam_slot = CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - ', SUBSTRING(s.jam_selesai, 1, 5))
+                OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), ' - %')
+                OR g.jam_slot LIKE CONCAT(SUBSTRING(s.jam_mulai, 1, 5), '%')
+            )
+            WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND (g.hari = :curHari OR g.hari LIKE CONCAT(:curHari2, '%'))))
+              AND (:tid <= 0 OR g.topik_id = :tid2 OR g.topik_id IS NULL OR g.topik_id = 0)
+              AND (
+                  (g.mapel_nama = :mapel OR :mapel LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', :mapel, '%'))
+                  OR (g.ujian_id = :uid AND (g.mapel_nama IS NULL OR g.mapel_nama = '' OR g.mapel_nama = :mapel2))
+              )
+              AND (
+                  g.kelas_nama = :kelas 
+                  OR g.kelas_nama = :tingkat 
+                  OR g.kelas_nama = 'Semua Kelas' 
+                  OR g.kelas_nama = ''
+                  OR g.kelas_nama IS NULL
+                  OR :kelas LIKE CONCAT('%', g.kelas_nama, '%')
+                  OR (
+                      (:short_tingkat = 'XII' AND (g.kelas_nama LIKE 'XII%' OR g.kelas_nama LIKE 'Kelas 12%' OR g.kelas_nama LIKE 'Kelas XII%'))
+                      OR (:short_tingkat = 'XI' AND ((g.kelas_nama LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 11%' OR g.kelas_nama LIKE 'Kelas XI%'))
+                      OR (:short_tingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
                   )
-                ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, (g.kelas_nama = :tingkat2) DESC, g.id ASC LIMIT 1
-            ");
-            $stmtToday->execute([
-                ':today' => $todayDate,
-                ':curHari' => $curHari,
-                ':curHari2' => $curHari,
-                ':uid' => $u['id'],
-                ':mapel' => $u['mapel_nama'],
-                ':kelas' => $siswa['nama_kelas'],
-                ':tingkat' => $tingkat_kelas,
-                ':short_tingkat' => $short_tingkat,
-                ':uid2' => $u['id'],
-                ':kelas2' => $siswa['nama_kelas'],
-                ':tingkat2' => $tingkat_kelas
-            ]);
-            $jGrid = $stmtToday->fetch(PDO::FETCH_ASSOC);
+              )
+            ORDER BY (g.mapel_nama = :mapel3) DESC, (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, (g.kelas_nama = :tingkat2) DESC, g.id ASC LIMIT 1
+        ");
+        $stmtToday->execute([
+            ':today' => $todayDate,
+            ':curHari' => $curHari,
+            ':curHari2' => $curHari,
+            ':tid' => $uTopikId,
+            ':tid2' => $uTopikId,
+            ':mapel' => $uMapel,
+            ':uid' => $u['id'],
+            ':mapel2' => $uMapel,
+            ':kelas' => $siswa['nama_kelas'],
+            ':tingkat' => $tingkat_kelas,
+            ':short_tingkat' => $short_tingkat,
+            ':mapel3' => $uMapel,
+            ':uid2' => $u['id'],
+            ':kelas2' => $siswa['nama_kelas'],
+            ':tingkat2' => $tingkat_kelas
+        ]);
+        $jGrid = $stmtToday->fetch(PDO::FETCH_ASSOC);
 
             if ($jGrid) {
                 // Terjadwal HARI INI!
@@ -714,21 +724,28 @@ foreach ($ujianListRaw as $u) {
                 $startTs = !empty($jMulaiStr) ? strtotime($todayDate . ' ' . $jMulaiStr) : 0;
                 $endTs = !empty($jSelesaiStr) ? strtotime($todayDate . ' ' . $jSelesaiStr) : 0;
 
-                if ($startTs && $nowTs < $startTs) {
-                    // Jam mulai belum tiba
-                    $scheduleState = 'early';
-                    $canTake = false;
-                    $scheduleNotice = 'Sesi dibuka pukul ' . $jMulaiStr . ' WIB';
-                } elseif ($endTs && $nowTs > $endTs) {
-                    // Jam selesai sudah terlewat!
-                    $scheduleState = 'expired';
-                    $canTake = false;
-                    $scheduleNotice = 'Sesi telah berakhir pada pukul ' . $jSelesaiStr . ' WIB';
+                if ($lockSchedule) {
+                    if ($startTs && $nowTs < $startTs) {
+                        // Jam mulai belum tiba
+                        $scheduleState = 'early';
+                        $canTake = false;
+                        $scheduleNotice = 'Sesi dibuka pukul ' . $jMulaiStr . ' WIB';
+                    } elseif ($endTs && $nowTs > $endTs) {
+                        // Jam selesai sudah terlewat!
+                        $scheduleState = 'expired';
+                        $canTake = false;
+                        $scheduleNotice = 'Sesi telah berakhir pada pukul ' . $jSelesaiStr . ' WIB';
+                    } else {
+                        // Jam sedang berlangsung
+                        $scheduleState = 'open';
+                        $canTake = true;
+                        $scheduleNotice = 'Sesi Sedang Berlangsung (' . ($timeRange ?: 'Jam Ujian') . ')';
+                    }
                 } else {
-                    // Jam sedang berlangsung
+                    // Mode Bebas Jam Hari Ini
                     $scheduleState = 'open';
                     $canTake = true;
-                    $scheduleNotice = 'Sesi Sedang Berlangsung (' . ($timeRange ?: 'Jam Ujian') . ')';
+                    $scheduleNotice = 'Sesi Hari Ini Terbuka (' . ($timeRange ?: 'Bebas Jam') . ')';
                 }
             } else {
                 // Tidak ada jadwal untuk HARI INI. Cek apakah ada jadwal di hari lain di cbt_jadwal_grid
@@ -813,21 +830,20 @@ foreach ($ujianListRaw as $u) {
                     }
                     $jadwalSlotLabel = 'Hari ' . $otherDayIndo;
                 } else {
-                    // Benar-benar tidak dijadwalkan hari ini (seperti Bahasa Arab)
+                    // Benar-benar tidak dijadwalkan hari ini
                     $isHariIni = false;
                     $scheduleState = 'unscheduled';
-                    $canTake = false;
-                    $scheduleNotice = 'Tidak Ada Jadwal Hari Ini';
                     $jadwalSlotLabel = 'Belum Dijadwalkan';
+                    if ($lockSchedule) {
+                        $canTake = false;
+                        $scheduleNotice = 'Tidak Ada Jadwal Hari Ini';
+                    } else {
+                        $canTake = true;
+                        $scheduleNotice = 'Mode Susulan Terbuka';
+                    }
                 }
             }
         } catch (\Exception $e) {}
-    } else {
-        $isHariIni = true;
-        $scheduleState = 'open';
-        $canTake = true;
-        $scheduleNotice = 'Mode Ujian Susulan (Terbuka)';
-    }
 
     // Evaluasi Verifikasi Absensi 1 Pintu (Jika Diwajibkan di Pengaturan CBT)
     $hasAbsen = true;
@@ -871,14 +887,10 @@ foreach ($allEvaluatedUjian as $u) {
     if ($u['status_pengerjaan'] === 'Selesai') {
         continue;
     }
-    if ($lockSchedule) {
-        if (!empty($u['is_hari_ini'])) {
-            $ujianHariIni[] = $u;
-        } else {
-            $ujianLainnya[] = $u;
-        }
-    } else {
+    if (!empty($u['is_hari_ini'])) {
         $ujianHariIni[] = $u;
+    } else {
+        $ujianLainnya[] = $u;
     }
 }
 
@@ -908,16 +920,24 @@ $upcomingUjian = null;
 $completedTodayUjian = null;
 
 // Prioritas 1: Yang sedang dikerjakan saat ini
-foreach ($allEvaluatedUjian as $uItem) {
+foreach ($ujianHariIni as $uItem) {
     if (in_array($uItem['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan'])) {
         $activeOngoingUjian = $uItem;
         break;
     }
 }
+if (!$activeOngoingUjian) {
+    foreach ($ujianLainnya as $uItem) {
+        if (in_array($uItem['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan'])) {
+            $activeOngoingUjian = $uItem;
+            break;
+        }
+    }
+}
 
 // Prioritas 2: Yang aktif hari ini dan siap dikerjakan
 if (!$activeOngoingUjian) {
-    foreach ($allEvaluatedUjian as $uItem) {
+    foreach ($ujianHariIni as $uItem) {
         if ($uItem['status_pengerjaan'] !== 'Selesai' && $uItem['can_take']) {
             $activeOngoingUjian = $uItem;
             break;
@@ -928,7 +948,7 @@ if (!$activeOngoingUjian) {
 // Prioritas 3: Jadwal hari ini tapi jam mulai belum tiba (pilih yang paling awal jam mulainya)
 if (!$activeOngoingUjian) {
     $earlyToday = [];
-    foreach ($allEvaluatedUjian as $uItem) {
+    foreach ($ujianHariIni as $uItem) {
         if (!empty($uItem['is_hari_ini']) && $uItem['schedule_state'] === 'early') {
             $earlyToday[] = $uItem;
         }
@@ -945,7 +965,7 @@ if (!$activeOngoingUjian) {
 
 // Prioritas 4: Jika jadwal hari ini sudah diselesaikan siswa
 if (!$activeOngoingUjian && !$upcomingUjian) {
-    foreach ($allEvaluatedUjian as $uItem) {
+    foreach ($ujianHariIni as $uItem) {
         if (!empty($uItem['is_hari_ini']) && $uItem['status_pengerjaan'] === 'Selesai') {
             $completedTodayUjian = $uItem;
             break;
@@ -1650,7 +1670,69 @@ include 'header.php';
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- Section 2: Mata Pelajaran Lain (Disembunyikan agar tampilan APK siswa bersih dan fokus pada jadwal hari ini) -->
+    <!-- Section 2: Ujian Susulan (Hanya Muncul jika Mode Susulan / Kunci Jadwal Dimatikan oleh Proktor) -->
+    <?php if (!$lockSchedule && !empty($ujianLainnya)): ?>
+        <div style="padding: 12px 16px 8px; display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 900; color: #475569; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-list-check" style="color: #64748b;"></i> Ujian Susulan / Di Luar Jadwal Hari Ini
+            </h3>
+            <span style="font-size: 0.72rem; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; font-weight: 800; padding: 2px 9px; border-radius: 20px;">
+                <?= count($ujianLainnya) ?> Mapel
+            </span>
+        </div>
+        <div style="padding: 0 16px 10px;">
+            <?php foreach ($ujianLainnya as $u): ?>
+                <?php
+                $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']);
+                $durasi = (int)($u['durasi_menit'] ?? 90);
+                $totalSoal = (int)($u['total_soal'] ?? 0);
+                $kkm = (int)($u['kkm'] ?? 75);
+                $tokenUjian = $u['token'] ?? '';
+                ?>
+                <div class="cbt-card" style="margin-bottom: 12px; border-left: 4px solid #64748b; opacity: 0.95;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase;">
+                                <i class="fa-solid fa-book-bookmark"></i> <?= htmlspecialchars($u['kode_ujian']) ?>
+                            </div>
+                            <h4 style="margin: 2px 0 0; font-size: 0.92rem; color: #0f172a; font-weight: 800;">
+                                <?= htmlspecialchars($u['nama_ujian']) ?>
+                            </h4>
+                        </div>
+                        <span style="background: #f1f5f9; color: #475569; font-size: 0.65rem; font-weight: 800; padding: 2px 7px; border-radius: 20px; border: 1px solid #cbd5e1;">
+                            Mode Susulan
+                        </span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f8fafc; border-radius: 10px; padding: 6px 8px; margin-bottom: 10px; text-align: center;">
+                        <div>
+                            <div style="font-size: 0.62rem; color: #64748b;">Mata Pelajaran</div>
+                            <div style="font-size: 0.74rem; font-weight: 800; color: #1e293b;"><?= htmlspecialchars($u['mapel_nama']) ?></div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.62rem; color: #64748b;">Alokasi Waktu</div>
+                            <div style="font-size: 0.74rem; font-weight: 800; color: #1e293b;"><?= $durasi ?> Menit</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.62rem; color: #64748b;">Jumlah Soal</div>
+                            <div style="font-size: 0.74rem; font-weight: 800; color: #1e293b;"><?= $totalSoal > 0 ? $totalSoal . ' Butir' : 'Tersusun' ?></div>
+                        </div>
+                    </div>
+                    <?php if ($requireAttendance && empty($u['has_absen'])): ?>
+                        <div style="background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.72rem; color: #991b1b; font-weight: 700;">
+                            ⚠️ Anda belum absen. Silakan scan barcode kartu Anda ke pengawas ujian.
+                        </div>
+                        <button type="button" class="btn-ujian btn-ujian-locked" disabled style="opacity: 0.6; cursor: not-allowed; width: 100%; border: none;">
+                            <i class="fa-solid fa-lock"></i> Silakan Absensi Terlebih Dahulu
+                        </button>
+                    <?php else: ?>
+                        <a href="cbt_soal.php?ujian_id=<?= $u['id'] ?>" class="btn-ujian btn-ujian-active" style="display: block; text-align: center; text-decoration: none;">
+                            <i class="fa-solid fa-play"></i> Mulai Ujian Susulan
+                        </a>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 
     <!-- Riwayat Hasil Ujian CBT -->
     <?php if (!empty($riwayatUjian)): ?>

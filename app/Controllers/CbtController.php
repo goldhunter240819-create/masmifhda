@@ -1442,15 +1442,15 @@ class CbtController {
 
                 $existingUjian = null;
                 if ($ujianId > 0) {
-                    $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ?");
-                    $stmtU->execute([$ujianId]);
+                    $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ? AND (mapel_nama = ? OR mapel_nama LIKE ?)");
+                    $stmtU->execute([$ujianId, $mapel, '%' . $mapel . '%']);
                     $existingUjian = $stmtU->fetch(PDO::FETCH_ASSOC);
                 }
 
                 if (!$existingUjian) {
                     // Cari berdasarkan topik_id, mapel_nama, dan kelas_nama / tingkat
-                    $stmtFind = $db->prepare("SELECT * FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas' OR kelas_nama LIKE ?) ORDER BY id DESC LIMIT 1");
-                    $stmtFind->execute([$tId, $mapel, $kelasNama, $tingkat, '%' . $tingkat . '%']);
+                    $stmtFind = $db->prepare("SELECT * FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND (mapel_nama = ? OR mapel_nama LIKE ?) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas' OR kelas_nama LIKE ?) ORDER BY id DESC LIMIT 1");
+                    $stmtFind->execute([$tId, $mapel, '%' . $mapel . '%', $kelasNama, $tingkat, '%' . $tingkat . '%']);
                     $existingUjian = $stmtFind->fetch(PDO::FETCH_ASSOC);
                 }
 
@@ -1587,6 +1587,15 @@ class CbtController {
                         ]);
                     }
                 }
+            }
+
+            // Kumpulkan ID ujian yang terjadwal di cbt_jadwal_grid
+            $activeGridUjianIds = array_filter(array_map('intval', array_column($grids, 'ujian_id')));
+            if ($topik_id > 0 && !empty($activeGridUjianIds)) {
+                $inGridU = implode(',', array_unique($activeGridUjianIds));
+                try {
+                    $db->exec("UPDATE cbt_ujian SET status = 'Draft' WHERE topik_id = {$topik_id} AND id NOT IN ({$inGridU}) AND id NOT IN (SELECT DISTINCT ujian_id FROM cbt_peserta)");
+                } catch (\Exception $e) {}
             }
 
             // Pastikan Token Ujian Aktif
@@ -1792,7 +1801,7 @@ class CbtController {
                             $existingId = $stmtCheck->fetchColumn();
 
                             if ($existingId) {
-                                $sqlUp = "UPDATE cbt_jadwal_grid SET topik_id = ?, mapel_nama = ?, kelas_id = ?, tanggal = COALESCE(?, tanggal), hari = ?";
+                                $sqlUp = "UPDATE cbt_jadwal_grid SET topik_id = ?, mapel_nama = ?, kelas_id = ?, tanggal = COALESCE(?, tanggal), hari = ?, ujian_id = NULL";
                                 $upParams = [$topik_id, $mapel_nama, $kId, $tgl, $plainHari];
                                 if (!empty($pengawas)) {
                                     $sqlUp .= ", pengawas = ?";
@@ -6481,6 +6490,13 @@ class CbtController {
 
         // 3. Jadwal Grid
         if (!empty($data['jadwal_grid'])) {
+            $validGridIds = array_filter(array_map('intval', array_column($data['jadwal_grid'], 'id')));
+            if (!empty($validGridIds)) {
+                $inClauseG = implode(',', $validGridIds);
+                try {
+                    $db->exec("DELETE FROM cbt_jadwal_grid WHERE id NOT IN ($inClauseG)");
+                } catch (\Exception $e) {}
+            }
             $stmtG = $db->prepare("INSERT INTO cbt_jadwal_grid (id, topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_id, kelas_nama, pengawas, ruang, tanggal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mapel_nama = VALUES(mapel_nama), ujian_id = VALUES(ujian_id), tanggal = VALUES(tanggal), hari = VALUES(hari), jam_slot = VALUES(jam_slot)");
             foreach ($data['jadwal_grid'] as $g) {
                 try {
@@ -6492,6 +6508,13 @@ class CbtController {
 
         // 4. Ujian
         if (!empty($data['ujian'])) {
+            $validUjianIds = array_filter(array_map('intval', array_column($data['ujian'], 'id')));
+            if (!empty($validUjianIds)) {
+                $inClauseU = implode(',', $validUjianIds);
+                try {
+                    $db->exec("DELETE FROM cbt_ujian WHERE id NOT IN ($inClauseU) AND id NOT IN (SELECT DISTINCT ujian_id FROM cbt_peserta)");
+                } catch (\Exception $e) {}
+            }
             $stmtU = $db->prepare("INSERT INTO cbt_ujian (id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_ujian = VALUES(nama_ujian), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), status = VALUES(status), durasi_menit = VALUES(durasi_menit), kkm = VALUES(kkm)");
             foreach ($data['ujian'] as $u) {
                 try {
@@ -6706,6 +6729,10 @@ class CbtController {
                 } catch (\Exception $e) {}
             }
         }
+
+        try {
+            self::syncJadwalWithUjian($db, $dbSiakad);
+        } catch (\Exception $e) {}
 
         return $details;
     }
