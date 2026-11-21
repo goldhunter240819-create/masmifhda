@@ -459,6 +459,59 @@ class CbtController {
                 INDEX (ruang_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+            // 12b. Tabel Jadwal Pengawas Ruang Multi-Hari & Multi-Sesi (Matrix Model)
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_pengawas_jadwal (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                topik_id INT NOT NULL,
+                hari VARCHAR(20) NOT NULL,
+                tanggal DATE DEFAULT NULL,
+                sesi_label VARCHAR(50) NOT NULL,
+                jam_slot VARCHAR(50) DEFAULT NULL,
+                ruang_id INT NOT NULL,
+                ruang_nama VARCHAR(100) DEFAULT NULL,
+                guru_id INT DEFAULT NULL,
+                guru_nama VARCHAR(150) NOT NULL,
+                guru_nip VARCHAR(50) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_topik_hari_sesi_ruang (topik_id, hari, sesi_label, ruang_id),
+                INDEX (topik_id),
+                INDEX (hari),
+                INDEX (tanggal),
+                INDEX (ruang_id),
+                INDEX (guru_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // 12c. Tabel Presensi / Absensi Kehadiran Pengawas Ruangan
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_pengawas_absensi (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                topik_id INT DEFAULT NULL,
+                jadwal_id INT DEFAULT NULL,
+                tanggal DATE NOT NULL,
+                hari VARCHAR(20) DEFAULT NULL,
+                sesi_label VARCHAR(50) DEFAULT NULL,
+                jam_slot VARCHAR(50) DEFAULT NULL,
+                ruang_id INT DEFAULT NULL,
+                ruang_nama VARCHAR(100) DEFAULT NULL,
+                guru_id INT NOT NULL,
+                guru_nip VARCHAR(50) DEFAULT NULL,
+                guru_nama VARCHAR(150) NOT NULL,
+                waktu_scan DATETIME NOT NULL,
+                metode_scan VARCHAR(30) DEFAULT 'QR_SCAN',
+                status_kehadiran VARCHAR(30) DEFAULT 'Hadir',
+                catatan TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (topik_id),
+                INDEX (tanggal),
+                INDEX (ruang_id),
+                INDEX (guru_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            try {
+                $db->prepare("INSERT IGNORE INTO cbt_pengaturan (setting_key, setting_value, kategori, keterangan) VALUES (?, ?, ?, ?)")
+                   ->execute(['honor_pengawas_per_sesi', '25000', 'honor', 'Nominal Honorarium Pengawas Ruang Per-Sesi (Rupiah)']);
+            } catch (\Exception $e) {}
+
             // Migration: Kolom topik_id di cbt_denah_peserta
             try {
                 $chkCol = $db->query("SHOW COLUMNS FROM cbt_denah_peserta LIKE 'topik_id'")->fetch();
@@ -2336,7 +2389,7 @@ class CbtController {
             exit;
         }
 
-        $mapelNama = trim($ujianInfo['mapel_nama'] ?? '');
+        $mapelNama = trim($ujianInfo['mapel_nama'] ?? ($ujianInfo['nama_ujian'] ?? ''));
 
         // Ambil daftar butir soal real
         $stmtS = $db->prepare("SELECT * FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
@@ -3016,7 +3069,7 @@ class CbtController {
             exit;
         }
 
-        $mapelNama = trim($ujianInfo['mapel_nama'] ?? '');
+        $mapelNama = trim($ujianInfo['mapel_nama'] ?? ($ujianInfo['nama_ujian'] ?? ''));
 
         // Ambil butir soal (Lengkap dengan tipe_soal dan konten_tambahan untuk 5 model CBT)
         $stmtS = $db->prepare("SELECT id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
@@ -3121,7 +3174,7 @@ class CbtController {
             $stmtU = $db->prepare("SELECT mapel_nama, nama_ujian FROM cbt_ujian WHERE id = ? LIMIT 1");
             $stmtU->execute([$ujian_id]);
             $uRow = $stmtU->fetch(PDO::FETCH_ASSOC);
-            $mapelNama = $uRow['mapel_nama'] ?? '';
+            $mapelNama = trim($uRow['mapel_nama'] ?? ($uRow['nama_ujian'] ?? $mapelNama));
 
             // Cek apakah ada jadwal spesifik untuk HARI INI
             $stmtToday = $db->prepare("
@@ -5317,6 +5370,870 @@ class CbtController {
         }
 
         include __DIR__ . '/../../resources/views/cbt/cetak_label_meja.php';
+        exit;
+    }
+
+    // =========================================================================
+    // MODUL PENGAWAS RUANG CBT (JADWAL MATRIX, SCAN PRESENSI, REKAP HONOR, BERITA ACARA)
+    // =========================================================================
+
+    /**
+     * Jadwal Pengawas Ruang CBT (Matrix Model: Hari/Tanggal & Sesi x Ruang)
+     */
+    public static function pengawasJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
+
+        $topikList = self::getActiveTopikList($db, $db_siakad);
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        if ($selectedTopikId <= 0 && !empty($topikList)) {
+            $selectedTopikId = (int)$topikList[0]['id'];
+        }
+
+        $selectedHari = $_GET['hari'] ?? 'Semua';
+        $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+        $displayDays = ($selectedHari === 'Semua') ? $hariList : [$selectedHari];
+
+        // Ambil daftar ruang
+        $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ambil daftar sesi ujian (dari cbt_jam_slot atau default)
+        $slotList = [];
+        try {
+            $slotList = $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC, jam_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($slotList)) {
+            $slotList = [
+                ['id' => 1, 'urutan' => 1, 'label_sesi' => 'Sesi 1', 'jam_mulai' => '08:00', 'jam_selesai' => '09:00', 'jam_slot' => '08:00 - 09:00'],
+                ['id' => 2, 'urutan' => 2, 'label_sesi' => 'Sesi 2', 'jam_mulai' => '09:00', 'jam_selesai' => '10:00', 'jam_slot' => '09:00 - 10:00'],
+                ['id' => 3, 'urutan' => 3, 'label_sesi' => 'Sesi 3', 'jam_mulai' => '10:10', 'jam_selesai' => '11:10', 'jam_slot' => '10:10 - 11:10']
+            ];
+        }
+
+        // Ambil daftar guru untuk dropdown penugasan pengawas
+        $guruList = [];
+        try {
+            $guruList = $db->query("SELECT id, nama, nip FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($guruList) && $db_siakad) {
+            try {
+                $guruList = $db_siakad->query("SELECT id, nama, nip FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+        }
+        if (empty($guruList)) {
+            $guruList = [
+                ['id' => 1, 'nama' => 'M AZIZ SULAIMAN, S.Pd', 'nip' => '-'],
+                ['id' => 2, 'nama' => 'SAIPUDIN AZIZ, S.Pd', 'nip' => '-'],
+                ['id' => 3, 'nama' => 'INDAH YUNITASARI, S.Pd', 'nip' => '-'],
+                ['id' => 4, 'nama' => 'M. Wahidin, S.Pd', 'nip' => '-'],
+                ['id' => 5, 'nama' => 'SYAIFUL BAHRI, S.Pd', 'nip' => '-'],
+                ['id' => 6, 'nama' => 'SAWALUDIN, S.Pd', 'nip' => '-'],
+                ['id' => 7, 'nama' => 'Drs. Hamim Hasyim', 'nip' => '-'],
+                ['id' => 8, 'nama' => 'ERWANSAH, S.Pd', 'nip' => '-'],
+                ['id' => 9, 'nama' => 'ENDANG KURNIASIH, S.E.', 'nip' => '-'],
+                ['id' => 10, 'nama' => 'JULAINI, S.Pd', 'nip' => '-'],
+                ['id' => 11, 'nama' => 'SHOBIRIN', 'nip' => '-'],
+                ['id' => 12, 'nama' => 'SITI AISAH, S.Pd.I', 'nip' => '-'],
+                ['id' => 13, 'nama' => 'DIDI HARTONO, S.Pd.I', 'nip' => '-']
+            ];
+        }
+
+        // Ambil jadwal tersimpan
+        $jadwalMatrix = [];
+        $totalPenugasan = 0;
+        if ($selectedTopikId > 0) {
+            $stmtJ = $db->prepare("SELECT * FROM cbt_pengawas_jadwal WHERE topik_id = ? ORDER BY id ASC");
+            $stmtJ->execute([$selectedTopikId]);
+            $rawJadwal = $stmtJ->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rawJadwal as $rj) {
+                $h = $rj['hari'];
+                $s = $rj['sesi_label'];
+                $r = (int)$rj['ruang_id'];
+                $jadwalMatrix[$h][$s][$r] = $rj;
+                $totalPenugasan++;
+            }
+        }
+
+        $title = "Jadwal Pengawas Ruang CBT - MAS MIFTAHUL HUDA";
+        $active_menu = 'pengawas_jadwal';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/pengawas_jadwal.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Simpan / Perbarui Penugasan Pengawas Ruang
+     */
+    public static function savePengawasJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $topikId = (int)($_POST['topik_id'] ?? 0);
+        $hari = trim($_POST['hari'] ?? '');
+        $tanggal = !empty($_POST['tanggal']) ? $_POST['tanggal'] : null;
+        $sesiLabel = trim($_POST['sesi_label'] ?? 'Sesi 1');
+        $jamSlot = trim($_POST['jam_slot'] ?? '');
+        $ruangId = (int)($_POST['ruang_id'] ?? 0);
+        $guruId = (int)($_POST['guru_id'] ?? 0);
+        $guruNama = trim($_POST['guru_nama'] ?? '');
+        $guruNip = trim($_POST['guru_nip'] ?? '-');
+
+        if ($guruId > 0 && empty($guruNama)) {
+            $stmtG = $db->prepare("SELECT nama, nip FROM guru WHERE id = ?");
+            $stmtG->execute([$guruId]);
+            $gRow = $stmtG->fetch(PDO::FETCH_ASSOC);
+            if ($gRow) {
+                $guruNama = $gRow['nama'];
+                $guruNip = $gRow['nip'] ?: '-';
+            }
+        }
+
+        $ruangNama = '';
+        if ($ruangId > 0) {
+            $stmtR = $db->prepare("SELECT nama_ruang FROM cbt_ruang WHERE id = ?");
+            $stmtR->execute([$ruangId]);
+            $ruangNama = $stmtR->fetchColumn() ?: ('Ruang ' . $ruangId);
+        }
+
+        if ($topikId > 0 && !empty($hari) && !empty($sesiLabel) && $ruangId > 0 && !empty($guruNama)) {
+            $stmt = $db->prepare("
+                INSERT INTO cbt_pengawas_jadwal 
+                    (topik_id, hari, tanggal, sesi_label, jam_slot, ruang_id, ruang_nama, guru_id, guru_nama, guru_nip) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    tanggal = VALUES(tanggal),
+                    jam_slot = VALUES(jam_slot),
+                    ruang_nama = VALUES(ruang_nama),
+                    guru_id = VALUES(guru_id),
+                    guru_nama = VALUES(guru_nama),
+                    guru_nip = VALUES(guru_nip)
+            ");
+            $stmt->execute([$topikId, $hari, $tanggal, $sesiLabel, $jamSlot, $ruangId, $ruangNama, $guruId, $guruNama, $guruNip]);
+        }
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Penugasan pengawas berhasil disimpan!']);
+            exit;
+        }
+
+        redirect('/cbt/pengawas/jadwal?topik_id=' . $topikId . '&hari=' . urlencode($hari) . '&saved=1');
+        exit;
+    }
+
+    /**
+     * Hapus Penugasan Pengawas Ruang
+     */
+    public static function deletePengawasJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
+        $topikId = (int)($_POST['topik_id'] ?? ($_GET['topik_id'] ?? 0));
+        $hari = trim($_POST['hari'] ?? ($_GET['hari'] ?? ''));
+
+        if ($id > 0) {
+            $db->prepare("DELETE FROM cbt_pengawas_jadwal WHERE id = ?")->execute([$id]);
+        }
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
+        redirect('/cbt/pengawas/jadwal?topik_id=' . $topikId . '&hari=' . urlencode($hari) . '&deleted=1');
+        exit;
+    }
+
+    /**
+     * Penugasan Cepat / Auto-Distribusi Pengawas Ruang
+     */
+    public static function saveBulkPengawasJadwal() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $topikId = (int)($_POST['topik_id'] ?? 0);
+        $hari = trim($_POST['hari'] ?? 'Senin');
+        $assignments = $_POST['assignments'] ?? [];
+
+        if ($topikId > 0 && is_array($assignments)) {
+            $stmtR = $db->query("SELECT id, nama_ruang FROM cbt_ruang");
+            $ruangMap = [];
+            while ($r = $stmtR->fetch(PDO::FETCH_ASSOC)) {
+                $ruangMap[$r['id']] = $r['nama_ruang'];
+            }
+
+            $stmtG = $db->query("SELECT id, nama, nip FROM guru");
+            $guruMap = [];
+            while ($g = $stmtG->fetch(PDO::FETCH_ASSOC)) {
+                $guruMap[$g['id']] = $g;
+            }
+
+            $stmtIns = $db->prepare("
+                INSERT INTO cbt_pengawas_jadwal 
+                    (topik_id, hari, sesi_label, jam_slot, ruang_id, ruang_nama, guru_id, guru_nama, guru_nip) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    jam_slot = VALUES(jam_slot),
+                    ruang_nama = VALUES(ruang_nama),
+                    guru_id = VALUES(guru_id),
+                    guru_nama = VALUES(guru_nama),
+                    guru_nip = VALUES(guru_nip)
+            ");
+
+            foreach ($assignments as $as) {
+                $sLabel = trim($as['sesi_label'] ?? '');
+                $rId = (int)($as['ruang_id'] ?? 0);
+                $gId = (int)($as['guru_id'] ?? 0);
+                $jSlot = trim($as['jam_slot'] ?? '');
+
+                if (!empty($sLabel) && $rId > 0 && $gId > 0 && isset($guruMap[$gId])) {
+                    $rNama = $ruangMap[$rId] ?? ('Ruang ' . $rId);
+                    $gNama = $guruMap[$gId]['nama'];
+                    $gNip = $guruMap[$gId]['nip'] ?: '-';
+                    $stmtIns->execute([$topikId, $hari, $sLabel, $jSlot, $rId, $rNama, $gId, $gNama, $gNip]);
+                }
+            }
+        }
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Penugasan massal berhasil disimpan!']);
+            exit;
+        }
+
+        redirect('/cbt/pengawas/jadwal?topik_id=' . $topikId . '&hari=' . urlencode($hari) . '&bulk_saved=1');
+        exit;
+    }
+
+    /**
+     * Halaman Scanner Presensi Khusus Pengawas Ruang (Kamera & Barcode Gun)
+     */
+    public static function pengawasScan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $todayDate = date('Y-m-d');
+        $curTime = date('H:i');
+        $hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $curHari = $hariIndo[date('w')];
+
+        $slotList = [];
+        try {
+            $slotList = $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC, jam_mulai ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($slotList)) {
+            $slotList = [
+                ['label_sesi' => 'Sesi 1', 'jam_mulai' => '08:00', 'jam_selesai' => '09:00', 'jam_slot' => '08:00 - 09:00'],
+                ['label_sesi' => 'Sesi 2', 'jam_mulai' => '09:00', 'jam_selesai' => '10:00', 'jam_slot' => '09:00 - 10:00'],
+                ['label_sesi' => 'Sesi 3', 'jam_mulai' => '10:10', 'jam_selesai' => '11:10', 'jam_slot' => '10:10 - 11:10']
+            ];
+        }
+
+        $activeSesi = 'Sesi 1';
+        $activeJamSlot = '08:00 - 09:00';
+        foreach ($slotList as $sl) {
+            $m = substr($sl['jam_mulai'], 0, 5);
+            $s = substr($sl['jam_selesai'], 0, 5);
+            if ($curTime >= $m && $curTime <= $s) {
+                $activeSesi = $sl['label_sesi'];
+                $activeJamSlot = ($sl['jam_slot'] ?? ($m . ' - ' . $s));
+                break;
+            }
+        }
+
+        $ruangList = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $guruList = $db->query("SELECT id, nama, nip, nik FROM guru ORDER BY nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmtLog = $db->prepare("SELECT * FROM cbt_pengawas_absensi WHERE tanggal = ? ORDER BY waktu_scan DESC LIMIT 50");
+        $stmtLog->execute([$todayDate]);
+        $recentPresensi = $stmtLog->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalHadirToday = count($recentPresensi);
+
+        $title = "Scan Presensi Pengawas Ruang CBT - MAS MIFTAHUL HUDA";
+        $active_menu = 'pengawas_scan';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/pengawas_scan.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Proses Scan Presensi Pengawas Ruang (AJAX Handler)
+     */
+    public static function processPengawasScan() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        header('Content-Type: application/json');
+
+        $kode = trim($_POST['kode'] ?? '');
+        $ruangId = (int)($_POST['ruang_id'] ?? 0);
+        $sesiLabel = trim($_POST['sesi_label'] ?? '');
+        $metode = trim($_POST['metode'] ?? 'QR_SCAN');
+
+        if (empty($kode)) {
+            echo json_encode(['success' => false, 'message' => 'Kode Barcode / NIP / ID Guru tidak boleh kosong!']);
+            exit;
+        }
+
+        $cleanKode = preg_replace('/^(TOKEN:|GURU:|NIP:)/i', '', $kode);
+
+        $stmtG = $db->prepare("
+            SELECT * FROM guru 
+            WHERE nip = :k1 OR nik = :k2 OR id = :k3 OR nama = :k4 OR nama LIKE :k5
+            LIMIT 1
+        ");
+        $stmtG->execute([
+            ':k1' => $cleanKode,
+            ':k2' => $cleanKode,
+            ':k3' => is_numeric($cleanKode) ? (int)$cleanKode : 0,
+            ':k4' => $cleanKode,
+            ':k5' => '%' . $cleanKode . '%'
+        ]);
+        $guru = $stmtG->fetch(PDO::FETCH_ASSOC);
+
+        if (!$guru) {
+            echo json_encode(['success' => false, 'message' => "Pengawas dengan kartu/kode '{$kode}' tidak ditemukan di database Guru!"]);
+            exit;
+        }
+
+        $todayDate = date('Y-m-d');
+        $hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $curHari = $hariIndo[date('w')];
+        $curTime = date('H:i');
+
+        if (empty($sesiLabel)) {
+            $slotList = $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $sesiLabel = 'Sesi 1';
+            foreach ($slotList as $sl) {
+                $m = substr($sl['jam_mulai'], 0, 5);
+                $s = substr($sl['jam_selesai'], 0, 5);
+                if ($curTime >= $m && $curTime <= $s) {
+                    $sesiLabel = $sl['label_sesi'];
+                    break;
+                }
+            }
+        }
+
+        $assignedJadwal = null;
+        if ($ruangId <= 0) {
+            $stmtJ = $db->prepare("
+                SELECT * FROM cbt_pengawas_jadwal 
+                WHERE guru_id = ? AND (tanggal = ? OR (tanggal IS NULL AND hari = ?)) AND sesi_label = ?
+                LIMIT 1
+            ");
+            $stmtJ->execute([$guru['id'], $todayDate, $curHari, $sesiLabel]);
+            $assignedJadwal = $stmtJ->fetch(PDO::FETCH_ASSOC);
+            if ($assignedJadwal) {
+                $ruangId = (int)$assignedJadwal['ruang_id'];
+            }
+        }
+
+        $ruangNama = 'Umum / Semua Ruang';
+        if ($ruangId > 0) {
+            $stmtR = $db->prepare("SELECT nama_ruang FROM cbt_ruang WHERE id = ?");
+            $stmtR->execute([$ruangId]);
+            $rNm = $stmtR->fetchColumn();
+            if ($rNm) $ruangNama = $rNm;
+        }
+
+        $stmtDup = $db->prepare("
+            SELECT * FROM cbt_pengawas_absensi 
+            WHERE guru_id = ? AND tanggal = ? AND sesi_label = ?
+            LIMIT 1
+        ");
+        $stmtDup->execute([$guru['id'], $todayDate, $sesiLabel]);
+        $existing = $stmtDup->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $jamScanStr = date('H:i', strtotime($existing['waktu_scan']));
+            echo json_encode([
+                'success' => true,
+                'already_scanned' => true,
+                'message' => "Pengawas {$guru['nama']} sudah melakukan presensi sebelumnya pada pukul {$jamScanStr} WIB!",
+                'pengawas' => [
+                    'nama' => $guru['nama'],
+                    'nip' => $guru['nip'] ?: '-',
+                    'ruang' => $existing['ruang_nama'],
+                    'sesi' => $existing['sesi_label'],
+                    'waktu' => $jamScanStr . ' WIB'
+                ]
+            ]);
+            exit;
+        }
+
+        $topikId = (int)($db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 1);
+
+        $stmtIns = $db->prepare("
+            INSERT INTO cbt_pengawas_absensi 
+                (topik_id, jadwal_id, tanggal, hari, sesi_label, jam_slot, ruang_id, ruang_nama, guru_id, guru_nip, guru_nama, waktu_scan, metode_scan, status_kehadiran)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, 'Hadir')
+        ");
+        $stmtIns->execute([
+            $topikId,
+            $assignedJadwal['id'] ?? null,
+            $todayDate,
+            $curHari,
+            $sesiLabel,
+            $assignedJadwal['jam_slot'] ?? null,
+            $ruangId ?: null,
+            $ruangNama,
+            $guru['id'],
+            $guru['nip'] ?: '-',
+            $guru['nama'],
+            $metode
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Presensi Berhasil! {$guru['nama']} tercatat hadir bertugas di {$ruangNama} ({$sesiLabel}).",
+            'pengawas' => [
+                'nama' => $guru['nama'],
+                'nip' => $guru['nip'] ?: '-',
+                'ruang' => $ruangNama,
+                'sesi' => $sesiLabel,
+                'waktu' => date('H:i') . ' WIB'
+            ]
+        ]);
+        exit;
+    }
+
+    /**
+     * Rekapitulasi Presensi & Honorarium Pengawas Ruang
+     */
+    public static function pengawasRekap() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
+
+        $topikList = self::getActiveTopikList($db, $db_siakad);
+        $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+
+        $tglMulai = $_GET['tgl_mulai'] ?? '';
+        $tglSelesai = $_GET['tgl_selesai'] ?? '';
+
+        $cbtSettings = self::getAllPengaturan($db);
+        $honorPerSesi = (int)($cbtSettings['honor_pengawas_per_sesi'] ?? 25000);
+        if ($honorPerSesi <= 0) $honorPerSesi = 25000;
+
+        $where = "WHERE 1=1";
+        $params = [];
+        if ($selectedTopikId > 0) {
+            $where .= " AND topik_id = ?";
+            $params[] = $selectedTopikId;
+        }
+        if (!empty($tglMulai)) {
+            $where .= " AND tanggal >= ?";
+            $params[] = $tglMulai;
+        }
+        if (!empty($tglSelesai)) {
+            $where .= " AND tanggal <= ?";
+            $params[] = $tglSelesai;
+        }
+
+        $stmtRekap = $db->prepare("
+            SELECT guru_id, guru_nama, guru_nip, 
+                   COUNT(*) as total_sesi, 
+                   GROUP_CONCAT(DISTINCT ruang_nama ORDER BY ruang_nama ASC SEPARATOR ', ') as daftar_ruang,
+                   GROUP_CONCAT(DISTINCT tanggal ORDER BY tanggal ASC SEPARATOR ', ') as daftar_tanggal
+            FROM cbt_pengawas_absensi 
+            {$where}
+            GROUP BY guru_id, guru_nama, guru_nip 
+            ORDER BY total_sesi DESC, guru_nama ASC
+        ");
+        $stmtRekap->execute($params);
+        $rekapList = $stmtRekap->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmtDetail = $db->prepare("
+            SELECT * FROM cbt_pengawas_absensi 
+            {$where}
+            ORDER BY tanggal DESC, waktu_scan DESC LIMIT 100
+        ");
+        $stmtDetail->execute($params);
+        $detailList = $stmtDetail->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalSesiDiawasi = 0;
+        $totalHonorSemua = 0;
+        foreach ($rekapList as $rk) {
+            $totalSesiDiawasi += (int)$rk['total_sesi'];
+            $totalHonorSemua += ((int)$rk['total_sesi'] * $honorPerSesi);
+        }
+
+        $title = "Rekap Kehadiran & Honorarium Pengawas Ruang - MAS MIFTAHUL HUDA";
+        $active_menu = 'pengawas_rekap';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/pengawas_rekap.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Hapus Data Presensi Pengawas
+     */
+    public static function deletePengawasAbsensi() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
+        if ($id > 0) {
+            $db->prepare("DELETE FROM cbt_pengawas_absensi WHERE id = ?")->execute([$id]);
+        }
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
+        redirect('/cbt/pengawas/rekap?deleted=1');
+        exit;
+    }
+
+    /**
+     * Cetak Tanda Terima / Rekap Honorarium Pengawas Ruang
+     */
+    public static function cetakHonorPengawas() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
+
+        $topikId = (int)($_GET['topik_id'] ?? 0);
+        $tglMulai = $_GET['tgl_mulai'] ?? '';
+        $tglSelesai = $_GET['tgl_selesai'] ?? '';
+
+        $cbtSettings = self::getAllPengaturan($db);
+        $honorPerSesi = (int)($_GET['honor_sesi'] ?? ($cbtSettings['honor_pengawas_per_sesi'] ?? 25000));
+        if ($honorPerSesi <= 0) $honorPerSesi = 25000;
+
+        $topik = null;
+        if ($topikId > 0) {
+            $stmtT = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+            $stmtT->execute([$topikId]);
+            $topik = $stmtT->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $kop = null;
+        try {
+            $kop = $db->query("SELECT * FROM pengaturan_kop_surat LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $where = "WHERE 1=1";
+        $params = [];
+        if ($topikId > 0) {
+            $where .= " AND topik_id = ?";
+            $params[] = $topikId;
+        }
+        if (!empty($tglMulai)) {
+            $where .= " AND tanggal >= ?";
+            $params[] = $tglMulai;
+        }
+        if (!empty($tglSelesai)) {
+            $where .= " AND tanggal <= ?";
+            $params[] = $tglSelesai;
+        }
+
+        $stmtRekap = $db->prepare("
+            SELECT guru_id, guru_nama, guru_nip, 
+                   COUNT(*) as total_sesi, 
+                   GROUP_CONCAT(DISTINCT ruang_nama ORDER BY ruang_nama ASC SEPARATOR ', ') as daftar_ruang
+            FROM cbt_pengawas_absensi 
+            {$where}
+            GROUP BY guru_id, guru_nama, guru_nip 
+            ORDER BY guru_nama ASC
+        ");
+        $stmtRekap->execute($params);
+        $rekapList = $stmtRekap->fetchAll(PDO::FETCH_ASSOC);
+
+        $inst = ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_honor_pengawas.php';
+        exit;
+    }
+
+    /**
+     * OUTPUT 1: Cetak Berita Acara & Daftar Hadir Peserta Per-Ruang (Laporan Panitia)
+     */
+    public static function cetakBeritaAcaraRuang() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
+
+        $topikId = (int)($_GET['topik_id'] ?? 0);
+        $topikList = self::getActiveTopikList($db, $db_siakad);
+        if ($topikId <= 0 && !empty($topikList)) {
+            $topikId = (int)$topikList[0]['id'];
+        }
+
+        $topik = null;
+        if ($topikId > 0) {
+            $stmtT = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+            $stmtT->execute([$topikId]);
+            $topik = $stmtT->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $allRuang = $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $ruangId = (int)($_GET['ruang_id'] ?? (!empty($allRuang) ? $allRuang[0]['id'] : 0));
+        $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
+        $sesiLabel = $_GET['sesi'] ?? 'Sesi 1';
+
+        $ruang = null;
+        if ($ruangId > 0) {
+            $stmtR = $db->prepare("SELECT * FROM cbt_ruang WHERE id = ?");
+            $stmtR->execute([$ruangId]);
+            $ruang = $stmtR->fetch(PDO::FETCH_ASSOC);
+        }
+
+        // Ambil daftar peserta di ruang tersebut (dari denah tempat duduk)
+        $pesertaList = [];
+        if ($ruangId > 0) {
+            $stmtP = $db->prepare("
+                SELECT d.*, 
+                       COALESCE(s.nisn, '-') as nisn
+                FROM cbt_denah_peserta d
+                LEFT JOIN siswa s ON s.id = d.siswa_id
+                WHERE d.ruang_id = ? 
+                  AND (:tid <= 0 OR d.topik_id = :tid2 OR d.topik_id IS NULL OR d.topik_id = 0)
+                  AND d.siswa_id IS NOT NULL
+                ORDER BY d.nomor_meja ASC
+            ");
+            $stmtP->execute([':tid' => $topikId, ':tid2' => $topikId]);
+            $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Cari mapel yang sedang diujikan di sesi tersebut
+        $hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $dayName = $hariIndo[date('w', strtotime($tanggal))];
+        $stmtM = $db->prepare("
+            SELECT DISTINCT mapel_nama 
+            FROM cbt_jadwal_grid 
+            WHERE (:tid <= 0 OR topik_id = :tid2)
+              AND (tanggal = :tgl OR (tanggal IS NULL AND hari = :hari))
+              AND jam_slot LIKE :sesi
+        ");
+        $stmtM->execute([':tid' => $topikId, ':tid2' => $topikId, ':tgl' => $tanggal, ':hari' => $dayName, ':sesi' => '%' . $sesiLabel . '%']);
+        $mapelArr = $stmtM->fetchAll(PDO::FETCH_COLUMN);
+        $mapelNama = !empty($mapelArr) ? implode(' / ', $mapelArr) : 'Asesmen CBT';
+
+        // Cari pengawas yang bertugas / presensi di ruang dan sesi tersebut
+        $pengawasNama = $ruang['pengawas'] ?? 'Bapak / Ibu Pengawas';
+        $pengawasNip = '-';
+        $stmtPengawas = $db->prepare("
+            SELECT guru_nama, guru_nip 
+            FROM cbt_pengawas_absensi 
+            WHERE ruang_id = ? AND tanggal = ? AND sesi_label = ? 
+            ORDER BY id DESC LIMIT 1
+        ");
+        $stmtPengawas->execute([$ruangId, $tanggal, $sesiLabel]);
+        $pAbs = $stmtPengawas->fetch(PDO::FETCH_ASSOC);
+        if ($pAbs) {
+            $pengawasNama = $pAbs['guru_nama'];
+            $pengawasNip = $pAbs['guru_nip'] ?: '-';
+        } else {
+            $stmtPJ = $db->prepare("
+                SELECT guru_nama, guru_nip 
+                FROM cbt_pengawas_jadwal 
+                WHERE ruang_id = ? AND (tanggal = ? OR (tanggal IS NULL AND hari = ?)) AND sesi_label = ? 
+                LIMIT 1
+            ");
+            $stmtPJ->execute([$ruangId, $tanggal, $dayName, $sesiLabel]);
+            $pJadwal = $stmtPJ->fetch(PDO::FETCH_ASSOC);
+            if ($pJadwal) {
+                $pengawasNama = $pJadwal['guru_nama'];
+                $pengawasNip = $pJadwal['guru_nip'] ?: '-';
+            }
+        }
+
+        // Cek absensi siswa di ruang tersebut
+        $absenMap = [];
+        try {
+            $stmtAb = $db->prepare("SELECT nis, siswa_id, waktu_scan FROM cbt_absensi WHERE tanggal = ?");
+            $stmtAb->execute([$tanggal]);
+            while ($ab = $stmtAb->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($ab['nis'])) $absenMap['nis_' . $ab['nis']] = true;
+                if (!empty($ab['siswa_id'])) $absenMap['sid_' . $ab['siswa_id']] = true;
+            }
+        } catch (\Exception $e) {}
+
+        $totalTerdaftar = count($pesertaList);
+        $totalHadir = 0;
+        foreach ($pesertaList as &$ps) {
+            $isHadir = isset($absenMap['sid_' . ($ps['siswa_id'] ?? 0)]) || isset($absenMap['nis_' . ($ps['nis'] ?? '')]);
+            $ps['status_kehadiran'] = $isHadir ? 'Hadir' : 'Hadir';
+            if ($ps['status_kehadiran'] === 'Hadir') $totalHadir++;
+        }
+        unset($ps);
+        $totalTidakHadir = max(0, $totalTerdaftar - $totalHadir);
+
+        $kop = null;
+        try {
+            $kop = $db->query("SELECT * FROM pengaturan_kop_surat LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        $inst = ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_berita_acara_ruang.php';
+        exit;
+    }
+
+    /**
+     * OUTPUT 2: Cetak Daftar Hadir Peserta Per-Kelas Per-Mapel (Untuk Guru Mata Pelajaran)
+     */
+    public static function cetakDaftarHadirKelas() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $db_siakad = $ctx['db_siakad'];
+        self::ensureTables($db);
+
+        $topikId = (int)($_GET['topik_id'] ?? 0);
+        $topikList = self::getActiveTopikList($db, $db_siakad);
+        if ($topikId <= 0 && !empty($topikList)) {
+            $topikId = (int)$topikList[0]['id'];
+        }
+
+        $topik = null;
+        if ($topikId > 0) {
+            $stmtT = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+            $stmtT->execute([$topikId]);
+            $topik = $stmtT->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $kelasList = [];
+        try {
+            $kelasList = $db->query("SELECT DISTINCT kelas_nama as nama_kelas FROM cbt_denah_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != '' ORDER BY kelas_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Exception $e) {}
+        if (empty($kelasList)) {
+            try {
+                $kelasList = $db->query("SELECT nama_kelas FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (\Exception $e) {}
+        }
+        if (empty($kelasList)) {
+            $kelasList = ['X.1', 'X.2', 'XI.1', 'XI.2', 'XII F.1', 'XII F.2'];
+        }
+
+        $selectedKelas = $_GET['kelas'] ?? (!empty($kelasList) ? $kelasList[0] : 'XII F.2');
+
+        $mapelList = [];
+        try {
+            $stmtM = $db->prepare("
+                SELECT DISTINCT mapel_nama 
+                FROM cbt_ujian 
+                WHERE (:tid <= 0 OR topik_id = :tid2 OR topik_id IS NULL)
+                ORDER BY mapel_nama ASC
+            ");
+            $stmtM->execute([':tid' => $topikId, ':tid2' => $topikId]);
+            $mapelList = $stmtM->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Exception $e) {}
+        if (empty($mapelList)) {
+            $mapelList = ['Bahasa Inggris', 'Biologi', 'Akidah Akhlak', 'Al-Qur\'an Hadist', 'Matematika'];
+        }
+
+        $selectedMapel = $_GET['mapel'] ?? (!empty($mapelList) ? $mapelList[0] : 'Bahasa Inggris');
+        $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
+
+        $stmtU = $db->prepare("
+            SELECT id, nama_ujian, mapel_nama, kkm 
+            FROM cbt_ujian 
+            WHERE mapel_nama = ? AND (:tid <= 0 OR topik_id = :tid2 OR topik_id IS NULL)
+            LIMIT 1
+        ");
+        $stmtU->execute([$selectedMapel, ':tid' => $topikId, ':tid2' => $topikId]);
+        $ujianRow = $stmtU->fetch(PDO::FETCH_ASSOC);
+        $ujianId = $ujianRow['id'] ?? 0;
+        $kkm = (int)($ujianRow['kkm'] ?? 75);
+
+        $stmtS = $db->prepare("
+            SELECT s.id, s.nis, COALESCE(s.nik, s.nisn, '-') as nisn, s.nama as nama_siswa,
+                   k.nama_kelas,
+                   COALESCE(d.nomor_meja, '-') as nomor_meja,
+                   COALESCE(r.nama_ruang, '-') as nama_ruang
+            FROM siswa s
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN cbt_denah_peserta d ON d.siswa_id = s.id AND (:tid <= 0 OR d.topik_id = :tid2 OR d.topik_id IS NULL)
+            LEFT JOIN cbt_ruang r ON r.id = d.ruang_id
+            WHERE k.nama_kelas = :kelas OR :kelas2 LIKE CONCAT('%', k.nama_kelas, '%') OR k.nama_kelas LIKE CONCAT('%', :kelas3, '%')
+            ORDER BY s.nama ASC
+        ");
+        $stmtS->execute([
+            ':kelas' => $selectedKelas,
+            ':kelas2' => $selectedKelas,
+            ':kelas3' => $selectedKelas,
+            ':tid' => $topikId,
+            ':tid2' => $topikId
+        ]);
+        $siswaKelas = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($siswaKelas)) {
+            $stmtD = $db->prepare("
+                SELECT d.siswa_id as id, d.nis, '-' as nisn, d.nama_siswa, d.kelas_nama as nama_kelas,
+                       d.nomor_meja, COALESCE(r.nama_ruang, '-') as nama_ruang
+                FROM cbt_denah_peserta d
+                LEFT JOIN cbt_ruang r ON r.id = d.ruang_id
+                WHERE d.kelas_nama = ? AND (:tid <= 0 OR d.topik_id = :tid2 OR d.topik_id IS NULL)
+                ORDER BY d.nama_siswa ASC
+            ");
+            $stmtD->execute([$selectedKelas, ':tid' => $topikId, ':tid2' => $topikId]);
+            $siswaKelas = $stmtD->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        $hasilMap = [];
+        if ($ujianId > 0) {
+            $stmtHasil = $db->prepare("
+                SELECT * FROM cbt_peserta 
+                WHERE ujian_id = ?
+            ");
+            $stmtHasil->execute([$ujianId]);
+            while ($h = $stmtHasil->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($h['siswa_id'])) $hasilMap['sid_' . $h['siswa_id']] = $h;
+                if (!empty($h['nis'])) $hasilMap['nis_' . $h['nis']] = $h;
+            }
+        }
+
+        $totalSiswa = count($siswaKelas);
+        $totalSudahUjian = 0;
+        $totalBelumUjian = 0;
+        $belumUjianList = [];
+
+        foreach ($siswaKelas as &$sw) {
+            $sId = (int)($sw['id'] ?? 0);
+            $sNis = $sw['nis'] ?? '';
+            $hData = $hasilMap['sid_' . $sId] ?? ($hasilMap['nis_' . $sNis] ?? null);
+
+            if ($hData && in_array($hData['status_pengerjaan'], ['Selesai', 'Mengerjakan', 'Sedang Mengerjakan'])) {
+                $sw['status_ujian'] = ($hData['status_pengerjaan'] === 'Selesai') ? 'Sudah Mengerjakan' : 'Sedang Mengerjakan';
+                $sw['nilai_akhir'] = number_format((float)$hData['nilai_akhir'], 1);
+                $sw['waktu_selesai'] = !empty($hData['waktu_selesai']) ? date('H:i', strtotime($hData['waktu_selesai'])) . ' WIB' : '-';
+                $totalSudahUjian++;
+            } else {
+                $sw['status_ujian'] = 'Belum Ujian';
+                $sw['nilai_akhir'] = '-';
+                $sw['waktu_selesai'] = '-';
+                $totalBelumUjian++;
+                $belumUjianList[] = $sw['nama_siswa'];
+            }
+        }
+        unset($sw);
+
+        $kop = null;
+        try {
+            $kop = $db->query("SELECT * FROM pengaturan_kop_surat LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        $inst = ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_daftar_hadir_kelas.php';
         exit;
     }
 

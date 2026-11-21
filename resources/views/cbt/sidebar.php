@@ -16,9 +16,10 @@ $logoUrl = \App\Core\Branding::getInstitusiLogo();
 
 // Deteksi status open masing-masing dropdown accordion
 $isUjianOpen = in_array($active_menu, ['topik', 'jadwal', 'bank_soal', 'token']);
-$isRuangOpen = in_array($active_menu, ['ruang', 'denah']);
+$isRuangOpen = in_array($active_menu, ['ruang', 'denah', 'berita_acara_ruang']);
+$isPengawasOpen = in_array($active_menu, ['pengawas_jadwal', 'pengawas_scan', 'pengawas_rekap', 'berita_acara_ruang', 'daftar_hadir_kelas']);
 $isAbsenOpen = in_array($active_menu, ['absensi_cbt', 'absensi_rekap']);
-$isHasilOpen = in_array($active_menu, ['hasil', 'analisis']);
+$isHasilOpen = in_array($active_menu, ['hasil', 'analisis', 'daftar_hadir_kelas']);
 ?>
 <aside class="z-sidebar" id="zSidebar">
     <!-- Brand -->
@@ -102,6 +103,43 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis']);
                         <i data-lucide="grid"></i>
                         <span>Denah Tempat Duduk</span>
                     </a>
+                    <a href="<?php echo base_url('cbt/ruang/berita-acara'); ?>" class="z-nav-item <?php echo $active_menu === 'berita_acara_ruang' ? 'active' : ''; ?>">
+                        <i data-lucide="file-check-2"></i>
+                        <span>Berita Acara Ruang</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Dropdown: Pengawas Ruang -->
+            <div class="z-nav-dropdown <?php echo $isPengawasOpen ? 'open' : ''; ?>">
+                <div class="z-nav-dropdown-toggle <?php echo $isPengawasOpen ? 'active' : ''; ?>" onclick="toggleCbtDropdown(this)">
+                    <div class="dt-left">
+                        <i data-lucide="user-check"></i>
+                        <span>Pengawas Ruang</span>
+                    </div>
+                    <i data-lucide="chevron-down" class="dt-icon"></i>
+                </div>
+                <div class="z-nav-dropdown-menu">
+                    <a href="<?php echo base_url('cbt/pengawas/jadwal'); ?>" class="z-nav-item <?php echo $active_menu === 'pengawas_jadwal' ? 'active' : ''; ?>">
+                        <i data-lucide="calendar"></i>
+                        <span>Jadwal Pengawas</span>
+                    </a>
+                    <a href="<?php echo base_url('cbt/pengawas/scan'); ?>" class="z-nav-item <?php echo $active_menu === 'pengawas_scan' ? 'active' : ''; ?>">
+                        <i data-lucide="scan-face"></i>
+                        <span>Scan Presensi Pengawas</span>
+                    </a>
+                    <a href="<?php echo base_url('cbt/pengawas/rekap'); ?>" class="z-nav-item <?php echo $active_menu === 'pengawas_rekap' ? 'active' : ''; ?>">
+                        <i data-lucide="coins"></i>
+                        <span>Rekap & Honorarium</span>
+                    </a>
+                    <a href="<?php echo base_url('cbt/ruang/berita-acara'); ?>" class="z-nav-item <?php echo $active_menu === 'berita_acara_ruang' ? 'active' : ''; ?>">
+                        <i data-lucide="file-check-2"></i>
+                        <span>Berita Acara Per-Ruang</span>
+                    </a>
+                    <a href="<?php echo base_url('cbt/hasil/daftar-hadir-kelas'); ?>" class="z-nav-item <?php echo $active_menu === 'daftar_hadir_kelas' ? 'active' : ''; ?>">
+                        <i data-lucide="clipboard-list"></i>
+                        <span>Daftar Hadir Per-Kelas</span>
+                    </a>
                 </div>
             </div>
 
@@ -157,6 +195,10 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis']);
                     <a href="<?php echo base_url('cbt/analisis'); ?>" class="z-nav-item <?php echo $active_menu === 'analisis' ? 'active' : ''; ?>">
                         <i data-lucide="bar-chart-2"></i>
                         <span>Analisis Butir Soal</span>
+                    </a>
+                    <a href="<?php echo base_url('cbt/hasil/daftar-hadir-kelas'); ?>" class="z-nav-item <?php echo $active_menu === 'daftar_hadir_kelas' ? 'active' : ''; ?>">
+                        <i data-lucide="clipboard-list"></i>
+                        <span>Daftar Hadir Per-Kelas</span>
                     </a>
                 </div>
             </div>

@@ -2560,6 +2560,19 @@ $router->add('GET', '/cbt/pengawas_khusus/cetak', [\App\Controllers\CbtControlle
 $router->add('GET', '/cbt/peserta_siakad', [\App\Controllers\CbtController::class, 'pesertaSiakad']);
 $router->add('POST', '/cbt/peserta_siakad/pull', [\App\Controllers\CbtController::class, 'ajaxPullSiswaOnline']);
 
+// Pengawas Ruang & Honorarium Suite
+$router->add('GET', '/cbt/pengawas/jadwal', [\App\Controllers\CbtController::class, 'pengawasJadwal']);
+$router->add('POST', '/cbt/pengawas/jadwal/save', [\App\Controllers\CbtController::class, 'savePengawasJadwal']);
+$router->add('POST', '/cbt/pengawas/jadwal/delete', [\App\Controllers\CbtController::class, 'deletePengawasJadwal']);
+$router->add('POST', '/cbt/pengawas/jadwal/bulk-save', [\App\Controllers\CbtController::class, 'saveBulkPengawasJadwal']);
+$router->add('GET', '/cbt/pengawas/scan', [\App\Controllers\CbtController::class, 'pengawasScan']);
+$router->add('POST', '/cbt/pengawas/scan/process', [\App\Controllers\CbtController::class, 'processPengawasScan']);
+$router->add('GET', '/cbt/pengawas/rekap', [\App\Controllers\CbtController::class, 'pengawasRekap']);
+$router->add('POST', '/cbt/pengawas/absensi/delete', [\App\Controllers\CbtController::class, 'deletePengawasAbsensi']);
+$router->add('GET', '/cbt/pengawas/cetak-honor', [\App\Controllers\CbtController::class, 'cetakHonorPengawas']);
+$router->add('GET', '/cbt/ruang/berita-acara', [\App\Controllers\CbtController::class, 'cetakBeritaAcaraRuang']);
+$router->add('GET', '/cbt/hasil/daftar-hadir-kelas', [\App\Controllers\CbtController::class, 'cetakDaftarHadirKelas']);
+
 // CBT Semi-Online Sync System
 $router->add('GET', '/cbt/semi-online', [\App\Controllers\CbtController::class, 'semiOnlineDashboard']);
 $router->add('POST', '/cbt/semi-online/pull', [\App\Controllers\CbtController::class, 'ajaxPullDataOnline']);
