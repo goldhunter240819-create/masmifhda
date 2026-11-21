@@ -6694,18 +6694,16 @@ class CbtController {
         $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
         $targetEndpoint = $serverUrl . '/apk/cbt_sync_api.php?action=import&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
-        // Ambil data hasil lokal
+        // Ambil data hasil ujian lokal (HANYA nilai & lembar jawaban peserta cbt_peserta, presensi sudah terpusat di server online)
         $peserta = $db->query("SELECT * FROM cbt_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
-        $absensi = $db->query("SELECT * FROM cbt_absensi ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-        if (empty($peserta) && empty($absensi)) {
-            echo json_encode(['success' => false, 'message' => 'Belum ada data pengerjaan atau absensi di server lokal ini.']);
+        if (empty($peserta)) {
+            echo json_encode(['success' => false, 'message' => 'Belum ada data pengerjaan atau nilai ujian siswa di server lokal ini.']);
             exit;
         }
 
         $payload = [
             'peserta' => $peserta,
-            'absensi' => $absensi,
             'sent_at' => date('Y-m-d H:i:s')
         ];
 
@@ -6740,8 +6738,8 @@ class CbtController {
 
         echo json_encode([
             'success' => true,
-            'message' => "Hasil ujian dari laptop lokal berhasil terkirim dan tersinkronisasi di Server Pusat!",
-            'details' => $data['details'] ?? ['peserta' => count($peserta), 'absensi' => count($absensi)]
+            'message' => "Hasil ujian (" . ($data['details']['peserta'] ?? count($peserta)) . " nilai siswa) dari laptop lokal berhasil terkirim dan tersinkronisasi di Server Pusat!",
+            'details' => $data['details'] ?? ['peserta' => count($peserta)]
         ]);
         exit;
     }

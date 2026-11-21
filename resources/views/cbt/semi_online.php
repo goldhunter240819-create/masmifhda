@@ -221,13 +221,13 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                         </div>
 
                         <p style="font-size: 0.82rem; color: #475569; line-height: 1.5; margin-bottom: 1.25rem;">
-                            Jalankan proses ini setelah seluruh sesi ujian madrasah selesai. Sistem akan mengunggah <b>Nilai Siswa, Lembar Jawaban, dan Rekap Absensi CBT</b> dari laptop lokal ke database online pusat secara otomatis.
+                            Jalankan proses ini setelah seluruh sesi ujian madrasah selesai. Sistem akan mengunggah <b>Nilai Siswa dan Lembar Jawaban CBT</b> dari laptop lokal ke database online pusat secara otomatis.
                         </p>
 
                         <div style="background: #f0fdf4; border-radius: 12px; padding: 12px 14px; margin-bottom: 1.5rem; border: 1px solid #bbf7d0;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="font-size: 0.78rem; font-weight: 700; color: #166534;">Data Siap Unggah Hari Ini:</span>
-                                <span style="font-size: 0.82rem; font-weight: 900; color: #15803d;"><?= number_format($countHasil) ?> Nilai • <?= number_format($countAbsenToday) ?> Absensi</span>
+                                <span style="font-size: 0.82rem; font-weight: 900; color: #15803d;"><?= number_format($countHasil) ?> Nilai Siswa Siap Unggah</span>
                             </div>
                         </div>
                     </div>
@@ -429,7 +429,7 @@ function executePushData() {
 
     Swal.fire({
         title: 'Kirim Hasil Ujian ke Pusat?',
-        text: 'Seluruh hasil ujian (lembar jawaban, nilai skor, dan rekap absensi) dari server lokal akan diunggah dan disatukan ke server pusat online.',
+        text: 'Seluruh hasil ujian (lembar jawaban dan nilai siswa) dari server lokal akan diunggah dan disatukan ke server pusat online.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#16a34a',
@@ -461,9 +461,7 @@ function executePushData() {
                         html: `<div style="text-align: left; font-size: 0.88rem; line-height: 1.6;">
                             <b>${res.message}</b><br><br>
                             📊 <b>Rincian Data Terkirim:</b><br>
-                            • Siswa Selesai: <b>${res.details ? res.details.peserta : '-'}</b><br>
-                            • Lembar Jawaban: <b>${res.details ? res.details.jawaban : '-'}</b><br>
-                            • Rekap Absensi: <b>${res.details ? res.details.absensi : '-'}</b>
+                            • Nilai & Lembar Jawaban: <b>${res.details ? (res.details.peserta || 0) : '-'} Data Siswa</b>
                         </div>`,
                         icon: 'success',
                         confirmButtonText: 'Alhamdulillah, Selesai'
