@@ -390,60 +390,81 @@ class CbtBiologiArabGenerator {
      * Memasukkan Paket Mapel ke bs_paket, butir soal ke bs_soal, ujian ke cbt_ujian, dan butir ke cbt_soal
      */
     private static function insertSubjectPackage($db_siakad, $db_core, $topikId, $mapelNama, $tingkat, $rombel, $kodeUjian, $guru, $namaUjian, $dataset) {
+        // Batasi tepat 10 butir soal untuk simulasi sesuai instruksi user
+        $dataset = array_slice($dataset, 0, 10);
+        foreach ($dataset as $idx => &$item) {
+            $item['nomor_urut'] = $idx + 1;
+            $item['skor_maksimal'] = 10.00;
+        }
+        unset($item);
+
         // 1. Pastikan Paket di bs_paket ada
-        $stmtP = $db_siakad->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
-        $stmtP->execute([$topikId, $mapelNama, $tingkat, $rombel]);
+        $stmtP = $db_siakad->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = ?) LIMIT 1");
+        $stmtP->execute([$topikId, $mapelNama, $tingkat, '%' . $tingkat . '%', $rombel]);
         $paketId = (int)$stmtP->fetchColumn();
 
         if (!$paketId) {
-            $stmtInsP = $db_siakad->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, ?, ?, ?, 75, 90, 0)");
+            $stmtInsP = $db_siakad->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, ?, ?, ?, 75, 60, 0)");
             $stmtInsP->execute([$topikId, $mapelNama, $tingkat, $rombel, $guru]);
             $paketId = (int)$db_siakad->lastInsertId();
         } else {
-            $db_siakad->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $paketId]);
+            $db_siakad->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 60, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $paketId]);
         }
 
         // Sinkronkan juga bs_paket ke db_core jika terpisah
         if ($db_core !== $db_siakad) {
             try {
-                $stmtPCore = $db_core->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
-                $stmtPCore->execute([$topikId, $mapelNama, $tingkat, $rombel]);
+                $stmtPCore = $db_core->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = ?) LIMIT 1");
+                $stmtPCore->execute([$topikId, $mapelNama, $tingkat, '%' . $tingkat . '%', $rombel]);
                 $pIdCore = (int)$stmtPCore->fetchColumn();
                 if (!$pIdCore) {
-                    $db_core->prepare("INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, ?, ?, ?, ?, 75, 90, 0)")
+                    $db_core->prepare("INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, ?, ?, ?, ?, 75, 60, 0)")
                             ->execute([$paketId, $topikId, $mapelNama, $tingkat, $rombel, $guru]);
                 } else {
-                    $db_core->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $pIdCore]);
+                    $db_core->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 60, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $pIdCore]);
                 }
             } catch (\Exception $e) {}
         }
 
         // 2. Pastikan cbt_ujian ada dan Aktif
-        $stmtU = $db_core->prepare("SELECT id FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas') LIMIT 1");
-        $stmtU->execute([$topikId, $mapelNama, $tingkat, $rombel]);
+        $stmtU = $db_core->prepare("SELECT id FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = 'Semua Kelas') ORDER BY id ASC LIMIT 1");
+        $stmtU->execute([$topikId, $mapelNama, $tingkat, '%' . $tingkat . '%']);
         $ujianId = (int)$stmtU->fetchColumn();
 
         if (!$ujianId) {
-            $stmtInsU = $db_core->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, status) VALUES (?, ?, ?, ?, ?, 90, 75, 1, 1, 'Aktif')");
+            $stmtInsU = $db_core->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, status) VALUES (?, ?, ?, ?, ?, 60, 75, 1, 1, 'Aktif')");
             $stmtInsU->execute([$topikId, $kodeUjian, $namaUjian, $mapelNama, $tingkat]);
             $ujianId = (int)$db_core->lastInsertId();
         } else {
-            $db_core->prepare("UPDATE cbt_ujian SET status = 'Aktif', durasi_menit = 90, kkm = 75, nama_ujian = ? WHERE id = ?")->execute([$namaUjian, $ujianId]);
+            $db_core->prepare("UPDATE cbt_ujian SET status = 'Aktif', durasi_menit = 60, kkm = 75, nama_ujian = ?, kelas_nama = ? WHERE id = ?")->execute([$namaUjian, $tingkat, $ujianId]);
         }
 
-        // Hubungkan ke jadwal_grid jika ada slot kelas ini
+        // Hubungkan ke jadwal_grid agar semua rombel kelas ini memakai ujian ini
         try {
-            $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ?)")->execute([$ujianId, $topikId, $mapelNama, $rombel, $tingkat]);
+            if ($tingkat === 'Kelas XII') {
+                $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = 'XII F.1' OR kelas_nama = 'XII F.2' OR kelas_nama = 'Kelas XII')")->execute([$ujianId, $topikId, $mapelNama]);
+            } elseif ($tingkat === 'Kelas XI') {
+                $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = 'XI F.1' OR kelas_nama = 'Kelas XI')")->execute([$ujianId, $topikId, $mapelNama]);
+            } else {
+                $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama = ? AND (kelas_nama = 'X E.1' OR kelas_nama = 'Kelas X')")->execute([$ujianId, $topikId, $mapelNama]);
+            }
         } catch (\Exception $e) {}
 
-        // Bersihkan soal lama di paket ini agar tidak double
+        // Bersihkan butir soal lama di paket dan ujian ini agar tepat 10 butir (tidak double)
         try { $db_siakad->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
         if ($db_core !== $db_siakad) {
             try { $db_core->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
         }
         try { $db_core->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$ujianId]); } catch (\Exception $e) {}
 
-        // 3. Masukkan 50 Butir Soal ke bs_soal dan cbt_soal
+        // Reset riwayat peserta pada ujian ini agar bisa tes simulasi fresh
+        try {
+            $db_core->prepare("DELETE FROM cbt_peserta_jawaban WHERE ujian_id = ?")->execute([$ujianId]);
+            $db_core->prepare("DELETE FROM cbt_jawaban WHERE ujian_id = ?")->execute([$ujianId]);
+            $db_core->prepare("DELETE FROM cbt_peserta WHERE ujian_id = ?")->execute([$ujianId]);
+        } catch (\Exception $e) {}
+
+        // 3. Masukkan 10 Butir Soal ke bs_soal dan cbt_soal
         $stmtBs = $db_siakad->prepare("
             INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -464,7 +485,7 @@ class CbtBiologiArabGenerator {
             $no = (int)$soal['nomor_urut'];
             $tipe = $soal['tipe_soal'];
             $tkesulitan = $soal['tingkat_kesulitan'] ?? 'Sedang';
-            $skor = (float)($soal['skor_maksimal'] ?? 2.00);
+            $skor = (float)($soal['skor_maksimal'] ?? 10.00);
             $tanya = $soal['pertanyaan'];
             $opA = $soal['opsi_a'] ?? '';
             $opB = $soal['opsi_b'] ?? '';
@@ -595,9 +616,12 @@ class CbtBiologiArabGenerator {
                     $winner = array_shift($items);
                     $toKeepUjianIds[] = (int)$winner['id'];
 
-                    // Sisanya dihapus
+                    // Sisanya dihapus dan arahkan referensi jadwal grid ke pemenang
                     foreach ($items as $loser) {
                         $toDeleteUjianIds[] = (int)$loser['id'];
+                        try {
+                            $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE ujian_id = ?")->execute([(int)$winner['id'], (int)$loser['id']]);
+                        } catch (\Exception $e) {}
                     }
                 }
             }

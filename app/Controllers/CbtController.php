@@ -1547,6 +1547,7 @@ class CbtController {
                     }
 
                     if (!empty($bsItems)) {
+                        try { $db->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$targetUjianId]); } catch (\Exception $e) {}
                         $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                         $no = 1;
                         foreach ($bsItems as $b) {

@@ -867,21 +867,24 @@ class BankSoalController {
     }
 
     /**
-     * Buat Contoh Dummy Realistis (Matematika: 50 Soal = 40 PG, 5 PG Kompleks, 5 Essay)
-     * Sesuai permintaan eksplisit user untuk melihat preview detail jenis soal
+     * Buat Contoh Dummy Realistis (Matematika, Biologi, Bahasa Arab: 10 Butir AKM per Mapel)
+     * Sesuai permintaan eksplisit user untuk tes simulasi cepat
      */
     public function generateDummy() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $topikId = (int)($_POST['topik_id'] ?? 0);
             if ($topikId === 0) {
-                $tp = $this->db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                $tp = $this->db->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                if (!$tp) {
+                    $tp = $this->db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                }
                 $topikId = $tp ? (int)$tp['id'] : 1;
             }
 
-            // Panggil service CbtDummyGenerator untuk generate 50 soal ber-stimulus per tingkat (Kelas X, XI, XII)
+            // Panggil service CbtDummyGenerator untuk generate 10 butir soal ber-stimulus per tingkat (Kelas X, XI, XII)
             \App\Services\CbtDummyGenerator::generateAll($topikId);
 
-            // Panggil service CbtBiologiArabGenerator untuk generate 50 soal Biologi & 50 soal Bahasa Arab per tingkat (Kelas X, XI, XII)
+            // Panggil service CbtBiologiArabGenerator untuk generate 10 butir soal Biologi & 10 butir Bahasa Arab per tingkat (Kelas X, XI, XII)
             if (class_exists('\\App\\Services\\CbtBiologiArabGenerator')) {
                 \App\Services\CbtBiologiArabGenerator::generateAll($topikId);
             }

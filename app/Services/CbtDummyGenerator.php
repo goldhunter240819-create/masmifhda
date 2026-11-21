@@ -20,7 +20,13 @@ class CbtDummyGenerator {
         \App\Controllers\CbtController::ensureTables($db_core);
 
         if (!$topikId) {
-            $tp = $db_siakad->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            $tp = $db_siakad->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            if (!$tp) {
+                $tp = $db_siakad->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$tp) {
+                $tp = $db_core->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            }
             if (!$tp) {
                 $tp = $db_core->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
             }
@@ -55,6 +61,9 @@ class CbtDummyGenerator {
             if (!empty($uIds)) {
                 $inIds = implode(',', array_map('intval', $uIds));
                 $db_core->exec("DELETE FROM cbt_soal WHERE ujian_id IN ({$inIds})");
+                $db_core->exec("DELETE FROM cbt_peserta_jawaban WHERE ujian_id IN ({$inIds})");
+                $db_core->exec("DELETE FROM cbt_jawaban WHERE ujian_id IN ({$inIds})");
+                $db_core->exec("DELETE FROM cbt_peserta WHERE ujian_id IN ({$inIds})");
             }
         } catch (\Exception $e) {}
 
@@ -77,7 +86,7 @@ class CbtDummyGenerator {
             ],
             [
                 'tingkat' => 'Kelas XII',
-                'rombel'  => 'XII F.2',
+                'rombel'  => 'XII F.1, XII F.2',
                 'kode'    => 'UJN-MAT-XII',
                 'guru'    => 'AHMAD NABHAN, S.Pd.I',
                 'topik_label' => 'Fase F+ (Dimensi Tiga, Statistika Lanjut, Peluang & Kalkulus)',
@@ -92,63 +101,94 @@ class CbtDummyGenerator {
             $rombel = $lvl['rombel'];
             $kode = $lvl['kode'];
             $guru = $lvl['guru'];
-            $dataset = $lvl['dataset'];
+            // Batasi tepat 10 butir soal untuk simulasi sesuai permintaan user
+            $dataset = array_slice($lvl['dataset'], 0, 10);
+            foreach ($dataset as $idx => &$item) {
+                $item['nomor_urut'] = $idx + 1;
+                $item['skor_maksimal'] = 10.00;
+            }
+            unset($item);
 
             // 1. Pastikan Paket di bs_paket ada
-            $stmtP = $db_siakad->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
-            $stmtP->execute([$topikId, $tingkat, $rombel]);
+            $stmtP = $db_siakad->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = ?) LIMIT 1");
+            $stmtP->execute([$topikId, $tingkat, '%' . $tingkat . '%', $rombel]);
             $paketId = (int)$stmtP->fetchColumn();
 
             if (!$paketId) {
-                $stmtInsP = $db_siakad->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, 'Matematika', ?, ?, 75, 90, 0)");
-                $stmtInsP->execute([$topikId, $tingkat, $guru]);
+                $stmtInsP = $db_siakad->prepare("INSERT INTO bs_paket (topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, 'Matematika', ?, ?, ?, 75, 60, 0)");
+                $stmtInsP->execute([$topikId, $tingkat, $rombel, $guru]);
                 $paketId = (int)$db_siakad->lastInsertId();
             } else {
-                $db_siakad->prepare("UPDATE bs_paket SET guru_nama = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $paketId]);
+                $db_siakad->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 60, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $paketId]);
             }
 
             // Sinkronkan juga bs_paket ke db_core jika terpisah
             if ($db_core !== $db_siakad) {
                 try {
-                    $stmtPCore = $db_core->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ?) LIMIT 1");
-                    $stmtPCore->execute([$topikId, $tingkat, $rombel]);
+                    $stmtPCore = $db_core->prepare("SELECT id FROM bs_paket WHERE topik_id = ? AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = ?) LIMIT 1");
+                    $stmtPCore->execute([$topikId, $tingkat, '%' . $tingkat . '%', $rombel]);
                     $pIdCore = (int)$stmtPCore->fetchColumn();
                     if (!$pIdCore) {
-                        $db_core->prepare("INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, 'Matematika', ?, ?, 75, 90, 0)")
-                                ->execute([$paketId, $topikId, $tingkat, $guru]);
+                        $db_core->prepare("INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_nama, kkm, durasi_menit, is_locked) VALUES (?, ?, 'Matematika', ?, ?, ?, 75, 60, 0)")
+                                ->execute([$paketId, $topikId, $tingkat, $rombel, $guru]);
                     } else {
-                        $db_core->prepare("UPDATE bs_paket SET guru_nama = ?, kkm = 75, durasi_menit = 90, is_locked = 0 WHERE id = ?")->execute([$guru, $pIdCore]);
+                        $db_core->prepare("UPDATE bs_paket SET guru_nama = ?, kelas_sasaran = ?, kkm = 75, durasi_menit = 60, is_locked = 0 WHERE id = ?")->execute([$guru, $rombel, $pIdCore]);
                     }
                 } catch (\Exception $e) {}
             }
 
             // 2. Pastikan cbt_ujian ada dan Aktif
-            $stmtU = $db_core->prepare("SELECT id FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama = 'Semua Kelas') LIMIT 1");
-            $stmtU->execute([$topikId, $tingkat, $rombel]);
+            $stmtU = $db_core->prepare("SELECT id FROM cbt_ujian WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = 'XII F.2' OR kelas_nama = 'Semua Kelas') ORDER BY id ASC LIMIT 1");
+            $stmtU->execute([$topikId, $tingkat, '%' . $tingkat . '%']);
             $ujianId = (int)$stmtU->fetchColumn();
 
             $namaUjian = "{$topikNama} - Matematika ({$tingkat})";
             if (!$ujianId) {
-                $stmtInsU = $db_core->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, status) VALUES (?, ?, ?, 'Matematika', ?, 90, 75, 1, 1, 'Aktif')");
+                $stmtInsU = $db_core->prepare("INSERT INTO cbt_ujian (topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, status) VALUES (?, ?, ?, 'Matematika', ?, 60, 75, 1, 1, 'Aktif')");
                 $stmtInsU->execute([$topikId, $kode, $namaUjian, $tingkat]);
                 $ujianId = (int)$db_core->lastInsertId();
             } else {
-                $db_core->prepare("UPDATE cbt_ujian SET status = 'Aktif', durasi_menit = 90, kkm = 75, nama_ujian = ? WHERE id = ?")->execute([$namaUjian, $ujianId]);
+                $db_core->prepare("UPDATE cbt_ujian SET status = 'Aktif', durasi_menit = 60, kkm = 75, nama_ujian = ?, kelas_nama = ? WHERE id = ?")->execute([$namaUjian, $tingkat, $ujianId]);
             }
 
-            // Hubungkan juga ke jadwal_grid jika ada slot kelas ini
+            // Bersihkan ujian duplikat matematika di tingkat kelas ini jika ada (misal Ujian 566 & 524)
             try {
-                $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = ? OR kelas_nama = ?)")->execute([$ujianId, $topikId, $rombel, $tingkat]);
+                $dupUjians = $db_core->query("SELECT id FROM cbt_ujian WHERE (topik_id = {$topikId} OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = '{$tingkat}' OR kelas_nama LIKE '%{$tingkat}%' OR kelas_nama LIKE 'XII%') AND id != {$ujianId}")->fetchAll(PDO::FETCH_COLUMN);
+                if (!empty($dupUjians)) {
+                    $inDup = implode(',', array_map('intval', $dupUjians));
+                    $db_core->exec("DELETE FROM cbt_soal WHERE ujian_id IN ({$inDup})");
+                    $db_core->exec("DELETE FROM cbt_peserta_jawaban WHERE ujian_id IN ({$inDup})");
+                    $db_core->exec("DELETE FROM cbt_peserta WHERE ujian_id IN ({$inDup})");
+                    $db_core->exec("DELETE FROM cbt_ujian WHERE id IN ({$inDup})");
+                }
             } catch (\Exception $e) {}
 
-            // Bersihkan butir soal lama di paket ini agar tidak double
+            // Hubungkan ke jadwal_grid agar semua rombel tingkat ini memakai ujian ini
+            try {
+                if ($tingkat === 'Kelas XII') {
+                    $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = 'XII F.1' OR kelas_nama = 'XII F.2' OR kelas_nama = 'Kelas XII')")->execute([$ujianId, $topikId]);
+                } elseif ($tingkat === 'Kelas XI') {
+                    $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = 'XI F.1' OR kelas_nama = 'Kelas XI')")->execute([$ujianId, $topikId]);
+                } else {
+                    $db_core->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE (topik_id = ? OR topik_id IS NULL) AND mapel_nama LIKE '%Matematika%' AND (kelas_nama = 'X E.1' OR kelas_nama = 'Kelas X')")->execute([$ujianId, $topikId]);
+                }
+            } catch (\Exception $e) {}
+
+            // Bersihkan butir soal lama di paket dan ujian ini agar tepat 10 butir (tidak double)
             try { $db_siakad->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
             if ($db_core !== $db_siakad) {
                 try { $db_core->prepare("DELETE FROM bs_soal WHERE paket_id = ?")->execute([$paketId]); } catch (\Exception $e) {}
             }
             try { $db_core->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$ujianId]); } catch (\Exception $e) {}
 
-            // 3. Masukkan 50 Butir Soal ke bs_soal dan cbt_soal
+            // Reset riwayat peserta pada ujian ini agar bisa tes simulasi fresh
+            try {
+                $db_core->prepare("DELETE FROM cbt_peserta_jawaban WHERE ujian_id = ?")->execute([$ujianId]);
+                $db_core->prepare("DELETE FROM cbt_jawaban WHERE ujian_id = ?")->execute([$ujianId]);
+                $db_core->prepare("DELETE FROM cbt_peserta WHERE ujian_id = ?")->execute([$ujianId]);
+            } catch (\Exception $e) {}
+
+            // 3. Masukkan 10 Butir Soal ke bs_soal dan cbt_soal
             $stmtBs = $db_siakad->prepare("
                 INSERT INTO bs_soal (topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan)
                 VALUES (?, ?, 'Matematika', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -168,7 +208,7 @@ class CbtDummyGenerator {
                 $no = (int)$soal['nomor_urut'];
                 $tipe = $soal['tipe_soal'];
                 $tkesulitan = $soal['tingkat_kesulitan'] ?? 'Mudah';
-                $skor = (float)($soal['skor_maksimal'] ?? 2.00);
+                $skor = (float)($soal['skor_maksimal'] ?? 10.00);
                 $tanya = $soal['pertanyaan'];
                 $opA = $soal['opsi_a'] ?? '';
                 $opB = $soal['opsi_b'] ?? '';

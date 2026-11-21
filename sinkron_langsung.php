@@ -262,6 +262,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
 
                 // 3. Butir Soal Bank Soal (bs_soal)
                 if (!empty($data['bs_soal'])) {
+                    $validBsSoalIds = array_filter(array_map('intval', array_column($data['bs_soal'], 'id')));
+                    $syncPaketIds = array_filter(array_map('intval', array_column($data['bs_paket'] ?? [], 'id')));
+                    if (!empty($validBsSoalIds) && !empty($syncPaketIds)) {
+                        $inPaketStr = implode(',', $syncPaketIds);
+                        $inBsSoalStr = implode(',', $validBsSoalIds);
+                        try { $pdoCore->exec("DELETE FROM bs_soal WHERE paket_id IN ($inPaketStr) AND id NOT IN ($inBsSoalStr)"); } catch (\Throwable $e) {}
+                        if ($pdoSiakad !== $pdoCore) {
+                            try { $pdoSiakad->exec("DELETE FROM bs_soal WHERE paket_id IN ($inPaketStr) AND id NOT IN ($inBsSoalStr)"); } catch (\Throwable $e) {}
+                        }
+                    }
+
                     $sqlBS = "INSERT INTO bs_soal (id, topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE topik_id = VALUES(topik_id), paket_id = VALUES(paket_id), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan), opsi_a = VALUES(opsi_a), opsi_b = VALUES(opsi_b), opsi_c = VALUES(opsi_c), opsi_d = VALUES(opsi_d), opsi_e = VALUES(opsi_e)";
                     $stmtBS1 = $pdoCore->prepare($sqlBS);
                     $stmtBS2 = ($pdoSiakad !== $pdoCore) ? $pdoSiakad->prepare($sqlBS) : null;
@@ -295,6 +306,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
 
                 // 5. Ujian CBT & Butir Soal Ujian
                 if (!empty($data['ujian'])) {
+                    $validUjianIds = array_filter(array_map('intval', array_column($data['ujian'], 'id')));
+                    $syncTopikIds = array_filter(array_map('intval', array_column($data['topik'] ?? [], 'id')));
+                    if (!empty($validUjianIds) && !empty($syncTopikIds)) {
+                        $inTopikStr = implode(',', $syncTopikIds);
+                        $inUjianStr = implode(',', $validUjianIds);
+                        try { $pdoCore->exec("DELETE FROM cbt_soal WHERE ujian_id IN (SELECT id FROM cbt_ujian WHERE topik_id IN ($inTopikStr) AND id NOT IN ($inUjianStr))"); } catch (\Throwable $e) {}
+                        try { $pdoCore->exec("DELETE FROM cbt_ujian WHERE topik_id IN ($inTopikStr) AND id NOT IN ($inUjianStr)"); } catch (\Throwable $e) {}
+                    }
+
                     $stmtU = $pdoCore->prepare("INSERT INTO cbt_ujian (id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_ujian = VALUES(nama_ujian), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), status = VALUES(status), durasi_menit = VALUES(durasi_menit), kkm = VALUES(kkm)");
                     $cntU = 0;
                     foreach ($data['ujian'] as $u) {
@@ -307,6 +327,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
                 }
 
                 if (!empty($data['soal'])) {
+                    $validSoalIds = array_filter(array_map('intval', array_column($data['soal'], 'id')));
+                    $syncUjianIds = array_filter(array_map('intval', array_column($data['ujian'] ?? [], 'id')));
+                    if (!empty($validSoalIds) && !empty($syncUjianIds)) {
+                        $inUjianStr = implode(',', $syncUjianIds);
+                        $inSoalStr = implode(',', $validSoalIds);
+                        try { $pdoCore->exec("DELETE FROM cbt_soal WHERE ujian_id IN ($inUjianStr) AND id NOT IN ($inSoalStr)"); } catch (\Throwable $e) {}
+                    }
+
                     $stmtSoal = $pdoCore->prepare("INSERT INTO cbt_soal (id, ujian_id, nomor_urut, tipe_soal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan)");
                     $cntS = 0;
                     foreach ($data['soal'] as $so) {

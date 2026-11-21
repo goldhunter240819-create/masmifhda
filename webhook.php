@@ -105,15 +105,20 @@ try {
     $output .= "\nPerangkat migration error: " . $e->getMessage() . "\n";
 }
 
-// 3.9 Generate Otomatis 50 Soal Biologi & 50 Soal Bahasa Arab Khusus di Topik SIMULASI CBT NEW
+// 3.9 Generate Otomatis 10 Soal Matematika, 10 Soal Biologi & 10 Soal Bahasa Arab Khusus di Topik SIMULASI CBT NEW
 try {
+    if (file_exists(__DIR__ . '/app/Services/CbtDummyGenerator.php')) {
+        require_once __DIR__ . '/app/Services/CbtDummyGenerator.php';
+        $insertedMat = \App\Services\CbtDummyGenerator::generateAll();
+        $output .= "\nCBT Matematika 10 questions generated: {$insertedMat} items.\n";
+    }
     if (file_exists(__DIR__ . '/app/Services/CbtBiologiArabGenerator.php')) {
         require_once __DIR__ . '/app/Services/CbtBiologiArabGenerator.php';
         $insertedSoal = \App\Services\CbtBiologiArabGenerator::generateAll();
-        $output .= "\nCBT Biologi & Arab questions generated: {$insertedSoal} items.\n";
+        $output .= "\nCBT Biologi & Arab 10 questions generated: {$insertedSoal} items.\n";
     }
 } catch (\Throwable $e) {
-    $output .= "\nCBT Biologi & Arab generator error: " . $e->getMessage() . "\n";
+    $output .= "\nCBT Dummy generator error: " . $e->getMessage() . "\n";
 }
 
 // 3.10 Seed 34 Peserta Khusus / Kelas Jauh (Kelas X, XI, XII)
