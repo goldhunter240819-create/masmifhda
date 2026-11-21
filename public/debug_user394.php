@@ -51,9 +51,10 @@ foreach ($siakadTables as $t) {
     } catch (\Exception $e2) {}
 }
 
+$presensi = $core->query("SELECT * FROM presensi WHERE user_id = 394 ORDER BY id DESC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+
 echo json_encode([
-    'foundIn' => $foundIn,
-    'user394' => $user
+    'presensi' => $presensi
 ]);
 
 
