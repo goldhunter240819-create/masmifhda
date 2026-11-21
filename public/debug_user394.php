@@ -15,22 +15,45 @@ $coreCols = $core->query("DESCRIBE siswa")->fetchAll(PDO::FETCH_COLUMN);
 
 $user394 = $core->query("SELECT * FROM users WHERE id = 394")->fetch(PDO::FETCH_ASSOC);
 
-$byNis = $siakad->query("SELECT * FROM siswa WHERE nis = '46278530' OR nisn = '46278530'")->fetchAll(PDO::FETCH_ASSOC);
-$byId = $siakad->query("SELECT * FROM siswa WHERE id = 394")->fetchAll(PDO::FETCH_ASSOC);
+// Cari di semua tabel core dan siakad yang memiliki kata 46278530 atau 394
+$coreTables = $core->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+$foundIn = [];
+foreach ($coreTables as $t) {
+    try {
+        $cnt = $core->query("SELECT COUNT(*) FROM `$t` WHERE id = 394")->fetchColumn();
+        if ($cnt > 0) $foundIn["core.$t.id"] = $cnt;
+    } catch (\Exception $e) {}
+    try {
+        $cols = $core->query("DESCRIBE `$t`")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($cols as $c) {
+            if ($c === 'user_id' || $c === 'siswa_id' || $c === 'username' || $c === 'nis') {
+                $c1 = $core->query("SELECT COUNT(*) FROM `$t` WHERE `$c` = '394' OR `$c` = '46278530'")->fetchColumn();
+                if ($c1 > 0) $foundIn["core.$t.$c"] = $c1;
+            }
+        }
+    } catch (\Exception $e2) {}
+}
 
-// Juga cek di core
-$coreByNis = $core->query("SELECT * FROM siswa WHERE nis = '46278530' OR nisn = '46278530' OR nik = '46278530'")->fetchAll(PDO::FETCH_ASSOC);
-$kjCheck = $core->query("SELECT * FROM cbt_peserta_khusus WHERE id = 394 OR username = '46278530' OR no_peserta = '46278530'")->fetchAll(PDO::FETCH_ASSOC);
-
-// Cek apakah ada siswa di siakad yang username 46278530 cocok dengan tahun_masuk atau apapun
-$similar = $siakad->query("SELECT id, nis, nisn, nama_lengkap, kelas_id, status FROM siswa WHERE nis LIKE '%4627%' OR nisn LIKE '%4627%'")->fetchAll(PDO::FETCH_ASSOC);
+$siakadTables = $siakad->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+foreach ($siakadTables as $t) {
+    try {
+        $cnt = $siakad->query("SELECT COUNT(*) FROM `$t` WHERE id = 394")->fetchColumn();
+        if ($cnt > 0) $foundIn["siakad.$t.id"] = $cnt;
+    } catch (\Exception $e) {}
+    try {
+        $cols = $siakad->query("DESCRIBE `$t`")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($cols as $c) {
+            if ($c === 'user_id' || $c === 'siswa_id' || $c === 'username' || $c === 'nis' || $c === 'nisn') {
+                $c1 = $siakad->query("SELECT COUNT(*) FROM `$t` WHERE `$c` = '394' OR `$c` = '46278530'")->fetchColumn();
+                if ($c1 > 0) $foundIn["siakad.$t.$c"] = $c1;
+            }
+        }
+    } catch (\Exception $e2) {}
+}
 
 echo json_encode([
-    'byNis' => $byNis,
-    'byId' => $byId,
-    'coreByNis' => $coreByNis,
-    'kjCheck' => $kjCheck,
-    'similar' => $similar
+    'foundIn' => $foundIn,
+    'user394' => $user
 ]);
 
 
