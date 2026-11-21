@@ -14,7 +14,7 @@ class CbtAllSubjects20Generator {
     public static function generateAll($topikId = 10) {
         $db_siakad = Database::connect('siakad');
         $db_core = Database::connect('core');
-        $dbs = array_unique(array_filter([$db_siakad, $db_core]));
+        $dbs = (!empty($db_siakad) && $db_siakad !== $db_core) ? [$db_siakad, $db_core] : [$db_core];
 
         // 1. Pastikan tabel CBT tersedia
         \App\Controllers\CbtController::ensureTables($db_core);
