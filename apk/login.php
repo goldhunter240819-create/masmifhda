@@ -9,9 +9,15 @@ $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
 $baseFolder = dirname($scriptDir);
 if ($baseFolder === '/' || $baseFolder === '\\' || $baseFolder === '.') $baseFolder = '';
 
-$is_standalone = file_exists(__DIR__ . '/../.cbt_standalone') 
-    || !file_exists(__DIR__ . '/guru_dashboard.php') 
-    || !file_exists(__DIR__ . '/../app/Controllers/SiakadController.php');
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$is_online_server = (strpos($host, 'apk.masmifhda.sch.id') !== false);
+
+$is_standalone = !$is_online_server && (
+    (defined('CBT_STANDALONE_MODE') && CBT_STANDALONE_MODE)
+    || file_exists(__DIR__ . '/../.cbt_standalone') 
+    || (strpos($host, '192.168.') === 0 || strpos($host, '10.') === 0 || strpos($host, '127.0.0.1') === 0 || strpos($host, 'localhost') === 0)
+    || !file_exists(__DIR__ . '/guru_dashboard.php')
+);
 
 $semiOnlineUrl = ($baseFolder ? $baseFolder : '') . '/semi-online';
 

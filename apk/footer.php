@@ -1,20 +1,30 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
+$current_tab = $_GET['tab'] ?? '';
+
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$is_online_server = (strpos($host, 'apk.masmifhda.sch.id') !== false);
+$is_standalone_env = !$is_online_server && (
+    (defined('CBT_STANDALONE_MODE') && CBT_STANDALONE_MODE)
+    || file_exists(__DIR__ . '/../.cbt_standalone')
+    || (strpos($host, '192.168.') === 0 || strpos($host, '10.') === 0 || strpos($host, '127.0.0.1') === 0 || strpos($host, 'localhost') === 0)
+    || !file_exists(__DIR__ . '/guru_dashboard.php')
+);
 ?>
-<?php if (!empty($_SESSION['is_cbt_only'])): ?>
-        <!-- BOTTOM NAVIGATION KHUSUS PESERTA CBT KELAS JAUH -->
+<?php if ($is_standalone_env || !empty($_SESSION['is_cbt_only'])): ?>
+        <!-- BOTTOM NAVIGATION KHUSUS CBT OFFLINE / STANDALONE (3 MENU: BERANDA, RIWAYAT, PROFIL) -->
         <div class="bottom-nav" style="left: 50%; transform: translateX(-50%); border-top: 1px solid #e2e8f0; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center; height: auto; min-height: 70px; padding-top: 5px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 9999; background: #ffffff;">
-            <a href="cbt.php" class="nav-item <?= ($current_page == 'cbt.php') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'cbt.php') ? '#2563eb' : '#64748b' ?>;">
-                <i class="fa-solid fa-laptop-code" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
-                <span style="font-size: 0.72rem; font-weight: 700;">Ruang CBT</span>
+            <a href="cbt.php" class="nav-item <?= ($current_page == 'cbt.php' && $current_tab !== 'riwayat') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'cbt.php' && $current_tab !== 'riwayat') ? '#2563eb' : '#64748b' ?>;">
+                <i class="fa-solid fa-house" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+                <span style="font-size: 0.72rem; font-weight: 700;">Beranda</span>
             </a>
-            <a href="profil_cbt.php" class="nav-item <?= ($current_page == 'profil_cbt.php') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'profil_cbt.php') ? '#2563eb' : '#64748b' ?>;">
-                <i class="fa-solid fa-user-gear" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
-                <span style="font-size: 0.72rem; font-weight: 700;">Profil Saya</span>
+            <a href="cbt.php?tab=riwayat" class="nav-item <?= ($current_page == 'cbt.php' && $current_tab === 'riwayat') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'cbt.php' && $current_tab === 'riwayat') ? '#2563eb' : '#64748b' ?>;">
+                <i class="fa-solid fa-clock-rotate-left" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+                <span style="font-size: 0.72rem; font-weight: 700;">Riwayat Ujian</span>
             </a>
-            <a href="javascript:void(0)" onclick="konfirmasiKeluarCbt()" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
-                <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 1.3rem; margin-bottom: 4px;"></i>
-                <span style="font-size: 0.72rem; font-weight: 700;">Keluar</span>
+            <a href="profil.php" class="nav-item <?= ($current_page == 'profil.php' || $current_page == 'profil_cbt.php') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'profil.php' || $current_page == 'profil_cbt.php') ? '#2563eb' : '#64748b' ?>;">
+                <i class="fa-solid fa-user" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+                <span style="font-size: 0.72rem; font-weight: 700;">Profil</span>
             </a>
         </div>
 <?php else: ?>

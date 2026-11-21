@@ -85,6 +85,16 @@ if ($is_cbt_only) {
     }
 }
 
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$is_online_server = (strpos($host, 'apk.masmifhda.sch.id') !== false);
+$is_standalone_env = !$is_online_server && (
+    (defined('CBT_STANDALONE_MODE') && CBT_STANDALONE_MODE)
+    || file_exists(__DIR__ . '/../.cbt_standalone')
+    || (strpos($host, '192.168.') === 0 || strpos($host, '10.') === 0 || strpos($host, '127.0.0.1') === 0 || strpos($host, 'localhost') === 0)
+    || !file_exists(__DIR__ . '/guru_dashboard.php')
+);
+$activeTab = $_GET['tab'] ?? 'beranda';
+
 // Self Check-in / Verifikasi Presensi Mandiri
 if (isset($_GET['self_checkin'])) {
     $nowStr = date('Y-m-d H:i:s');
@@ -1406,7 +1416,7 @@ include 'header.php';
                 <?php endif; ?>
             </div>
         </div>
-        <?php if ($is_cbt_only): ?>
+        <?php if ($is_cbt_only || $is_standalone_env): ?>
             <button type="button" onclick="konfirmasiKeluarCbt()" class="cbt-btn-logout" title="Keluar Akun">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
             </button>
@@ -1423,7 +1433,85 @@ include 'header.php';
             <i class="fa-solid fa-calendar-days" style="color: #059669; font-size: 0.95rem;"></i>
             <span>Jadwal Ujian</span>
         </button>
+        <?php if ($is_standalone_env): ?>
+            <a href="cbt.php" class="btn-tatatertib-top" style="<?= $activeTab !== 'riwayat' ? 'background: #2563eb; color: #ffffff; border-color: #2563eb;' : 'background: #ffffff; color: #475569; border-color: #cbd5e1;' ?> text-decoration: none;">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Ujian Aktif</span>
+            </a>
+            <a href="cbt.php?tab=riwayat" class="btn-tatatertib-top" style="<?= $activeTab === 'riwayat' ? 'background: #2563eb; color: #ffffff; border-color: #2563eb;' : 'background: #ffffff; color: #475569; border-color: #cbd5e1;' ?> text-decoration: none;">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Riwayat (<?= count($riwayatUjian) ?>)</span>
+            </a>
+        <?php endif; ?>
     </div>
+
+    <?php if ($activeTab === 'riwayat'): ?>
+        <!-- Tampilan Khusus Tab Riwayat Pengerjaan Ujian -->
+        <div style="padding: 12px 16px 20px;">
+            <div style="background: white; border-radius: 16px; padding: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-clock-rotate-left" style="color: #2563eb;"></i> Riwayat Pengerjaan Ujian
+                        </h3>
+                        <p style="margin: 3px 0 0 0; font-size: 0.72rem; color: #64748b;">
+                            Daftar seluruh ujian yang telah selesai dikerjakan dan dikumpulkan.
+                        </p>
+                    </div>
+                    <span style="font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; font-weight: 800; padding: 4px 10px; border-radius: 20px;">
+                        <?= count($riwayatUjian) ?> Selesai
+                    </span>
+                </div>
+            </div>
+
+            <?php if (!empty($riwayatUjian)): ?>
+                <?php foreach ($riwayatUjian as $r): ?>
+                    <?php
+                    $isTuntas = ((float)$r['nilai_akhir'] >= (float)($r['kkm'] ?? 75));
+                    ?>
+                    <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                        <div style="min-width: 0; flex: 1; padding-right: 10px;">
+                            <div style="font-weight: 800; font-size: 0.9rem; color: #1e293b;"><?= htmlspecialchars($r['nama_ujian']) ?></div>
+                            <div style="font-size: 0.74rem; color: #64748b; margin-top: 3px;">
+                                <span style="font-weight: 600; color: #334155;"><?= htmlspecialchars($r['mapel_nama']) ?></span> • 
+                                <span><?= date('d M Y, H:i', strtotime($r['waktu_selesai'])) ?> WIB</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <?php if ($showScoreToStudent): ?>
+                                <div style="font-size: 1.2rem; font-weight: 900; color: <?= $isTuntas ? '#10b981' : '#ef4444' ?>; line-height: 1;">
+                                    <?= number_format((float)$r['nilai_akhir'], 1) ?>
+                                </div>
+                                <span style="font-size: 0.65rem; font-weight: 800; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>;">
+                                    <?= $isTuntas ? 'TUNTAS' : 'REMEDIAL' ?>
+                                </span>
+                            <?php else: ?>
+                                <div style="font-size: 0.88rem; font-weight: 900; color: <?= $isTuntas ? '#10b981' : '#ef4444' ?>;">
+                                    <?= $isTuntas ? '✓ TUNTAS' : '✕ REMEDIAL' ?>
+                                </div>
+                                <span style="font-size: 0.65rem; color: #64748b; font-weight: 700;">
+                                    KKM: <?= (int)($r['kkm'] ?? 75) ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div style="text-align: center; padding: 45px 20px; background: white; border-radius: 16px; border: 1.5px dashed #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                    <div style="width: 60px; height: 60px; background: #f1f5f9; color: #94a3b8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.7rem; margin: 0 auto 12px;">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    <h4 style="margin: 0 0 6px 0; font-weight: 800; font-size: 0.95rem; color: #334155;">Belum Ada Riwayat Ujian</h4>
+                    <p style="margin: 0 0 16px 0; font-size: 0.78rem; color: #64748b; line-height: 1.5; max-width: 320px; margin-inline: auto;">
+                        Ujian yang telah Anda selesaikan dan kumpulkan akan tercatat secara otomatis di halaman ini.
+                    </p>
+                    <a href="cbt.php" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: #2563eb; color: white; border-radius: 10px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">
+                        <i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda Ujian
+                    </a>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php else: ?>
 
     <!-- Banner Status Asesmen Berlangsung -->
     <?php if ($activeOngoingUjian): ?>
@@ -1777,6 +1865,7 @@ include 'header.php';
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+    <?php endif; ?> <!-- /end activeTab !== riwayat -->
 
     <!-- MODAL: INFORMASI JADWAL UJIAN SISWA -->
     <div id="modalJadwalSiswa" class="cbt-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px 16px 85px 16px;">

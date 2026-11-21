@@ -5297,6 +5297,7 @@ class CbtController {
         try {
             $ctx = self::getAuthContext();
             $db = $ctx['db_core'];
+            $dbSiakad = $ctx['db_siakad'] ?? $db;
             self::ensureTables($db);
 
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -5338,103 +5339,119 @@ class CbtController {
             $siswa = null;
             $tipePeserta = 'reguler';
 
-            // 1a. Cari jika terdeteksi User ID / Siswa ID dari TOKEN Siakad (misal TOKEN:414:...)
+            // 1a. Cari jika terdeteksi User ID / Siswa ID dari TOKEN Siakad (misal TOKEN:394:...)
             if ($extractedUserId) {
-                $stmtS = $db->prepare("
-                    SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
-                    FROM siswa s
-                    LEFT JOIN kelas k ON s.kelas_id = k.id
-                    WHERE s.user_id = ? OR s.id = ?
-                    LIMIT 1
-                ");
-                $stmtS->execute([$extractedUserId, $extractedUserId]);
-                $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
-                if ($sRow) {
-                    $siswa = [
-                        'id' => (int)$sRow['id'],
-                        'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
-                        'nama' => $sRow['nama'],
-                        'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
-                        'tingkat' => $sRow['tingkat'],
-                        'foto' => $sRow['foto'],
-                        'tipe' => 'reguler'
-                    ];
+                $dbsToQuery = ($dbSiakad !== $db) ? [$dbSiakad, $db] : [$db];
+                foreach ($dbsToQuery as $targetDb) {
+                    try {
+                        $stmtS = $targetDb->prepare("
+                            SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                            FROM siswa s
+                            LEFT JOIN kelas k ON s.kelas_id = k.id
+                            WHERE s.user_id = ? OR s.id = ?
+                            LIMIT 1
+                        ");
+                        $stmtS->execute([$extractedUserId, $extractedUserId]);
+                        $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+                        if ($sRow) {
+                            $siswa = [
+                                'id' => (int)$sRow['id'],
+                                'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
+                                'nama' => $sRow['nama'],
+                                'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                                'tingkat' => $sRow['tingkat'],
+                                'foto' => $sRow['foto'],
+                                'tipe' => 'reguler'
+                            ];
+                            break;
+                        }
+                    } catch (\Exception $e) {}
                 }
             }
 
             // 1b. Cari jika terdeteksi ID dari Kartu Kelas Jauh (misal CBT_KJ:1:...)
             if (!$siswa && $extractedKjId) {
-                $stmtK = $db->prepare("
-                    SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
-                    FROM cbt_peserta_khusus
-                    WHERE id = ?
-                    LIMIT 1
-                ");
-                $stmtK->execute([$extractedKjId]);
-                $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
-                if ($kRow) {
-                    $siswa = [
-                        'id' => (int)$kRow['id'],
-                        'nis' => $kRow['nis'],
-                        'nama' => $kRow['nama'],
-                        'kelas_nama' => $kRow['kelas_nama'] ?: 'Kelas Jauh',
-                        'tingkat' => $kRow['tingkat'],
-                        'foto' => null,
-                        'tipe' => 'khusus'
-                    ];
-                    $tipePeserta = 'khusus';
-                }
+                try {
+                    $stmtK = $db->prepare("
+                        SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
+                        FROM cbt_peserta_khusus
+                        WHERE id = ?
+                        LIMIT 1
+                    ");
+                    $stmtK->execute([$extractedKjId]);
+                    $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+                    if ($kRow) {
+                        $siswa = [
+                            'id' => (int)$kRow['id'],
+                            'nis' => $kRow['nis'],
+                            'nama' => $kRow['nama'],
+                            'kelas_nama' => $kRow['kelas_nama'] ?: 'Kelas Jauh',
+                            'tingkat' => $kRow['tingkat'],
+                            'foto' => null,
+                            'tipe' => 'khusus'
+                        ];
+                        $tipePeserta = 'khusus';
+                    }
+                } catch (\Exception $e) {}
             }
 
-            // 1c. Cari di tabel siswa berdasarkan NIS, NISN, ID, user_id, username, atau qr_token users
+            // 1c. Cari di tabel siswa berdasarkan NIS, ID, user_id, atau username
             if (!$siswa) {
-                $stmtS = $db->prepare("
-                    SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
-                    FROM siswa s
-                    LEFT JOIN kelas k ON s.kelas_id = k.id
-                    LEFT JOIN users u ON s.user_id = u.id
-                    WHERE s.nis = ? OR s.nisn = ? OR s.id = ? OR s.user_id = ? OR u.username = ? OR u.qr_token = ?
-                       OR s.nis = ? OR s.id = ? OR u.qr_token = ?
-                    LIMIT 1
-                ");
-                $stmtS->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode, $rawCode]);
-                $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
-                if ($sRow) {
-                    $siswa = [
-                        'id' => (int)$sRow['id'],
-                        'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
-                        'nama' => $sRow['nama'],
-                        'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
-                        'tingkat' => $sRow['tingkat'],
-                        'foto' => $sRow['foto'],
-                        'tipe' => 'reguler'
-                    ];
+                $dbsToQuery = ($dbSiakad !== $db) ? [$dbSiakad, $db] : [$db];
+                foreach ($dbsToQuery as $targetDb) {
+                    try {
+                        $stmtS = $targetDb->prepare("
+                            SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                            FROM siswa s
+                            LEFT JOIN kelas k ON s.kelas_id = k.id
+                            LEFT JOIN users u ON s.user_id = u.id
+                            WHERE s.nis = ? OR s.id = ? OR s.user_id = ? OR u.username = ?
+                               OR s.nis = ? OR s.id = ?
+                            LIMIT 1
+                        ");
+                        $stmtS->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode]);
+                        $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+                        if ($sRow) {
+                            $siswa = [
+                                'id' => (int)$sRow['id'],
+                                'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
+                                'nama' => $sRow['nama'],
+                                'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                                'tingkat' => $sRow['tingkat'],
+                                'foto' => $sRow['foto'],
+                                'tipe' => 'reguler'
+                            ];
+                            break;
+                        }
+                    } catch (\Exception $e) {}
                 }
             }
 
             // 1d. Cari di tabel cbt_peserta_khusus (Kelas Jauh)
             if (!$siswa) {
-                $stmtK = $db->prepare("
-                    SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
-                    FROM cbt_peserta_khusus
-                    WHERE no_peserta = ? OR username = ? OR id = ? OR qr_token = ?
-                       OR no_peserta = ? OR username = ?
-                    LIMIT 1
-                ");
-                $stmtK->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode]);
-                $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
-                if ($kRow) {
-                    $siswa = [
-                        'id' => (int)$kRow['id'],
-                        'nis' => $kRow['nis'],
-                        'nama' => $kRow['nama'],
-                        'kelas_nama' => $kRow['kelas_nama'] ?: 'Kelas Jauh',
-                        'tingkat' => $kRow['tingkat'],
-                        'foto' => null,
-                        'tipe' => 'khusus'
-                    ];
-                    $tipePeserta = 'khusus';
-                }
+                try {
+                    $stmtK = $db->prepare("
+                        SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
+                        FROM cbt_peserta_khusus
+                        WHERE no_peserta = ? OR username = ? OR id = ? OR qr_token = ?
+                           OR no_peserta = ? OR username = ?
+                        LIMIT 1
+                    ");
+                    $stmtK->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode]);
+                    $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+                    if ($kRow) {
+                        $siswa = [
+                            'id' => (int)$kRow['id'],
+                            'nis' => $kRow['nis'],
+                            'nama' => $kRow['nama'],
+                            'kelas_nama' => $kRow['kelas_nama'] ?: 'Kelas Jauh',
+                            'tingkat' => $kRow['tingkat'],
+                            'foto' => null,
+                            'tipe' => 'khusus'
+                        ];
+                        $tipePeserta = 'khusus';
+                    }
+                } catch (\Exception $e) {}
             }
 
             if (!$siswa) {

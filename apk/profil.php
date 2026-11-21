@@ -21,10 +21,37 @@ if (!isset($_SESSION['siswa_id'])) {
 
 $siswa_id = $_SESSION['siswa_id'];
 
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$is_online_server = (strpos($host, 'apk.masmifhda.sch.id') !== false);
+$is_standalone_env = !$is_online_server && (
+    (defined('CBT_STANDALONE_MODE') && CBT_STANDALONE_MODE)
+    || file_exists(__DIR__ . '/../.cbt_standalone')
+    || (strpos($host, '192.168.') === 0 || strpos($host, '10.') === 0 || strpos($host, '127.0.0.1') === 0 || strpos($host, 'localhost') === 0)
+    || !file_exists(__DIR__ . '/guru_dashboard.php')
+);
+
 // Ambil data siswa lengkap
 $stmt = $core_db->prepare("SELECT * FROM siswa WHERE id = :id LIMIT 1");
 $stmt->execute(['id' => $siswa_id]);
 $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$siswa) {
+    try {
+        $stmtC = $core_db->prepare("SELECT id, nama_siswa as nama, no_peserta as nis, nis as nik, kelas_nama, tingkat, foto FROM cbt_peserta_khusus WHERE id = :id LIMIT 1");
+        $stmtC->execute(['id' => $siswa_id]);
+        $cbtS = $stmtC->fetch(PDO::FETCH_ASSOC);
+        if ($cbtS) {
+            $siswa = $cbtS;
+            $nama_kelas = $cbtS['kelas_nama'] ?: 'Kelas Jauh';
+        }
+    } catch (\Throwable $e) {}
+}
+
+if (!$siswa) {
+    session_destroy();
+    header("Location: login.php");
+    exit;
+}
 
 // Nama Kelas
 $nama_kelas = "-";
@@ -130,6 +157,7 @@ include 'header.php';
                 <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 0.8rem;"></i>
             </a>
             
+            <?php if (!$is_standalone_env): ?>
             <a href="kalender.php" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0; text-decoration: none; color: var(--text-main);">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="background: #e0f2fe; color: #0ea5e9; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
@@ -142,7 +170,6 @@ include 'header.php';
                 </div>
                 <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 0.8rem;"></i>
             </a>
-
 
             <a href="buku_saku.php" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0; text-decoration: none; color: var(--text-main);">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -182,6 +209,7 @@ include 'header.php';
                 </div>
                 <i class="fa-solid fa-chevron-right" style="color: #cbd5e1; font-size: 0.8rem;"></i>
             </a>
+            <?php endif; ?>
 
             <a href="#" onclick="openTentang(); return false;" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; text-decoration: none; color: var(--text-main);">
                 <div style="display: flex; align-items: center; gap: 12px;">

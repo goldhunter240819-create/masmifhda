@@ -24,7 +24,7 @@ function build_cbt_standalone_package() {
     // 1. Berkas APK khusus CBT
     $apkFiles = [
         'cbt.php', 'cbt_scan.php', 'hasil_ujian.php', 'login.php', 'logout.php',
-        'koneksi.php', 'header.php', 'footer.php', 'profil_cbt.php',
+        'koneksi.php', 'header.php', 'footer.php', 'profil_cbt.php', 'profil.php',
         'apk_version_guard.php', 'ping_tracker.php', 'sw.js', 'manifest.json', 'cbt_sync_api.php'
     ];
     foreach ($apkFiles as $f) {
