@@ -773,6 +773,26 @@ class CbtController {
     }
 
     /**
+     * Cek apakah aplikasi sedang berjalan dalam mode CBT Standalone Offline
+     */
+    public static function isStandalone() {
+        if (defined('CBT_STANDALONE_MODE') && CBT_STANDALONE_MODE) {
+            return true;
+        }
+        // Server offline madrasah tidak memiliki modul SiakadController / FinanceController
+        if (!file_exists(__DIR__ . '/SiakadController.php') || !file_exists(__DIR__ . '/FinanceController.php')) {
+            return true;
+        }
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        // Deteksi host IP lokal (192.168.*, 10.*, 127.0.0.1, localhost) dan BUKAN domain cloud resmi
+        if (strpos($host, 'apk.masmifhda.sch.id') === false && 
+            (strpos($host, '192.168.') === 0 || strpos($host, '10.') === 0 || strpos($host, '127.0.0.1') === 0 || strpos($host, 'localhost') === 0)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Inisialisasi Auth & Koneksi Database
      */
     private static function getAuthContext() {
@@ -3758,6 +3778,169 @@ class CbtController {
     }
 
     /**
+     * Manajemen Peserta Siswa SIAKAD (Khusus CBT Offline)
+     */
+    public static function pesertaSiakad() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $dbSiakad = $ctx['db_siakad'] ?? $db;
+        self::ensureTables($db);
+
+        $selectedTingkat = trim($_GET['tingkat'] ?? '');
+        $selectedKelasId = !empty($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : 0;
+        $search = trim($_GET['q'] ?? '');
+
+        // Ambil daftar kelas untuk dropdown filter
+        $kelasList = [];
+        try {
+            $kelasList = $db->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($kelasList) && $dbSiakad !== $db) {
+            try {
+                $kelasList = $dbSiakad->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC")->fetchAll(\PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
+        // Query data siswa
+        $sql = "
+            SELECT s.id, s.user_id, s.nis, s.nik, s.nama, s.jenis_kelamin, s.status, s.kelas_id,
+                   k.nama_kelas, k.tingkat,
+                   u.username, u.plain_password, u.status as user_status
+            FROM siswa s
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN users u ON (s.user_id IS NOT NULL AND s.user_id = u.id) OR (u.username = s.nis AND s.nis != '')
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if ($selectedTingkat !== '') {
+            $sql .= " AND (k.tingkat = ? OR k.nama_kelas LIKE ?)";
+            $params[] = $selectedTingkat;
+            $params[] = "%{$selectedTingkat}%";
+        }
+
+        if ($selectedKelasId > 0) {
+            $sql .= " AND s.kelas_id = ?";
+            $params[] = $selectedKelasId;
+        }
+
+        if ($search !== '') {
+            $sql .= " AND (s.nama LIKE ? OR s.nis LIKE ? OR s.nik LIKE ? OR u.username LIKE ?)";
+            $wild = "%{$search}%";
+            $params[] = $wild;
+            $params[] = $wild;
+            $params[] = $wild;
+            $params[] = $wild;
+        }
+
+        $sql .= " ORDER BY k.tingkat ASC, k.nama_kelas ASC, s.nama ASC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $siswaList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Statistik
+        $totalSiswa = 0;
+        $countX = 0;
+        $countXI = 0;
+        $countXII = 0;
+        $countActiveAccount = 0;
+
+        try {
+            $allRows = $db->query("
+                SELECT s.id, k.tingkat, k.nama_kelas, u.id as has_user
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN users u ON (s.user_id IS NOT NULL AND s.user_id = u.id) OR (u.username = s.nis AND s.nis != '')
+            ")->fetchAll(\PDO::FETCH_ASSOC);
+            $totalSiswa = count($allRows);
+            foreach ($allRows as $r) {
+                $t = strtoupper((string)($r['tingkat'] ?? ''));
+                $nk = strtoupper((string)($r['nama_kelas'] ?? ''));
+                if (strpos($t, 'XII') !== false || strpos($nk, 'XII') !== false) {
+                    $countXII++;
+                } elseif (strpos($t, 'XI') !== false || strpos($nk, 'XI') !== false) {
+                    $countXI++;
+                } else {
+                    $countX++;
+                }
+                if (!empty($r['has_user'])) {
+                    $countActiveAccount++;
+                }
+            }
+        } catch (\Exception $e) {}
+
+        $title = "Peserta Siswa SIAKAD (CBT Offline) - MAS MIFTAHUL HUDA";
+        $active_menu = 'peserta_siakad';
+
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/peserta_siakad.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * AJAX Tarik Khusus Data Siswa SIAKAD dari Server Online ke Offline
+     */
+    public static function ajaxPullSiswaOnline() {
+        set_time_limit(180);
+        header('Content-Type: application/json');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $dbSiakad = $ctx['db_siakad'] ?? $db;
+        self::ensureTables($db);
+
+        $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
+        $targetEndpoint = $serverUrl . '/apk/cbt_sync_api.php?action=export_siswa&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+
+        $ch = curl_init($targetEndpoint);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['action' => 'export_siswa']));
+        curl_setopt($ch, CURLOPT_ENCODING, '');
+        curl_setopt($ch, CURLOPT_TIMEOUT, 180);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if (!$response || $httpCode !== 200) {
+            echo json_encode([
+                'success' => false,
+                'message' => "Gagal terhubung ke Server Online Pusat ({$serverUrl}). HTTP {$httpCode}. Error: {$curlErr}"
+            ]);
+            exit;
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || ($data['status'] ?? '') !== 'success') {
+            echo json_encode([
+                'success' => false,
+                'message' => $data['message'] ?? 'Respon server online tidak valid atau format salah.'
+            ]);
+            exit;
+        }
+
+        $resDetails = self::importDataPayload($db, $dbSiakad, [
+            'kelas' => $data['kelas'] ?? [],
+            'siswa' => $data['siswa'] ?? [],
+            'users' => $data['users'] ?? []
+        ]);
+
+        $countSiswa = count($data['siswa'] ?? []);
+        echo json_encode([
+            'success' => true,
+            'message' => "Berhasil menarik {$countSiswa} data siswa SIAKAD dari Server Online Pusat!",
+            'count' => $countSiswa,
+            'details' => $resDetails
+        ]);
+        exit;
+    }
+
+    /**
      * Simpan / Perbarui Peserta CBT Kelas Jauh
      */
     public static function savePesertaKhusus() {
@@ -5909,6 +6092,82 @@ class CbtController {
         }
 
         echo json_encode($payload);
+        exit;
+    }
+
+    /**
+     * API Export Khusus Data Siswa SIAKAD dari Server Online
+     */
+    public static function apiExportSiswaOnline() {
+        set_time_limit(180);
+        header('Content-Type: application/json');
+        
+        $syncSecret = 'MIFHDA_CBT_SYNC_2026';
+        $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
+        $isTokenValid = ($providedToken === $syncSecret);
+
+        self::ensureSession();
+        $isSessionValid = !empty($_SESSION['user_id']);
+
+        if (!$isTokenValid && !$isSessionValid) {
+            http_response_code(401);
+            echo json_encode(['status' => 'error', 'message' => 'Akses ditolak: Token sinkronisasi tidak valid.']);
+            exit;
+        }
+
+        $db = \App\Core\Database::connect('core');
+        $dbSiakad = \App\Core\Database::connect('siakad');
+        self::ensureTables($db);
+
+        // Kelas
+        $kelasList = [];
+        try {
+            $kelasList = $dbSiakad->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            try {
+                $kelasList = $db->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {
+                $kelasList = [];
+            }
+        }
+
+        // Siswa Reguler
+        $siswaList = [];
+        try {
+            $siswaList = $dbSiakad->query("
+                SELECT id, user_id, nis, nik, COALESCE(nama, nama_lengkap) as nama, status, kelas_id, jenis_kelamin
+                FROM siswa WHERE status = 'Aktif'
+            ")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        if (empty($siswaList)) {
+            try {
+                $siswaList = $db->query("
+                    SELECT id, user_id, nis, nik, nama, status, kelas_id, jenis_kelamin
+                    FROM siswa WHERE status = 'Aktif'
+                ")->fetchAll(\PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
+        // Akun Users Siswa
+        $usersList = [];
+        try {
+            $usersList = $db->query("
+                SELECT id, username, password_hash, plain_password, role_id, status
+                FROM users WHERE role_id IN (1, 2, 3, 4, 6, 7, 99)
+            ")->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $usersList = [];
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'exported_at' => date('Y-m-d H:i:s'),
+            'kelas' => $kelasList,
+            'siswa' => $siswaList,
+            'users' => $usersList,
+            'count' => count($siswaList)
+        ]);
         exit;
     }
 

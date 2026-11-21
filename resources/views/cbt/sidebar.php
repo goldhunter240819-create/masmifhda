@@ -132,6 +132,14 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis']);
                 <span>Peserta Kelas Jauh</span>
             </a>
 
+            <?php if (\App\Controllers\CbtController::isStandalone()): ?>
+            <!-- 5b. Peserta Siswa SIAKAD (Hanya Tampil di Server CBT Offline) -->
+            <a href="<?php echo base_url('cbt/peserta_siakad'); ?>" class="z-nav-item <?php echo $active_menu === 'peserta_siakad' ? 'active' : ''; ?>">
+                <i data-lucide="graduation-cap"></i>
+                <span>Peserta SIAKAD</span>
+            </a>
+            <?php endif; ?>
+
             <!-- 6. Dropdown: Hasil & Evaluasi -->
             <div class="z-nav-dropdown <?php echo $isHasilOpen ? 'open' : ''; ?>">
                 <div class="z-nav-dropdown-toggle <?php echo $isHasilOpen ? 'active' : ''; ?>" onclick="toggleCbtDropdown(this)">

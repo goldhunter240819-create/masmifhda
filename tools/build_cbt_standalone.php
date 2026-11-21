@@ -132,6 +132,7 @@ PHP;
     // 5. Minimal Standalone public/index.php (Hanya rute CBT & auth proktor, bersih dari modul SIAKAD lain)
     $publicIndexContent = <<<'PHP'
 <?php
+define('CBT_STANDALONE_MODE', true);
 date_default_timezone_set('Asia/Jakarta');
 session_name("AULA_SYSTEM_PORTAL");
 if (session_status() === PHP_SESSION_NONE) {
@@ -312,6 +313,8 @@ $router->add('POST', '/cbt/pengaturan/reset-default', [\App\Controllers\CbtContr
 $router->add('GET', '/cbt/peserta_khusus', [\App\Controllers\CbtController::class, 'pesertaKhusus']);
 $router->add('POST', '/cbt/peserta_khusus/save', [\App\Controllers\CbtController::class, 'savePesertaKhusus']);
 $router->add('POST', '/cbt/peserta_khusus/delete', [\App\Controllers\CbtController::class, 'deletePesertaKhusus']);
+$router->add('GET', '/cbt/peserta_siakad', [\App\Controllers\CbtController::class, 'pesertaSiakad']);
+$router->add('POST', '/cbt/peserta_siakad/pull', [\App\Controllers\CbtController::class, 'ajaxPullSiswaOnline']);
 
 // Semi-Online Routes (both /cbt/semi-online and /semi-online)
 $router->add('GET', '/semi-online', [\App\Controllers\CbtController::class, 'semiOnlineDashboard']);

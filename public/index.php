@@ -2551,6 +2551,8 @@ $router->add('POST', '/cbt/pengawas_kj/delete', [\App\Controllers\CbtController:
 $router->add('POST', '/cbt/peserta_khusus/import', [\App\Controllers\CbtController::class, 'importPesertaKhusus']);
 $router->add('GET', '/cbt/peserta_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPesertaKhusus']);
 $router->add('GET', '/cbt/pengawas_khusus/cetak', [\App\Controllers\CbtController::class, 'cetakKartuPengawasKhusus']);
+$router->add('GET', '/cbt/peserta_siakad', [\App\Controllers\CbtController::class, 'pesertaSiakad']);
+$router->add('POST', '/cbt/peserta_siakad/pull', [\App\Controllers\CbtController::class, 'ajaxPullSiswaOnline']);
 
 // CBT Semi-Online Sync System
 $router->add('GET', '/cbt/semi-online', [\App\Controllers\CbtController::class, 'semiOnlineDashboard']);
