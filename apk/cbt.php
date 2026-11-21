@@ -447,7 +447,13 @@ if ($requireAttendance) {
                 ':today2' => $todayDate
             ]);
         }
+        $hasAnyAbsenToday = false;
+        $firstAbsenRow = null;
         while ($abRow = $stmtAbs->fetch(PDO::FETCH_ASSOC)) {
+            $hasAnyAbsenToday = true;
+            if (!$firstAbsenRow) {
+                $firstAbsenRow = $abRow;
+            }
             if (!empty($abRow['ujian_id'])) {
                 $absenHariIniMap['uid_' . $abRow['ujian_id']] = $abRow;
             }
@@ -704,6 +710,10 @@ foreach ($ujianListRaw as $u) {
         } elseif ($mKeyNorm && isset($absenHariIniMap['mapel_' . $mKeyNorm])) {
             $hasAbsen = true;
             $absenInfo = $absenHariIniMap['mapel_' . $mKeyNorm];
+        } elseif (!empty($hasAnyAbsenToday) && !empty($firstAbsenRow)) {
+            // Siswa sudah scan presensi hari ini di gerbang / per-sesi -> izinkan akses ujian hari ini
+            $hasAbsen = true;
+            $absenInfo = $firstAbsenRow;
         }
     }
     $u['has_absen'] = $hasAbsen;

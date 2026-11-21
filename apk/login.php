@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $pass_ok = false;
                 if (!$user) {
-                    // Cek langsung ke data siswa jika belum memiliki akun user terpisah
+                    // Cek langsung ke data siswa jika belum memiliki akun user terpisah (Login via NIS atau NIK)
                     $stmtDirectS = $core_db->prepare("SELECT * FROM siswa WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
                     $stmtDirectS->execute([$username_input, $username_input]);
                     $directS = $stmtDirectS->fetch(PDO::FETCH_ASSOC);
@@ -220,7 +220,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
+
                 if ($user) {
+                    // Pastikan s_id, s_nis, dan s_nik terisi jika akun ini adalah akun siswa
+                    if (empty($user['s_id']) && ($user['role_id'] == 3 || empty($user['role_id']))) {
+                        $stmtResolvS = $core_db->prepare("
+                            SELECT * FROM siswa 
+                            WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                               OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                               OR (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                               OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                               OR (user_id = ? AND ? > 0)
+                            LIMIT 1
+                        ");
+                        $stmtResolvS->execute([$username_input, $username_input, $user['username'], $user['username'], $user['id'], $user['id']]);
+                        $foundS = $stmtResolvS->fetch(PDO::FETCH_ASSOC);
+                        if (!$foundS && isset($siakad_db)) {
+                            try {
+                                $stmtResolvS2 = $siakad_db->prepare("
+                                    SELECT * FROM siswa 
+                                    WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                                       OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                                       OR (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                                       OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                                       OR (user_id = ? AND ? > 0)
+                                    LIMIT 1
+                                ");
+                                $stmtResolvS2->execute([$username_input, $username_input, $user['username'], $user['username'], $user['id'], $user['id']]);
+                                $foundS = $stmtResolvS2->fetch(PDO::FETCH_ASSOC);
+                            } catch (\Throwable $e) {}
+                        }
+                        if ($foundS) {
+                            $user['s_id'] = $foundS['id'];
+                            $user['s_nama'] = $foundS['nama'];
+                            $user['s_nis'] = $foundS['nis'];
+                            $user['s_nik'] = $foundS['nik'];
+                            $user['s_status'] = $foundS['status'] ?? 'Aktif';
+                            try {
+                                $core_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $foundS['id']]);
+                                if (isset($siakad_db)) {
+                                    $siakad_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $foundS['id']]);
+                                }
+                            } catch (\Throwable $e) {}
+                        }
+                    }
+
                     // 1. Cek apakah password cocok dengan password_hash (misal password sudah diubah oleh pengguna)
                     if (password_verify($password_input, $user['password_hash'])) {
                         $pass_ok = true;
@@ -231,18 +275,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } elseif (md5($password_input) === $user['password_hash']) {
                         $pass_ok = true;
                     }
-                    // 3. Login Default menggunakan NIK (kecuali sudah diubah secara khusus)
+                    // 3. Login Default menggunakan NIK Siswa
                     elseif (!empty($user['s_nik']) && $password_input === $user['s_nik']) {
                         $pass_ok = true;
-                    } elseif (!empty($user['g_nik']) && $password_input === $user['g_nik']) {
-                        $pass_ok = true;
-                    }
-                    // 4. Fallback jika login menggunakan NIS (siswa) / NIP (guru) / Username
+                    } 
+                    // 4. Login Default menggunakan NIS Siswa
                     elseif (!empty($user['s_nis']) && $password_input === $user['s_nis']) {
                         $pass_ok = true;
-                    } elseif (!empty($user['g_nip']) && $password_input === $user['g_nip']) {
+                    }
+                    // 5. Default password standar siswa '123456'
+                    elseif ($user['role_id'] == 3 && $password_input === '123456') {
                         $pass_ok = true;
-                    } elseif ($password_input === $user['username']) {
+                    }
+                    // 6. Login menggunakan Username akun
+                    elseif ($password_input === $user['username']) {
+                        $pass_ok = true;
+                    }
+                    // 7. Login Guru NIK / NIP
+                    elseif (!empty($user['g_nik']) && $password_input === $user['g_nik']) {
+                        $pass_ok = true;
+                    } elseif (!empty($user['g_nip']) && $password_input === $user['g_nip']) {
                         $pass_ok = true;
                     }
                 }

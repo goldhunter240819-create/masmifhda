@@ -5823,7 +5823,7 @@ class CbtController {
         try {
             $payload['absensi'] = $db->query("
                 SELECT * FROM cbt_absensi 
-                WHERE tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE()
+                WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) OR DATE(waktu_scan) >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
                 ORDER BY id ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
@@ -5859,7 +5859,7 @@ class CbtController {
         try {
             $absensi = $db->query("
                 SELECT * FROM cbt_absensi 
-                WHERE tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE()
+                WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) OR DATE(waktu_scan) >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
                 ORDER BY id ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
@@ -6082,7 +6082,13 @@ class CbtController {
 
         // 2. Simpan Rekap Absensi Lokal (Aman, hanya update/insert data absensi yang dikirim)
         if (!empty($payload['absensi'])) {
-            $stmtChkA = $db->prepare("SELECT id FROM cbt_absensi WHERE tanggal = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
+            $stmtChkA = $db->prepare("
+                SELECT id FROM cbt_absensi 
+                WHERE tanggal = ? 
+                  AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?))
+                  AND (ujian_id = ? OR mapel_nama = ? OR (? = '' AND mapel_nama = ''))
+                LIMIT 1
+            ");
             $stmtUpdA = $db->prepare("UPDATE cbt_absensi SET waktu_scan = ?, status = ?, kelas_nama = ?, mapel_nama = ?, jam_slot = ?, petugas_nama = ?, ruang_nama = ? WHERE id = ?");
             $stmtInsA = $db->prepare("
                 INSERT INTO cbt_absensi 
@@ -6095,8 +6101,10 @@ class CbtController {
                     $tgl = $a['tanggal'] ?? date('Y-m-d');
                     $nis = trim((string)($a['nis'] ?? ''));
                     $sId = !empty($a['siswa_id']) ? (int)$a['siswa_id'] : null;
+                    $uId = !empty($a['ujian_id']) ? (int)$a['ujian_id'] : 0;
+                    $mapel = trim((string)($a['mapel_nama'] ?? ''));
 
-                    $stmtChkA->execute([$tgl, $nis, $sId ?: -1]);
+                    $stmtChkA->execute([$tgl, $nis, $sId ?: -1, $uId, $mapel, $mapel]);
                     $existAid = $stmtChkA->fetchColumn();
 
                     if ($existAid) {
@@ -6104,7 +6112,7 @@ class CbtController {
                             $a['waktu_scan'] ?? date('Y-m-d H:i:s'),
                             $a['status'] ?? 'Hadir',
                             $a['kelas_nama'] ?? '',
-                            $a['mapel_nama'] ?? '',
+                            $mapel,
                             $a['jam_slot'] ?? 'Sesi 1',
                             $a['petugas_nama'] ?? 'Proktor Lokal',
                             $a['ruang_nama'] ?? 'Lokal Madrasah',
@@ -6114,7 +6122,7 @@ class CbtController {
                         $stmtInsA->execute([
                             $tgl, $sId, $nis, $a['nama_siswa'],
                             $a['kelas_nama'] ?? '', $a['tipe_peserta'] ?? 'reguler', $a['topik_id'] ?? null,
-                            $a['ujian_id'] ?? null, $a['mapel_nama'] ?? '', $a['jam_slot'] ?? 'Sesi 1',
+                            $a['ujian_id'] ?? null, $mapel, $a['jam_slot'] ?? 'Sesi 1',
                             $a['waktu_scan'] ?? date('Y-m-d H:i:s'), $a['status'] ?? 'Hadir',
                             $a['metode_scan'] ?? 'SEMI_ONLINE', $a['petugas_nama'] ?? 'Proktor Lokal',
                             $a['ruang_nama'] ?? 'Lokal Madrasah'
@@ -6577,8 +6585,15 @@ class CbtController {
                     $sid = !empty($a['siswa_id']) ? (int)$a['siswa_id'] : null;
                     $mapel = $a['mapel_nama'] ?? '';
 
-                    $chk = $db->prepare("SELECT id FROM cbt_absensi WHERE tanggal = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
-                    $chk->execute([$tgl, $nis, $sid ?: -1]);
+                    $uId = !empty($a['ujian_id']) ? (int)$a['ujian_id'] : 0;
+                    $chk = $db->prepare("
+                        SELECT id FROM cbt_absensi 
+                        WHERE tanggal = ? 
+                          AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?))
+                          AND (ujian_id = ? OR mapel_nama = ? OR (? = '' AND mapel_nama = ''))
+                        LIMIT 1
+                    ");
+                    $chk->execute([$tgl, $nis, $sid ?: -1, $uId, $mapel, $mapel]);
                     $existId = $chk->fetchColumn();
 
                     if ($existId) {

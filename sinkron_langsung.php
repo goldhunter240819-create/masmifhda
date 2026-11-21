@@ -1,8 +1,10 @@
 <?php
 /**
- * ⚡ SINKRONISASI KILAT & BERSIH SERVER CBT MADRASAH
- * Menyelaraskan seluruh data topik, bank soal, jadwal, dan akun dari server online pusat.
- * Dirancang 100% tangguh & mandiri: otomatis membuat seluruh tabel di aula_db & aula_siakad_db.
+ * ⚡ SINKRONISASI SERVER CBT MADRASAH (MAS MIFTAHUL HUDA)
+ * Sinkronisasi 2-Arah Tanpa Tumpang Tindih & Tanpa Data Tertimpa:
+ * 1. ⬇️ Tarik Master Data & Bank Soal (Data Awal Ujian)
+ * 2. ⬇️ Tarik Presensi Siswa Hari Ini / Per-Sesi (Agar Siswa Bisa Mengerjakan Ujian)
+ * 3. ⬆️ Kirim Hasil Ujian & Nilai ke Server Online (Upload Nilai, Jawaban, & Absensi)
  */
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -25,6 +27,8 @@ $siakadDbName = $dbConfig['siakad']['db_name'] ?? 'aula_siakad_db';
 $status = [];
 $warnings = [];
 $errorMsg = '';
+$successMsg = '';
+$activeAction = '';
 $isDone = false;
 
 function ensureAllSyncTables($pdoCore, $pdoSiakad) {
@@ -136,6 +140,54 @@ function ensureAllSyncTables($pdoCore, $pdoSiakad) {
             INDEX (topik_id),
             INDEX (paket_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS cbt_peserta (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            ujian_id INT NOT NULL,
+            siswa_id INT DEFAULT NULL,
+            nis VARCHAR(50) DEFAULT NULL,
+            nama_siswa VARCHAR(150) NOT NULL,
+            kelas_nama VARCHAR(100) DEFAULT NULL,
+            waktu_mulai DATETIME DEFAULT NULL,
+            waktu_selesai DATETIME DEFAULT NULL,
+            status_pengerjaan VARCHAR(50) DEFAULT 'Belum Mengerjakan',
+            jumlah_benar INT DEFAULT 0,
+            jumlah_salah INT DEFAULT 0,
+            nilai_akhir DECIMAL(5,2) DEFAULT 0.00,
+            jawaban_json LONGTEXT DEFAULT NULL,
+            reset_count INT DEFAULT 0,
+            violation_count INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX (ujian_id),
+            INDEX (siswa_id),
+            INDEX (nis)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS cbt_absensi (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tanggal DATE NOT NULL,
+            siswa_id INT DEFAULT NULL,
+            nis VARCHAR(50) NOT NULL,
+            nama_siswa VARCHAR(150) NOT NULL,
+            kelas_nama VARCHAR(100) NOT NULL,
+            tipe_peserta ENUM('reguler', 'khusus') DEFAULT 'reguler',
+            topik_id INT DEFAULT NULL,
+            ujian_id INT DEFAULT NULL,
+            mapel_nama VARCHAR(150) NOT NULL,
+            jam_slot VARCHAR(50) NOT NULL,
+            waktu_scan DATETIME NOT NULL,
+            status ENUM('Hadir', 'Terlambat', 'Izin', 'Sakit') DEFAULT 'Hadir',
+            metode_scan VARCHAR(30) DEFAULT 'QR_SCAN',
+            petugas_nama VARCHAR(100) DEFAULT NULL,
+            ruang_nama VARCHAR(100) DEFAULT NULL,
+            keterangan VARCHAR(255) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX (tanggal),
+            INDEX (nis),
+            INDEX (siswa_id),
+            INDEX (ujian_id),
+            INDEX (mapel_nama)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
     foreach ([$pdoCore, $pdoSiakad] as $pdo) {
@@ -151,40 +203,70 @@ function ensureAllSyncTables($pdoCore, $pdoSiakad) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
+// Inisialisasi Koneksi Database
+$pdoCore = null;
+$pdoSiakad = null;
+$localStats = [
+    'topik' => 0,
+    'paket' => 0,
+    'soal' => 0,
+    'siswa' => 0,
+    'users' => 0,
+    'absen_today' => 0,
+    'hasil_ujian' => 0
+];
+
+try {
+    $pdoCore = new PDO("mysql:host=$host;dbname=$coreDbName;charset=utf8mb4", $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+    ]);
+
     try {
-        $pdoCore = new PDO("mysql:host=$host;dbname=$coreDbName;charset=utf8mb4", $user, $pass, [
+        $pdoSiakad = new PDO("mysql:host=$host;dbname=$siakadDbName;charset=utf8mb4", $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
         ]);
-
-        $pdoSiakad = null;
+    } catch (\Throwable $e) {
         try {
+            $pdoRoot = new PDO("mysql:host=$host", $user, $pass);
+            $pdoRoot->exec("CREATE DATABASE IF NOT EXISTS `{$siakadDbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             $pdoSiakad = new PDO("mysql:host=$host;dbname=$siakadDbName;charset=utf8mb4", $user, $pass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
             ]);
-        } catch (\Throwable $e) {
-            // Jika database siakad belum ada, buat otomatis
-            try {
-                $pdoRoot = new PDO("mysql:host=$host", $user, $pass);
-                $pdoRoot->exec("CREATE DATABASE IF NOT EXISTS `{$siakadDbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-                $pdoSiakad = new PDO("mysql:host=$host;dbname=$siakadDbName;charset=utf8mb4", $user, $pass, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-                ]);
-            } catch (\Throwable $e2) {
-                $pdoSiakad = $pdoCore;
-            }
-        }
-        if (!$pdoSiakad) {
+        } catch (\Throwable $e2) {
             $pdoSiakad = $pdoCore;
         }
+    }
+    if (!$pdoSiakad) {
+        $pdoSiakad = $pdoCore;
+    }
 
-        // Jalankan pembuatan skema tabel lengkap pada kedua database
-        ensureAllSyncTables($pdoCore, $pdoSiakad);
+    ensureAllSyncTables($pdoCore, $pdoSiakad);
 
-        $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
+    // Ambil statistik lokal
+    try { $localStats['topik'] = (int)$pdoCore->query("SELECT COUNT(*) FROM bs_topik")->fetchColumn(); } catch (\Throwable $e) {}
+    try { $localStats['paket'] = (int)$pdoCore->query("SELECT COUNT(*) FROM bs_paket")->fetchColumn(); } catch (\Throwable $e) {}
+    try { $localStats['soal'] = (int)$pdoCore->query("SELECT COUNT(*) FROM bs_soal")->fetchColumn(); } catch (\Throwable $e) {}
+    try { $localStats['siswa'] = (int)$pdoCore->query("SELECT COUNT(*) FROM siswa")->fetchColumn(); } catch (\Throwable $e) {}
+    try { $localStats['users'] = (int)$pdoCore->query("SELECT COUNT(*) FROM users")->fetchColumn(); } catch (\Throwable $e) {}
+    try { $localStats['absen_today'] = (int)$pdoCore->query("SELECT COUNT(*) FROM cbt_absensi WHERE tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE()")->fetchColumn(); } catch (\Throwable $e) {}
+    try { $localStats['hasil_ujian'] = (int)$pdoCore->query("SELECT COUNT(*) FROM cbt_peserta WHERE status_pengerjaan = 'Selesai'")->fetchColumn(); } catch (\Throwable $e) {}
+
+} catch (\Throwable $e) {
+    $errorMsg = "Koneksi database lokal gagal: " . $e->getMessage();
+}
+
+$serverUrl = rtrim(trim($_POST['server_url'] ?? ($_GET['server_url'] ?? 'https://apk.masmifhda.sch.id')), '/');
+$reqAction = $_POST['action'] ?? ($_GET['action'] ?? '');
+
+// =========================================================================
+// 1. ACTION: TARIK MASTER DATA & BANK SOAL (PULL ALL)
+// =========================================================================
+if ($pdoCore && ($reqAction === 'pull_all' || (isset($_GET['mulai']) && empty($reqAction)))) {
+    $activeAction = 'pull_all';
+    try {
         $apiUrl = $serverUrl . '/apk/cbt_sync_api.php?action=export&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
         $ch = curl_init($apiUrl);
@@ -206,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
             if (!$data || ($data['status'] ?? '') !== 'success') {
                 $errorMsg = "Format respon dari server pusat tidak valid.";
             } else {
-                // 1. Bersihkan dummy topik dan sinkronkan 4 topik resmi
+                // 1. Sinkronkan Topik Asesmen
                 if (!empty($data['topik'])) {
                     $validTopikIds = array_filter(array_map('intval', array_column($data['topik'], 'id')));
                     if (!empty($validTopikIds)) {
@@ -484,7 +566,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
                     $status['token'] = $cntTok;
                 }
 
-                // 12. Peserta Khusus & Denah
+                // 12. Peserta Khusus (CBT Only)
                 if (!empty($data['peserta_khusus'])) {
                     $stmtKj = $pdoCore->prepare("INSERT INTO cbt_peserta_khusus (id, nama_siswa, no_peserta, nis, tingkat, kelas_nama, username, password_plain, password_hash, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), no_peserta = VALUES(no_peserta), status = VALUES(status)");
                     $cntKj = 0;
@@ -497,6 +579,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
                     $status['peserta_khusus'] = $cntKj;
                 }
 
+                // 13. Data Absensi Siswa Hari Ini (jika ada di server online)
+                if (!empty($data['absensi'])) {
+                    $stmtChkA = $pdoCore->prepare("
+                        SELECT id FROM cbt_absensi 
+                        WHERE tanggal = ? 
+                          AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?))
+                          AND (ujian_id = ? OR mapel_nama = ? OR (? = '' AND mapel_nama = ''))
+                        LIMIT 1
+                    ");
+                    $stmtUpdA = $pdoCore->prepare("UPDATE cbt_absensi SET waktu_scan = ?, status = ?, kelas_nama = ?, mapel_nama = ?, jam_slot = ?, petugas_nama = ?, ruang_nama = ? WHERE id = ?");
+                    $stmtInsA = $pdoCore->prepare("
+                        INSERT INTO cbt_absensi 
+                        (tanggal, siswa_id, nis, nama_siswa, kelas_nama, tipe_peserta, topik_id, ujian_id, mapel_nama, jam_slot, waktu_scan, status, metode_scan, petugas_nama, ruang_nama)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+                    $cntAbs = 0;
+                    foreach ($data['absensi'] as $a) {
+                        try {
+                            $tgl = $a['tanggal'] ?? date('Y-m-d');
+                            $nis = trim((string)($a['nis'] ?? ''));
+                            $sid = !empty($a['siswa_id']) ? (int)$a['siswa_id'] : null;
+                            $uId = !empty($a['ujian_id']) ? (int)$a['ujian_id'] : 0;
+                            $mapel = trim((string)($a['mapel_nama'] ?? ''));
+
+                            $stmtChkA->execute([$tgl, $nis, $sid ?: -1, $uId, $mapel, $mapel]);
+                            $existAid = $stmtChkA->fetchColumn();
+
+                            if ($existAid) {
+                                $stmtUpdA->execute([
+                                    $a['waktu_scan'] ?? date('Y-m-d H:i:s'),
+                                    $a['status'] ?? 'Hadir',
+                                    $a['kelas_nama'] ?? '',
+                                    $mapel,
+                                    $a['jam_slot'] ?? 'Sesi 1',
+                                    $a['petugas_nama'] ?? 'Online Scan',
+                                    $a['ruang_nama'] ?? 'Gerbang Madrasah',
+                                    $existAid
+                                ]);
+                            } else {
+                                $stmtInsA->execute([
+                                    $tgl, $sid, $nis, $a['nama_siswa'],
+                                    $a['kelas_nama'] ?? '', $a['tipe_peserta'] ?? 'reguler', $a['topik_id'] ?? null,
+                                    $a['ujian_id'] ?? null, $mapel, $a['jam_slot'] ?? 'Sesi 1',
+                                    $a['waktu_scan'] ?? date('Y-m-d H:i:s'), $a['status'] ?? 'Hadir',
+                                    $a['metode_scan'] ?? 'ONLINE_SYNC', $a['petugas_nama'] ?? 'Online Scan',
+                                    $a['ruang_nama'] ?? 'Gerbang Madrasah'
+                                ]);
+                            }
+                            $cntAbs++;
+                        } catch (\Throwable $e) {}
+                    }
+                    $status['absensi'] = $cntAbs;
+                }
+
                 // Pastikan akun proktor default ada
                 try {
                     $hasAdmin = (int)$pdoCore->query("SELECT COUNT(*) FROM users WHERE role_id = 1")->fetchColumn();
@@ -507,10 +643,154 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
                 } catch (\Throwable $e) {}
 
                 $isDone = true;
+                $successMsg = "Alhamdulillah! Master Data & Bank Soal berhasil disinkronkan 100% dari Server Online Pusat.";
             }
         }
     } catch (\Throwable $e) {
-        $errorMsg = "Terjadi kegagalan: " . $e->getMessage();
+        $errorMsg = "Terjadi kegagalan saat sinkronisasi master data: " . $e->getMessage();
+    }
+}
+
+// =========================================================================
+// 2. ACTION: TARIK PRESENSI SISWA HARI INI (PULL ABSENSI PER-SESI)
+// =========================================================================
+elseif ($pdoCore && $reqAction === 'pull_absen') {
+    $activeAction = 'pull_absen';
+    try {
+        $apiUrl = $serverUrl . '/apk/cbt_sync_api.php?action=export_absen&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+
+        $ch = curl_init($apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['action' => 'export_absen']));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlErr || $httpCode !== 200 || empty($response)) {
+            $errorMsg = "Gagal mengambil data presensi dari server online ($apiUrl). HTTP: $httpCode. Error: $curlErr";
+        } else {
+            $data = json_decode($response, true);
+            if (!$data || ($data['status'] ?? '') !== 'success') {
+                $errorMsg = "Format respon presensi dari server pusat tidak valid.";
+            } else {
+                $absList = $data['absensi'] ?? [];
+                $cntAbs = 0;
+
+                $stmtChkA = $pdoCore->prepare("
+                    SELECT id FROM cbt_absensi 
+                    WHERE tanggal = ? 
+                      AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?))
+                      AND (ujian_id = ? OR mapel_nama = ? OR (? = '' AND mapel_nama = ''))
+                    LIMIT 1
+                ");
+                $stmtUpdA = $pdoCore->prepare("UPDATE cbt_absensi SET waktu_scan = ?, status = ?, kelas_nama = ?, mapel_nama = ?, jam_slot = ?, petugas_nama = ?, ruang_nama = ? WHERE id = ?");
+                $stmtInsA = $pdoCore->prepare("
+                    INSERT INTO cbt_absensi 
+                    (tanggal, siswa_id, nis, nama_siswa, kelas_nama, tipe_peserta, topik_id, ujian_id, mapel_nama, jam_slot, waktu_scan, status, metode_scan, petugas_nama, ruang_nama)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+
+                foreach ($absList as $a) {
+                    try {
+                        $tgl = $a['tanggal'] ?? date('Y-m-d');
+                        $nis = trim((string)($a['nis'] ?? ''));
+                        $sid = !empty($a['siswa_id']) ? (int)$a['siswa_id'] : null;
+                        $uId = !empty($a['ujian_id']) ? (int)$a['ujian_id'] : 0;
+                        $mapel = trim((string)($a['mapel_nama'] ?? ''));
+
+                        $stmtChkA->execute([$tgl, $nis, $sid ?: -1, $uId, $mapel, $mapel]);
+                        $existAid = $stmtChkA->fetchColumn();
+
+                        if ($existAid) {
+                            $stmtUpdA->execute([
+                                $a['waktu_scan'] ?? date('Y-m-d H:i:s'),
+                                $a['status'] ?? 'Hadir',
+                                $a['kelas_nama'] ?? '',
+                                $mapel,
+                                $a['jam_slot'] ?? 'Sesi 1',
+                                $a['petugas_nama'] ?? 'Online Scan',
+                                $a['ruang_nama'] ?? 'Gerbang Madrasah',
+                                $existAid
+                            ]);
+                        } else {
+                            $stmtInsA->execute([
+                                $tgl, $sid, $nis, $a['nama_siswa'],
+                                $a['kelas_nama'] ?? '', $a['tipe_peserta'] ?? 'reguler', $a['topik_id'] ?? null,
+                                $a['ujian_id'] ?? null, $mapel, $a['jam_slot'] ?? 'Sesi 1',
+                                $a['waktu_scan'] ?? date('Y-m-d H:i:s'), $a['status'] ?? 'Hadir',
+                                $a['metode_scan'] ?? 'ONLINE_SYNC', $a['petugas_nama'] ?? 'Online Scan',
+                                $a['ruang_nama'] ?? 'Gerbang Madrasah'
+                            ]);
+                        }
+                        $cntAbs++;
+                    } catch (\Throwable $e) {}
+                }
+
+                $status['absensi'] = $cntAbs;
+                $isDone = true;
+                $successMsg = "Berhasil menarik {$cntAbs} data presensi siswa hari ini! Siswa yang telah scan di online sekarang dapat langsung mengerjakan soal di server lokal.";
+            }
+        }
+    } catch (\Throwable $e) {
+        $errorMsg = "Gagal memproses presensi: " . $e->getMessage();
+    }
+}
+
+// =========================================================================
+// 3. ACTION: KIRIM HASIL UJIAN & NILAI KE SERVER ONLINE (PUSH HASIL)
+// =========================================================================
+elseif ($pdoCore && $reqAction === 'push_hasil') {
+    $activeAction = 'push_hasil';
+    try {
+        $apiUrl = $serverUrl . '/apk/cbt_sync_api.php?action=import&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+
+        $peserta = $pdoCore->query("SELECT * FROM cbt_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $absensi = $pdoCore->query("SELECT * FROM cbt_absensi ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($peserta) && empty($absensi)) {
+            $errorMsg = "Belum ada data pengerjaan ujian atau absensi di server lokal ini untuk dikirim.";
+        } else {
+            $payload = [
+                'peserta' => $peserta,
+                'absensi' => $absensi,
+                'sent_at' => date('Y-m-d H:i:s')
+            ];
+
+            $ch = curl_init($apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, ['payload' => json_encode($payload)]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 90);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlErr || $httpCode !== 200 || empty($response)) {
+                $errorMsg = "Gagal mengunggah hasil ujian ke server pusat ($apiUrl). HTTP: $httpCode. Error: $curlErr";
+            } else {
+                $resData = json_decode($response, true);
+                if (!$resData || !($resData['success'] ?? false)) {
+                    $errorMsg = $resData['message'] ?? 'Respon server online gagal saat memproses hasil ujian.';
+                } else {
+                    $status['peserta_terkirim'] = count($peserta);
+                    $status['absensi_terkirim'] = count($absensi);
+                    $status['peserta_online'] = $resData['details']['peserta'] ?? count($peserta);
+                    $status['absensi_online'] = $resData['details']['absensi'] ?? count($absensi);
+                    $isDone = true;
+                    $successMsg = "Alhamdulillah! Sebanyak {$status['peserta_terkirim']} hasil ujian siswa dan {$status['absensi_terkirim']} rekap absensi berhasil diunggah ke Server Online Pusat!";
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        $errorMsg = "Gagal mengirim hasil ujian ke server pusat: " . $e->getMessage();
     }
 }
 ?>
@@ -519,87 +799,239 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sinkronisasi Kilat Server CBT Madrasah</title>
+    <title>Sinkronisasi Server CBT Madrasah - MAS Miftahul Huda</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .glow-indigo { box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4); }
+        .glow-emerald { box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4); }
+        .glow-amber { box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.4); }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl">
-        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-700">
-            <div class="w-14 h-14 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
-                <i class="fa-solid fa-bolt"></i>
+<body class="bg-slate-950 text-slate-100 min-h-screen py-10 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- HEADER -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl mb-8">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border-b border-slate-800 pb-6 mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-sky-500 text-white rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-indigo-500/30 flex-shrink-0">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </div>
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> CBT SEMI-ONLINE ENGINE 2026
+                        </div>
+                        <h1 class="text-2xl font-black text-white tracking-tight">Sinkronisasi Server CBT Madrasah</h1>
+                        <p class="text-xs text-slate-400">Penyelarasan 2-Arah MAS Miftahul Huda: Bank Soal, Presensi Per-Sesi & Upload Nilai</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/cbt" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center gap-2">
+                        <i class="fa-solid fa-gauge-high"></i> Dashboard CBT
+                    </a>
+                    <a href="/bank_soal" class="px-4 py-2.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-bold rounded-xl border border-indigo-500/40 transition flex items-center gap-2">
+                        <i class="fa-solid fa-book-open"></i> Bank Soal
+                    </a>
+                </div>
             </div>
-            <div>
-                <h1 class="text-xl font-black text-white">Sinkronisasi Kilat Server CBT</h1>
-                <p class="text-xs text-slate-400">Penyelarasan Bersih ID Topik, Bank Soal, Jadwal & Siswa MAS MIFHDA</p>
+
+            <!-- SERVER STATS STRIP -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-2xl">
+                    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Topik & Bank Soal</div>
+                    <div class="text-lg font-black text-white">
+                        <?= $localStats['topik'] ?> <span class="text-xs font-semibold text-slate-400">Topik</span> • 
+                        <?= $localStats['soal'] ?> <span class="text-xs font-semibold text-slate-400">Butir</span>
+                    </div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-2xl">
+                    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Siswa Terdaftar</div>
+                    <div class="text-lg font-black text-sky-400">
+                        <?= $localStats['siswa'] ?> <span class="text-xs font-semibold text-slate-400">Siswa (NIS/NIK)</span>
+                    </div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-2xl">
+                    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Presensi Hari Ini</div>
+                    <div class="text-lg font-black text-emerald-400">
+                        <?= $localStats['absen_today'] ?> <span class="text-xs font-semibold text-slate-400">Siswa Hadir</span>
+                    </div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-2xl">
+                    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Hasil Ujian Lokal</div>
+                    <div class="text-lg font-black text-amber-400">
+                        <?= $localStats['hasil_ujian'] ?> <span class="text-xs font-semibold text-slate-400">Selesai</span>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- NOTIFIKASI HASIL EKSEKUSI -->
         <?php if ($isDone): ?>
-            <div class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 p-5 rounded-2xl mb-6">
-                <div class="flex items-center gap-3 font-bold text-base mb-2">
-                    <i class="fa-solid fa-circle-check text-xl text-emerald-400"></i>
-                    <span>ALHAMDULILLAH! SINKRONISASI BERHASIL 100%</span>
-                </div>
-                <p class="text-xs text-emerald-200 mb-4">Seluruh data lama/dummy berhasil dibersihkan dan digantikan dengan data resmi dari server pusat online.</p>
-                <div class="grid grid-cols-2 gap-3 text-xs bg-slate-900/60 p-4 rounded-xl border border-emerald-500/30">
-                    <div>• Topik Ujian: <b class="text-white"><?= $status['topik'] ?? 0 ?> Topik</b></div>
-                    <div>• Paket Bank Soal: <b class="text-white"><?= $status['bs_paket'] ?? 0 ?> Paket</b></div>
-                    <div>• Butir Bank Soal: <b class="text-white"><?= $status['bs_soal'] ?? 0 ?> Butir</b></div>
-                    <div>• Sesi Jadwal Grid: <b class="text-white"><?= $status['jadwal'] ?? 0 ?> Sesi</b></div>
-                    <div>• Paket Ujian CBT: <b class="text-white"><?= $status['ujian'] ?? 0 ?> Ujian</b></div>
-                    <div>• Butir Soal CBT: <b class="text-white"><?= $status['soal_cbt'] ?? 0 ?> Butir</b></div>
-                    <div>• Siswa Madrasah: <b class="text-white"><?= $status['siswa'] ?? 0 ?> Siswa</b></div>
-                    <div>• Akun Login: <b class="text-white"><?= $status['users'] ?? 0 ?> Pengguna</b></div>
-                    <div>• Data Mapel: <b class="text-white"><?= $status['mapel'] ?? 0 ?> Mapel</b></div>
-                    <div>• Data Kelas: <b class="text-white"><?= $status['kelas'] ?? 0 ?> Kelas</b></div>
-                </div>
-            </div>
+            <div class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 p-6 rounded-3xl mb-8 shadow-xl">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-2xl text-emerald-400 flex-shrink-0 mt-0.5">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-black text-white mb-1">
+                            <?= htmlspecialchars($successMsg) ?>
+                        </h3>
+                        <p class="text-xs text-emerald-200/90 mb-4">
+                            Sistem berhasil menyelaraskan data dengan metode aman (UPSERT), sehingga seluruh ID terjaga konsisten dan data lain tidak tertimpa sembarangan.
+                        </p>
 
-            <div class="flex flex-col gap-3">
-                <a href="bank_soal" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-xl text-center transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30">
-                    <i class="fa-solid fa-layer-group"></i> 👉 Buka Bank Soal Madrasah Sekarang
-                </a>
-                <a href="jadwal" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 px-6 rounded-xl text-center transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-calendar-days"></i> Cek Jadwal Ujian CBT
-                </a>
-                <a href="topik" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl text-center transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-calendar-check"></i> Cek Master Topik Ujian
-                </a>
-                <a href="semi-online" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-400 font-bold py-2.5 px-6 rounded-xl text-center transition text-xs">
-                    Kembali ke Menu Semi-Online
-                </a>
-            </div>
-        <?php else: ?>
-            <?php if (!empty($errorMsg)): ?>
-                <div class="bg-rose-500/20 border border-rose-500/40 text-rose-300 p-4 rounded-xl text-sm mb-6 flex items-start gap-3">
-                    <i class="fa-solid fa-triangle-exclamation text-lg mt-0.5 text-rose-400"></i>
-                    <div>
-                        <div class="font-bold">Gagal Sinkronisasi:</div>
-                        <div class="text-xs mt-1 text-rose-200"><?= htmlspecialchars($errorMsg) ?></div>
+                        <?php if ($activeAction === 'pull_all'): ?>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-slate-900/80 p-4 rounded-2xl border border-emerald-500/30">
+                                <div>• Topik Ujian: <b class="text-white"><?= $status['topik'] ?? 0 ?> Topik</b></div>
+                                <div>• Paket Soal: <b class="text-white"><?= $status['bs_paket'] ?? 0 ?> Paket</b></div>
+                                <div>• Butir Bank Soal: <b class="text-white"><?= $status['bs_soal'] ?? 0 ?> Butir</b></div>
+                                <div>• Sesi Jadwal: <b class="text-white"><?= $status['jadwal'] ?? 0 ?> Sesi</b></div>
+                                <div>• Paket CBT: <b class="text-white"><?= $status['ujian'] ?? 0 ?> Ujian</b></div>
+                                <div>• Butir Soal CBT: <b class="text-white"><?= $status['soal_cbt'] ?? 0 ?> Butir</b></div>
+                                <div>• Siswa Madrasah: <b class="text-white"><?= $status['siswa'] ?? 0 ?> Siswa</b></div>
+                                <div>• Akun Login: <b class="text-white"><?= $status['users'] ?? 0 ?> Akun</b></div>
+                            </div>
+                        <?php elseif ($activeAction === 'pull_absen'): ?>
+                            <div class="bg-slate-900/80 p-4 rounded-2xl border border-emerald-500/30 text-xs">
+                                Presensi Masuk: <b class="text-emerald-400 text-sm"><?= $status['absensi'] ?? 0 ?> Siswa</b> hari ini. Siswa tersebut kini langsung dapat mengakses soal ujian pada laptop lokal!
+                            </div>
+                        <?php elseif ($activeAction === 'push_hasil'): ?>
+                            <div class="grid grid-cols-2 gap-3 text-xs bg-slate-900/80 p-4 rounded-2xl border border-emerald-500/30">
+                                <div>• Nilai & Jawaban Terkirim: <b class="text-amber-400 text-sm"><?= $status['peserta_terkirim'] ?? 0 ?> Siswa</b></div>
+                                <div>• Rekap Presensi Terkirim: <b class="text-emerald-400 text-sm"><?= $status['absensi_terkirim'] ?? 0 ?> Data</b></div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
-            <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
-            <div class="text-xs text-slate-300 bg-slate-700/50 p-4 rounded-xl mb-6 leading-relaxed border border-slate-600">
-                <b class="text-indigo-400 font-bold"><i class="fa-solid fa-info-circle mr-1"></i> Apa yang dilakukan alat ini?</b><br>
-                1. Memperbaiki dan memastikan database <code class="text-emerald-400">aula_db</code> & <code class="text-emerald-400">aula_siakad_db</code> siap 100%.<br>
-                2. Menghapus 5 topik dummy bawaan awal yang ID-nya salah / tidak cocok.<br>
-                3. Mengimpor 4 Topik Resmi (SAS 89 Sesi, UM, STS, Simulasi).<br>
-                4. Mengimpor 154 Paket Bank Soal dan 1.980 Butir Soal.<br>
-                5. Mengimpor 125 Jadwal Grid, Siswa SIAKAD, dan Akun Login Peserta.
+        <?php if (!empty($errorMsg)): ?>
+            <div class="bg-rose-500/15 border border-rose-500/40 text-rose-300 p-5 rounded-3xl mb-8 flex items-start gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-xl mt-0.5 text-rose-400"></i>
+                <div>
+                    <div class="font-bold text-sm">Gagal Sinkronisasi:</div>
+                    <div class="text-xs mt-1 text-rose-200"><?= htmlspecialchars($errorMsg) ?></div>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- URL SERVER PUSAT -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 mb-8">
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="text-xs font-bold text-slate-400 flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-cloud text-indigo-400"></i> Server Online Pusat:
+                </div>
+                <input type="text" id="commonServerUrl" value="<?= htmlspecialchars($serverUrl) ?>" class="flex-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono" onchange="syncServerUrl(this.value)">
+            </div>
+        </div>
+
+        <!-- 3 KARTU AKSI UTAMA SINKRONISASI -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- KARTU 1: TARIK MASTER DATA & BANK SOAL -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-indigo-500/50 transition">
+                <div>
+                    <div class="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center text-xl mb-4 border border-indigo-500/30">
+                        <i class="fa-solid fa-download"></i>
+                    </div>
+                    <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">Tahap 1: Persiapan Ujian</div>
+                    <h3 class="text-base font-black text-white mb-2">Tarik Master Data & Bank Soal</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Mengunduh Topik resmi, 154 Paket Bank Soal (10 butir AKM per mapel/tingkat), Jadwal Grid, Token, Akun Siswa (login NIS & NIK), dan Akun Pengawas.
+                    </p>
+                    <div class="text-[11px] text-slate-500 bg-slate-950 p-3 rounded-xl mb-6 border border-slate-800">
+                        <i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i> Aman: menggunakan UPSERT ID, tidak merusak data lain.
+                    </div>
+                </div>
+
+                <form method="POST">
+                    <input type="hidden" name="action" value="pull_all">
+                    <input type="hidden" name="server_url" class="targetServerUrlInput" value="<?= htmlspecialchars($serverUrl) ?>">
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-4 rounded-2xl text-xs transition glow-indigo flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> Tarik Master Data (1-Klik)
+                    </button>
+                </form>
             </div>
 
-            <form method="POST">
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-300 mb-2">URL Server Online Pusat:</label>
-                    <input type="text" name="server_url" value="https://apk.masmifhda.sch.id" required class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono">
+            <!-- KARTU 2: TARIK PRESENSI SISWA PER-SESI -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-emerald-500/50 transition">
+                <div>
+                    <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center text-xl mb-4 border border-emerald-500/30">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Tahap 2: Sesi Ujian Berjalan</div>
+                    <h3 class="text-base font-black text-white mb-2">Tarik Presensi Hari Ini</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Tarik data scan absensi gerbang/online per-sesi hari ini. Siswa yang telah scan di server online langsung dapat masuk mengerjakan soal di laptop lokal.
+                    </p>
+                    <div class="text-[11px] text-slate-500 bg-slate-950 p-3 rounded-xl mb-6 border border-slate-800">
+                        <i class="fa-solid fa-bolt text-amber-400 mr-1"></i> Super Kilat (< 2 detik): hanya menarik presensi hari ini.
+                    </div>
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm">
-                    <i class="fa-solid fa-bolt"></i> Mulai Sinkronisasi Kilat (1-Klik Bersih)
-                </button>
-            </form>
-        <?php endif; ?>
+
+                <form method="POST">
+                    <input type="hidden" name="action" value="pull_absen">
+                    <input type="hidden" name="server_url" class="targetServerUrlInput" value="<?= htmlspecialchars($serverUrl) ?>">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-2xl text-xs transition glow-emerald flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate text-xs"></i> Tarik Presensi Siswa (Kilat)
+                    </button>
+                </form>
+            </div>
+
+            <!-- KARTU 3: KIRIM HASIL UJIAN KE SERVER ONLINE PUSAT -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-amber-500/50 transition">
+                <div>
+                    <div class="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-xl mb-4 border border-amber-500/30">
+                        <i class="fa-solid fa-upload"></i>
+                    </div>
+                    <div class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">Tahap 3: Selesai Sesi / Harian</div>
+                    <h3 class="text-base font-black text-white mb-2">Kirim Hasil Ujian ke Online</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Mengunggah lembar jawaban, nilai akhir skor, dan rekap absensi dari laptop lokal ke database online pusat secara otomatis tanpa menimpa data siswa lain.
+                    </p>
+                    <div class="text-[11px] text-slate-500 bg-slate-950 p-3 rounded-xl mb-6 border border-slate-800">
+                        <i class="fa-solid fa-chart-line text-sky-400 mr-1"></i> Rekap nilai di server online langsung terupdate otomatis.
+                    </div>
+                </div>
+
+                <form method="POST" onsubmit="return confirm('Kirim seluruh nilai siswa dan lembar jawaban dari laptop lokal ke Server Online Pusat?');">
+                    <input type="hidden" name="action" value="push_hasil">
+                    <input type="hidden" name="server_url" class="targetServerUrlInput" value="<?= htmlspecialchars($serverUrl) ?>">
+                    <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 px-4 rounded-2xl text-xs transition glow-amber flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Kirim Nilai ke Server Online
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- PANDUAN RINGKAS PROKTOR -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+            <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-circle-question text-sky-400"></i> Panduan Alur Pelaksanaan Ujian CBT Madrasah:
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-400 leading-relaxed">
+                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <b class="text-indigo-400 block mb-1">1. Sebelum Ujian Dimulai</b>
+                    Klik tombol <b>"Tarik Master Data"</b>. Server lokal akan mengunduh seluruh jadwal, paket soal AKM, dan akun siswa. Pastikan jumlah butir soal dan siswa sudah cocok.
+                </div>
+                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <b class="text-emerald-400 block mb-1">2. Setiap Sesi Ujian</b>
+                    Siswa scan absensi saat datang ke madrasah / gerbang. Proktor cukup klik <b>"Tarik Presensi Siswa"</b>. Siswa langsung diizinkan login dan mengerjakan soal sesi tersebut.
+                </div>
+                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <b class="text-amber-400 block mb-1">3. Setelah Sesi Berakhir</b>
+                    Setelah siswa menekan tombol "Selesai Ujian", proktor mengklik <b>"Kirim Nilai ke Server Online"</b>. Nilai tersimpan aman di pusat dan bisa langsung dicetak kepala madrasah.
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function syncServerUrl(val) {
+            document.querySelectorAll('.targetServerUrlInput').forEach(function(el) {
+                el.value = val;
+            });
+        }
+    </script>
 </body>
 </html>

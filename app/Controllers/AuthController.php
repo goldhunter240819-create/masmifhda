@@ -32,14 +32,17 @@ class AuthController {
             $password = $_POST['password'];
 
             $db = Database::connect('core');
+            $dbSiakad = null;
+            try { $dbSiakad = Database::connect('siakad'); } catch (\Throwable $e) {}
+
             $loginInput = trim($username);
             $stmt = $db->prepare("
                 SELECT u.*, 
                        s.id as s_id, s.nama as s_nama, s.nis as s_nis, s.nik as s_nik,
                        g.id as g_id, g.nama as g_nama, g.nip as g_nip, g.nik as g_nik, g.is_kamad as g_kamad
                 FROM users u 
-                LEFT JOIN siswa s ON s.user_id = u.id 
-                LEFT JOIN guru g ON g.user_id = u.id 
+                LEFT JOIN siswa s ON (s.user_id = u.id OR (s.nik = u.username AND s.nik != '' AND s.nik IS NOT NULL) OR (s.nis = u.username AND s.nis != '' AND s.nis IS NOT NULL))
+                LEFT JOIN guru g ON (g.user_id = u.id OR (g.nik = u.username AND g.nik != '' AND g.nik IS NOT NULL) OR (g.nip = u.username AND g.nip != '' AND g.nip IS NOT NULL))
                 WHERE u.username = ? 
                    OR s.nik = ? 
                    OR s.nis = ? 
@@ -51,7 +54,99 @@ class AuthController {
             $user = $stmt->fetch();
 
             $pass_ok = false;
+            if (!$user) {
+                // Cek langsung ke data siswa jika belum memiliki akun user terpisah (Login via NIS atau NIK)
+                $stmtDirectS = $db->prepare("SELECT * FROM siswa WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                $stmtDirectS->execute([$loginInput, $loginInput]);
+                $directS = $stmtDirectS->fetch();
+                if (!$directS && $dbSiakad) {
+                    try {
+                        $stmtDirectS2 = $dbSiakad->prepare("SELECT * FROM siswa WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                        $stmtDirectS2->execute([$loginInput, $loginInput]);
+                        $directS = $stmtDirectS2->fetch();
+                    } catch (\Throwable $e) {}
+                }
+
+                if ($directS) {
+                    $allowedPass = array_filter([$directS['nik'] ?? null, $directS['nis'] ?? null, '123456']);
+                    if (in_array($password, $allowedPass)) {
+                        $uname = !empty($directS['nik']) ? $directS['nik'] : $directS['nis'];
+                        $hash = password_hash($password, PASSWORD_BCRYPT);
+                        try {
+                            $stmtMakeU = $db->prepare("INSERT INTO users (username, password_hash, plain_password, role_id, status) VALUES (?, ?, ?, 3, 'active') ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), plain_password = VALUES(plain_password)");
+                            $stmtMakeU->execute([$uname, $hash, $password]);
+                            $newUid = (int)$db->lastInsertId();
+                            if (!$newUid) {
+                                $newUid = (int)$db->query("SELECT id FROM users WHERE username = " . $db->quote($uname))->fetchColumn();
+                            }
+                            if ($newUid) {
+                                $db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$newUid, $directS['id']]);
+                                if ($dbSiakad) {
+                                    try { $dbSiakad->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$newUid, $directS['id']]); } catch (\Throwable $e) {}
+                                }
+                            }
+                        } catch (\Throwable $e) {}
+
+                        $user = [
+                            'id' => $newUid ?? (100000 + (int)$directS['id']),
+                            'username' => $uname,
+                            'password_hash' => $hash,
+                            'plain_password' => $password,
+                            'role_id' => 3,
+                            'status' => 'active',
+                            's_id' => $directS['id'],
+                            's_nama' => $directS['nama'],
+                            's_nis' => $directS['nis'],
+                            's_nik' => $directS['nik']
+                        ];
+                        $pass_ok = true;
+                    }
+                }
+            }
+
             if ($user) {
+                // Pastikan s_id, s_nis, dan s_nik terisi jika akun ini adalah akun siswa
+                if (empty($user['s_id']) && ($user['role_id'] == 3 || empty($user['role_id']))) {
+                    $stmtResolvS = $db->prepare("
+                        SELECT * FROM siswa 
+                        WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                           OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                           OR (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                           OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                           OR (user_id = ? AND ? > 0)
+                        LIMIT 1
+                    ");
+                    $stmtResolvS->execute([$loginInput, $loginInput, $user['username'], $user['username'], $user['id'], $user['id']]);
+                    $foundS = $stmtResolvS->fetch();
+                    if (!$foundS && $dbSiakad) {
+                        try {
+                            $stmtResolvS2 = $dbSiakad->prepare("
+                                SELECT * FROM siswa 
+                                WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                                   OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                                   OR (nik = ? AND nik != '' AND nik IS NOT NULL) 
+                                   OR (nis = ? AND nis != '' AND nis IS NOT NULL)
+                                   OR (user_id = ? AND ? > 0)
+                                LIMIT 1
+                            ");
+                            $stmtResolvS2->execute([$loginInput, $loginInput, $user['username'], $user['username'], $user['id'], $user['id']]);
+                            $foundS = $stmtResolvS2->fetch();
+                        } catch (\Throwable $e) {}
+                    }
+                    if ($foundS) {
+                        $user['s_id'] = $foundS['id'];
+                        $user['s_nama'] = $foundS['nama'];
+                        $user['s_nis'] = $foundS['nis'];
+                        $user['s_nik'] = $foundS['nik'];
+                        try {
+                            $db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $foundS['id']]);
+                            if ($dbSiakad) {
+                                try { $dbSiakad->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $foundS['id']]); } catch (\Throwable $e) {}
+                            }
+                        } catch (\Throwable $e) {}
+                    }
+                }
+
                 // 1. Cek apakah password cocok dengan hash (misal sudah diganti oleh pengguna)
                 if (password_verify($password, $user['password_hash'])) {
                     $pass_ok = true;
@@ -62,18 +157,26 @@ class AuthController {
                 } elseif (md5($password) === $user['password_hash']) {
                     $pass_ok = true;
                 }
-                // 3. Default Password = NIK (Kecuali jika user sudah mengganti password)
+                // 3. Default Password = NIK Siswa
                 elseif (!empty($user['s_nik']) && $password === $user['s_nik']) {
                     $pass_ok = true;
-                } elseif (!empty($user['g_nik']) && $password === $user['g_nik']) {
-                    $pass_ok = true;
-                }
-                // 4. Fallback jika login menggunakan NIS (siswa) / NIP (guru) / Username
+                } 
+                // 4. Default Password = NIS Siswa
                 elseif (!empty($user['s_nis']) && $password === $user['s_nis']) {
                     $pass_ok = true;
-                } elseif (!empty($user['g_nip']) && $password === $user['g_nip']) {
+                }
+                // 5. Default Password Siswa '123456'
+                elseif ($user['role_id'] == 3 && $password === '123456') {
                     $pass_ok = true;
-                } elseif ($password === $user['username']) {
+                }
+                // 6. Username akun
+                elseif ($password === $user['username']) {
+                    $pass_ok = true;
+                }
+                // 7. Guru NIK / NIP
+                elseif (!empty($user['g_nik']) && $password === $user['g_nik']) {
+                    $pass_ok = true;
+                } elseif (!empty($user['g_nip']) && $password === $user['g_nip']) {
                     $pass_ok = true;
                 }
             }
