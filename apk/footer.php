@@ -4,15 +4,11 @@ $current_tab = $_GET['tab'] ?? '';
 
 $host = $_SERVER['HTTP_HOST'] ?? '';
 $is_online_server = (strpos($host, 'apk.masmifhda.sch.id') !== false);
-$is_standalone_env = !$is_online_server && (
-    (defined('CBT_STANDALONE_MODE') && CBT_STANDALONE_MODE)
-    || file_exists(__DIR__ . '/../.cbt_standalone')
-    || (strpos($host, '192.168.') === 0 || strpos($host, '10.') === 0 || strpos($host, '127.0.0.1') === 0 || strpos($host, 'localhost') === 0)
-    || !file_exists(__DIR__ . '/guru_dashboard.php')
-);
+// Offline CBT: Host bukan apk.masmifhda.sch.id, atau mode cbt standalone aktif
+$is_offline_cbt = !$is_online_server || !empty($_SESSION['is_cbt_only']) || (defined('CBT_STANDALONE_MODE') && CBT_STANDALONE_MODE);
 ?>
-<?php if ($is_standalone_env || !empty($_SESSION['is_cbt_only'])): ?>
-        <!-- BOTTOM NAVIGATION KHUSUS CBT OFFLINE / STANDALONE (3 MENU: BERANDA, RIWAYAT, PROFIL) -->
+<?php if ($is_offline_cbt): ?>
+        <!-- BOTTOM NAVIGATION KHUSUS CBT OFFLINE / STANDALONE (3 MENU: BERANDA, RIWAYAT PENGERJAAN, PROFIL) -->
         <div class="bottom-nav" style="left: 50%; transform: translateX(-50%); border-top: 1px solid #e2e8f0; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center; height: auto; min-height: 70px; padding-top: 5px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 9999; background: #ffffff;">
             <a href="cbt.php" class="nav-item <?= ($current_page == 'cbt.php' && $current_tab !== 'riwayat') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'cbt.php' && $current_tab !== 'riwayat') ? '#2563eb' : '#64748b' ?>;">
                 <i class="fa-solid fa-house" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
@@ -20,7 +16,7 @@ $is_standalone_env = !$is_online_server && (
             </a>
             <a href="cbt.php?tab=riwayat" class="nav-item <?= ($current_page == 'cbt.php' && $current_tab === 'riwayat') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'cbt.php' && $current_tab === 'riwayat') ? '#2563eb' : '#64748b' ?>;">
                 <i class="fa-solid fa-clock-rotate-left" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
-                <span style="font-size: 0.72rem; font-weight: 700;">Riwayat Ujian</span>
+                <span style="font-size: 0.72rem; font-weight: 700;">Riwayat Pengerjaan</span>
             </a>
             <a href="profil.php" class="nav-item <?= ($current_page == 'profil.php' || $current_page == 'profil_cbt.php') ? 'active' : '' ?>" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($current_page == 'profil.php' || $current_page == 'profil_cbt.php') ? '#2563eb' : '#64748b' ?>;">
                 <i class="fa-solid fa-user" style="font-size: 1.25rem; margin-bottom: 4px;"></i>

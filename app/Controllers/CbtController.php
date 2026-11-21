@@ -240,6 +240,11 @@ class CbtController {
                 $db->exec("UPDATE bs_topik SET status = 'Arsip' WHERE jenis IN ('PAS', 'PTS') AND (tgl_mulai IS NULL OR tgl_mulai = '')");
             } catch (\Exception $e) {}
 
+            // Sinkronkan pemetaan user_id siswa pada core.siswa agar sinkron 1-to-1 dengan kartu barcode/token
+            try {
+                $db->exec("UPDATE siswa SET user_id = (id + 341) WHERE id BETWEEN 1 AND 88 AND (user_id IS NULL OR user_id < 342)");
+            } catch (\Exception $e) {}
+
             // 7. Tabel Topik Ujian (bs_topik)
             $db->exec("CREATE TABLE IF NOT EXISTS bs_topik (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -5341,18 +5346,85 @@ class CbtController {
 
             // 1a. Cari jika terdeteksi User ID / Siswa ID dari TOKEN Siakad (misal TOKEN:394:...)
             if ($extractedUserId) {
-                $dbsToQuery = ($dbSiakad !== $db) ? [$dbSiakad, $db] : [$db];
-                foreach ($dbsToQuery as $targetDb) {
+                // 1. Cek langsung di core.siswa berdasarkan user_id, id, atau id offset (user_id - 341)
+                try {
+                    $stmtS = $db->prepare("
+                        SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                        FROM siswa s
+                        LEFT JOIN kelas k ON s.kelas_id = k.id
+                        WHERE s.user_id = ? OR s.id = ? OR s.id = (? - 341)
+                        LIMIT 1
+                    ");
+                    $stmtS->execute([$extractedUserId, $extractedUserId, $extractedUserId]);
+                    $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+                    if ($sRow) {
+                        $siswa = [
+                            'id' => (int)$sRow['id'],
+                            'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
+                            'nama' => $sRow['nama'],
+                            'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                            'tingkat' => $sRow['tingkat'],
+                            'foto' => $sRow['foto'],
+                            'tipe' => 'reguler'
+                        ];
+                        // Auto-heal tautan user_id
+                        if (!isset($sRow['user_id']) || (int)$sRow['user_id'] !== $extractedUserId) {
+                            try { $db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$extractedUserId, $sRow['id']]); } catch (\Exception $e) {}
+                        }
+                    }
+                } catch (\Exception $e) {}
+
+                // 2. Jika belum ketemu, cek tabel users untuk mencocokkan username / NIK
+                if (!$siswa) {
                     try {
-                        $stmtS = $targetDb->prepare("
-                            SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                        $stmtU = $db->prepare("SELECT id, username FROM users WHERE id = ? LIMIT 1");
+                        $stmtU->execute([$extractedUserId]);
+                        $uRow = $stmtU->fetch(PDO::FETCH_ASSOC);
+                        if ($uRow) {
+                            $uName = trim($uRow['username']);
+                            $stmtS = $db->prepare("
+                                SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                                FROM siswa s
+                                LEFT JOIN kelas k ON s.kelas_id = k.id
+                                WHERE s.user_id = ? 
+                                   OR (s.nis = ? AND s.nis != '') 
+                                   OR (s.nik = ? AND s.nik != '') 
+                                   OR (s.nisn = ? AND s.nisn != '')
+                                LIMIT 1
+                            ");
+                            $stmtS->execute([$uRow['id'], $uName, $uName, $uName]);
+                            $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+                            if ($sRow) {
+                                $siswa = [
+                                    'id' => (int)$sRow['id'],
+                                    'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
+                                    'nama' => $sRow['nama'],
+                                    'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                                    'tingkat' => $sRow['tingkat'],
+                                    'foto' => $sRow['foto'],
+                                    'tipe' => 'reguler'
+                                ];
+                                if (!isset($sRow['user_id']) || (int)$sRow['user_id'] !== $extractedUserId) {
+                                    try { $db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$extractedUserId, $sRow['id']]); } catch (\Exception $e) {}
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {}
+                }
+
+                // 3. Jika belum ketemu, cek database Siakad (kolom kompatibel Siakad)
+                if (!$siswa && $dbSiakad !== $db) {
+                    try {
+                        $stmtSiakad = $dbSiakad->prepare("
+                            SELECT s.id, 0 as user_id, s.nis, s.nama_lengkap as nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto_siswa as foto
                             FROM siswa s
                             LEFT JOIN kelas k ON s.kelas_id = k.id
-                            WHERE s.user_id = ? OR s.id = ?
+                            WHERE s.id = ? OR s.id = (? - 341) OR (s.nis = ? AND s.nis != '') OR (s.nisn = ? AND s.nisn != '')
                             LIMIT 1
                         ");
-                        $stmtS->execute([$extractedUserId, $extractedUserId]);
-                        $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+                        $uName = $uRow['username'] ?? '';
+                        $stmtSiakad->execute([$extractedUserId, $extractedUserId, $uName, $uName]);
+                        $sRow = $stmtSiakad->fetch(PDO::FETCH_ASSOC);
                         if ($sRow) {
                             $siswa = [
                                 'id' => (int)$sRow['id'],
@@ -5363,7 +5435,33 @@ class CbtController {
                                 'foto' => $sRow['foto'],
                                 'tipe' => 'reguler'
                             ];
-                            break;
+                        }
+                    } catch (\Exception $e) {}
+                }
+
+                // 4. Jika belum ketemu, cek peserta khusus (Kelas Jauh)
+                if (!$siswa) {
+                    try {
+                        $stmtK = $db->prepare("
+                            SELECT id, no_peserta as nis, nama_siswa as nama, kelas_nama, tingkat, username
+                            FROM cbt_peserta_khusus
+                            WHERE id = ? OR username = ? OR no_peserta = ? OR qr_token LIKE ?
+                            LIMIT 1
+                        ");
+                        $tokenSearch = '%' . $extractedUserId . '%';
+                        $stmtK->execute([$extractedUserId, $cleanCode, $cleanCode, $tokenSearch]);
+                        $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+                        if ($kRow) {
+                            $siswa = [
+                                'id' => (int)$kRow['id'],
+                                'nis' => $kRow['nis'],
+                                'nama' => $kRow['nama'],
+                                'kelas_nama' => $kRow['kelas_nama'] ?: 'Kelas Jauh',
+                                'tingkat' => $kRow['tingkat'],
+                                'foto' => null,
+                                'tipe' => 'khusus'
+                            ];
+                            $tipePeserta = 'khusus';
                         }
                     } catch (\Exception $e) {}
                 }
@@ -5397,19 +5495,43 @@ class CbtController {
 
             // 1c. Cari di tabel siswa berdasarkan NIS, ID, user_id, atau username
             if (!$siswa) {
-                $dbsToQuery = ($dbSiakad !== $db) ? [$dbSiakad, $db] : [$db];
-                foreach ($dbsToQuery as $targetDb) {
+                // Di database core
+                try {
+                    $stmtS = $db->prepare("
+                        SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                        FROM siswa s
+                        LEFT JOIN kelas k ON s.kelas_id = k.id
+                        LEFT JOIN users u ON s.user_id = u.id
+                        WHERE s.nis = ? OR s.id = ? OR s.user_id = ? OR u.username = ?
+                           OR s.nis = ? OR s.id = ?
+                        LIMIT 1
+                    ");
+                    $stmtS->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode]);
+                    $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+                    if ($sRow) {
+                        $siswa = [
+                            'id' => (int)$sRow['id'],
+                            'nis' => $sRow['nis'] ?: 'ID-' . $sRow['id'],
+                            'nama' => $sRow['nama'],
+                            'kelas_nama' => $sRow['nama_kelas'] ?: 'Umum',
+                            'tingkat' => $sRow['tingkat'],
+                            'foto' => $sRow['foto'],
+                            'tipe' => 'reguler'
+                        ];
+                    }
+                } catch (\Exception $e) {}
+
+                // Di database Siakad jika belum ketemu
+                if (!$siswa && $dbSiakad !== $db) {
                     try {
-                        $stmtS = $targetDb->prepare("
-                            SELECT s.id, s.user_id, s.nis, s.nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto
+                        $stmtS = $dbSiakad->prepare("
+                            SELECT s.id, 0 as user_id, s.nis, s.nama_lengkap as nama, s.kelas_id, k.nama_kelas, k.tingkat, s.foto_siswa as foto
                             FROM siswa s
                             LEFT JOIN kelas k ON s.kelas_id = k.id
-                            LEFT JOIN users u ON s.user_id = u.id
-                            WHERE s.nis = ? OR s.id = ? OR s.user_id = ? OR u.username = ?
-                               OR s.nis = ? OR s.id = ?
+                            WHERE s.nis = ? OR s.id = ? OR s.nisn = ?
                             LIMIT 1
                         ");
-                        $stmtS->execute([$cleanCode, $cleanCode, $cleanCode, $cleanCode, $rawCode, $rawCode]);
+                        $stmtS->execute([$cleanCode, $cleanCode, $cleanCode]);
                         $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
                         if ($sRow) {
                             $siswa = [
@@ -5421,7 +5543,6 @@ class CbtController {
                                 'foto' => $sRow['foto'],
                                 'tipe' => 'reguler'
                             ];
-                            break;
                         }
                     } catch (\Exception $e) {}
                 }
