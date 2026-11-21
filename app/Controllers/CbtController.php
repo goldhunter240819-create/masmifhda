@@ -771,12 +771,29 @@ class CbtController {
     }
 
     /**
+     * Pastikan sesi PHP berjalan dengan session_name dan session_save_path yang seragam
+     */
+    public static function ensureSession() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_name("AULA_SYSTEM_PORTAL");
+            $sessDir = __DIR__ . '/../../storage/sessions';
+            if (!is_dir($sessDir)) {
+                @mkdir($sessDir, 0777, true);
+            }
+            if (is_dir($sessDir) && is_writable($sessDir)) {
+                @session_save_path($sessDir);
+            }
+            ini_set('session.gc_maxlifetime', 86400);
+            ini_set('session.cookie_lifetime', 86400);
+            @session_start();
+        }
+    }
+
+    /**
      * Inisialisasi Auth & Koneksi Database
      */
     private static function getAuthContext() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        self::ensureSession();
 
         if (!isset($_SESSION['user_id'])) {
             redirect('/login');
@@ -5667,10 +5684,7 @@ class CbtController {
         $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
         $isTokenValid = ($providedToken === $syncSecret);
 
-        if (session_status() === PHP_SESSION_NONE) {
-            session_name("AULA_SYSTEM_PORTAL");
-            session_start();
-        }
+        self::ensureSession();
         $isSessionValid = !empty($_SESSION['user_id']);
 
         if (!$isTokenValid && !$isSessionValid) {
@@ -5762,10 +5776,7 @@ class CbtController {
         $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
         $isTokenValid = ($providedToken === $syncSecret);
 
-        if (session_status() === PHP_SESSION_NONE) {
-            session_name("AULA_SYSTEM_PORTAL");
-            session_start();
-        }
+        self::ensureSession();
         $isSessionValid = !empty($_SESSION['user_id']);
 
         if (!$isTokenValid && !$isSessionValid) {
@@ -5909,10 +5920,7 @@ class CbtController {
         $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
         $isTokenValid = ($providedToken === $syncSecret);
 
-        if (session_status() === PHP_SESSION_NONE) {
-            session_name("AULA_SYSTEM_PORTAL");
-            session_start();
-        }
+        self::ensureSession();
         $isSessionValid = !empty($_SESSION['user_id']);
 
         if (!$isTokenValid && !$isSessionValid) {
