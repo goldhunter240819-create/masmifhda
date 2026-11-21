@@ -2572,6 +2572,8 @@ $router->add('POST', '/cbt/pengawas/absensi/delete', [\App\Controllers\CbtContro
 $router->add('GET', '/cbt/pengawas/cetak-honor', [\App\Controllers\CbtController::class, 'cetakHonorPengawas']);
 $router->add('GET', '/cbt/pengawas/cetak-rekap', [\App\Controllers\CbtController::class, 'cetakHonorPengawas']);
 $router->add('GET', '/cbt/ruang/berita-acara', [\App\Controllers\CbtController::class, 'cetakBeritaAcaraRuang']);
+$router->add('GET', '/cbt/ruang/berita-acara/cetak-ba', [\App\Controllers\CbtController::class, 'cetakDokumenBA']);
+$router->add('GET', '/cbt/ruang/berita-acara/cetak-hadir-ruang', [\App\Controllers\CbtController::class, 'cetakDokumenHadirRuang']);
 $router->add('GET', '/cbt/hasil/daftar-hadir-kelas', [\App\Controllers\CbtController::class, 'cetakDaftarHadirKelas']);
 
 // CBT Semi-Online Sync System

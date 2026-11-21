@@ -6152,9 +6152,9 @@ class CbtController {
     }
 
     /**
-     * OUTPUT 1: Cetak Berita Acara & Daftar Hadir Peserta Per-Ruang (Laporan Panitia)
+     * Helper: Ambil Data Berita Acara & Kehadiran Per-Ruang & Per-Sesi
      */
-    public static function cetakBeritaAcaraRuang() {
+    private static function getBeritaAcaraData() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
         $db_siakad = $ctx['db_siakad'];
@@ -6216,6 +6216,17 @@ class CbtController {
         $mapelArr = $stmtM->fetchAll(PDO::FETCH_COLUMN);
         $mapelNama = !empty($mapelArr) ? implode(' / ', $mapelArr) : 'Asesmen CBT';
 
+        // Cari jam sesi
+        $jamSesi = '08:00 - 09:00 WIB';
+        try {
+            $stmtS = $db->prepare("SELECT jam_mulai, jam_selesai FROM cbt_jadwal_slot WHERE label_sesi = ? LIMIT 1");
+            $stmtS->execute([$sesiLabel]);
+            $slotData = $stmtS->fetch(PDO::FETCH_ASSOC);
+            if ($slotData && !empty($slotData['jam_mulai'])) {
+                $jamSesi = date('H:i', strtotime($slotData['jam_mulai'])) . ' - ' . date('H:i', strtotime($slotData['jam_selesai'])) . ' WIB';
+            }
+        } catch (\Exception $e) {}
+
         // Cari pengawas yang bertugas / presensi di ruang dan sesi tersebut
         $pengawasNama = $ruang['pengawas'] ?? 'Bapak / Ibu Pengawas';
         $pengawasNip = '-';
@@ -6245,25 +6256,71 @@ class CbtController {
             }
         }
 
-        // Cek absensi siswa di ruang tersebut
+        // Cek absensi siswa scan kartu persesi pada tanggal ini
         $absenMap = [];
         try {
-            $stmtAb = $db->prepare("SELECT nis, siswa_id, waktu_scan FROM cbt_absensi WHERE tanggal = ?");
+            $stmtAb = $db->prepare("SELECT nis, siswa_id, waktu_scan, status, metode_scan FROM cbt_absensi WHERE tanggal = ? ORDER BY waktu_scan ASC");
             $stmtAb->execute([$tanggal]);
             while ($ab = $stmtAb->fetch(PDO::FETCH_ASSOC)) {
-                if (!empty($ab['nis'])) $absenMap['nis_' . $ab['nis']] = true;
-                if (!empty($ab['siswa_id'])) $absenMap['sid_' . $ab['siswa_id']] = true;
+                if (!empty($ab['nis'])) $absenMap['nis_' . trim((string)$ab['nis'])] = $ab;
+                if (!empty($ab['siswa_id'])) $absenMap['sid_' . (int)$ab['siswa_id']] = $ab;
+            }
+        } catch (\Exception $e) {}
+
+        // Juga cek pengerjaan cbt_peserta jika siswa langsung login workstation CBT
+        $cbtPesertaMap = [];
+        try {
+            $stmtCp = $db->prepare("
+                SELECT p.siswa_id, p.nis, p.waktu_mulai, p.status_pengerjaan 
+                FROM cbt_peserta p
+                WHERE (DATE(p.waktu_mulai) = ? OR ? <= 0 OR p.ujian_id IN (SELECT id FROM cbt_ujian WHERE topik_id = ?))
+                  AND p.status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Selesai')
+            ");
+            $stmtCp->execute([$tanggal, $topikId, $topikId]);
+            while ($cp = $stmtCp->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($cp['siswa_id'])) $cbtPesertaMap['sid_' . (int)$cp['siswa_id']] = $cp;
+                if (!empty($cp['nis'])) $cbtPesertaMap['nis_' . trim((string)$cp['nis'])] = $cp;
             }
         } catch (\Exception $e) {}
 
         $totalTerdaftar = count($pesertaList);
         $totalHadir = 0;
+        $tidakHadirList = [];
+
         foreach ($pesertaList as &$ps) {
-            $isHadir = isset($absenMap['sid_' . ($ps['siswa_id'] ?? 0)]) || isset($absenMap['nis_' . ($ps['nis'] ?? '')]);
-            $ps['status_kehadiran'] = $isHadir ? 'Hadir' : 'Hadir';
-            if ($ps['status_kehadiran'] === 'Hadir') $totalHadir++;
+            $sId = (int)($ps['siswa_id'] ?? 0);
+            $sNis = trim((string)($ps['nis'] ?? ''));
+
+            $matchedAbsen = null;
+            if ($sId > 0 && isset($absenMap['sid_' . $sId])) {
+                $matchedAbsen = $absenMap['sid_' . $sId];
+            } elseif (!empty($sNis) && isset($absenMap['nis_' . $sNis])) {
+                $matchedAbsen = $absenMap['nis_' . $sNis];
+            }
+
+            if ($matchedAbsen) {
+                $ps['is_hadir'] = true;
+                $ps['status_kehadiran'] = 'Hadir';
+                $ps['waktu_scan'] = !empty($matchedAbsen['waktu_scan']) ? date('H:i:s', strtotime($matchedAbsen['waktu_scan'])) . ' WIB' : 'Terscan';
+                $ps['metode_scan'] = !empty($matchedAbsen['metode_scan']) ? $matchedAbsen['metode_scan'] : 'Scan Kartu';
+                $totalHadir++;
+            } elseif (isset($cbtPesertaMap['sid_' . $sId]) || isset($cbtPesertaMap['nis_' . $sNis])) {
+                $cp = $cbtPesertaMap['sid_' . $sId] ?? $cbtPesertaMap['nis_' . $sNis];
+                $ps['is_hadir'] = true;
+                $ps['status_kehadiran'] = 'Hadir';
+                $ps['waktu_scan'] = !empty($cp['waktu_mulai']) ? date('H:i:s', strtotime($cp['waktu_mulai'])) . ' WIB' : 'Login CBT';
+                $ps['metode_scan'] = 'Login CBT';
+                $totalHadir++;
+            } else {
+                $ps['is_hadir'] = false;
+                $ps['status_kehadiran'] = 'Tidak Hadir';
+                $ps['waktu_scan'] = '-';
+                $ps['metode_scan'] = '-';
+                $tidakHadirList[] = $ps;
+            }
         }
         unset($ps);
+
         $totalTidakHadir = max(0, $totalTerdaftar - $totalHadir);
 
         $kop = null;
@@ -6272,7 +6329,63 @@ class CbtController {
         } catch (\Exception $e) {}
         $inst = ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
 
-        include __DIR__ . '/../../resources/views/cbt/cetak_berita_acara_ruang.php';
+        return [
+            'topikId' => $topikId,
+            'topikList' => $topikList,
+            'topik' => $topik,
+            'allRuang' => $allRuang,
+            'ruangId' => $ruangId,
+            'ruang' => $ruang,
+            'tanggal' => $tanggal,
+            'sesiLabel' => $sesiLabel,
+            'pesertaList' => $pesertaList,
+            'tidakHadirList' => $tidakHadirList,
+            'mapelNama' => $mapelNama,
+            'jamSesi' => $jamSesi,
+            'pengawasNama' => $pengawasNama,
+            'pengawasNip' => $pengawasNip,
+            'totalTerdaftar' => $totalTerdaftar,
+            'totalHadir' => $totalHadir,
+            'totalTidakHadir' => $totalTidakHadir,
+            'kop' => $kop,
+            'inst' => $inst,
+        ];
+    }
+
+    /**
+     * OUTPUT 1: Halaman Dashboard Berita Acara & Kehadiran Ruang CBT (Dengan Sidebar)
+     */
+    public static function cetakBeritaAcaraRuang() {
+        $data = self::getBeritaAcaraData();
+        extract($data);
+
+        $title = "Berita Acara & Kehadiran Ruang CBT - MAS MIFTAHUL HUDA";
+        $active_menu = 'berita_acara_ruang';
+        ob_start();
+        include __DIR__ . '/../../resources/views/cbt/berita_acara_dashboard.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../../resources/views/siakad/layout.php';
+    }
+
+    /**
+     * Cetak Lembar Dokumen Berita Acara Pelaksanaan Ujian CBT (A4 Portrait Print View)
+     */
+    public static function cetakDokumenBA() {
+        $data = self::getBeritaAcaraData();
+        extract($data);
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_dokumen_ba.php';
+        exit;
+    }
+
+    /**
+     * Cetak Lembar Dokumen Daftar Hadir Peserta Ruang Ujian CBT (A4 Portrait Print View - Waktu Scan)
+     */
+    public static function cetakDokumenHadirRuang() {
+        $data = self::getBeritaAcaraData();
+        extract($data);
+
+        include __DIR__ . '/../../resources/views/cbt/cetak_dokumen_hadir_ruang.php';
         exit;
     }
 
