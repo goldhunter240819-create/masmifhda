@@ -356,6 +356,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['mulai'])) {
                     $status['users'] = $cntUsr;
                 }
 
+                // 7b. Sinkronisasi Permanen user_id Siswa dengan Akun Login NIK / NIS
+                try {
+                    $pdoCore->exec("
+                        UPDATE siswa s 
+                        JOIN users u ON (u.username = s.nik AND s.nik != '' AND s.nik IS NOT NULL)
+                        SET s.user_id = u.id
+                    ");
+                    $pdoCore->exec("
+                        UPDATE siswa s 
+                        JOIN users u ON (u.username = s.nis AND s.nis != '' AND s.nis IS NOT NULL)
+                        SET s.user_id = u.id
+                        WHERE s.user_id IS NULL OR s.user_id = 0
+                    ");
+                } catch (\Throwable $e) {}
+                if ($pdoSiakad !== $pdoCore) {
+                    try {
+                        $pdoSiakad->exec("
+                            UPDATE siswa s 
+                            JOIN users u ON (u.username = s.nik AND s.nik != '' AND s.nik IS NOT NULL)
+                            SET s.user_id = u.id
+                        ");
+                        $pdoSiakad->exec("
+                            UPDATE siswa s 
+                            JOIN users u ON (u.username = s.nis AND s.nis != '' AND s.nis IS NOT NULL)
+                            SET s.user_id = u.id
+                            WHERE s.user_id IS NULL OR s.user_id = 0
+                        ");
+                    } catch (\Throwable $e) {}
+                }
+
                 // 8. Kelas
                 if (!empty($data['kelas'])) {
                     $sqlK = "INSERT INTO kelas (id, nama_kelas, tingkat) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE nama_kelas = VALUES(nama_kelas), tingkat = VALUES(tingkat)";

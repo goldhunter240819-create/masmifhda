@@ -5776,6 +5776,16 @@ class CbtController {
             }
         }
 
+        // Pastikan relasi user_id siswa tersambung ke akun users berdasarkan NIK / NIS resmi
+        try {
+            $db->exec("UPDATE siswa s JOIN users u ON (u.username = s.nik AND s.nik != '' AND s.nik IS NOT NULL) SET s.user_id = u.id");
+            $db->exec("UPDATE siswa s JOIN users u ON (u.username = s.nis AND s.nis != '' AND s.nis IS NOT NULL) SET s.user_id = u.id WHERE s.user_id IS NULL OR s.user_id = 0");
+            if ($dbSiakad !== $db) {
+                $dbSiakad->exec("UPDATE siswa s JOIN users u ON (u.username = s.nik AND s.nik != '' AND s.nik IS NOT NULL) SET s.user_id = u.id");
+                $dbSiakad->exec("UPDATE siswa s JOIN users u ON (u.username = s.nis AND s.nis != '' AND s.nis IS NOT NULL) SET s.user_id = u.id WHERE s.user_id IS NULL OR s.user_id = 0");
+            }
+        } catch (\Throwable $e) {}
+
         // Export data siswa reguler (prioritaskan database siakad yang memuat seluruh siswa aktif madrasah)
         $siswaList = [];
         try {

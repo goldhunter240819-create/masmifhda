@@ -157,8 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            s.id as s_id, s.nama as s_nama, s.nis as s_nis, s.nik as s_nik, s.status as s_status,
                            g.id as g_id, g.nama as g_nama, g.nip as g_nip, g.nik as g_nik, g.is_kamad as g_kamad
                     FROM users u 
-                    LEFT JOIN siswa s ON s.user_id = u.id 
-                    LEFT JOIN guru g ON g.user_id = u.id 
+                    LEFT JOIN siswa s ON (s.user_id = u.id OR (s.nik = u.username AND s.nik != '' AND s.nik IS NOT NULL) OR (s.nis = u.username AND s.nis != '' AND s.nis IS NOT NULL))
+                    LEFT JOIN guru g ON (g.user_id = u.id OR (g.nik = u.username AND g.nik != '' AND g.nik IS NOT NULL) OR (g.nip = u.username AND g.nip != '' AND g.nip IS NOT NULL))
                     WHERE u.username = ? 
                        OR s.nik = ? 
                        OR s.nis = ? 
@@ -170,6 +170,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 $pass_ok = false;
+                if (!$user) {
+                    // Cek langsung ke data siswa jika belum memiliki akun user terpisah
+                    $stmtDirectS = $core_db->prepare("SELECT * FROM siswa WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                    $stmtDirectS->execute([$username_input, $username_input]);
+                    $directS = $stmtDirectS->fetch(PDO::FETCH_ASSOC);
+                    if (!$directS && isset($siakad_db)) {
+                        try {
+                            $stmtDirectS2 = $siakad_db->prepare("SELECT * FROM siswa WHERE (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                            $stmtDirectS2->execute([$username_input, $username_input]);
+                            $directS = $stmtDirectS2->fetch(PDO::FETCH_ASSOC);
+                        } catch (\Throwable $e) {}
+                    }
+
+                    if ($directS) {
+                        $allowedPass = array_filter([$directS['nik'] ?? null, $directS['nis'] ?? null, '123456']);
+                        if (in_array($password_input, $allowedPass)) {
+                            $uname = !empty($directS['nik']) ? $directS['nik'] : $directS['nis'];
+                            $hash = password_hash($password_input, PASSWORD_BCRYPT);
+                            try {
+                                $stmtMakeU = $core_db->prepare("INSERT INTO users (username, password_hash, plain_password, role_id, status) VALUES (?, ?, ?, 3, 'active') ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), plain_password = VALUES(plain_password)");
+                                $stmtMakeU->execute([$uname, $hash, $password_input]);
+                                $newUid = (int)$core_db->lastInsertId();
+                                if (!$newUid) {
+                                    $newUid = (int)$core_db->query("SELECT id FROM users WHERE username = " . $core_db->quote($uname))->fetchColumn();
+                                }
+                                if ($newUid) {
+                                    $core_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$newUid, $directS['id']]);
+                                    if (isset($siakad_db)) {
+                                        $siakad_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$newUid, $directS['id']]);
+                                    }
+                                }
+                            } catch (\Throwable $e) {}
+
+                            $user = [
+                                'id' => $newUid ?? (100000 + (int)$directS['id']),
+                                'username' => $uname,
+                                'password_hash' => $hash,
+                                'plain_password' => $password_input,
+                                'role_id' => 3,
+                                'status' => 'active',
+                                's_id' => $directS['id'],
+                                's_nama' => $directS['nama'],
+                                's_nis' => $directS['nis'],
+                                's_nik' => $directS['nik'],
+                                's_status' => $directS['status'] ?? 'Aktif'
+                            ];
+                            $pass_ok = true;
+                        }
+                    }
+                }
                 if ($user) {
                     // 1. Cek apakah password cocok dengan password_hash (misal password sudah diubah oleh pengguna)
                     if (password_verify($password_input, $user['password_hash'])) {
@@ -208,16 +258,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $siswa_nis = $user['s_nis'];
                             $siswa_status = $user['s_status'] ?? 'Aktif';
 
-                            // Fallback jika belum ter-JOIN
+                            // Multi-fallback pencarian data siswa (berdasarkan user_id, NIK, atau NIS)
                             if (!$siswa_id) {
-                                $stmtS = $core_db->prepare("SELECT * FROM siswa WHERE user_id = ? LIMIT 1");
-                                $stmtS->execute([$user['id']]);
+                                $targetId = $user['username'] ?? $username_input;
+                                $stmtS = $core_db->prepare("SELECT * FROM siswa WHERE user_id = ? OR (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                                $stmtS->execute([$user['id'], $targetId, $targetId]);
                                 $rowS = $stmtS->fetch(PDO::FETCH_ASSOC);
+
+                                if (!$rowS && isset($siakad_db)) {
+                                    try {
+                                        $stmtS2 = $siakad_db->prepare("SELECT * FROM siswa WHERE user_id = ? OR (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                                        $stmtS2->execute([$user['id'], $targetId, $targetId]);
+                                        $rowS = $stmtS2->fetch(PDO::FETCH_ASSOC);
+                                    } catch (\Throwable $e) {}
+                                }
+
                                 if ($rowS) {
                                     $siswa_id = $rowS['id'];
                                     $siswa_nama = $rowS['nama'];
                                     $siswa_nis = $rowS['nis'];
                                     $siswa_status = $rowS['status'];
+
+                                    // Auto-link user_id agar sinkron permanen
+                                    try {
+                                        $core_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $siswa_id]);
+                                        if (isset($siakad_db)) {
+                                            $siakad_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $siswa_id]);
+                                        }
+                                    } catch (\Throwable $e) {}
                                 }
                             }
 
@@ -446,11 +514,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($user && $pass_ok) {
                         if ($user['role_id'] == 3 || $user['role_id'] == 6) { // Siswa
-                            $stmtSiswa = $core_db->prepare("SELECT * FROM siswa WHERE user_id = ? LIMIT 1");
-                            $stmtSiswa->execute([$user['id']]);
+                            $stmtSiswa = $core_db->prepare("SELECT * FROM siswa WHERE user_id = ? OR (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                            $stmtSiswa->execute([$user['id'], $user['username'], $user['username']]);
                             $siswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
-                            
+
+                            if (!$siswa && isset($siakad_db)) {
+                                try {
+                                    $stmtSiswa2 = $siakad_db->prepare("SELECT * FROM siswa WHERE user_id = ? OR (nik = ? AND nik != '' AND nik IS NOT NULL) OR (nis = ? AND nis != '' AND nis IS NOT NULL) LIMIT 1");
+                                    $stmtSiswa2->execute([$user['id'], $user['username'], $user['username']]);
+                                    $siswa = $stmtSiswa2->fetch(PDO::FETCH_ASSOC);
+                                } catch (\Throwable $e) {}
+                            }
+
                             if ($siswa) {
+                                try {
+                                    $core_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $siswa['id']]);
+                                    if (isset($siakad_db)) {
+                                        $siakad_db->prepare("UPDATE siswa SET user_id = ? WHERE id = ?")->execute([$user['id'], $siswa['id']]);
+                                    }
+                                } catch (\Throwable $e) {}
                                 $_SESSION['siswa_id'] = $siswa['id'];
                                 $_SESSION['siswa_nama'] = $siswa['nama'];
                                 $_SESSION['siswa_nis'] = $siswa['nis'];
