@@ -4,13 +4,24 @@ require_once __DIR__ . '/../app/Services/AuditLogger.php';
 require_once __DIR__ . '/apk_version_guard.php';
 check_apk_version_guard();
 
+// Deteksi environment Standalone CBT Madrasah
+$scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+$baseFolder = dirname($scriptDir);
+if ($baseFolder === '/' || $baseFolder === '\\' || $baseFolder === '.') $baseFolder = '';
+
+$is_standalone = file_exists(__DIR__ . '/../.cbt_standalone') 
+    || !file_exists(__DIR__ . '/guru_dashboard.php') 
+    || !file_exists(__DIR__ . '/../app/Controllers/SiakadController.php');
+
+$semiOnlineUrl = ($baseFolder ? $baseFolder : '') . '/semi-online';
+
 // Jika sudah login, langsung ke dashboard yang sesuai
 if (!empty($_SESSION['is_cbt_only'])) {
     header("Location: cbt.php");
     exit;
 }
 if (isset($_SESSION['siswa_id'])) {
-    if (file_exists(__DIR__ . '/../.cbt_standalone') || !file_exists(__DIR__ . '/index.php')) {
+    if ($is_standalone) {
         header("Location: cbt.php");
         exit;
     }
@@ -21,6 +32,10 @@ if (isset($_SESSION['siswa_id'])) {
     }
     exit;
 } elseif (isset($_SESSION['guru_id'])) {
+    if ($is_standalone) {
+        header("Location: cbt_scan.php");
+        exit;
+    }
     if (!empty($_SESSION['is_guru_kelas_jauh'])) {
         header("Location: guru_kelas_jauh.php");
         exit;
@@ -28,6 +43,10 @@ if (isset($_SESSION['siswa_id'])) {
     header("Location: guru_dashboard.php");
     exit;
 } elseif (isset($_SESSION['user_id']) && isset($_SESSION['role_id']) && ($_SESSION['role_id'] == 1 || $_SESSION['role_id'] == 99)) {
+    if ($is_standalone) {
+        header("Location: " . $semiOnlineUrl);
+        exit;
+    }
     header("Location: /portal");
     exit;
 }
@@ -218,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 \App\Services\AuditLogger::loginSuccess($siswa_nama, 'Siswa (APK Manual)');
 
-                                if (file_exists(__DIR__ . '/../.cbt_standalone') || !file_exists(__DIR__ . '/index.php')) {
+                                if ($is_standalone) {
                                     header("Location: cbt.php");
                                     exit;
                                 }
@@ -271,6 +290,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 \App\Services\AuditLogger::loginSuccess($guru_nama, 'Guru (APK Manual)');
 
+                                if ($is_standalone) {
+                                    header("Location: cbt_scan.php");
+                                    exit;
+                                }
                                 if (stripos($user['username'], 'kelasjauh') !== false || stripos($user['username'], 'kelas_jauh') !== false || stripos($user['username'], 'kj') !== false) {
                                     $_SESSION['is_guru_kelas_jauh'] = true;
                                     header("Location: guru_kelas_jauh.php");
@@ -289,8 +312,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['username'] = $user['username'];
                             $_SESSION['nama'] = $user['username'];
                             \App\Services\AuditLogger::loginSuccess($user['username'], 'Admin/Dev (APK Manual)');
-                            if (file_exists(__DIR__ . '/../.cbt_standalone')) {
-                                header("Location: /cbt/semi-online");
+                            if ($is_standalone) {
+                                header("Location: " . $semiOnlineUrl);
                                 exit;
                             }
                             header("Location: /portal");
@@ -439,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 
                                 \App\Services\AuditLogger::loginSuccess($_SESSION['siswa_nama'], 'Siswa (APK)');
                                 
-                                if (file_exists(__DIR__ . '/../.cbt_standalone') || !file_exists(__DIR__ . '/index.php')) {
+                                if ($is_standalone) {
                                     header("Location: cbt.php");
                                     exit;
                                 }
@@ -468,6 +491,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 
                                 \App\Services\AuditLogger::loginSuccess($_SESSION['guru_nama'], 'Guru (APK)');
                                 
+                                if ($is_standalone) {
+                                    header("Location: cbt_scan.php");
+                                    exit;
+                                }
                                 if (stripos($user['username'], 'kelasjauh') !== false || stripos($user['username'], 'kelas_jauh') !== false || stripos($user['username'], 'kj') !== false) {
                                     $_SESSION['is_guru_kelas_jauh'] = true;
                                     header("Location: guru_kelas_jauh.php");
@@ -481,6 +508,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         } else {
                             $_SESSION['role_id'] = $user['role_id'];
                             $_SESSION['user_id'] = $user['id'];
+                            if ($is_standalone) {
+                                header("Location: " . $semiOnlineUrl);
+                                exit;
+                            }
                             header("Location: /dev-panel");
                             exit;
                         }
