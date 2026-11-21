@@ -17,7 +17,8 @@ $mapelByDayAndSlot = $mapelByDayAndSlot ?? [];
 $topikNama = !empty($topikAktif['nama_topik']) ? $topikAktif['nama_topik'] : 'SIMULASI NEW CBT';
 $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '2026/2027';
 ?>
-<!-- SweetAlert2 Modern -->
+<!-- Font Awesome 6 & SweetAlert2 Modern -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -216,13 +217,16 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="button" onclick="bukaModalTugaskan()" class="e-btn e-btn-primary">
-                            <i class="fa-solid fa-user-plus"></i> Tugaskan Pengawas
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                            <span>Tugaskan Pengawas</span>
                         </button>
                         <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/scan') : '/cbt/pengawas/scan' ?>" class="e-btn e-btn-glass">
-                            <i class="fa-solid fa-id-badge"></i> Scan Presensi Pengawas
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>
+                            <span>Scan Presensi Pengawas</span>
                         </a>
                         <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/rekap') : '/cbt/pengawas/rekap' ?>" class="e-btn e-btn-glass">
-                            <i class="fa-solid fa-clipboard-check"></i> Rekap Presensi Pengawas
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+                            <span>Rekap Presensi Pengawas</span>
                         </a>
                     </div>
                 </div>
@@ -341,7 +345,14 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                                         <?php
                                         $rId = (int)$rg['id'];
                                         $cellId = 'cell-' . md5($dKey . '::' . $sLabel . '::' . $rId);
-                                        $item = $jadwalMatrix[$dKey][$sLabel][$rId] ?? ($jadwalMatrix[$dHari][$sLabel][$rId] ?? null);
+                                        // STRICT DATE ISOLATION:
+                                        // If date exists, strictly match against that date only!
+                                        $item = null;
+                                        if (!empty($dTgl)) {
+                                            $item = $jadwalMatrix[$dTgl][$sLabel][$rId] ?? null;
+                                        } else {
+                                            $item = $jadwalMatrix[$dHari][$sLabel][$rId] ?? ($jadwalMatrix[$dKey][$sLabel][$rId] ?? null);
+                                        }
                                         ?>
                                         <td id="<?= $cellId ?>" 
                                             data-dkey="<?= htmlspecialchars($dKey) ?>"
@@ -366,18 +377,18 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                                                             </div>
                                                         </div>
                                                         <div style="display: flex; align-items: center; gap: 4px;">
-                                                            <button type="button" onclick="editPenugasanAjax('<?= $cellId ?>', <?= htmlspecialchars(json_encode($item)) ?>)" style="background: #f1f5f9; border: none; color: #475569; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ubah Pengawas">
-                                                                <i class="fa-solid fa-pen" style="font-size: 0.72rem;"></i>
+                                                            <button type="button" onclick="editPenugasanAjax('<?= $cellId ?>', <?= htmlspecialchars(json_encode($item)) ?>)" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ubah Pengawas">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                                             </button>
-                                                            <button type="button" onclick="hapusPenugasanAjax('<?= $cellId ?>', <?= (int)$item['id'] ?>, '<?= addslashes($item['guru_nama']) ?>', '<?= htmlspecialchars($sLabel) ?>', '<?= htmlspecialchars($rg['nama_ruang']) ?>')" style="background: #fee2e2; border: none; color: #ef4444; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Hapus">
-                                                                <i class="fa-solid fa-trash-can" style="font-size: 0.72rem;"></i>
+                                                            <button type="button" onclick="hapusPenugasanAjax('<?= $cellId ?>', <?= (int)$item['id'] ?>, '<?= addslashes($item['guru_nama']) ?>', '<?= htmlspecialchars($sLabel) ?>', '<?= htmlspecialchars($rg['nama_ruang']) ?>')" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Hapus">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                                                             </button>
                                                         </div>
                                                     </div>
                                                 </div>
                                             <?php else: ?>
                                                 <div class="cell-empty-assign" onclick="pilihSlotKosongAjax('<?= $cellId ?>')">
-                                                    <i class="fa-solid fa-user-plus" style="font-size: 0.9rem; margin: 0 auto 3px; display: block; color: #94a3b8;"></i>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 3px; display: block;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
                                                     <span>+ Tugaskan</span>
                                                 </div>
                                             <?php endif; ?>
@@ -651,11 +662,11 @@ function submitPenugasanAjax(e) {
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <button type="button" onclick='editPenugasanAjax("${cellId}", ${JSON.stringify(itemData)})' style="background: #f1f5f9; border: none; color: #475569; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ubah Pengawas">
-                                        <i class="fa-solid fa-pen" style="font-size: 0.72rem;"></i>
+                                    <button type="button" onclick='editPenugasanAjax("${cellId}", ${JSON.stringify(itemData)})' style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Ubah Pengawas">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                     </button>
-                                    <button type="button" onclick="hapusPenugasanAjax('${cellId}', ${data.id}, '${data.guru_nama.replace(/'/g, "\\'")}', '${data.sesi_label}', '${data.ruang_nama}')" style="background: #fee2e2; border: none; color: #ef4444; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Hapus">
-                                        <i class="fa-solid fa-trash-can" style="font-size: 0.72rem;"></i>
+                                    <button type="button" onclick="hapusPenugasanAjax('${cellId}', ${data.id}, '${data.guru_nama.replace(/'/g, "\\'")}', '${data.sesi_label}', '${data.ruang_nama}')" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Hapus">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                                     </button>
                                 </div>
                             </div>
@@ -720,7 +731,7 @@ function hapusPenugasanAjax(cellId, id, guruNama, sesi, ruangNama) {
                     if (targetCell) {
                         targetCell.innerHTML = `
                             <div class="cell-empty-assign" onclick="pilihSlotKosongAjax('${cellId}')" style="animation: popIn 0.2s ease;">
-                                <i class="fa-solid fa-user-plus" style="font-size: 0.9rem; margin: 0 auto 3px; display: block; color: #94a3b8;"></i>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 3px; display: block;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
                                 <span>+ Tugaskan</span>
                             </div>
                         `;

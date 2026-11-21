@@ -5567,7 +5567,7 @@ class CbtController {
             }
         }
 
-        // Ambil penugasan pengawas tersimpan (100% terisolasi per topik_id)
+        // Ambil penugasan pengawas tersimpan (100% terisolasi per topik_id dan per tanggal spesifik)
         $jadwalMatrix = [];
         $totalPenugasan = 0;
         if ($selectedTopikId > 0) {
@@ -5575,16 +5575,17 @@ class CbtController {
             $stmtJ->execute([$selectedTopikId]);
             $rawJadwal = $stmtJ->fetchAll(PDO::FETCH_ASSOC);
             foreach ($rawJadwal as $rj) {
-                $tgl = $rj['tanggal'];
-                $h = $rj['hari'];
-                $s = $rj['sesi_label'];
+                $tgl = (!empty($rj['tanggal']) && $rj['tanggal'] !== '0000-00-00') ? trim($rj['tanggal']) : null;
+                $h = trim($rj['hari']);
+                $s = trim($rj['sesi_label']);
                 $r = (int)$rj['ruang_id'];
 
-                $dKey = !empty($tgl) ? $tgl : $h;
-                $jadwalMatrix[$dKey][$s][$r] = $rj;
-                $jadwalMatrix[$h][$s][$r] = $rj;
                 if (!empty($tgl)) {
-                    $jadwalMatrix[$h . '_' . $tgl][$s][$r] = $rj;
+                    // Strictly isolate by exact date so different weeks with same day don't bleed into each other
+                    $jadwalMatrix[$tgl][$s][$r] = $rj;
+                } else {
+                    // Only index by day name if there is NO specific date assigned
+                    $jadwalMatrix[$h][$s][$r] = $rj;
                 }
                 $totalPenugasan++;
             }
@@ -6189,10 +6190,9 @@ class CbtController {
         if ($ruangId > 0) {
             $stmtP = $db->prepare("
                 SELECT d.*, 
-                       COALESCE(s.nomor_peserta, s.nis, d.nis, '-') as no_peserta,
-                       COALESCE(s.nisn, '-') as nisn
+                       COALESCE(d.nis, '-') as no_peserta,
+                       COALESCE(d.nis, '-') as nisn
                 FROM cbt_denah_peserta d
-                LEFT JOIN siswa s ON s.id = d.siswa_id
                 WHERE d.ruang_id = ? 
                   AND (? <= 0 OR d.topik_id = ? OR d.topik_id IS NULL OR d.topik_id = 0)
                   AND d.siswa_id IS NOT NULL
