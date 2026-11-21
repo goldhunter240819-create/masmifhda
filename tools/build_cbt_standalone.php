@@ -118,6 +118,9 @@ if (!function_exists('base_url')) {
         $base = preg_replace('#/public.*$#', '', $base);
         if ($base === '/' || $base === '\\') $base = '';
         $path = ltrim($path, '/');
+        if (substr($base, -4) === '/cbt' && strpos($path, 'cbt/') === 0) {
+            $path = substr($path, 4);
+        }
         return $base . '/' . $path;
     }
 }
@@ -214,17 +217,28 @@ $router->add('GET', '/cbt/peserta_khusus', [\App\Controllers\CbtController::clas
 $router->add('POST', '/cbt/peserta_khusus/save', [\App\Controllers\CbtController::class, 'savePesertaKhusus']);
 $router->add('POST', '/cbt/peserta_khusus/delete', [\App\Controllers\CbtController::class, 'deletePesertaKhusus']);
 
-// Semi-Online Routes
+// Semi-Online Routes (both /cbt/semi-online and /semi-online)
+$router->add('GET', '/semi-online', [\App\Controllers\CbtController::class, 'semiOnlineDashboard']);
 $router->add('GET', '/cbt/semi-online', [\App\Controllers\CbtController::class, 'semiOnlineDashboard']);
+$router->add('POST', '/semi-online/pull', [\App\Controllers\CbtController::class, 'ajaxPullDataOnline']);
 $router->add('POST', '/cbt/semi-online/pull', [\App\Controllers\CbtController::class, 'ajaxPullDataOnline']);
+$router->add('POST', '/semi-online/pull-absen', [\App\Controllers\CbtController::class, 'ajaxPullAbsensiOnline']);
 $router->add('POST', '/cbt/semi-online/pull-absen', [\App\Controllers\CbtController::class, 'ajaxPullAbsensiOnline']);
+$router->add('POST', '/semi-online/push', [\App\Controllers\CbtController::class, 'ajaxPushHasilOnline']);
 $router->add('POST', '/cbt/semi-online/push', [\App\Controllers\CbtController::class, 'ajaxPushHasilOnline']);
+$router->add('POST', '/semi-online/update-engine', [\App\Controllers\CbtController::class, 'ajaxUpdateEngine']);
 $router->add('POST', '/cbt/semi-online/update-engine', [\App\Controllers\CbtController::class, 'ajaxUpdateEngine']);
+$router->add('GET', '/semi-online/api/version', [\App\Controllers\CbtController::class, 'apiCheckVersionOnline']);
 $router->add('GET', '/cbt/semi-online/api/version', [\App\Controllers\CbtController::class, 'apiCheckVersionOnline']);
+$router->add('POST', '/semi-online/export-file', [\App\Controllers\CbtController::class, 'exportBackupFile']);
 $router->add('POST', '/cbt/semi-online/export-file', [\App\Controllers\CbtController::class, 'exportBackupFile']);
+$router->add('POST', '/semi-online/import-file', [\App\Controllers\CbtController::class, 'importBackupFile']);
 $router->add('POST', '/cbt/semi-online/import-file', [\App\Controllers\CbtController::class, 'importBackupFile']);
+$router->add('GET', '/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
 $router->add('GET', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
+$router->add('POST', '/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
 $router->add('POST', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
+$router->add('POST', '/semi-online/api/import-hasil', [\App\Controllers\CbtController::class, 'apiImportHasilOnline']);
 $router->add('POST', '/cbt/semi-online/api/import-hasil', [\App\Controllers\CbtController::class, 'apiImportHasilOnline']);
 
 // Dispatch router
@@ -281,7 +295,8 @@ PHP;
 <?php
 $baseUri = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 if ($baseUri === '/' || $baseUri === '\\') $baseUri = '';
-header('Location: ' . $baseUri . '/cbt/semi-online');
+$redirectPath = ($baseUri === '/cbt' || substr($baseUri, -4) === '/cbt') ? '/semi-online' : '/cbt/semi-online';
+header('Location: ' . $baseUri . $redirectPath);
 exit;
 PHP;
     $zip->addFromString('index.php', $rootIndexContent);

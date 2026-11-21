@@ -19,23 +19,28 @@ class Router {
 
     public function run($customMethod = null, $customPath = null) {
         $method = $customMethod ?: $_SERVER['REQUEST_METHOD'];
-        $path = $customPath ?: parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
-        // Find the base path by looking at where index.php is
-        // Usually something like /public/index.php
-        $scriptName = $_SERVER['SCRIPT_NAME']; 
-        $basePath = str_replace('\\', '/', dirname($scriptName)); // /public
-        
-        // Also consider the project root (one level up from public)
-        $projectRoot = str_replace('\\', '/', dirname($basePath)); // /mismifhda
-        
-        // Remove the longest matching base path from the URI (Case Insensitive for Windows/XAMPP)
-        if (stripos($path, $scriptName) === 0) {
-            $path = substr($path, strlen($scriptName));
-        } elseif (stripos($path, $basePath) === 0) {
-            $path = substr($path, strlen($basePath));
-        } elseif (stripos($path, $projectRoot) === 0) {
-            $path = substr($path, strlen($projectRoot));
+        if ($customPath !== null) {
+            $path = $customPath;
+        } else {
+            $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+            
+            // Find the base path by looking at where index.php is
+            // Usually something like /public/index.php
+            $scriptName = $_SERVER['SCRIPT_NAME']; 
+            $basePath = str_replace('\\', '/', dirname($scriptName)); // /public
+            
+            // Also consider the project root (one level up from public)
+            $projectRoot = str_replace('\\', '/', dirname($basePath)); // /mismifhda
+            
+            // Remove the longest matching base path from the URI (Case Insensitive for Windows/XAMPP)
+            if (stripos($path, $scriptName) === 0) {
+                $path = substr($path, strlen($scriptName));
+            } elseif (stripos($path, $basePath) === 0) {
+                $path = substr($path, strlen($basePath));
+            } elseif (stripos($path, $projectRoot) === 0) {
+                $path = substr($path, strlen($projectRoot));
+            }
         }
 
         if (empty($path) || $path === '') {
@@ -65,18 +70,34 @@ class Router {
             }
         }
 
+        // Siapkan kandidat path untuk pencocokan route (mendukung subfolder /cbt/ maupun root standalone)
+        $candidatePaths = [$path];
+        if (strpos($path, '/cbt/') === 0) {
+            $candidatePaths[] = substr($path, 4) ?: '/';
+        } elseif ($path === '/cbt') {
+            $candidatePaths[] = '/';
+        } else {
+            $candidatePaths[] = '/cbt' . ($path === '/' ? '' : $path);
+        }
+
         foreach ($this->routes as $route) {
+            if ($route['method'] !== $method) {
+                continue;
+            }
             $pattern = "#^" . preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[a-zA-Z0-9_]+)', $route['path']) . "$#";
-            if ($route['method'] == $method && preg_match($pattern, $path, $matches)) {
-                $handler = $route['handler'];
-                if (is_callable($handler)) {
-                    return call_user_func_array($handler, array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
-                }
-                if (is_array($handler)) {
-                    $controllerName = $handler[0];
-                    $methodName = $handler[1];
-                    $controller = new $controllerName();
-                    return call_user_func_array([$controller, $methodName], array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
+            
+            foreach ($candidatePaths as $tryPath) {
+                if (preg_match($pattern, $tryPath, $matches)) {
+                    $handler = $route['handler'];
+                    if (is_callable($handler)) {
+                        return call_user_func_array($handler, array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
+                    }
+                    if (is_array($handler)) {
+                        $controllerName = $handler[0];
+                        $methodName = $handler[1];
+                        $controller = new $controllerName();
+                        return call_user_func_array([$controller, $methodName], array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
+                    }
                 }
             }
         }
