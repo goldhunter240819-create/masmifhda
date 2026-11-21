@@ -6574,8 +6574,8 @@ class CbtController {
             ");
             $stmtInsP = $db->prepare("
                 INSERT INTO cbt_peserta 
-                (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, nomor_meja, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json, reset_count, violation_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json, reset_count, violation_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             foreach ($payload['peserta'] as $p) {
@@ -6603,7 +6603,7 @@ class CbtController {
                     } else {
                         $stmtInsP->execute([
                             $uId, $sId, $nis, $p['nama_siswa'], $p['kelas_nama'] ?? null,
-                            $p['nomor_meja'] ?? null, $p['waktu_mulai'] ?? null, $p['waktu_selesai'] ?? null,
+                            $p['waktu_mulai'] ?? null, $p['waktu_selesai'] ?? null,
                             $p['status_pengerjaan'] ?? 'Selesai',
                             $p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0),
                             $p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0),
