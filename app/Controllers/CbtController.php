@@ -1590,7 +1590,7 @@ class CbtController {
             }
 
             // Kumpulkan ID ujian yang terjadwal di cbt_jadwal_grid
-            $activeGridUjianIds = array_filter(array_map('intval', array_column($grids, 'ujian_id')));
+            $activeGridUjianIds = !empty($gridRows) ? array_filter(array_map('intval', array_column($gridRows, 'ujian_id'))) : [];
             if ($topik_id > 0 && !empty($activeGridUjianIds)) {
                 $inGridU = implode(',', array_unique($activeGridUjianIds));
                 try {
