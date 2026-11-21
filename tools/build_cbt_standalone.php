@@ -54,6 +54,9 @@ function build_cbt_standalone_package() {
 
     // 2. Berkas App (Controller, Core, Service)
     $zip->addFile($baseDir . '/app/Controllers/CbtController.php', 'app/Controllers/CbtController.php');
+    if (file_exists($baseDir . '/app/Controllers/BankSoalController.php')) {
+        $zip->addFile($baseDir . '/app/Controllers/BankSoalController.php', 'app/Controllers/BankSoalController.php');
+    }
     $zip->addFile($baseDir . '/app/Core/Database.php', 'app/Core/Database.php');
     $zip->addFile($baseDir . '/app/Core/Router.php', 'app/Core/Router.php');
     if (file_exists($baseDir . '/app/Core/Branding.php')) {
@@ -97,13 +100,23 @@ return [
 PHP;
     $zip->addFromString('config/database.php', $dbConfigContent);
 
-    // 4. Resources Views CBT & Master Layout
+    // 4. Resources Views CBT, Bank Soal & Master Layout
     $cbtViews = glob($baseDir . '/resources/views/cbt/*.php');
     foreach ($cbtViews as $cv) {
         $zip->addFile($cv, 'resources/views/cbt/' . basename($cv));
     }
+    $bankSoalViews = glob($baseDir . '/resources/views/bank_soal/*.php');
+    foreach ($bankSoalViews as $bv) {
+        $zip->addFile($bv, 'resources/views/bank_soal/' . basename($bv));
+    }
     if (file_exists($baseDir . '/resources/views/siakad/layout.php')) {
         $zip->addFile($baseDir . '/resources/views/siakad/layout.php', 'resources/views/siakad/layout.php');
+    }
+    if (file_exists($baseDir . '/resources/views/siakad/_siakad_header.php')) {
+        $zip->addFile($baseDir . '/resources/views/siakad/_siakad_header.php', 'resources/views/siakad/_siakad_header.php');
+    }
+    if (file_exists($baseDir . '/resources/views/admin/_zamrud_head.php')) {
+        $zip->addFile($baseDir . '/resources/views/admin/_zamrud_head.php', 'resources/views/admin/_zamrud_head.php');
     }
 
     // 5. Minimal Standalone public/index.php (Hanya rute CBT & auth proktor, bersih dari modul SIAKAD lain)
@@ -193,9 +206,28 @@ $router->add('GET', '/cbt/kerjakan/selesai', [\App\Controllers\CbtController::cl
 $router->add('GET', '/cbt/soal', [\App\Controllers\CbtController::class, 'soal']);
 $router->add('POST', '/cbt/soal/save', [\App\Controllers\CbtController::class, 'saveSoal']);
 $router->add('POST', '/cbt/soal/delete', [\App\Controllers\CbtController::class, 'deleteSoal']);
-$router->add('GET', '/bank_soal', [\App\Controllers\CbtController::class, 'soal']);
-$router->add('GET', '/cbt/bank_soal', [\App\Controllers\CbtController::class, 'soal']);
 $router->add('GET', '/soal', [\App\Controllers\CbtController::class, 'soal']);
+
+// Bank Soal Suite (Sama persis seperti di Server Pusat)
+$router->add('GET', '/bank_soal', [\App\Controllers\BankSoalController::class, 'dashboard']);
+$router->add('GET', '/cbt/bank_soal', function() { redirect('/bank_soal'); exit; });
+$router->add('GET', '/bank_soal/kelola_soal', [\App\Controllers\BankSoalController::class, 'kelolaSoal']);
+$router->add('GET', '/bank_soal/daftar_soal', [\App\Controllers\BankSoalController::class, 'daftarSoal']);
+$router->add('GET', '/bank_soal/tambah_soal', [\App\Controllers\BankSoalController::class, 'tambahSoal']);
+$router->add('POST', '/bank_soal/tambah_soal', [\App\Controllers\BankSoalController::class, 'simpanSoal']);
+$router->add('POST', '/bank_soal/soal/simpan', [\App\Controllers\BankSoalController::class, 'simpanSoal']);
+$router->add('GET', '/bank_soal/hapus_soal', [\App\Controllers\BankSoalController::class, 'hapusSoal']);
+$router->add('POST', '/bank_soal/hapus_soal', [\App\Controllers\BankSoalController::class, 'hapusSoal']);
+$router->add('POST', '/bank_soal/soal/copy', [\App\Controllers\BankSoalController::class, 'copySoal']);
+$router->add('POST', '/bank_soal/paket/simpan', [\App\Controllers\BankSoalController::class, 'simpanPaket']);
+$router->add('POST', '/bank_soal/paket/hapus', [\App\Controllers\BankSoalController::class, 'hapusPaket']);
+$router->add('POST', '/bank_soal/paket/toggle-lock', [\App\Controllers\BankSoalController::class, 'toggleLockPaket']);
+$router->add('POST', '/bank_soal/paket/sync-jadwal', [\App\Controllers\BankSoalController::class, 'syncFromJadwal']);
+$router->add('POST', '/bank_soal/paket/sync-pengampu', [\App\Controllers\BankSoalController::class, 'syncFromPengampu']);
+$router->add('GET', '/bank_soal/paket/sync-pengampu', [\App\Controllers\BankSoalController::class, 'syncFromPengampu']);
+$router->add('GET', '/bank_soal/topik', [\App\Controllers\BankSoalController::class, 'indexTopik']);
+$router->add('POST', '/bank_soal/topik/simpan', [\App\Controllers\BankSoalController::class, 'simpanTopik']);
+$router->add('GET', '/bank_soal/topik/hapus', [\App\Controllers\BankSoalController::class, 'hapusTopik']);
 
 $router->add('GET', '/cbt/token', [\App\Controllers\CbtController::class, 'token']);
 $router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::class, 'generateToken']);

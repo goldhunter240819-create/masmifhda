@@ -5697,14 +5697,36 @@ class CbtController {
         $dbSiakad = \App\Core\Database::connect('siakad');
         self::ensureTables($db);
 
-        // Export data topik
+        // Export data topik (Semua topik non-arsip, termasuk Aktif, Terjadwal, dan Selesai)
         $topikList = [];
         try {
-            $topikList = $dbSiakad->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $topikList = $dbSiakad->query("SELECT * FROM bs_topik WHERE status != 'Arsip' OR status IS NULL ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
         if (empty($topikList)) {
             try {
-                $topikList = $db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+                $topikList = $db->query("SELECT * FROM bs_topik WHERE status != 'Arsip' OR status IS NULL ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
+        // Export data paket bank soal (bs_paket)
+        $bsPaketList = [];
+        try {
+            $bsPaketList = $dbSiakad->query("SELECT * FROM bs_paket ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($bsPaketList)) {
+            try {
+                $bsPaketList = $db->query("SELECT * FROM bs_paket ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
+        // Export data butir bank soal (bs_soal)
+        $bsSoalList = [];
+        try {
+            $bsSoalList = $dbSiakad->query("SELECT * FROM bs_soal ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($bsSoalList)) {
+            try {
+                $bsSoalList = $db->query("SELECT * FROM bs_soal ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
             } catch (\Exception $e2) {}
         }
 
@@ -5712,11 +5734,13 @@ class CbtController {
             'status' => 'success',
             'exported_at' => date('Y-m-d H:i:s'),
             'topik' => $topikList,
+            'bs_paket' => $bsPaketList,
+            'bs_soal' => $bsSoalList,
             'jam_slot' => $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC),
             'jadwal_grid' => $db->query("SELECT * FROM cbt_jadwal_grid ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
-            'ujian' => $db->query("SELECT * FROM cbt_ujian WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'ujian' => $db->query("SELECT * FROM cbt_ujian ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'soal' => $db->query("SELECT * FROM cbt_soal ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
-            'token' => $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC),
+            'token' => $db->query("SELECT * FROM cbt_token ORDER BY id DESC LIMIT 500")->fetchAll(PDO::FETCH_ASSOC),
             'peserta_khusus' => $db->query("SELECT * FROM cbt_peserta_khusus WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'denah' => $db->query("SELECT * FROM cbt_denah_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'ruang' => $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
@@ -6280,15 +6304,64 @@ class CbtController {
      * Helper untuk memasukkan payload data sinkronisasi ke database lokal
      */
     private static function importDataPayload($db, $dbSiakad, $data) {
-        $details = ['topik' => 0, 'jadwal' => 0, 'soal' => 0, 'siswa' => 0, 'kelas' => 0, 'absensi' => 0];
+        $details = ['topik' => 0, 'bs_paket' => 0, 'bs_soal' => 0, 'jadwal' => 0, 'ujian' => 0, 'soal' => 0, 'siswa' => 0, 'kelas' => 0, 'absensi' => 0];
 
-        // 1. Topik
+        // 1. Topik Asesmen (Simpan ke Core & Siakad agar sinkron di kedua modul)
         if (!empty($data['topik'])) {
-            $stmtT = $dbSiakad->prepare("INSERT INTO bs_topik (id, tahun_ajaran, semester, nama_topik, jenis, tgl_mulai, tgl_selesai, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_topik = VALUES(nama_topik), status = VALUES(status), tgl_mulai = VALUES(tgl_mulai), tgl_selesai = VALUES(tgl_selesai)");
+            $sqlT = "INSERT INTO bs_topik (id, tahun_ajaran, semester, nama_topik, jenis, tgl_mulai, tgl_selesai, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_topik = VALUES(nama_topik), jenis = VALUES(jenis), status = VALUES(status), tgl_mulai = VALUES(tgl_mulai), tgl_selesai = VALUES(tgl_selesai), tahun_ajaran = VALUES(tahun_ajaran), semester = VALUES(semester), keterangan = VALUES(keterangan)";
+            $stmtT = $db->prepare($sqlT);
+            $stmtTSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare($sqlT) : null;
             foreach ($data['topik'] as $t) {
                 try {
-                    $stmtT->execute([$t['id'], $t['tahun_ajaran'] ?? '2026/2027', $t['semester'] ?? 'Ganjil', $t['nama_topik'], $t['jenis'] ?? ($t['jenis_topik'] ?? 'SAS'), $t['tgl_mulai'] ?? null, $t['tgl_selesai'] ?? null, $t['keterangan'] ?? ($t['deskripsi'] ?? null), $t['status'] ?? 'Aktif']);
+                    $valsT = [$t['id'], $t['tahun_ajaran'] ?? '2026/2027', $t['semester'] ?? 'Ganjil', $t['nama_topik'], $t['jenis'] ?? ($t['jenis_topik'] ?? 'SAS'), $t['tgl_mulai'] ?? null, $t['tgl_selesai'] ?? null, $t['keterangan'] ?? ($t['deskripsi'] ?? null), $t['status'] ?? 'Terjadwal'];
+                    $stmtT->execute($valsT);
+                    if ($stmtTSiakad) {
+                        try { $stmtTSiakad->execute($valsT); } catch (\Exception $e2) {}
+                    }
                     $details['topik']++;
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 1b. Paket Bank Soal (bs_paket)
+        if (!empty($data['bs_paket'])) {
+            try {
+                if (class_exists('\App\Controllers\BankSoalController')) {
+                    \App\Controllers\BankSoalController::ensureTables($db);
+                    if ($db !== $dbSiakad) {
+                        \App\Controllers\BankSoalController::ensureTables($dbSiakad);
+                    }
+                }
+            } catch (\Exception $e) {}
+
+            $sqlP = "INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_id, guru_nama, kkm, durasi_menit, is_locked, locked_at, locked_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), kelas_sasaran = VALUES(kelas_sasaran), guru_id = VALUES(guru_id), guru_nama = VALUES(guru_nama), kkm = VALUES(kkm), durasi_menit = VALUES(durasi_menit), is_locked = VALUES(is_locked)";
+            $stmtP = $db->prepare($sqlP);
+            $stmtPSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare($sqlP) : null;
+            foreach ($data['bs_paket'] as $p) {
+                try {
+                    $valsP = [$p['id'], $p['topik_id'], $p['mapel_nama'], $p['kelas_nama'] ?? 'Kelas X', $p['kelas_sasaran'] ?? null, $p['guru_id'] ?? null, $p['guru_nama'] ?? null, $p['kkm'] ?? 75, $p['durasi_menit'] ?? 90, $p['is_locked'] ?? 0, $p['locked_at'] ?? null, $p['locked_by'] ?? null];
+                    $stmtP->execute($valsP);
+                    if ($stmtPSiakad) {
+                        try { $stmtPSiakad->execute($valsP); } catch (\Exception $e2) {}
+                    }
+                    $details['bs_paket']++;
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 1c. Butir Soal Bank Soal (bs_soal)
+        if (!empty($data['bs_soal'])) {
+            $sqlBS = "INSERT INTO bs_soal (id, topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan), opsi_a = VALUES(opsi_a), opsi_b = VALUES(opsi_b), opsi_c = VALUES(opsi_c), opsi_d = VALUES(opsi_d), opsi_e = VALUES(opsi_e)";
+            $stmtBS = $db->prepare($sqlBS);
+            $stmtBSSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare($sqlBS) : null;
+            foreach ($data['bs_soal'] as $bs) {
+                try {
+                    $valsBS = [$bs['id'], $bs['topik_id'], $bs['paket_id'] ?? null, $bs['mapel_nama'], $bs['kelas_nama'] ?? null, $bs['nomor_urut'] ?? 1, $bs['tipe_soal'] ?? 'sec_pg', $bs['tingkat_kesulitan'] ?? 'Sedang', $bs['skor_maksimal'] ?? 2.00, $bs['pertanyaan'], $bs['opsi_a'] ?? null, $bs['opsi_b'] ?? null, $bs['opsi_c'] ?? null, $bs['opsi_d'] ?? null, $bs['opsi_e'] ?? null, $bs['kunci_jawaban'] ?? null, $bs['konten_tambahan'] ?? null];
+                    $stmtBS->execute($valsBS);
+                    if ($stmtBSSiakad) {
+                        try { $stmtBSSiakad->execute($valsBS); } catch (\Exception $e2) {}
+                    }
+                    $details['bs_soal']++;
                 } catch (\Exception $e) {}
             }
         }
@@ -6314,9 +6387,12 @@ class CbtController {
 
         // 4. Ujian
         if (!empty($data['ujian'])) {
-            $stmtU = $db->prepare("INSERT INTO cbt_ujian (id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_ujian = VALUES(nama_ujian), status = VALUES(status), durasi_menit = VALUES(durasi_menit), kkm = VALUES(kkm)");
+            $stmtU = $db->prepare("INSERT INTO cbt_ujian (id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_ujian = VALUES(nama_ujian), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), status = VALUES(status), durasi_menit = VALUES(durasi_menit), kkm = VALUES(kkm)");
             foreach ($data['ujian'] as $u) {
-                try { $stmtU->execute([$u['id'], $u['topik_id'] ?? null, $u['kode_ujian'], $u['nama_ujian'], $u['mapel_nama'], $u['kelas_nama'], $u['durasi_menit'] ?? 60, $u['kkm'] ?? 75, $u['acak_soal'] ?? 1, $u['acak_opsi'] ?? 1, $u['token'] ?? '', $u['status'] ?? 'Aktif']); } catch (\Exception $e) {}
+                try {
+                    $stmtU->execute([$u['id'], $u['topik_id'] ?? null, $u['kode_ujian'], $u['nama_ujian'], $u['mapel_nama'], $u['kelas_nama'], $u['durasi_menit'] ?? 60, $u['kkm'] ?? 75, $u['acak_soal'] ?? 1, $u['acak_opsi'] ?? 1, $u['token'] ?? '', $u['status'] ?? 'Aktif']);
+                    $details['ujian']++;
+                } catch (\Exception $e) {}
             }
         }
 
@@ -6520,15 +6596,50 @@ class CbtController {
         $db = $ctx['db_core'];
         $dbSiakad = $ctx['db_siakad'] ?? $db;
 
+        // Topik
+        $topikList = [];
+        try {
+            $topikList = $dbSiakad->query("SELECT * FROM bs_topik WHERE status != 'Arsip' OR status IS NULL ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($topikList)) {
+            try {
+                $topikList = $db->query("SELECT * FROM bs_topik WHERE status != 'Arsip' OR status IS NULL ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
+        // bs_paket
+        $bsPaketList = [];
+        try {
+            $bsPaketList = $dbSiakad->query("SELECT * FROM bs_paket ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($bsPaketList)) {
+            try {
+                $bsPaketList = $db->query("SELECT * FROM bs_paket ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
+        // bs_soal
+        $bsSoalList = [];
+        try {
+            $bsSoalList = $dbSiakad->query("SELECT * FROM bs_soal ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($bsSoalList)) {
+            try {
+                $bsSoalList = $db->query("SELECT * FROM bs_soal ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
         $payload = [
             'status' => 'success',
             'exported_at' => date('Y-m-d H:i:s'),
-            'topik' => $dbSiakad->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'topik' => $topikList,
+            'bs_paket' => $bsPaketList,
+            'bs_soal' => $bsSoalList,
             'jam_slot' => $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC),
             'jadwal_grid' => $db->query("SELECT * FROM cbt_jadwal_grid ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
-            'ujian' => $db->query("SELECT * FROM cbt_ujian WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'ujian' => $db->query("SELECT * FROM cbt_ujian ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'soal' => $db->query("SELECT * FROM cbt_soal ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
-            'token' => $db->query("SELECT * FROM cbt_token WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC),
+            'token' => $db->query("SELECT * FROM cbt_token ORDER BY id DESC LIMIT 500")->fetchAll(PDO::FETCH_ASSOC),
             'peserta_khusus' => $db->query("SELECT * FROM cbt_peserta_khusus WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'denah' => $db->query("SELECT * FROM cbt_denah_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'ruang' => $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
