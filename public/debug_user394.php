@@ -9,25 +9,29 @@ if ($secret !== 'MIFHDA_DEBUG_394') {
 
 $core = \App\Core\Database::connect('core');
 
-// Check all presensi on 2026-11-21
-$presToday = $core->query("SELECT * FROM presensi WHERE tanggal = '2026-11-21' ORDER BY jam_masuk ASC")->fetchAll(PDO::FETCH_ASSOC);
+$uids = [385, 386, 389, 394, 395, 415, 417, 429];
+$placeholders = implode(',', $uids);
 
-// Also check audit_log or similar
-$audit = [];
+$siswas = $core->query("SELECT id, user_id, nis, nama, kelas_id FROM siswa WHERE user_id IN ($placeholders)")->fetchAll(PDO::FETCH_ASSOC);
+
+// Also check in siakad
+$siakad = \App\Core\Database::connect('siakad');
+$siakadSiswas = [];
 try {
-    $audit = $core->query("SELECT * FROM audit_logs WHERE created_at LIKE '2026-11-21%' OR action LIKE '%394%' ORDER BY id DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
+    $siakadSiswas = $siakad->query("SELECT id, nis, nama_lengkap, kelas_id FROM siswa WHERE id IN ($placeholders)")->fetchAll(PDO::FETCH_ASSOC);
 } catch (\Throwable $e) {}
 
-// Also check who printed the card with TOKEN:394:...
-// Wait, is there a table `kartu` or `cetak` or `login_log`?
-$loginLogs = [];
-if (file_exists(__DIR__ . '/../apk/debug_login.log')) {
-    $lines = file(__DIR__ . '/../apk/debug_login.log');
-    $loginLogs = array_slice($lines, -15);
+// Also check if there is an id_mapping or user relation table in siakad or core!
+$relTables = [];
+$tables = $core->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+foreach ($tables as $t) {
+    if (strpos($t, 'user') !== false || strpos($t, 'map') !== false || strpos($t, 'rfid') !== false || strpos($t, 'kartu') !== false || strpos($t, 'member') !== false) {
+        $relTables[] = $t;
+    }
 }
 
 echo json_encode([
-    'presToday' => $presToday,
-    'audit' => $audit,
-    'loginLogs' => $loginLogs
+    'siswas_found' => $siswas,
+    'siakadSiswas_found' => $siakadSiswas,
+    'relTables' => $relTables
 ], JSON_PRETTY_PRINT);
