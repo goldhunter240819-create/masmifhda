@@ -201,6 +201,21 @@ try {
     $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";
 }
 
+// 3.12 Build Standalone CBT Package Terbaru untuk Distribusi Server Madrasah
+try {
+    if (file_exists(__DIR__ . '/tools/build_cbt_standalone.php')) {
+        require_once __DIR__ . '/tools/build_cbt_standalone.php';
+        if (function_exists('build_cbt_standalone_package')) {
+            $bRes = build_cbt_standalone_package();
+            if ($bRes) {
+                $output .= "\nStandalone CBT Package built successfully: " . round($bRes['size'] / 1024, 2) . " KB (" . $bRes['files'] . " files).\n";
+            }
+        }
+    }
+} catch (\Throwable $e) {
+    $output .= "\nStandalone CBT Package build error: " . $e->getMessage() . "\n";
+}
+
 // 4. Catat riwayat ke log
 $logData = date('Y-m-d H:i:s') . "\nResult:\n" . $output . "\n-------------------------\n";
 @file_put_contents(__DIR__ . '/webhook.log', $logData, FILE_APPEND);
