@@ -6308,6 +6308,17 @@ class CbtController {
 
         // 1. Topik Asesmen (Simpan ke Core & Siakad agar sinkron di kedua modul)
         if (!empty($data['topik'])) {
+            $validTopikIds = array_filter(array_map('intval', array_column($data['topik'], 'id')));
+            if (!empty($validTopikIds)) {
+                $inClauseT = implode(',', $validTopikIds);
+                try {
+                    $db->exec("DELETE FROM bs_topik WHERE id NOT IN ($inClauseT)");
+                    if ($db !== $dbSiakad) {
+                        $dbSiakad->exec("DELETE FROM bs_topik WHERE id NOT IN ($inClauseT)");
+                    }
+                } catch (\Exception $e) {}
+            }
+
             $sqlT = "INSERT INTO bs_topik (id, tahun_ajaran, semester, nama_topik, jenis, tgl_mulai, tgl_selesai, keterangan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_topik = VALUES(nama_topik), jenis = VALUES(jenis), status = VALUES(status), tgl_mulai = VALUES(tgl_mulai), tgl_selesai = VALUES(tgl_selesai), tahun_ajaran = VALUES(tahun_ajaran), semester = VALUES(semester), keterangan = VALUES(keterangan)";
             $stmtT = $db->prepare($sqlT);
             $stmtTSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare($sqlT) : null;
@@ -6333,6 +6344,17 @@ class CbtController {
                     }
                 }
             } catch (\Exception $e) {}
+
+            $validPaketIds = array_filter(array_map('intval', array_column($data['bs_paket'], 'id')));
+            if (!empty($validPaketIds)) {
+                $inClauseP = implode(',', $validPaketIds);
+                try {
+                    $db->exec("DELETE FROM bs_paket WHERE id NOT IN ($inClauseP)");
+                    if ($db !== $dbSiakad) {
+                        $dbSiakad->exec("DELETE FROM bs_paket WHERE id NOT IN ($inClauseP)");
+                    }
+                } catch (\Exception $e) {}
+            }
 
             $sqlP = "INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_id, guru_nama, kkm, durasi_menit, is_locked, locked_at, locked_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), kelas_sasaran = VALUES(kelas_sasaran), guru_id = VALUES(guru_id), guru_nama = VALUES(guru_nama), kkm = VALUES(kkm), durasi_menit = VALUES(durasi_menit), is_locked = VALUES(is_locked)";
             $stmtP = $db->prepare($sqlP);
