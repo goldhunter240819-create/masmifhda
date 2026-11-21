@@ -3,14 +3,7 @@ require_once 'koneksi.php';
 
 // Cek logout
 if (isset($_GET['logout'])) {
-    if (isset($_SESSION['role_id']) && in_array($_SESSION['role_id'], [1, 99])) {
-        unset($_SESSION['siswa_id'], $_SESSION['siswa_nama'], $_SESSION['siswa_nis'], $_SESSION['siswa_status']);
-        unset($_SESSION['guru_id'], $_SESSION['guru_nama'], $_SESSION['guru_nip']);
-    } else {
-        session_destroy();
-    }
-    setcookie('apk_remember_siswa', '', time() - 3600, "/");
-    header("Location: login.php");
+    header("Location: logout.php");
     exit;
 }
 
@@ -95,19 +88,19 @@ include 'header.php';
                     <i class="fa-solid fa-user"></i>
                 <?php endif; ?>
             </div>
-            <h2 style="font-size: 1.2rem; color: var(--text-main); margin-bottom: 5px;"><?= htmlspecialchars($siswa['nama']) ?></h2>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">NIS: <?= htmlspecialchars($siswa['nis']) ?> &bull; NISN: <?= htmlspecialchars($siswa['nisn'] ?: '-') ?></p>
+            <h2 style="font-size: 1.2rem; color: var(--text-main); margin-bottom: 5px;"><?= htmlspecialchars($siswa['nama'] ?? 'Peserta CBT') ?></h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">NIS: <?= htmlspecialchars($siswa['nis'] ?? '-') ?> &bull; NISN: <?= htmlspecialchars(!empty($siswa['nisn']) ? $siswa['nisn'] : '-') ?></p>
         </div>
 
         <div style="height: 1px; background: #e2e8f0; margin: 15px 0;"></div>
 
         <div class="data-row">
             <span class="data-label">Kelas</span>
-            <span class="data-value"><?= htmlspecialchars($nama_kelas) ?></span>
+            <span class="data-value"><?= htmlspecialchars($nama_kelas ?? '-') ?></span>
         </div>
         <div class="data-row">
             <span class="data-label">Tempat Lahir</span>
-            <span class="data-value"><?= htmlspecialchars($siswa['tempat_lahir'] ?: '-') ?></span>
+            <span class="data-value"><?= htmlspecialchars(!empty($siswa['tempat_lahir']) ? $siswa['tempat_lahir'] : '-') ?></span>
         </div>
         <div class="data-row">
             <span class="data-label">Tanggal Lahir</span>
@@ -116,7 +109,7 @@ include 'header.php';
                 if (!empty($siswa['tanggal_lahir'])) {
                     $bulan_indo = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
                     $time = strtotime($siswa['tanggal_lahir']);
-                    echo htmlspecialchars(date('d', $time) . ' ' . $bulan_indo[(int)date('m', $time)] . ' ' . date('Y', $time));
+                    echo htmlspecialchars(date('d', $time) . ' ' . ($bulan_indo[(int)date('m', $time)] ?? '') . ' ' . date('Y', $time));
                 } else {
                     echo '-';
                 }
@@ -125,15 +118,15 @@ include 'header.php';
         </div>
         <div class="data-row">
             <span class="data-label">Nama Ayah</span>
-            <span class="data-value"><?= htmlspecialchars($siswa['nama_ayah'] ?: '-') ?></span>
+            <span class="data-value"><?= htmlspecialchars(!empty($siswa['nama_ayah']) ? $siswa['nama_ayah'] : '-') ?></span>
         </div>
         <div class="data-row">
             <span class="data-label">Nama Ibu</span>
-            <span class="data-value"><?= htmlspecialchars($siswa['nama_ibu'] ?: '-') ?></span>
+            <span class="data-value"><?= htmlspecialchars(!empty($siswa['nama_ibu']) ? $siswa['nama_ibu'] : '-') ?></span>
         </div>
         <div class="data-row">
             <span class="data-label">Kontak Ortu</span>
-            <span class="data-value"><?= htmlspecialchars($siswa['no_hp_ortu'] ?: '-') ?></span>
+            <span class="data-value"><?= htmlspecialchars(!empty($siswa['no_hp_ortu']) ? $siswa['no_hp_ortu'] : '-') ?></span>
         </div>
         
     </div>
@@ -226,7 +219,7 @@ include 'header.php';
         </div>
     </div>
 
-    <a href="profil.php?logout=1" class="btn-logout" style="margin-top: 15px;" onclick="confirmLogout(event, this.href, 'Keluar dari Aplikasi?');">
+    <a href="logout.php" class="btn-logout" style="margin-top: 15px;" onclick="confirmLogout(event, this.href, 'Keluar dari Aplikasi?');">
         <i class="fa-solid fa-right-from-bracket"></i> Keluar Aplikasi
     </a>
     

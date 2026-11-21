@@ -70,33 +70,24 @@ class Router {
             }
         }
 
-        // Siapkan kandidat path untuk pencocokan route (mendukung subfolder /cbt/, urldecode, spasi -> dash)
-        $rawPaths = [$path];
-        if (strpos($path, '/cbt/') === 0) {
-            $rawPaths[] = substr($path, 4) ?: '/';
-        } elseif ($path === '/cbt') {
-            $rawPaths[] = '/';
-        } else {
-            $rawPaths[] = '/cbt' . ($path === '/' ? '' : $path);
-        }
+        // Helper untuk menghasilkan variasi URL (decode, dash, underscore)
+        $buildVariants = function($pList) {
+            $variants = [];
+            foreach ($pList as $p) {
+                $variants[] = $p;
+                $decoded = rawurldecode($p);
+                if ($decoded !== $p) $variants[] = $decoded;
+                $dash = str_replace([' ', '_'], '-', $decoded);
+                if (!in_array($dash, $variants)) $variants[] = $dash;
+                $under = str_replace([' ', '-'], '_', $decoded);
+                if (!in_array($under, $variants)) $variants[] = $under;
+            }
+            return array_unique($variants);
+        };
 
-        $candidatePaths = [];
-        foreach ($rawPaths as $rp) {
-            $candidatePaths[] = $rp;
-            $decoded = rawurldecode($rp);
-            if ($decoded !== $rp) {
-                $candidatePaths[] = $decoded;
-            }
-            $dash = str_replace([' ', '_'], '-', $decoded);
-            if (!in_array($dash, $candidatePaths)) {
-                $candidatePaths[] = $dash;
-            }
-            $under = str_replace([' ', '-'], '_', $decoded);
-            if (!in_array($under, $candidatePaths)) {
-                $candidatePaths[] = $under;
-            }
-        }
-        $candidatePaths = array_unique($candidatePaths);
+        // 1. Prioritas Utama: Evaluasi path yang PERSIS diminta user (Exact Match)
+        // Mencegah rute root '/' membajak request '/cbt' sebelum rute '/cbt' sempat dievaluasi
+        $exactCandidates = $buildVariants([$path]);
 
         foreach ($this->routes as $route) {
             if ($route['method'] !== $method) {
@@ -104,7 +95,41 @@ class Router {
             }
             $pattern = "#^" . preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[a-zA-Z0-9_]+)', $route['path']) . "$#";
             
-            foreach ($candidatePaths as $tryPath) {
+            foreach ($exactCandidates as $tryPath) {
+                if (preg_match($pattern, $tryPath, $matches)) {
+                    $handler = $route['handler'];
+                    if (is_callable($handler)) {
+                        return call_user_func_array($handler, array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
+                    }
+                    if (is_array($handler)) {
+                        $controllerName = $handler[0];
+                        $methodName = $handler[1];
+                        $controller = new $controllerName();
+                        return call_user_func_array([$controller, $methodName], array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
+                    }
+                }
+            }
+        }
+
+        // 2. Prioritas Cadangan: Fallback Aliases (HANYA jika tidak ada route yang cocok dengan path eksak)
+        // Mendukung request dengan atau tanpa prefix subfolder /cbt/
+        $aliasPaths = [];
+        if (strpos($path, '/cbt/') === 0) {
+            $aliasPaths[] = substr($path, 4) ?: '/';
+        } elseif ($path === '/cbt') {
+            $aliasPaths[] = '/';
+        } else {
+            $aliasPaths[] = '/cbt' . ($path === '/' ? '' : $path);
+        }
+        $fallbackCandidates = $buildVariants($aliasPaths);
+
+        foreach ($this->routes as $route) {
+            if ($route['method'] !== $method) {
+                continue;
+            }
+            $pattern = "#^" . preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[a-zA-Z0-9_]+)', $route['path']) . "$#";
+            
+            foreach ($fallbackCandidates as $tryPath) {
                 if (preg_match($pattern, $tryPath, $matches)) {
                     $handler = $route['handler'];
                     if (is_callable($handler)) {

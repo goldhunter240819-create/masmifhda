@@ -897,6 +897,7 @@ foreach ($ujianListRaw as $u) {
 
 // 4a. Kelompokkan Paket Ujian Tersedia (Belum Selesai)
 $ujianHariIni = [];
+$ujianTerlewatHariIni = [];
 $ujianLainnya = [];
 
 foreach ($allEvaluatedUjian as $u) {
@@ -904,7 +905,14 @@ foreach ($allEvaluatedUjian as $u) {
         continue;
     }
     if (!empty($u['is_hari_ini'])) {
-        $ujianHariIni[] = $u;
+        // Jika pembatasan jadwal aktif ($lockSchedule) dan sesi telah berakhir/terlewat,
+        // sembunyikan dari Beranda dan pindahkan ke tab Riwayat.
+        // Jika mode susulan diaktifkan ($lockSchedule == false), ujian tetap muncul di Beranda dan dapat dikerjakan.
+        if ($lockSchedule && ($u['schedule_state'] ?? '') === 'expired') {
+            $ujianTerlewatHariIni[] = $u;
+        } else {
+            $ujianHariIni[] = $u;
+        }
     } else {
         $ujianLainnya[] = $u;
     }
@@ -1446,7 +1454,7 @@ include 'header.php';
             </a>
             <a href="cbt.php?tab=riwayat" class="btn-tatatertib-top" style="<?= $activeTab === 'riwayat' ? 'background: #2563eb; color: #ffffff; border-color: #2563eb;' : 'background: #ffffff; color: #475569; border-color: #cbd5e1;' ?> text-decoration: none;">
                 <i class="fa-solid fa-clock-rotate-left"></i>
-                <span>Riwayat (<?= count($riwayatUjian) ?>)</span>
+                <span>Riwayat (<?= count($riwayatUjian) + count($ujianTerlewatHariIni) ?>)</span>
             </a>
         <?php endif; ?>
     </div>
@@ -1458,25 +1466,46 @@ include 'header.php';
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div>
                         <h3 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-clock-rotate-left" style="color: #2563eb;"></i> Riwayat Pengerjaan Ujian
+                            <i class="fa-solid fa-clock-rotate-left" style="color: #2563eb;"></i> Riwayat & Status Ujian
                         </h3>
                         <p style="margin: 3px 0 0 0; font-size: 0.72rem; color: #64748b;">
-                            Daftar seluruh ujian yang telah selesai dikerjakan dan dikumpulkan.
+                            Daftar ujian yang telah dikerjakan serta sesi jadwal yang telah terlewat.
                         </p>
                     </div>
-                    <span style="font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; font-weight: 800; padding: 4px 10px; border-radius: 20px;">
-                        <?= count($riwayatUjian) ?> Selesai
-                    </span>
+                </div>
+
+                <!-- Filter Tombol / Tabs -->
+                <div style="display: flex; gap: 8px; margin-top: 14px; overflow-x: auto; padding-bottom: 2px;">
+                    <button type="button" id="btn-filter-all" onclick="setFilterRiwayat('all')" class="btn-filter-riwayat" style="padding: 6px 14px; border-radius: 20px; font-size: 0.76rem; font-weight: 800; cursor: pointer; border: 1px solid #2563eb; background: #2563eb; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <span>Semua</span>
+                        <span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 10px; background: rgba(255,255,255,0.25);"><?= count($riwayatUjian) + count($ujianTerlewatHariIni) ?></span>
+                    </button>
+                    <button type="button" id="btn-filter-selesai" onclick="setFilterRiwayat('selesai')" class="btn-filter-riwayat" style="padding: 6px 14px; border-radius: 20px; font-size: 0.76rem; font-weight: 800; cursor: pointer; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
+                        <span>Sudah Mengerjakan</span>
+                        <span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 10px; background: #e2e8f0; color: #334155;"><?= count($riwayatUjian) ?></span>
+                    </button>
+                    <?php if (count($ujianTerlewatHariIni) > 0): ?>
+                    <button type="button" id="btn-filter-terlewat" onclick="setFilterRiwayat('terlewat')" class="btn-filter-riwayat" style="padding: 6px 14px; border-radius: 20px; font-size: 0.76rem; font-weight: 800; cursor: pointer; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <i class="fa-solid fa-clock" style="color: #ef4444;"></i>
+                        <span>Sesi Terlewat</span>
+                        <span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 10px; background: #fee2e2; color: #b91c1c;"><?= count($ujianTerlewatHariIni) ?></span>
+                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
 
-            <?php if (!empty($riwayatUjian)): ?>
+            <?php if (!empty($riwayatUjian) || !empty($ujianTerlewatHariIni)): ?>
+                <!-- Daftar Ujian yang Telah Selesai Dikerjakan -->
                 <?php foreach ($riwayatUjian as $r): ?>
                     <?php
                     $isTuntas = ((float)$r['nilai_akhir'] >= (float)($r['kkm'] ?? 75));
                     ?>
-                    <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div class="item-riwayat filter-selesai" style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; transition: all 0.2s;">
                         <div style="min-width: 0; flex: 1; padding-right: 10px;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                                <span style="font-size: 0.65rem; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 8px; border-radius: 12px;">SUDAH MENGERJAKAN</span>
+                            </div>
                             <div style="font-weight: 800; font-size: 0.9rem; color: #1e293b;"><?= htmlspecialchars($r['nama_ujian']) ?></div>
                             <div style="font-size: 0.74rem; color: #64748b; margin-top: 3px;">
                                 <span style="font-weight: 600; color: #334155;"><?= htmlspecialchars($r['mapel_nama']) ?></span> • 
@@ -1502,6 +1531,35 @@ include 'header.php';
                         </div>
                     </div>
                 <?php endforeach; ?>
+
+                <!-- Daftar Ujian Hari Ini yang Waktu Sesinya Telah Berakhir (Terlewat) -->
+                <?php foreach ($ujianTerlewatHariIni as $uPass): ?>
+                    <div class="item-riwayat filter-terlewat" style="background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 10px; border-left: 4px solid #f97316; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #fed7aa; border-right: 1px solid #fed7aa; border-bottom: 1px solid #fed7aa; transition: all 0.2s;">
+                        <div style="min-width: 0; flex: 1; padding-right: 10px;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <span style="font-size: 0.65rem; font-weight: 800; color: #c2410c; background: #fff7ed; border: 1px solid #fdba74; padding: 1px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> SESI TERLEWAT
+                                </span>
+                                <?php if (!empty($uPass['jadwal_slot_label'])): ?>
+                                    <span style="font-size: 0.68rem; color: #64748b; font-weight: 600;">
+                                        <?= htmlspecialchars($uPass['jadwal_slot_label']) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            <div style="font-weight: 800; font-size: 0.9rem; color: #1e293b;"><?= htmlspecialchars($uPass['nama_ujian'] ?: $uPass['mapel_nama']) ?></div>
+                            <div style="font-size: 0.73rem; color: #9a3412; margin-top: 4px; display: flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Waktu sesi berakhir pukul <?= htmlspecialchars($uPass['jam_selesai'] ?: '') ?> WIB. Hubungi proktor jika dijadwalkan Susulan.</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <span style="display: inline-block; font-size: 0.7rem; font-weight: 800; color: #9a3412; background: #ffedd5; padding: 4px 10px; border-radius: 8px;">
+                                Terkunci
+                            </span>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+
             <?php else: ?>
                 <div style="text-align: center; padding: 45px 20px; background: white; border-radius: 16px; border: 1.5px dashed #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
                     <div style="width: 60px; height: 60px; background: #f1f5f9; color: #94a3b8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.7rem; margin: 0 auto 12px;">
@@ -1509,7 +1567,7 @@ include 'header.php';
                     </div>
                     <h4 style="margin: 0 0 6px 0; font-weight: 800; font-size: 0.95rem; color: #334155;">Belum Ada Riwayat Ujian</h4>
                     <p style="margin: 0 0 16px 0; font-size: 0.78rem; color: #64748b; line-height: 1.5; max-width: 320px; margin-inline: auto;">
-                        Ujian yang telah Anda selesaikan dan kumpulkan akan tercatat secara otomatis di halaman ini.
+                        Ujian yang telah Anda selesaikan atau sesi jadwal yang telah lewat akan tercatat di halaman ini.
                     </p>
                     <a href="cbt.php" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: #2563eb; color: white; border-radius: 10px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">
                         <i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda Ujian
@@ -2103,6 +2161,52 @@ document.getElementById('inputTokenUjian')?.addEventListener('keyup', function(e
         verifikasiDanMulaiUjian();
     }
 });
+
+// Konfirmasi Keluar / Logout Akun CBT
+function konfirmasiKeluarCbt() {
+    Swal.fire({
+        title: 'Keluar dari Akun?',
+        text: 'Apakah Anda yakin ingin logout dari aplikasi CBT?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'logout.php';
+        }
+    });
+}
+
+// Filter Tab Riwayat (Semua / Sudah Mengerjakan / Sesi Terlewat)
+function setFilterRiwayat(type) {
+    var btns = document.querySelectorAll('.btn-filter-riwayat');
+    btns.forEach(function(b) {
+        b.style.background = '#f8fafc';
+        b.style.color = '#475569';
+        b.style.borderColor = '#e2e8f0';
+    });
+    var activeBtn = document.getElementById('btn-filter-' + type);
+    if (activeBtn) {
+        activeBtn.style.background = '#2563eb';
+        activeBtn.style.color = '#ffffff';
+        activeBtn.style.borderColor = '#2563eb';
+    }
+    
+    var items = document.querySelectorAll('.item-riwayat');
+    items.forEach(function(item) {
+        if (type === 'all') {
+            item.style.display = 'flex';
+        } else if (type === 'selesai') {
+            item.style.display = item.classList.contains('filter-selesai') ? 'flex' : 'none';
+        } else if (type === 'terlewat') {
+            item.style.display = item.classList.contains('filter-terlewat') ? 'flex' : 'none';
+        }
+    });
+}
 
 // Heartbeat ping to Developer Monitor setiap 45 detik agar status siswa tetap Online
 setInterval(function() {
