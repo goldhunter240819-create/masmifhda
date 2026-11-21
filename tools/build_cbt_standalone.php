@@ -12,6 +12,9 @@ function build_cbt_standalone_package() {
         @mkdir($outDir, 0755, true);
     }
     $zipPath = $outDir . '/cbt_standalone_madrasah.zip';
+    if (file_exists($zipPath)) {
+        @unlink($zipPath);
+    }
 
     $zip = new ZipArchive();
     if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
