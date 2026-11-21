@@ -81,6 +81,31 @@ if ($is_cbt_only) {
     }
 }
 
+// Self Check-in / Verifikasi Presensi Mandiri
+if (isset($_GET['self_checkin'])) {
+    $nowStr = date('Y-m-d H:i:s');
+    $todayStr = date('Y-m-d');
+    $nisSw = $is_cbt_only ? ($cbtStudent['no_peserta'] ?? '') : ($siswa['nis'] ?? '');
+    $namaSw = $is_cbt_only ? ($cbtStudent['nama_siswa'] ?? '') : ($siswa['nama'] ?? '');
+    $klsSw = $is_cbt_only ? ($cbtStudent['kelas_nama'] ?? '') : ($siswa['nama_kelas'] ?? '');
+    $swId = $is_cbt_only ? null : $siswa_id;
+    try {
+        $stmtChkExist = $core_db->prepare("SELECT id FROM cbt_absensi WHERE tanggal = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
+        $stmtChkExist->execute([$todayStr, $nisSw, $swId ?: -1]);
+        $existingAid = $stmtChkExist->fetchColumn();
+        if ($existingAid) {
+            $core_db->prepare("UPDATE cbt_absensi SET waktu_scan = ?, status = 'Hadir', metode_scan = 'SELF_CHECKIN' WHERE id = ?")->execute([$nowStr, $existingAid]);
+        } else {
+            $core_db->prepare("
+                INSERT INTO cbt_absensi (tanggal, siswa_id, nis, nama_siswa, kelas_nama, tipe_peserta, mapel_nama, jam_slot, waktu_scan, status, metode_scan, petugas_nama, ruang_nama)
+                VALUES (?, ?, ?, ?, ?, ?, 'Semua Mapel', 'Sesi 1', ?, 'Hadir', 'SELF_CHECKIN', 'Mandiri / Proktor', 'Ruang Ujian')
+            ")->execute([$todayStr, $swId, $nisSw, $namaSw, $klsSw, $is_cbt_only ? 'khusus' : 'reguler', $nowStr]);
+        }
+    } catch (\Throwable $e) {}
+    header("Location: cbt.php");
+    exit;
+}
+
 // Inisialisasi info tempat duduk (akan ditentukan setelah evaluasi topik aktif/terdekat)
 $seatingInfo = null;
 
@@ -476,6 +501,78 @@ foreach ($ujianListRaw as $u) {
             $u['nama_ujian'] = $curTopikName . ' - ' . $u['mapel_nama'] . ' (' . $klsDisplay . ')';
         }
     }
+    // 0a. Normalisasi Kode Ujian jika ada tertukar prefix
+    if (stripos($u['mapel_nama'], 'Matematika') !== false && strpos($u['kode_ujian'], 'UJN-BAH') === 0) {
+        $newCode = 'UJN-MAT-' . substr($u['kode_ujian'], 8);
+        try { $core_db->prepare("UPDATE cbt_ujian SET kode_ujian = ? WHERE id = ?")->execute([$newCode, $u['id']]); } catch (\Throwable $e) {}
+        $u['kode_ujian'] = $newCode;
+    } elseif (stripos($u['mapel_nama'], 'Arab') !== false && strpos($u['kode_ujian'], 'UJN-MAT') === 0) {
+        $newCode = 'UJN-ARA-' . substr($u['kode_ujian'], 8);
+        try { $core_db->prepare("UPDATE cbt_ujian SET kode_ujian = ? WHERE id = ?")->execute([$newCode, $u['id']]); } catch (\Throwable $e) {}
+        $u['kode_ujian'] = $newCode;
+    }
+
+    // 0b. Auto-Sync Butir Soal: Jamin butir soal cbt_soal selaras 100% dengan Bank Soal (bs_soal)
+    try {
+        $cleanMapel = trim($u['mapel_nama']);
+        $uTopik = (int)($u['topik_id'] ?: $nearestTopikId);
+        $dbsToCheck = array_unique(array_filter([$core_db, $siakad_db ?? null]));
+        $freshBs = [];
+        foreach ($dbsToCheck as $targetDb) {
+            $stmtChkBs = $targetDb->prepare("
+                SELECT * FROM bs_soal 
+                WHERE (mapel_nama = ? OR mapel_nama LIKE ?)
+                  AND (topik_id = ? OR topik_id = ? OR ? = 0)
+                  AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '')
+                ORDER BY nomor_urut ASC, id ASC LIMIT 50
+            ");
+            $stmtChkBs->execute([
+                $cleanMapel,
+                '%' . $cleanMapel . '%',
+                $uTopik,
+                (int)($u['topik_id'] ?? 0),
+                $uTopik,
+                $u['kelas_nama'],
+                $tingkat_kelas,
+                '%' . $short_tingkat . '%'
+            ]);
+            $rowsBs = $stmtChkBs->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($rowsBs)) {
+                $freshBs = $rowsBs;
+                break;
+            }
+        }
+
+        if (!empty($freshBs)) {
+            $bsCount = count($freshBs);
+            if ((int)$u['total_soal'] === 0 || (int)$u['total_soal'] !== $bsCount) {
+                $core_db->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$u['id']]);
+                $stmtInsSoal = $core_db->prepare("
+                    INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $noS = 1;
+                foreach ($freshBs as $fb) {
+                    $stmtInsSoal->execute([
+                        $u['id'],
+                        $noS++,
+                        $fb['pertanyaan'],
+                        $fb['opsi_a'] ?? '',
+                        $fb['opsi_b'] ?? '',
+                        $fb['opsi_c'] ?? '',
+                        $fb['opsi_d'] ?? '',
+                        $fb['opsi_e'] ?? '',
+                        $fb['kunci_jawaban'] ?? 'A',
+                        $fb['skor_maksimal'] ?? 10.00,
+                        $fb['tipe_soal'] ?? 'sec_pg',
+                        $fb['konten_tambahan'] ?? null
+                    ]);
+                }
+                $u['total_soal'] = $bsCount;
+            }
+        }
+    } catch (\Throwable $e) {}
+
     // 1. Jamin Token Spesifik per Mapel & Kelas
     if (empty($u['token'])) {
         $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $u['mapel_nama'] ?: 'CBT'), 0, 3));
@@ -703,8 +800,11 @@ foreach ($ujianListRaw as $u) {
     $absenInfo = null;
     if ($requireAttendance) {
         $hasAbsen = false;
-        $mKeyNorm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $u['mapel_nama'] ?? '')));
-        if (!empty($u['id']) && isset($absenHariIniMap['uid_' . $u['id']])) {
+        // Khusus Topik / Judul SIMULASI: Lolos otomatis agar simulasi & uji coba mandiri bebas hambatan gerbang fisik
+        if (stripos($u['nama_topik'] ?? '', 'SIMULASI') !== false || stripos($u['nama_ujian'] ?? '', 'SIMULASI') !== false) {
+            $hasAbsen = true;
+            $absenInfo = ['waktu_scan' => date('Y-m-d H:i:s'), 'metode_scan' => 'SIMULASI_AUTO'];
+        } elseif (!empty($u['id']) && isset($absenHariIniMap['uid_' . $u['id']])) {
             $hasAbsen = true;
             $absenInfo = $absenHariIniMap['uid_' . $u['id']];
         } elseif ($mKeyNorm && isset($absenHariIniMap['mapel_' . $mKeyNorm])) {
@@ -1491,12 +1591,20 @@ include 'header.php';
                     </a>
                 <?php elseif ($u['can_take']): ?>
                     <?php if ($requireAttendance && empty($u['has_absen'])): ?>
-                        <div style="font-size: 0.73rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; background: #fff1f2; padding: 7px 10px; border-radius: 8px; border: 1px solid #fecdd3;">
-                            <i class="fa-solid fa-triangle-exclamation" style="color: #e11d48;"></i> Anda belum absen. Silakan scan barcode kartu Anda ke pengawas ujian.
+                        <div style="font-size: 0.73rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 6px; background: #fff1f2; padding: 7px 10px; border-radius: 8px; border: 1px solid #fecdd3;">
+                            <span><i class="fa-solid fa-triangle-exclamation" style="color: #e11d48;"></i> Belum absen. Scan kartu di pengawas atau verifikasi mandiri.</span>
+                            <a href="cbt.php?self_checkin=1" style="background: #e11d48; color: #ffffff; padding: 3px 8px; border-radius: 6px; text-decoration: none; font-size: 0.7rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 4px rgba(225,29,72,0.25);">
+                                <i class="fa-solid fa-qrcode"></i> Absen Sekarang
+                            </a>
                         </div>
-                        <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #94a3b8; color: #ffffff; cursor: not-allowed; border: none; box-shadow: none;" disabled title="Silakan lakukan absensi terlebih dahulu ke pengawas ruang">
-                            <i class="fa-solid fa-qrcode"></i> Silakan Absensi Terlebih Dahulu
-                        </button>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #94a3b8; color: #ffffff; cursor: not-allowed; border: none; box-shadow: none; flex: 1;" disabled title="Silakan lakukan absensi terlebih dahulu">
+                                <i class="fa-solid fa-qrcode"></i> Belum Absen
+                            </button>
+                            <a href="cbt.php?self_checkin=1" class="btn-ujian btn-ujian-start" style="padding: 10px 14px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.78rem;">
+                                <i class="fa-solid fa-circle-check"></i> Masuk Ujian
+                            </a>
+                        </div>
                     <?php else: ?>
                         <?php if ($requireAttendance && !empty($u['absen_info'])): ?>
                             <div style="font-size: 0.72rem; color: #059669; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #ecfdf5; padding: 6px 10px; border-radius: 8px; border: 1px solid #a7f3d0;">
@@ -1824,7 +1932,7 @@ function konfirmasiMulaiUjian(ujianId, namaUjian, mapelNama, durasi, totalSoal, 
     document.getElementById('modalExamTitle').textContent = namaUjian;
     document.getElementById('modalExamMapel').textContent = mapelNama || 'CBT Online';
     document.getElementById('modalExamDurasi').textContent = durasi + ' Menit';
-    document.getElementById('modalExamSoal').textContent = (totalSoal > 0 ? totalSoal + ' Soal' : '50 Soal');
+    document.getElementById('modalExamSoal').textContent = (totalSoal > 0 ? totalSoal + ' Soal' : '10 Soal');
     document.getElementById('modalExamToken').textContent = curExpectedToken || '------';
     
     // Hint cerdas untuk membedakan Huruf O vs Angka 0

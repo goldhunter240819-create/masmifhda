@@ -1488,84 +1488,53 @@ class CbtController {
                     }
                 }
 
-                // Sinkronkan butir soal jika cbt_soal masih 0
+                // Sinkronkan butir soal jika cbt_soal masih 0 atau jumlahnya tidak selaras dengan Bank Soal
                 $targetUjianId = (int)$existingUjian['id'];
                 $soalCount = (int)$db->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$targetUjianId}")->fetchColumn();
-                if ($soalCount === 0) {
-                    $bsItems = [];
+
+                $bsItems = [];
+                try {
+                    $stmtBS = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
+                    $stmtBS->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
+                    $bsItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                } catch (\Exception $e) {}
+
+                if (empty($bsItems) && $db !== $db_siakad) {
                     try {
-                        $stmtBS = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
-                        $stmtBS->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
-                        $bsItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                        $stmtBSCore = $db->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
+                        $stmtBSCore->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
+                        $bsItems = $stmtBSCore->fetchAll(PDO::FETCH_ASSOC);
                     } catch (\Exception $e) {}
+                }
 
-                    if (empty($bsItems) && $db !== $db_siakad) {
-                        try {
-                            $stmtBSCore = $db->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY nomor_urut ASC, id ASC LIMIT 50");
-                            $stmtBSCore->execute([$mapel, $tId, $tId, $kelasNama, $tingkat, '%' . $tingkat . '%']);
-                            $bsItems = $stmtBSCore->fetchAll(PDO::FETCH_ASSOC);
-                        } catch (\Exception $e) {}
-                    }
+                if (empty($bsItems)) {
+                    try {
+                        $stmtBSAll = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) ORDER BY nomor_urut ASC, id ASC LIMIT 50");
+                        $stmtBSAll->execute([$mapel, $tId, $tId]);
+                        $bsItems = $stmtBSAll->fetchAll(PDO::FETCH_ASSOC);
+                    } catch (\Exception $e) {}
+                }
 
-                    if (empty($bsItems)) {
-                        try {
-                            $stmtBSAll = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (topik_id = ? OR ? = 0) ORDER BY nomor_urut ASC, id ASC LIMIT 50");
-                            $stmtBSAll->execute([$mapel, $tId, $tId]);
-                            $bsItems = $stmtBSAll->fetchAll(PDO::FETCH_ASSOC);
-                        } catch (\Exception $e) {}
-                    }
-
-                    // Fallback cerdas: cari butir soal mapel & tingkat ini dari topik lain di Bank Soal
-                    if (empty($bsItems)) {
-                        try {
-                            $stmtBSAny = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama IS NULL OR kelas_nama = '') ORDER BY id DESC LIMIT 50");
-                            $stmtBSAny->execute([$mapel, $kelasNama, $tingkat, '%' . $tingkat . '%']);
-                            $bsItems = $stmtBSAny->fetchAll(PDO::FETCH_ASSOC);
-                        } catch (\Exception $e) {}
-                    }
-
-                    if (empty($bsItems)) {
-                        try {
-                            $stmtBSAnyMapel = $db_siakad->prepare("SELECT * FROM bs_soal WHERE mapel_nama = ? ORDER BY id DESC LIMIT 50");
-                            $stmtBSAnyMapel->execute([$mapel]);
-                            $bsItems = $stmtBSAnyMapel->fetchAll(PDO::FETCH_ASSOC);
-                        } catch (\Exception $e) {}
-                    }
-
-                    // Fallback terakhir: salin dari paket ujian CBT yang sudah memiliki soal untuk mapel & tingkat yang sama
-                    if (empty($bsItems)) {
-                        try {
-                            $stmtOther = $db->prepare("SELECT id FROM cbt_ujian WHERE mapel_nama = ? AND (kelas_nama = ? OR kelas_nama = ? OR kelas_nama LIKE ? OR kelas_nama = 'Semua Kelas') AND id != ? AND (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = cbt_ujian.id) > 0 ORDER BY id DESC LIMIT 1");
-                            $stmtOther->execute([$mapel, $kelasNama, $tingkat, '%' . $tingkat . '%', $targetUjianId]);
-                            $otherUjianId = $stmtOther->fetchColumn();
-                            if ($otherUjianId) {
-                                $stmtCopy = $db->prepare("SELECT * FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC");
-                                $stmtCopy->execute([$otherUjianId]);
-                                $bsItems = $stmtCopy->fetchAll(PDO::FETCH_ASSOC);
-                            }
-                        } catch (\Exception $e) {}
-                    }
-
-                    if (!empty($bsItems)) {
-                        try { $db->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$targetUjianId]); } catch (\Exception $e) {}
-                        $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                        $no = 1;
-                        foreach ($bsItems as $b) {
-                            $stmtInsS->execute([
-                                $targetUjianId,
-                                $no++,
-                                $b['pertanyaan'],
-                                $b['opsi_a'] ?? '',
-                                $b['opsi_b'] ?? '',
-                                $b['opsi_c'] ?? '',
-                                $b['opsi_d'] ?? '',
-                                $b['opsi_e'] ?? '',
-                                $b['kunci_jawaban'] ?? 'A',
-                                $b['skor_maksimal'] ?? 2.00,
-                                $b['tipe_soal'] ?? 'sec_pg',
-                                $b['konten_tambahan'] ?? null
-                            ]);
-                        }
+                $shouldSyncSoal = ($soalCount === 0) || (!empty($bsItems) && $soalCount !== count($bsItems));
+                if ($shouldSyncSoal && !empty($bsItems)) {
+                    try { $db->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$targetUjianId]); } catch (\Exception $e) {}
+                    $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $no = 1;
+                    foreach ($bsItems as $b) {
+                        $stmtInsS->execute([
+                            $targetUjianId,
+                            $no++,
+                            $b['pertanyaan'],
+                            $b['opsi_a'] ?? '',
+                            $b['opsi_b'] ?? '',
+                            $b['opsi_c'] ?? '',
+                            $b['opsi_d'] ?? '',
+                            $b['opsi_e'] ?? '',
+                            $b['kunci_jawaban'] ?? 'A',
+                            $b['skor_maksimal'] ?? 10.00,
+                            $b['tipe_soal'] ?? 'sec_pg',
+                            $b['konten_tambahan'] ?? null
+                        ]);
                     }
                 }
             }
@@ -5722,6 +5691,47 @@ class CbtController {
             } catch (\Exception $e2) {}
         }
 
+        // Auto-sinkron cbt_soal dari bs_soal jika belum ada atau jumlah tidak sesuai
+        try {
+            $ujians = $db->query("SELECT id, mapel_nama, kelas_nama, topik_id FROM cbt_ujian")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($ujians as $uExp) {
+                $uIdExp = (int)$uExp['id'];
+                $soalCnt = (int)$db->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$uIdExp}")->fetchColumn();
+                $cleanM = trim($uExp['mapel_nama']);
+                $tId = (int)($uExp['topik_id'] ?? 0);
+                
+                $bsSrc = !empty($bsSoalList) ? $bsSoalList : [];
+                $matchedBs = array_filter($bsSrc, function($b) use ($cleanM, $tId, $uExp) {
+                    $mMatch = ($b['mapel_nama'] === $cleanM || stripos($b['mapel_nama'], $cleanM) !== false || stripos($cleanM, $b['mapel_nama']) !== false);
+                    $tMatch = ($tId === 0 || (int)($b['topik_id'] ?? 0) === $tId);
+                    $kMatch = empty($uExp['kelas_nama']) || empty($b['kelas_nama']) || stripos($uExp['kelas_nama'], $b['kelas_nama']) !== false || stripos($b['kelas_nama'], $uExp['kelas_nama']) !== false;
+                    return $mMatch && $tMatch && $kMatch;
+                });
+                
+                if (!empty($matchedBs) && ($soalCnt === 0 || $soalCnt !== count($matchedBs))) {
+                    $db->exec("DELETE FROM cbt_soal WHERE ujian_id = {$uIdExp}");
+                    $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $noS = 1;
+                    foreach ($matchedBs as $mbs) {
+                        $stmtInsS->execute([
+                            $uIdExp,
+                            $noS++,
+                            $mbs['pertanyaan'],
+                            $mbs['opsi_a'] ?? '',
+                            $mbs['opsi_b'] ?? '',
+                            $mbs['opsi_c'] ?? '',
+                            $mbs['opsi_d'] ?? '',
+                            $mbs['opsi_e'] ?? '',
+                            $mbs['kunci_jawaban'] ?? 'A',
+                            $mbs['skor_maksimal'] ?? 10.00,
+                            $mbs['tipe_soal'] ?? 'sec_pg',
+                            $mbs['konten_tambahan'] ?? null
+                        ]);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {}
+
         $payload = [
             'status' => 'success',
             'exported_at' => date('Y-m-d H:i:s'),
@@ -6434,6 +6444,13 @@ class CbtController {
 
         // 5. Soal
         if (!empty($data['soal'])) {
+            $payloadUjianIds = array_unique(array_filter(array_map('intval', array_column($data['soal'], 'ujian_id'))));
+            if (!empty($payloadUjianIds)) {
+                $inPayloadU = implode(',', $payloadUjianIds);
+                try {
+                    $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN ($inPayloadU)");
+                } catch (\Exception $e) {}
+            }
             $stmtSoal = $db->prepare("INSERT INTO cbt_soal (id, ujian_id, nomor_urut, tipe_soal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan)");
             foreach ($data['soal'] as $so) {
                 try {
@@ -6671,6 +6688,47 @@ class CbtController {
                 $bsSoalList = $db->query("SELECT * FROM bs_soal ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
             } catch (\Exception $e2) {}
         }
+
+        // Auto-sinkron cbt_soal dari bs_soal jika belum ada atau jumlah tidak sesuai
+        try {
+            $ujians = $db->query("SELECT id, mapel_nama, kelas_nama, topik_id FROM cbt_ujian")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($ujians as $uExp) {
+                $uIdExp = (int)$uExp['id'];
+                $soalCnt = (int)$db->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$uIdExp}")->fetchColumn();
+                $cleanM = trim($uExp['mapel_nama']);
+                $tId = (int)($uExp['topik_id'] ?? 0);
+                
+                $bsSrc = !empty($bsSoalList) ? $bsSoalList : [];
+                $matchedBs = array_filter($bsSrc, function($b) use ($cleanM, $tId, $uExp) {
+                    $mMatch = ($b['mapel_nama'] === $cleanM || stripos($b['mapel_nama'], $cleanM) !== false || stripos($cleanM, $b['mapel_nama']) !== false);
+                    $tMatch = ($tId === 0 || (int)($b['topik_id'] ?? 0) === $tId);
+                    $kMatch = empty($uExp['kelas_nama']) || empty($b['kelas_nama']) || stripos($uExp['kelas_nama'], $b['kelas_nama']) !== false || stripos($b['kelas_nama'], $uExp['kelas_nama']) !== false;
+                    return $mMatch && $tMatch && $kMatch;
+                });
+                
+                if (!empty($matchedBs) && ($soalCnt === 0 || $soalCnt !== count($matchedBs))) {
+                    $db->exec("DELETE FROM cbt_soal WHERE ujian_id = {$uIdExp}");
+                    $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $noS = 1;
+                    foreach ($matchedBs as $mbs) {
+                        $stmtInsS->execute([
+                            $uIdExp,
+                            $noS++,
+                            $mbs['pertanyaan'],
+                            $mbs['opsi_a'] ?? '',
+                            $mbs['opsi_b'] ?? '',
+                            $mbs['opsi_c'] ?? '',
+                            $mbs['opsi_d'] ?? '',
+                            $mbs['opsi_e'] ?? '',
+                            $mbs['kunci_jawaban'] ?? 'A',
+                            $mbs['skor_maksimal'] ?? 10.00,
+                            $mbs['tipe_soal'] ?? 'sec_pg',
+                            $mbs['konten_tambahan'] ?? null
+                        ]);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {}
 
         $payload = [
             'status' => 'success',
