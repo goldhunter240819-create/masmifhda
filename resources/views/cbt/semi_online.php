@@ -195,6 +195,12 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                             <span>⚡ Tarik Presensi Hari Ini Saja (Kilat)</span>
                         </button>
 
+                        <div style="margin-top: 10px; text-align: center;">
+                            <a href="<?= base_url('sinkron_langsung.php') ?>" target="_blank" style="font-size: 0.8rem; font-weight: 700; color: #4f46e5; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="external-link" style="width: 14px; height: 14px;"></i> Atau buka: Sinkronisasi Kilat Langsung (Halaman Mandiri)
+                            </a>
+                        </div>
+
                         <div style="font-size: 0.72rem; color: #64748b; margin-top: 10px; line-height: 1.45; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1;">
                             <span style="color: #4338ca; font-weight: 800;"><i data-lucide="info" style="width: 12px; height: 12px; display: inline;"></i> Info Alur Presensi:</span> Siswa scan kartu di gerbang madrasah via Server Online (<a href="https://apk.masmifhda.sch.id/apk/cbt_scan.php" target="_blank" style="color: #4f46e5; font-weight: 700; text-decoration: underline;">Scan Online</a>). Setelah anak-anak masuk ruangan, proktor cukup klik <b>Tarik Presensi (Kilat)</b> di laptop ini agar kuncian soal langsung terbuka!
                         </div>

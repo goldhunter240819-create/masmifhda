@@ -284,24 +284,7 @@ class CbtController {
                 }
             } catch (\Exception $e) {}
 
-            try {
-                $insertSql = "INSERT INTO bs_topik (jenis, nama_topik, keterangan, tahun_ajaran, semester, tgl_mulai, tgl_selesai, status) VALUES
-                    ('SAS', 'Sumatif Akhir Semester (SAS) Ganjil 2026/2027', 'Asesmen Sumatif Akhir Semester Ganjil TA 2026/2027 seluruh tingkat kelas.', '2026/2027', 'Ganjil', '2026-12-01', '2026-12-08', 'Aktif'),
-                    ('STS', 'Sumatif Tengah Semester (STS) Ganjil 2026/2027', 'Asesmen Sumatif Tengah Semester Ganjil TA 2026/2027.', '2026/2027', 'Ganjil', '2026-09-21', '2026-09-26', 'Selesai'),
-                    ('UM', 'Ujian Madrasah (UM) 2026/2027', 'Ujian Akhir Madrasah Aliyah Miftahul Huda Mathla\'ul Anwar Tahun Pelajaran 2026/2027.', '2026/2027', 'Genap', '2027-03-15', '2027-03-22', 'Terjadwal'),
-                    ('Try Out', 'Try Out Ujian Madrasah 2026/2027', 'Simulasi CBT dan pemantapan materi persiapan Ujian Madrasah.', '2026/2027', 'Genap', '2027-02-15', '2027-02-18', 'Terjadwal')
-                ";
-                $cntCore = (int)$db->query("SELECT COUNT(*) FROM bs_topik WHERE jenis = 'SAS'")->fetchColumn();
-                if ($cntCore === 0) {
-                    $db->exec($insertSql);
-                }
-                if (isset($dbS) && $dbS && $dbS !== $db) {
-                    $cntSiakad = (int)$dbS->query("SELECT COUNT(*) FROM bs_topik WHERE jenis = 'SAS'")->fetchColumn();
-                    if ($cntSiakad === 0) {
-                        $dbS->exec($insertSql);
-                    }
-                }
-            } catch (\Exception $e) {}
+            // Topik Asesmen diisi via sinkronisasi resmi dari server online / import CBT, tidak di-seed dummy agar ID tidak bentrok.
 
             // 8. Tabel Pengaturan CBT & Keamanan
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_pengaturan (
@@ -5678,6 +5661,11 @@ class CbtController {
      * API Export Paket Data dari Server Pusat (ditarik oleh laptop proktor semi-online)
      */
     public static function apiExportPaketOnline() {
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
+        if (function_exists('ob_gzhandler') && !ob_get_level()) {
+            ob_start('ob_gzhandler');
+        }
         header('Content-Type: application/json');
         
         $syncSecret = 'MIFHDA_CBT_SYNC_2026';
@@ -5928,6 +5916,8 @@ class CbtController {
      * AJAX Pull Data dari Server Pusat ke Server Lokal
      */
     public static function ajaxPullDataOnline() {
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
         header('Content-Type: application/json');
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
@@ -5941,7 +5931,9 @@ class CbtController {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['action' => 'export']));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_ENCODING, '');
+        curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         $response = curl_exec($ch);
@@ -6356,7 +6348,7 @@ class CbtController {
                 } catch (\Exception $e) {}
             }
 
-            $sqlP = "INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_id, guru_nama, kkm, durasi_menit, is_locked, locked_at, locked_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), kelas_sasaran = VALUES(kelas_sasaran), guru_id = VALUES(guru_id), guru_nama = VALUES(guru_nama), kkm = VALUES(kkm), durasi_menit = VALUES(durasi_menit), is_locked = VALUES(is_locked)";
+            $sqlP = "INSERT INTO bs_paket (id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, guru_id, guru_nama, kkm, durasi_menit, is_locked, locked_at, locked_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE topik_id = VALUES(topik_id), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), kelas_sasaran = VALUES(kelas_sasaran), guru_id = VALUES(guru_id), guru_nama = VALUES(guru_nama), kkm = VALUES(kkm), durasi_menit = VALUES(durasi_menit), is_locked = VALUES(is_locked)";
             $stmtP = $db->prepare($sqlP);
             $stmtPSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare($sqlP) : null;
             foreach ($data['bs_paket'] as $p) {
@@ -6373,7 +6365,7 @@ class CbtController {
 
         // 1c. Butir Soal Bank Soal (bs_soal)
         if (!empty($data['bs_soal'])) {
-            $sqlBS = "INSERT INTO bs_soal (id, topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan), opsi_a = VALUES(opsi_a), opsi_b = VALUES(opsi_b), opsi_c = VALUES(opsi_c), opsi_d = VALUES(opsi_d), opsi_e = VALUES(opsi_e)";
+            $sqlBS = "INSERT INTO bs_soal (id, topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE topik_id = VALUES(topik_id), paket_id = VALUES(paket_id), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan), opsi_a = VALUES(opsi_a), opsi_b = VALUES(opsi_b), opsi_c = VALUES(opsi_c), opsi_d = VALUES(opsi_d), opsi_e = VALUES(opsi_e)";
             $stmtBS = $db->prepare($sqlBS);
             $stmtBSSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare($sqlBS) : null;
             foreach ($data['bs_soal'] as $bs) {

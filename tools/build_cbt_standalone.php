@@ -284,6 +284,24 @@ $router->add('POST', '/semi-online/export-file', [\App\Controllers\CbtController
 $router->add('POST', '/cbt/semi-online/export-file', [\App\Controllers\CbtController::class, 'exportBackupFile']);
 $router->add('POST', '/semi-online/import-file', [\App\Controllers\CbtController::class, 'importBackupFile']);
 $router->add('POST', '/cbt/semi-online/import-file', [\App\Controllers\CbtController::class, 'importBackupFile']);
+
+// Direct Sync Tool
+$router->add('GET', '/sinkron_langsung.php', function() {
+    require __DIR__ . '/../sinkron_langsung.php';
+    exit;
+});
+$router->add('POST', '/sinkron_langsung.php', function() {
+    require __DIR__ . '/../sinkron_langsung.php';
+    exit;
+});
+$router->add('GET', '/cbt/sinkron_langsung.php', function() {
+    require __DIR__ . '/../sinkron_langsung.php';
+    exit;
+});
+$router->add('POST', '/cbt/sinkron_langsung.php', function() {
+    require __DIR__ . '/../sinkron_langsung.php';
+    exit;
+});
 $router->add('GET', '/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
 $router->add('GET', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
 $router->add('POST', '/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
@@ -425,6 +443,10 @@ echo.
 pause
 BAT;
     $zip->addFromString('UPDATE_CBT.bat', $updateBatContent);
+
+    if (file_exists($baseDir . '/sinkron_langsung.php')) {
+        $zip->addFile($baseDir . '/sinkron_langsung.php', 'sinkron_langsung.php');
+    }
 
     // 9. Installer Web 1-Klik: setup_db.php
     $setupDbContent = <<<'PHP'
