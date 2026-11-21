@@ -8,15 +8,11 @@ if ($secret !== 'MIFHDA_DEBUG_394') {
 }
 
 $core = \App\Core\Database::connect('core');
-$siakad = \App\Core\Database::connect('siakad');
 
-$siakadAbsenToday = $siakad->query("SELECT a.*, s.nama_lengkap, s.nis FROM absensi_siswa a LEFT JOIN siswa s ON a.siswa_id = s.id WHERE a.tanggal = '2026-11-21' ORDER BY a.id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-
-// Also let's check core presensi where user_id = 394:
-// Is there a correlation with any row in siakad.absensi_siswa around 08:01:17?
-$siakadAbsen8am = $siakad->query("SELECT a.*, s.nama_lengkap, s.nis FROM absensi_siswa a LEFT JOIN siswa s ON a.siswa_id = s.id WHERE a.tanggal = '2026-11-21' AND a.created_at LIKE '2026-11-21 08:01%'")->fetchAll(PDO::FETCH_ASSOC);
+$u285 = $core->query("SELECT * FROM users WHERE id IN (285, 394)")->fetchAll(PDO::FETCH_ASSOC);
+$s53 = $core->query("SELECT * FROM siswa WHERE id = 53")->fetchAll(PDO::FETCH_ASSOC);
 
 echo json_encode([
-    'siakadAbsenToday' => $siakadAbsenToday,
-    'siakadAbsen8am' => $siakadAbsen8am
+    'users' => $u285,
+    'siswa53' => $s53
 ], JSON_PRETTY_PRINT);
