@@ -6007,11 +6007,11 @@ class CbtController {
                 FROM cbt_denah_peserta d
                 LEFT JOIN siswa s ON s.id = d.siswa_id
                 WHERE d.ruang_id = ? 
-                  AND (:tid <= 0 OR d.topik_id = :tid2 OR d.topik_id IS NULL OR d.topik_id = 0)
+                  AND (? <= 0 OR d.topik_id = ? OR d.topik_id IS NULL OR d.topik_id = 0)
                   AND d.siswa_id IS NOT NULL
                 ORDER BY d.nomor_meja ASC
             ");
-            $stmtP->execute([':tid' => $topikId, ':tid2' => $topikId]);
+            $stmtP->execute([$ruangId, $topikId, $topikId]);
             $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
         }
 
@@ -6021,11 +6021,11 @@ class CbtController {
         $stmtM = $db->prepare("
             SELECT DISTINCT mapel_nama 
             FROM cbt_jadwal_grid 
-            WHERE (:tid <= 0 OR topik_id = :tid2)
-              AND (tanggal = :tgl OR (tanggal IS NULL AND hari = :hari))
-              AND jam_slot LIKE :sesi
+            WHERE (? <= 0 OR topik_id = ?)
+              AND (tanggal = ? OR (tanggal IS NULL AND hari = ?))
+              AND jam_slot LIKE ?
         ");
-        $stmtM->execute([':tid' => $topikId, ':tid2' => $topikId, ':tgl' => $tanggal, ':hari' => $dayName, ':sesi' => '%' . $sesiLabel . '%']);
+        $stmtM->execute([$topikId, $topikId, $tanggal, $dayName, '%' . $sesiLabel . '%']);
         $mapelArr = $stmtM->fetchAll(PDO::FETCH_COLUMN);
         $mapelNama = !empty($mapelArr) ? implode(' / ', $mapelArr) : 'Asesmen CBT';
 
@@ -6147,10 +6147,10 @@ class CbtController {
         $stmtU = $db->prepare("
             SELECT id, nama_ujian, mapel_nama, kkm 
             FROM cbt_ujian 
-            WHERE mapel_nama = ? AND (:tid <= 0 OR topik_id = :tid2 OR topik_id IS NULL)
+            WHERE mapel_nama = ? AND (? <= 0 OR topik_id = ? OR topik_id IS NULL)
             LIMIT 1
         ");
-        $stmtU->execute([$selectedMapel, ':tid' => $topikId, ':tid2' => $topikId]);
+        $stmtU->execute([$selectedMapel, $topikId, $topikId]);
         $ujianRow = $stmtU->fetch(PDO::FETCH_ASSOC);
         $ujianId = $ujianRow['id'] ?? 0;
         $kkm = (int)($ujianRow['kkm'] ?? 75);
@@ -6162,17 +6162,17 @@ class CbtController {
                    COALESCE(r.nama_ruang, '-') as nama_ruang
             FROM siswa s
             LEFT JOIN kelas k ON s.kelas_id = k.id
-            LEFT JOIN cbt_denah_peserta d ON d.siswa_id = s.id AND (:tid <= 0 OR d.topik_id = :tid2 OR d.topik_id IS NULL)
+            LEFT JOIN cbt_denah_peserta d ON d.siswa_id = s.id AND (? <= 0 OR d.topik_id = ? OR d.topik_id IS NULL)
             LEFT JOIN cbt_ruang r ON r.id = d.ruang_id
-            WHERE k.nama_kelas = :kelas OR :kelas2 LIKE CONCAT('%', k.nama_kelas, '%') OR k.nama_kelas LIKE CONCAT('%', :kelas3, '%')
+            WHERE k.nama_kelas = ? OR ? LIKE CONCAT('%', k.nama_kelas, '%') OR k.nama_kelas LIKE CONCAT('%', ?, '%')
             ORDER BY s.nama ASC
         ");
         $stmtS->execute([
-            ':kelas' => $selectedKelas,
-            ':kelas2' => $selectedKelas,
-            ':kelas3' => $selectedKelas,
-            ':tid' => $topikId,
-            ':tid2' => $topikId
+            $topikId,
+            $topikId,
+            $selectedKelas,
+            $selectedKelas,
+            $selectedKelas
         ]);
         $siswaKelas = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 
@@ -6182,10 +6182,10 @@ class CbtController {
                        d.nomor_meja, COALESCE(r.nama_ruang, '-') as nama_ruang
                 FROM cbt_denah_peserta d
                 LEFT JOIN cbt_ruang r ON r.id = d.ruang_id
-                WHERE d.kelas_nama = ? AND (:tid <= 0 OR d.topik_id = :tid2 OR d.topik_id IS NULL)
+                WHERE d.kelas_nama = ? AND (? <= 0 OR d.topik_id = ? OR d.topik_id IS NULL)
                 ORDER BY d.nama_siswa ASC
             ");
-            $stmtD->execute([$selectedKelas, ':tid' => $topikId, ':tid2' => $topikId]);
+            $stmtD->execute([$selectedKelas, $topikId, $topikId]);
             $siswaKelas = $stmtD->fetchAll(PDO::FETCH_ASSOC);
         }
 
