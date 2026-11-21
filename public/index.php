@@ -2294,7 +2294,23 @@ $router->add('POST', '/bank_soal/paket/sync-jadwal', ['\App\Controllers\BankSoal
 $router->add('POST', '/bank_soal/paket/sync-pengampu', ['\App\Controllers\BankSoalController', 'syncFromPengampu']);
 $router->add('GET', '/bank_soal/paket/sync-pengampu', ['\App\Controllers\BankSoalController', 'syncFromPengampu']);
 $router->add('POST', '/bank_soal/generate-dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('GET', '/bank_soal/generate-dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('POST', '/bank_soal/generate_dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('GET', '/bank_soal/generate_dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('POST', '/bank_soal/generate dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('GET', '/bank_soal/generate dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+
+$router->add('POST', '/cbt/bank_soal/generate-dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('GET', '/cbt/bank_soal/generate-dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('POST', '/cbt/bank_soal/generate_dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('GET', '/cbt/bank_soal/generate_dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('POST', '/cbt/bank_soal/generate dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+$router->add('GET', '/cbt/bank_soal/generate dummy', ['\App\Controllers\BankSoalController', 'generateDummy']);
+
 $router->add('POST', '/bank_soal/reset-data', ['\App\Controllers\BankSoalController', 'resetData']);
+$router->add('GET', '/bank_soal/reset-data', ['\App\Controllers\BankSoalController', 'resetData']);
+$router->add('POST', '/cbt/bank_soal/reset-data', ['\App\Controllers\BankSoalController', 'resetData']);
+$router->add('GET', '/cbt/bank_soal/reset-data', ['\App\Controllers\BankSoalController', 'resetData']);
 
 $router->add('GET', '/bank_soal/topik', ['\App\Controllers\BankSoalController', 'indexTopik']);
 $router->add('POST', '/bank_soal/topik/simpan', ['\App\Controllers\BankSoalController', 'simpanTopik']);

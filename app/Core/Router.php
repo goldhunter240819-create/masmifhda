@@ -70,15 +70,33 @@ class Router {
             }
         }
 
-        // Siapkan kandidat path untuk pencocokan route (mendukung subfolder /cbt/ maupun root standalone)
-        $candidatePaths = [$path];
+        // Siapkan kandidat path untuk pencocokan route (mendukung subfolder /cbt/, urldecode, spasi -> dash)
+        $rawPaths = [$path];
         if (strpos($path, '/cbt/') === 0) {
-            $candidatePaths[] = substr($path, 4) ?: '/';
+            $rawPaths[] = substr($path, 4) ?: '/';
         } elseif ($path === '/cbt') {
-            $candidatePaths[] = '/';
+            $rawPaths[] = '/';
         } else {
-            $candidatePaths[] = '/cbt' . ($path === '/' ? '' : $path);
+            $rawPaths[] = '/cbt' . ($path === '/' ? '' : $path);
         }
+
+        $candidatePaths = [];
+        foreach ($rawPaths as $rp) {
+            $candidatePaths[] = $rp;
+            $decoded = rawurldecode($rp);
+            if ($decoded !== $rp) {
+                $candidatePaths[] = $decoded;
+            }
+            $dash = str_replace([' ', '_'], '-', $decoded);
+            if (!in_array($dash, $candidatePaths)) {
+                $candidatePaths[] = $dash;
+            }
+            $under = str_replace([' ', '-'], '_', $decoded);
+            if (!in_array($under, $candidatePaths)) {
+                $candidatePaths[] = $under;
+            }
+        }
+        $candidatePaths = array_unique($candidatePaths);
 
         foreach ($this->routes as $route) {
             if ($route['method'] !== $method) {

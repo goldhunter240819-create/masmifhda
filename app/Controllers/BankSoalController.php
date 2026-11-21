@@ -868,57 +868,69 @@ class BankSoalController {
 
     /**
      * Buat Contoh Dummy Realistis (Matematika, Biologi, Bahasa Arab: 10 Butir AKM per Mapel)
-     * Sesuai permintaan eksplisit user untuk tes simulasi cepat
+     * Sesuai permintaan user: Hapus data lama & buat tepat 10 soal dengan 5 model soal AKM
      */
     public function generateDummy() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $topikId = (int)($_POST['topik_id'] ?? 0);
-            if ($topikId === 0) {
-                $tp = $this->db->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-                if (!$tp) {
-                    $tp = $this->db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-                }
-                $topikId = $tp ? (int)$tp['id'] : 1;
+        $topikId = (int)($_POST['topik_id'] ?? $_GET['topik_id'] ?? 0);
+        if ($topikId === 0) {
+            $tp = $this->db->query("SELECT id FROM bs_topik WHERE nama_topik LIKE '%SIMULASI%' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            if (!$tp) {
+                $tp = $this->db->query("SELECT id FROM bs_topik WHERE status = 'Aktif' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
             }
-
-            // Panggil service CbtDummyGenerator untuk generate 10 butir soal ber-stimulus per tingkat (Kelas X, XI, XII)
-            \App\Services\CbtDummyGenerator::generateAll($topikId);
-
-            // Panggil service CbtBiologiArabGenerator untuk generate 10 butir soal Biologi & 10 butir Bahasa Arab per tingkat (Kelas X, XI, XII)
-            if (class_exists('\\App\\Services\\CbtBiologiArabGenerator')) {
-                \App\Services\CbtBiologiArabGenerator::generateAll($topikId);
-            }
-
-            // Sinkronkan langsung dengan jadwal dan ujian CBT
-            try {
-                \App\Controllers\CbtController::syncJadwalWithUjian($this->db_core, $this->db, $topikId);
-            } catch (\Exception $e) {}
-
-            redirect("/bank_soal?topik_id={$topikId}&msg=dummy_created");
-            exit;
+            $topikId = $tp ? (int)$tp['id'] : 1;
         }
-        redirect('/bank_soal');
+
+        // 1. Hapus semua data butir soal lama di topik simulasi ini agar bersih total
+        try {
+            $this->db->prepare("DELETE FROM bs_soal WHERE topik_id = ?")->execute([$topikId]);
+            if ($this->db_core !== $this->db) {
+                $this->db_core->prepare("DELETE FROM bs_soal WHERE topik_id = ?")->execute([$topikId]);
+            }
+            $uIds = $this->db_core->query("SELECT id FROM cbt_ujian WHERE topik_id = {$topikId}")->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($uIds)) {
+                $inU = implode(',', array_map('intval', $uIds));
+                $this->db_core->exec("DELETE FROM cbt_soal WHERE ujian_id IN ({$inU})");
+                $this->db_core->exec("DELETE FROM cbt_peserta_jawaban WHERE ujian_id IN ({$inU})");
+                $this->db_core->exec("DELETE FROM cbt_jawaban WHERE ujian_id IN ({$inU})");
+                $this->db_core->exec("DELETE FROM cbt_peserta WHERE ujian_id IN ({$inU})");
+            }
+        } catch (\Exception $e) {}
+
+        // 2. Panggil CbtDummyGenerator untuk generate 10 butir soal Matematika (5 model soal AKM)
+        if (class_exists('\\App\\Services\\CbtDummyGenerator')) {
+            \App\Services\CbtDummyGenerator::generateAll($topikId);
+        }
+
+        // 3. Panggil CbtBiologiArabGenerator untuk generate 10 butir Biologi & 10 butir Bahasa Arab (5 model soal AKM)
+        if (class_exists('\\App\\Services\\CbtBiologiArabGenerator')) {
+            \App\Services\CbtBiologiArabGenerator::generateAll($topikId);
+        }
+
+        // 4. Sinkronkan langsung dengan jadwal dan ujian CBT
+        try {
+            \App\Controllers\CbtController::syncJadwalWithUjian($this->db_core, $this->db, $topikId);
+        } catch (\Exception $e) {}
+
+        redirect(base_url("bank_soal?topik_id={$topikId}&msg=dummy_created"));
+        exit;
     }
 
     /**
      * Kosongkan Bank Soal (Reset Data Soal & Paket)
      */
     public function resetData() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $topikId = isset($_POST['topik_id']) ? (int)$_POST['topik_id'] : 0;
-            if ($topikId > 0) {
-                $this->db->prepare("DELETE FROM bs_soal WHERE topik_id = ?")->execute([$topikId]);
-                $this->db->prepare("DELETE FROM bs_paket WHERE topik_id = ?")->execute([$topikId]);
-                redirect("/bank_soal?topik_id={$topikId}&msg=bank_reset");
-                exit;
-            } else {
-                $this->db->exec("TRUNCATE TABLE bs_soal");
-                $this->db->exec("TRUNCATE TABLE bs_paket");
-                redirect("/bank_soal?msg=bank_reset_all");
-                exit;
-            }
+        $topikId = isset($_REQUEST['topik_id']) ? (int)$_REQUEST['topik_id'] : 0;
+        if ($topikId > 0) {
+            $this->db->prepare("DELETE FROM bs_soal WHERE topik_id = ?")->execute([$topikId]);
+            $this->db->prepare("DELETE FROM bs_paket WHERE topik_id = ?")->execute([$topikId]);
+            redirect(base_url("bank_soal?topik_id={$topikId}&msg=bank_reset"));
+            exit;
+        } else {
+            $this->db->exec("TRUNCATE TABLE bs_soal");
+            $this->db->exec("TRUNCATE TABLE bs_paket");
+            redirect(base_url("bank_soal?msg=bank_reset_all"));
+            exit;
         }
-        redirect('/bank_soal');
     }
 
     /**

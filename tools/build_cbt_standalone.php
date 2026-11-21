@@ -63,6 +63,16 @@ function build_cbt_standalone_package() {
         $zip->addFile($baseDir . '/app/Core/Branding.php', 'app/Core/Branding.php');
     }
     $zip->addFile($baseDir . '/app/Services/AuditLogger.php', 'app/Services/AuditLogger.php');
+    if (file_exists($baseDir . '/app/Services/CbtDummyGenerator.php')) {
+        $zip->addFile($baseDir . '/app/Services/CbtDummyGenerator.php', 'app/Services/CbtDummyGenerator.php');
+    }
+    if (file_exists($baseDir . '/app/Services/CbtBiologiArabGenerator.php')) {
+        $zip->addFile($baseDir . '/app/Services/CbtBiologiArabGenerator.php', 'app/Services/CbtBiologiArabGenerator.php');
+    }
+    $datasetFiles = glob($baseDir . '/app/Services/Datasets/*.php');
+    foreach ($datasetFiles as $df) {
+        $zip->addFile($df, 'app/Services/Datasets/' . basename($df));
+    }
 
     // 3. Config Database Local Default
     $dbConfigContent = <<<'PHP'
@@ -211,23 +221,59 @@ $router->add('GET', '/soal', [\App\Controllers\CbtController::class, 'soal']);
 // Bank Soal Suite (Sama persis seperti di Server Pusat)
 $router->add('GET', '/bank_soal', [\App\Controllers\BankSoalController::class, 'dashboard']);
 $router->add('GET', '/cbt/bank_soal', function() { redirect('/bank_soal'); exit; });
+$router->add('POST', '/bank_soal/generate-dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('GET', '/bank_soal/generate-dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('POST', '/bank_soal/generate_dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('GET', '/bank_soal/generate_dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('POST', '/bank_soal/generate dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('GET', '/bank_soal/generate dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+
+$router->add('POST', '/cbt/bank_soal/generate-dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('GET', '/cbt/bank_soal/generate-dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('POST', '/cbt/bank_soal/generate_dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('GET', '/cbt/bank_soal/generate_dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('POST', '/cbt/bank_soal/generate dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+$router->add('GET', '/cbt/bank_soal/generate dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
+
+$router->add('POST', '/bank_soal/reset-data', [\App\Controllers\BankSoalController::class, 'resetData']);
+$router->add('GET', '/bank_soal/reset-data', [\App\Controllers\BankSoalController::class, 'resetData']);
+$router->add('POST', '/cbt/bank_soal/reset-data', [\App\Controllers\BankSoalController::class, 'resetData']);
+$router->add('GET', '/cbt/bank_soal/reset-data', [\App\Controllers\BankSoalController::class, 'resetData']);
+
 $router->add('GET', '/bank_soal/kelola_soal', [\App\Controllers\BankSoalController::class, 'kelolaSoal']);
+$router->add('GET', '/cbt/bank_soal/kelola_soal', [\App\Controllers\BankSoalController::class, 'kelolaSoal']);
 $router->add('GET', '/bank_soal/daftar_soal', [\App\Controllers\BankSoalController::class, 'daftarSoal']);
+$router->add('GET', '/cbt/bank_soal/daftar_soal', [\App\Controllers\BankSoalController::class, 'daftarSoal']);
 $router->add('GET', '/bank_soal/tambah_soal', [\App\Controllers\BankSoalController::class, 'tambahSoal']);
+$router->add('GET', '/cbt/bank_soal/tambah_soal', [\App\Controllers\BankSoalController::class, 'tambahSoal']);
 $router->add('POST', '/bank_soal/tambah_soal', [\App\Controllers\BankSoalController::class, 'simpanSoal']);
+$router->add('POST', '/cbt/bank_soal/tambah_soal', [\App\Controllers\BankSoalController::class, 'simpanSoal']);
 $router->add('POST', '/bank_soal/soal/simpan', [\App\Controllers\BankSoalController::class, 'simpanSoal']);
+$router->add('POST', '/cbt/bank_soal/soal/simpan', [\App\Controllers\BankSoalController::class, 'simpanSoal']);
 $router->add('GET', '/bank_soal/hapus_soal', [\App\Controllers\BankSoalController::class, 'hapusSoal']);
+$router->add('GET', '/cbt/bank_soal/hapus_soal', [\App\Controllers\BankSoalController::class, 'hapusSoal']);
 $router->add('POST', '/bank_soal/hapus_soal', [\App\Controllers\BankSoalController::class, 'hapusSoal']);
+$router->add('POST', '/cbt/bank_soal/hapus_soal', [\App\Controllers\BankSoalController::class, 'hapusSoal']);
 $router->add('POST', '/bank_soal/soal/copy', [\App\Controllers\BankSoalController::class, 'copySoal']);
+$router->add('POST', '/cbt/bank_soal/soal/copy', [\App\Controllers\BankSoalController::class, 'copySoal']);
 $router->add('POST', '/bank_soal/paket/simpan', [\App\Controllers\BankSoalController::class, 'simpanPaket']);
+$router->add('POST', '/cbt/bank_soal/paket/simpan', [\App\Controllers\BankSoalController::class, 'simpanPaket']);
 $router->add('POST', '/bank_soal/paket/hapus', [\App\Controllers\BankSoalController::class, 'hapusPaket']);
+$router->add('POST', '/cbt/bank_soal/paket/hapus', [\App\Controllers\BankSoalController::class, 'hapusPaket']);
 $router->add('POST', '/bank_soal/paket/toggle-lock', [\App\Controllers\BankSoalController::class, 'toggleLockPaket']);
+$router->add('POST', '/cbt/bank_soal/paket/toggle-lock', [\App\Controllers\BankSoalController::class, 'toggleLockPaket']);
 $router->add('POST', '/bank_soal/paket/sync-jadwal', [\App\Controllers\BankSoalController::class, 'syncFromJadwal']);
+$router->add('POST', '/cbt/bank_soal/paket/sync-jadwal', [\App\Controllers\BankSoalController::class, 'syncFromJadwal']);
 $router->add('POST', '/bank_soal/paket/sync-pengampu', [\App\Controllers\BankSoalController::class, 'syncFromPengampu']);
 $router->add('GET', '/bank_soal/paket/sync-pengampu', [\App\Controllers\BankSoalController::class, 'syncFromPengampu']);
+$router->add('POST', '/cbt/bank_soal/paket/sync-pengampu', [\App\Controllers\BankSoalController::class, 'syncFromPengampu']);
+$router->add('GET', '/cbt/bank_soal/paket/sync-pengampu', [\App\Controllers\BankSoalController::class, 'syncFromPengampu']);
 $router->add('GET', '/bank_soal/topik', [\App\Controllers\BankSoalController::class, 'indexTopik']);
+$router->add('GET', '/cbt/bank_soal/topik', [\App\Controllers\BankSoalController::class, 'indexTopik']);
 $router->add('POST', '/bank_soal/topik/simpan', [\App\Controllers\BankSoalController::class, 'simpanTopik']);
+$router->add('POST', '/cbt/bank_soal/topik/simpan', [\App\Controllers\BankSoalController::class, 'simpanTopik']);
 $router->add('GET', '/bank_soal/topik/hapus', [\App\Controllers\BankSoalController::class, 'hapusTopik']);
+$router->add('GET', '/cbt/bank_soal/topik/hapus', [\App\Controllers\BankSoalController::class, 'hapusTopik']);
 
 $router->add('GET', '/cbt/token', [\App\Controllers\CbtController::class, 'token']);
 $router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::class, 'generateToken']);
@@ -312,19 +358,25 @@ $router->add('POST', '/cbt/semi-online/api/import-hasil', [\App\Controllers\CbtC
 // Dispatch router
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$rawUri = rawurldecode($requestUri);
 
 $base = dirname($_SERVER['SCRIPT_NAME']);
 $base = str_replace('\\', '/', $base);
 $base = preg_replace('#/public.*$#', '', $base);
 if ($base !== '/' && $base !== '') {
     $requestUri = preg_replace('#^' . preg_quote($base, '#') . '#', '', $requestUri);
+    $rawUri = preg_replace('#^' . preg_quote($base, '#') . '#', '', $rawUri);
+}
+if (strpos($requestUri, '/cbt/') === 0) {
+    $requestUri = substr($requestUri, 4);
+    $rawUri = substr($rawUri, 4);
 }
 if (empty($requestUri)) $requestUri = '/';
 
 if (method_exists($router, 'dispatch')) {
     $router->dispatch($requestMethod, $requestUri);
 } else {
-    $router->run();
+    $router->run($requestMethod, $requestUri);
 }
 PHP;
     $zip->addFromString('public/index.php', $publicIndexContent);
