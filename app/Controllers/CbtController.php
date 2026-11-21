@@ -2336,6 +2336,8 @@ class CbtController {
             exit;
         }
 
+        $mapelNama = trim($ujianInfo['mapel_nama'] ?? '');
+
         // Ambil daftar butir soal real
         $stmtS = $db->prepare("SELECT * FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
         $stmtS->execute([$ujian_id]);
@@ -3013,6 +3015,8 @@ class CbtController {
             redirect('/cbt/ujian');
             exit;
         }
+
+        $mapelNama = trim($ujianInfo['mapel_nama'] ?? '');
 
         // Ambil butir soal (Lengkap dengan tipe_soal dan konten_tambahan untuk 5 model CBT)
         $stmtS = $db->prepare("SELECT id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
