@@ -3092,9 +3092,11 @@ class CbtController {
             ]);
             $jGrid = $stmtToday->fetch(PDO::FETCH_ASSOC);
 
+            $apkCbtRedirectUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+
             if (!$jGrid) {
                 // Tidak ada jadwal untuk hari ini!
-                echo "<script>alert('Mata pelajaran ini tidak dijadwalkan pada hari ini! Silakan periksa kembali jadwal resmi.'); window.location.href='/apk/cbt.php';</script>";
+                echo "<script>alert('Mata pelajaran ini tidak dijadwalkan pada hari ini! Silakan periksa kembali jadwal resmi.'); window.location.href='{$apkCbtRedirectUrl}';</script>";
                 exit;
             }
 
@@ -3110,7 +3112,7 @@ class CbtController {
             if (!empty($jMulai)) {
                 $startTs = strtotime($todayDate . ' ' . $jMulai);
                 if ($nowTs < $startTs) {
-                    echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai hari ini pukul " . substr($jMulai, 0, 5) . " WIB.'); window.location.href='/apk/cbt.php';</script>";
+                    echo "<script>alert('Sesi ujian belum dibuka! Waktu mulai hari ini pukul " . substr($jMulai, 0, 5) . " WIB.'); window.location.href='{$apkCbtRedirectUrl}';</script>";
                     exit;
                 }
             }
@@ -3118,7 +3120,7 @@ class CbtController {
             if (!empty($jSelesai)) {
                 $endTs = strtotime($todayDate . ' ' . $jSelesai);
                 if ($nowTs > $endTs) {
-                    echo "<script>alert('Waktu pelaksanaan sesi ujian ini telah berakhir pada pukul " . substr($jSelesai, 0, 5) . " WIB! Anda tidak dapat mengerjakan di luar jam sesi resmi. Hubungi proktor jika Anda membutuhkan ujian susulan.'); window.location.href='/apk/cbt.php';</script>";
+                    echo "<script>alert('Waktu pelaksanaan sesi ujian ini telah berakhir pada pukul " . substr($jSelesai, 0, 5) . " WIB! Anda tidak dapat mengerjakan di luar jam sesi resmi. Hubungi proktor jika Anda membutuhkan ujian susulan.'); window.location.href='{$apkCbtRedirectUrl}';</script>";
                     exit;
                 }
             }
@@ -5633,7 +5635,8 @@ class CbtController {
         }
         $port = $_SERVER['SERVER_PORT'] ?? '80';
         $portStr = ($port === '80' || $port === '443') ? '' : (':' . $port);
-        $localUrl = "http://{$localIp}{$portStr}/apk/cbt.php";
+        $cbtRelPath = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+        $localUrl = "http://{$localIp}{$portStr}{$cbtRelPath}";
 
         // Hitung statistik data di database lokal
         $countJadwal = (int)$db->query("SELECT COUNT(*) FROM cbt_jadwal_grid")->fetchColumn();

@@ -144,8 +144,11 @@ $showScore = isset($showScore) ? (bool)$showScore : true;
             </div>
         </div>
 
+        <?php
+            $apkCbtUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+        ?>
         <div style="display: flex; gap: 10px; justify-content: center; flex-direction: column; align-items: stretch; margin-top: 1rem;">
-            <a href="/apk/cbt.php" style="padding: 12px 20px; border-radius: 14px; background: linear-gradient(135deg, #10b981, #0284c7); color: white; text-decoration: none; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
+            <a href="<?php echo htmlspecialchars($apkCbtUrl); ?>" style="padding: 12px 20px; border-radius: 14px; background: linear-gradient(135deg, #10b981, #0284c7); color: white; text-decoration: none; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
                 <i data-lucide="smartphone" style="width: 18px; height: 18px;"></i> Kembali ke APK Siswa
             </a>
             <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: #94a3b8; text-align: center;">
