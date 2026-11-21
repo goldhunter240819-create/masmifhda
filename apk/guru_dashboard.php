@@ -76,32 +76,80 @@ if (!$guru) {
     exit;
 }
 
-// Jadwal Mengawas CBT Hari Ini
+// Hari & Tanggal Hari Ini & Besok
+$days_ind = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+$hari_ini = $days_ind[date('w')];
+$besok = $days_ind[date('w', strtotime('+1 day'))];
+$tgl_hari_ini = date('Y-m-d');
+$tgl_besok = date('Y-m-d', strtotime('+1 day'));
+
+// Jadwal Mengawas CBT Hari Ini & Besok
 $jadwalMengawasToday = [];
+$jadwalMengawasBesok = [];
 try {
     $gNama = trim($guru['nama'] ?? '');
-    $todayDate = date('Y-m-d');
-    $stmtMng = $core_db->prepare("
-        SELECT rp.*, r.nama_ruang, r.kode_ruang, r.lokasi, t.nama_topik, t.tgl_mulai, t.tgl_selesai
-        FROM cbt_ruang_pengawas rp
-        JOIN cbt_ruang r ON rp.ruang_id = r.id
-        LEFT JOIN bs_topik t ON rp.topik_id = t.id
-        WHERE (rp.guru_nama = :gnama OR :gnama2 LIKE CONCAT('%', rp.guru_nama, '%') OR rp.guru_nama LIKE CONCAT('%', :gnama3, '%'))
-          AND (
-              t.status = 'Aktif'
-              OR (t.tgl_mulai <= :today AND t.tgl_selesai >= :today2)
-              OR rp.topik_id IS NULL
-          )
-        ORDER BY rp.sesi_label ASC, rp.id ASC
+    
+    // 1. Jadwal Mengawas Hari Ini (cbt_pengawas_jadwal)
+    $stmtPJToday = $core_db->prepare("
+        SELECT pj.*, t.nama_topik, t.tahun_ajaran
+        FROM cbt_pengawas_jadwal pj
+        LEFT JOIN bs_topik t ON pj.topik_id = t.id
+        WHERE (pj.guru_id = :gid OR pj.guru_nama = :gnama OR :gnama2 LIKE CONCAT('%', pj.guru_nama, '%'))
+          AND (pj.tanggal = :today OR ((pj.tanggal IS NULL OR pj.tanggal = '') AND pj.hari = :hari_ini))
+        ORDER BY pj.sesi_label ASC, pj.id ASC
     ");
-    $stmtMng->execute([
+    $stmtPJToday->execute([
+        ':gid' => $guru_id,
         ':gnama' => $gNama,
         ':gnama2' => $gNama,
-        ':gnama3' => $gNama,
-        ':today' => $todayDate,
-        ':today2' => $todayDate
+        ':today' => $tgl_hari_ini,
+        ':hari_ini' => $hari_ini
     ]);
-    $jadwalMengawasToday = $stmtMng->fetchAll(PDO::FETCH_ASSOC);
+    $jadwalMengawasToday = $stmtPJToday->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fallback cbt_ruang_pengawas untuk hari ini jika kosong
+    if (empty($jadwalMengawasToday)) {
+        $stmtMng = $core_db->prepare("
+            SELECT rp.*, r.nama_ruang, r.kode_ruang, r.lokasi, t.nama_topik, t.tgl_mulai, t.tgl_selesai
+            FROM cbt_ruang_pengawas rp
+            JOIN cbt_ruang r ON rp.ruang_id = r.id
+            LEFT JOIN bs_topik t ON rp.topik_id = t.id
+            WHERE (rp.guru_nama = :gnama OR :gnama2 LIKE CONCAT('%', rp.guru_nama, '%') OR rp.guru_nama LIKE CONCAT('%', :gnama3, '%'))
+              AND (
+                  t.status = 'Aktif'
+                  OR (t.tgl_mulai <= :today AND t.tgl_selesai >= :today2)
+                  OR rp.topik_id IS NULL
+              )
+            ORDER BY rp.sesi_label ASC, rp.id ASC
+        ");
+        $stmtMng->execute([
+            ':gnama' => $gNama,
+            ':gnama2' => $gNama,
+            ':gnama3' => $gNama,
+            ':today' => $tgl_hari_ini,
+            ':today2' => $tgl_hari_ini
+        ]);
+        $jadwalMengawasToday = $stmtMng->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // 2. Jadwal Mengawas Besok (Pengingat H-1)
+    $stmtPJBesok = $core_db->prepare("
+        SELECT pj.*, t.nama_topik, t.tahun_ajaran
+        FROM cbt_pengawas_jadwal pj
+        LEFT JOIN bs_topik t ON pj.topik_id = t.id
+        WHERE (pj.guru_id = :gid OR pj.guru_nama = :gnama OR :gnama2 LIKE CONCAT('%', pj.guru_nama, '%'))
+          AND (pj.tanggal = :tomorrow OR ((pj.tanggal IS NULL OR pj.tanggal = '') AND pj.hari = :besok))
+        ORDER BY pj.sesi_label ASC, pj.id ASC
+    ");
+    $stmtPJBesok->execute([
+        ':gid' => $guru_id,
+        ':gnama' => $gNama,
+        ':gnama2' => $gNama,
+        ':tomorrow' => $tgl_besok,
+        ':besok' => $besok
+    ]);
+    $jadwalMengawasBesok = $stmtPJBesok->fetchAll(PDO::FETCH_ASSOC);
+
 } catch (Exception $e) {}
 
 $page_title = 'Portal Guru';
@@ -211,16 +259,70 @@ include 'header.php';
 </div>
 
 <div class="main-content">
+    <!-- PENGINGAT: Jadwal Mengawas CBT Besok (H-1) -->
+    <?php if (!empty($jadwalMengawasBesok)): ?>
+    <div style="background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%); border-radius: 18px; padding: 18px; margin-bottom: 20px; color: white; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3); border: 1px solid rgba(255,255,255,0.2); position: relative; overflow: hidden;">
+        <div style="position: absolute; right: -15px; bottom: -20px; font-size: 7rem; opacity: 0.1; color: white; pointer-events: none;">
+            <i class="fa-solid fa-bell"></i>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; position: relative; z-index: 2;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <i class="fa-solid fa-bell" style="color: #fde047;"></i>
+                </span>
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">PENGINGAT PENGAWAS CBT</div>
+                    <div style="font-weight: 900; font-size: 1.05rem;">Besok Ada Jadwal Mengawas!</div>
+                </div>
+            </div>
+            <span style="background: #ffffff; color: #1e40af; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 900; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                Besok (<?= htmlspecialchars($besok) ?>) &bull; <?= count($jadwalMengawasBesok) ?> Sesi
+            </span>
+        </div>
+        <div style="font-size: 0.82rem; opacity: 0.95; margin-bottom: 12px; line-height: 1.4; position: relative; z-index: 2;">
+            Bapak/Ibu <strong><?= htmlspecialchars($guru['nama']) ?></strong>, besok Anda memiliki tugas pengawasan ujian CBT pada jadwal berikut:
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 2;">
+            <?php foreach ($jadwalMengawasBesok as $jmb): ?>
+                <div style="background: rgba(255,255,255,0.18); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.2);">
+                    <div>
+                        <div style="font-weight: 900; font-size: 0.95rem;">
+                            <i class="fa-solid fa-door-open" style="margin-right: 4px; color: #fde047;"></i> <?= htmlspecialchars($jmb['ruang_nama'] ?? ($jmb['nama_ruang'] ?? 'Ruang Ujian')) ?>
+                        </div>
+                        <div style="font-size: 0.74rem; opacity: 0.92; margin-top: 2px;">
+                            <?= htmlspecialchars($jmb['nama_topik'] ?: 'Asesmen CBT') ?> &bull; Tanggal: <?= !empty($jmb['tanggal']) ? date('d M Y', strtotime($jmb['tanggal'])) : $besok ?>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="background: white; color: #1e40af; font-weight: 900; font-size: 0.75rem; padding: 5px 12px; border-radius: 8px; display: inline-block;">
+                            <?= htmlspecialchars($jmb['sesi_label']) ?><?= !empty($jmb['jam_slot']) ? ' (' . htmlspecialchars($jmb['jam_slot']) . ')' : '' ?>
+                        </span>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <div style="margin-top: 10px; font-size: 0.73rem; opacity: 0.92; display: flex; align-items: center; gap: 6px; position: relative; z-index: 2;">
+            <i class="fa-solid fa-qrcode" style="color: #fde047;"></i>
+            <span>Harap bawa Kartu Pengawas untuk scan barcode presensi di meja proktor sebelum sesi ujian dimulai.</span>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Jadwal Mengawas CBT Hari Ini -->
     <?php if (!empty($jadwalMengawasToday)): ?>
-    <div style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%); border-radius: 16px; padding: 16px; margin-bottom: 20px; color: white; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25);">
+    <div style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%); border-radius: 18px; padding: 18px; margin-bottom: 20px; color: white; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25); border: 1px solid rgba(255,255,255,0.2); position: relative; overflow: hidden;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-clipboard-user" style="font-size: 1.25rem;"></i>
-                <span style="font-weight: 800; font-size: 0.95rem;">Jadwal Mengawas CBT Hari Ini</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-size: 1.15rem;">
+                    <i class="fa-solid fa-clipboard-user"></i>
+                </span>
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">TUGAS HARI INI</div>
+                    <div style="font-weight: 900; font-size: 1.05rem;">Jadwal Mengawas CBT Hari Ini</div>
+                </div>
             </div>
-            <span style="background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 800;">
-                <?= count($jadwalMengawasToday) ?> Sesi
+            <span style="background: white; color: #047857; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 900;">
+                Hari Ini &bull; <?= count($jadwalMengawasToday) ?> Sesi
             </span>
         </div>
         <div style="font-size: 0.82rem; opacity: 0.95; margin-bottom: 12px;">
@@ -231,10 +333,10 @@ include 'header.php';
                 <div style="background: rgba(255,255,255,0.18); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(4px);">
                     <div>
                         <div style="font-weight: 900; font-size: 0.95rem;">
-                            <i class="fa-solid fa-door-open" style="margin-right: 4px;"></i> <?= htmlspecialchars($jm['nama_ruang']) ?> (<?= htmlspecialchars($jm['kode_ruang']) ?>)
+                            <i class="fa-solid fa-door-open" style="margin-right: 4px;"></i> <?= htmlspecialchars($jm['ruang_nama'] ?? ($jm['nama_ruang'] ?? 'Ruang Ujian')) ?>
                         </div>
                         <div style="font-size: 0.74rem; opacity: 0.9; margin-top: 2px;">
-                            <?= htmlspecialchars($jm['nama_topik'] ?: 'Ujian CBT') ?> • <?= htmlspecialchars($jm['lokasi'] ?: 'Gedung Utama') ?>
+                            <?= htmlspecialchars($jm['nama_topik'] ?: 'Ujian CBT') ?>
                         </div>
                     </div>
                     <div style="text-align: right;">
@@ -244,6 +346,10 @@ include 'header.php';
                     </div>
                 </div>
             <?php endforeach; ?>
+        </div>
+        <div style="margin-top: 10px; font-size: 0.73rem; opacity: 0.92; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-qrcode"></i>
+            <span>Silakan lakukan scan kartu pengawas ke meja proktor untuk validasi kehadiran.</span>
         </div>
     </div>
     <?php endif; ?>

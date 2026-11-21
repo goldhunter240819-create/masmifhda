@@ -88,6 +88,45 @@ $active_menu = 'pengawas_scan';
     font-weight: 700;
     border: 1px solid #cbd5e1;
 }
+
+/* Standard Elite Header Buttons */
+.e-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border: none;
+    line-height: 1.2;
+}
+.e-btn-primary {
+    background: #ffffff;
+    color: #059669;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+}
+.e-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    background: #f8fafc;
+    color: #047857;
+}
+.e-btn-glass {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.e-btn-glass:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    transform: translateY(-2px);
+}
 </style>
 
 <div class="siakad-container">
@@ -107,17 +146,14 @@ $active_menu = 'pengawas_scan';
                             <i class="fa-solid fa-id-badge"></i> KHUSUS KOMPUTER PROKTOR
                         </div>
                         <h1><i class="fa-solid fa-user-check" style="color: #10b981;"></i> Scan Presensi Pengawas Ruang</h1>
-                        <p>Titik presensi resmi bapak/ibu pengawas ujian CBT per sesi dan ruang. Data tersimpan real-time untuk validasi Berita Acara dan kalkulasi honorarium.</p>
+                        <p>Titik presensi resmi bapak/ibu pengawas ujian CBT per sesi dan ruang. Data tersimpan real-time untuk validasi berita acara dan monitoring kehadiran pengawas.</p>
                     </div>
-                    <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal') : '/cbt/pengawas/jadwal' ?>" class="btn-head-outline">
+                    <div class="header-actions-premium" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal') : '/cbt/pengawas/jadwal' ?>" class="e-btn e-btn-glass">
                             <i class="fa-solid fa-calendar-days"></i> Matriks Jadwal
                         </a>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/rekap') : '/cbt/pengawas/rekap' ?>" class="btn-head-outline" style="border-color: #10b981; color: #10b981;">
-                            <i class="fa-solid fa-file-invoice-dollar"></i> Rekap & Honorarium
-                        </a>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/ruang/berita-acara') : '/cbt/ruang/berita-acara' ?>" class="btn-head-outline">
-                            <i class="fa-solid fa-print"></i> Cetak Berita Acara
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/rekap') : '/cbt/pengawas/rekap' ?>" class="e-btn e-btn-primary">
+                            <i class="fa-solid fa-clipboard-check"></i> Rekap Presensi Pengawas
                         </a>
                     </div>
                 </div>
@@ -475,7 +511,12 @@ function submitQuickGuru() {
     if (val) {
         submitPresensiAjax(val, 'MANUAL_PILIH');
     } else {
-        alert('Pilih nama pengawas terlebih dahulu!');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Pilih Pengawas',
+            text: 'Silakan pilih nama pengawas terlebih dahulu dari daftar!',
+            confirmButtonColor: '#0284c7'
+        });
     }
 }
 
@@ -561,7 +602,12 @@ function toggleCamera() {
             placeholder.style.display = 'none';
             laserOverlay.style.display = 'flex';
         }).catch(err => {
-            alert('Tidak dapat mengakses kamera: ' + err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Akses Kamera Gagal',
+                text: 'Tidak dapat mengakses kamera: ' + err,
+                confirmButtonColor: '#0284c7'
+            });
         });
     }
 }

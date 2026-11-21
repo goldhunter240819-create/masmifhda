@@ -1,13 +1,14 @@
 <?php
-$pageTitle = 'Rekapitulasi Presensi & Honorarium Pengawas Ruang';
+$pageTitle = 'Rekapitulasi Presensi Pengawas Ruang CBT';
 $active_menu = 'pengawas_rekap';
+$totalRuangDiawasi = $totalRuangDiawasi ?? 0;
 ?>
 <!-- SweetAlert2 Modern -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-.stat-card-honor {
+.stat-card-presensi {
     background: #ffffff;
     border-radius: 18px;
     padding: 1.25rem 1.5rem;
@@ -16,6 +17,11 @@ $active_menu = 'pengawas_rekap';
     display: flex;
     align-items: center;
     gap: 1.25rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card-presensi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
 }
 .stat-icon-wrapper {
     width: 52px;
@@ -25,6 +31,7 @@ $active_menu = 'pengawas_rekap';
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
+    flex-shrink: 0;
 }
 .chip-soft {
     display: inline-flex;
@@ -34,6 +41,45 @@ $active_menu = 'pengawas_rekap';
     border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 700;
+}
+
+/* Standard Elite Header Buttons */
+.e-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border: none;
+    line-height: 1.2;
+}
+.e-btn-primary {
+    background: #ffffff;
+    color: #059669;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+}
+.e-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    background: #f8fafc;
+    color: #047857;
+}
+.e-btn-glass {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.e-btn-glass:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    transform: translateY(-2px);
 }
 </style>
 
@@ -51,20 +97,20 @@ $active_menu = 'pengawas_rekap';
                 <div class="header-content-inner">
                     <div class="header-text-premium">
                         <div class="header-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            <i class="fa-solid fa-coins"></i> KEUANGAN & HONORARIUM CBT
+                            <i class="fa-solid fa-clipboard-check"></i> PRESENSI & MONITORING PENGAWAS
                         </div>
-                        <h1><i class="fa-solid fa-file-invoice-dollar" style="color: #10b981;"></i> Rekap Presensi & Honorarium Pengawas</h1>
-                        <p>Kalkulasi otomatis jumlah sesi pengawasan ruang ujian dan nominal honorarium per pengawas berdasarkan presensi kartu scan terverifikasi.</p>
+                        <h1><i class="fa-solid fa-user-check" style="color: #10b981;"></i> Rekap Presensi Pengawas Ruang</h1>
+                        <p>Monitoring kehadiran dan rekapitulasi sesi pengawasan ruang ujian per pengawas berdasarkan presensi kartu scan terverifikasi.</p>
                     </div>
-                    <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/scan') : '/cbt/pengawas/scan' ?>" class="btn-head-outline">
+                    <div class="header-actions-premium" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/scan') : '/cbt/pengawas/scan' ?>" class="e-btn e-btn-glass">
                             <i class="fa-solid fa-camera"></i> Buka Scanner
                         </a>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal') : '/cbt/pengawas/jadwal' ?>" class="btn-head-outline">
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal') : '/cbt/pengawas/jadwal' ?>" class="e-btn e-btn-glass">
                             <i class="fa-solid fa-calendar-days"></i> Matriks Jadwal
                         </a>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/cetak-honor?topik_id=' . $selectedTopikId . '&tgl_mulai=' . urlencode($tglMulai) . '&tgl_selesai=' . urlencode($tglSelesai) . '&honor_sesi=' . $honorPerSesi) : '/cbt/pengawas/cetak-honor' ?>" target="_blank" class="btn-head-primary" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
-                            <i class="fa-solid fa-print"></i> Cetak Tanda Terima Honor
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/cetak-rekap?topik_id=' . $selectedTopikId . '&tgl_mulai=' . urlencode($tglMulai) . '&tgl_selesai=' . urlencode($tglSelesai)) : '/cbt/pengawas/cetak-rekap' ?>" target="_blank" class="e-btn e-btn-primary">
+                            <i class="fa-solid fa-print"></i> Cetak Rekap Presensi (A4)
                         </a>
                     </div>
                 </div>
@@ -73,7 +119,7 @@ $active_menu = 'pengawas_rekap';
             <!-- Main Content Container -->
             <div style="max-width: 1300px; margin: 1.5rem auto; padding: 0 1.5rem;">
 
-                <!-- Filter & Settings Bar -->
+                <!-- Filter Bar -->
                 <div style="background: #ffffff; border-radius: 20px; padding: 1.25rem 1.5rem; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
                     <form method="GET" action="" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
                         <div style="flex: 1; min-width: 220px;">
@@ -112,7 +158,7 @@ $active_menu = 'pengawas_rekap';
                 <!-- 4 KPI Statistic Cards -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                     
-                    <div class="stat-card-honor">
+                    <div class="stat-card-presensi">
                         <div class="stat-icon-wrapper" style="background: #eff6ff; color: #2563eb;">
                             <i class="fa-solid fa-business-time"></i>
                         </div>
@@ -125,7 +171,7 @@ $active_menu = 'pengawas_rekap';
                         </div>
                     </div>
 
-                    <div class="stat-card-honor">
+                    <div class="stat-card-presensi">
                         <div class="stat-icon-wrapper" style="background: #f0fdf4; color: #16a34a;">
                             <i class="fa-solid fa-chalkboard-user"></i>
                         </div>
@@ -133,56 +179,54 @@ $active_menu = 'pengawas_rekap';
                             <div style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Pengawas Bertugas</div>
                             <div style="font-size: 1.7rem; font-weight: 900; color: #0f172a; line-height: 1.2;"><?= count($rekapList) ?></div>
                             <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; margin-top: 2px;">
-                                Guru / Pengawas Ruang
+                                Guru / Pengawas Aktif
                             </div>
                         </div>
                     </div>
 
-                    <div class="stat-card-honor">
+                    <div class="stat-card-presensi">
                         <div class="stat-icon-wrapper" style="background: #fefce8; color: #ca8a04;">
-                            <i class="fa-solid fa-tag"></i>
+                            <i class="fa-solid fa-door-open"></i>
                         </div>
                         <div>
-                            <div style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Tarif Honor Per-Sesi</div>
-                            <div style="font-size: 1.4rem; font-weight: 900; color: #0f172a; line-height: 1.2;">
-                                Rp <?= number_format($honorPerSesi, 0, ',', '.') ?>
+                            <div style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Ruang Terlayani</div>
+                            <div style="font-size: 1.7rem; font-weight: 900; color: #0f172a; line-height: 1.2;">
+                                <?= $totalRuangDiawasi ?>
                             </div>
-                            <div style="font-size: 0.72rem; color: #2563eb; font-weight: 700; margin-top: 2px;">
-                                <a href="javascript:void(0)" onclick="editTarifHonor()" style="color: #2563eb; text-decoration: none;">
-                                    <i class="fa-solid fa-pen-to-square"></i> Ubah Tarif
-                                </a>
+                            <div style="font-size: 0.72rem; color: #ca8a04; font-weight: 700; margin-top: 2px;">
+                                Ruang Ujian Aktif
                             </div>
                         </div>
                     </div>
 
-                    <div class="stat-card-honor">
-                        <div class="stat-icon-wrapper" style="background: #ecfdf5; color: #059669;">
-                            <i class="fa-solid fa-money-bill-wave"></i>
+                    <div class="stat-card-presensi">
+                        <div class="stat-icon-wrapper" style="background: #eef2ff; color: #4f46e5;">
+                            <i class="fa-solid fa-shield-halved"></i>
                         </div>
                         <div>
-                            <div style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Estimasi Total Honor</div>
-                            <div style="font-size: 1.45rem; font-weight: 900; color: #059669; line-height: 1.2;">
-                                Rp <?= number_format($totalHonorSemua, 0, ',', '.') ?>
+                            <div style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Validasi Kehadiran</div>
+                            <div style="font-size: 1.45rem; font-weight: 900; color: #4f46e5; line-height: 1.2;">
+                                100% Valid
                             </div>
-                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; margin-top: 2px;">
-                                Siap dicairkan bendahara
+                            <div style="font-size: 0.72rem; color: #10b981; font-weight: 700; margin-top: 2px;">
+                                <i class="fa-solid fa-qrcode"></i> Scan Kartu QR Proktor
                             </div>
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Table 1: Rekapitulasi Honor Pengawas -->
+                <!-- Table 1: Rekapitulasi Presensi Pengawas -->
                 <div style="background: #ffffff; border-radius: 20px; padding: 1.5rem; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
                         <div>
                             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-list-ol" style="color: #059669;"></i> Rekapitulasi Honorarium Pengawas Ruang
+                                <i class="fa-solid fa-list-check" style="color: #059669;"></i> Rekapitulasi Kehadiran Pengawas Ruang
                             </h3>
-                            <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">Jumlah total sesi dan honor yang berhak diterima masing-masing pengawas.</p>
+                            <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">Daftar akumulasi jumlah sesi dan ruangan yang diawasi oleh masing-masing guru pengawas.</p>
                         </div>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/cetak-honor?topik_id=' . $selectedTopikId . '&tgl_mulai=' . urlencode($tglMulai) . '&tgl_selesai=' . urlencode($tglSelesai) . '&honor_sesi=' . $honorPerSesi) : '/cbt/pengawas/cetak-honor' ?>" target="_blank" style="padding: 8px 16px; border-radius: 10px; background: #059669; color: white; text-decoration: none; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
-                            <i class="fa-solid fa-print"></i> Cetak Tanda Terima A4
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/cetak-rekap?topik_id=' . $selectedTopikId . '&tgl_mulai=' . urlencode($tglMulai) . '&tgl_selesai=' . urlencode($tglSelesai)) : '/cbt/pengawas/cetak-rekap' ?>" target="_blank" style="padding: 8px 16px; border-radius: 10px; background: #059669; color: white; text-decoration: none; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-print"></i> Cetak Rekap Presensi A4
                         </a>
                     </div>
 
@@ -194,9 +238,9 @@ $active_menu = 'pengawas_rekap';
                                     <th style="padding: 12px 14px;">Nama Pengawas</th>
                                     <th style="padding: 12px 14px;">NIP / ID</th>
                                     <th style="padding: 12px 14px;">Ruang Yang Diawasi</th>
+                                    <th style="padding: 12px 14px;">Tanggal Bertugas</th>
                                     <th style="padding: 12px 14px; text-align: center;">Jumlah Sesi</th>
-                                    <th style="padding: 12px 14px; text-align: right;">Honor / Sesi</th>
-                                    <th style="padding: 12px 14px; text-align: right;">Total Honor Diterima</th>
+                                    <th style="padding: 12px 14px; text-align: center;">Status Presensi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -210,9 +254,6 @@ $active_menu = 'pengawas_rekap';
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($rekapList as $idx => $rk): ?>
-                                        <?php 
-                                        $subTotalHonor = (int)$rk['total_sesi'] * $honorPerSesi;
-                                        ?>
                                         <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                                             <td style="padding: 12px 14px; font-weight: 800; color: #64748b;"><?= $idx + 1 ?></td>
                                             <td style="padding: 12px 14px;">
@@ -224,26 +265,25 @@ $active_menu = 'pengawas_rekap';
                                                     <i class="fa-solid fa-door-open"></i> <?= htmlspecialchars($rk['daftar_ruang'] ?: '-') ?>
                                                 </span>
                                             </td>
+                                            <td style="padding: 12px 14px; font-size: 0.78rem; color: #475569;">
+                                                <?= htmlspecialchars($rk['daftar_tanggal'] ?: '-') ?>
+                                            </td>
                                             <td style="padding: 12px 14px; text-align: center;">
                                                 <span class="chip-soft" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.82rem; font-weight: 800;">
                                                     <?= (int)$rk['total_sesi'] ?> Sesi
                                                 </span>
                                             </td>
-                                            <td style="padding: 12px 14px; text-align: right; font-weight: 700; color: #64748b;">
-                                                Rp <?= number_format($honorPerSesi, 0, ',', '.') ?>
-                                            </td>
-                                            <td style="padding: 12px 14px; text-align: right;">
-                                                <span style="font-weight: 900; color: #059669; font-size: 0.95rem;">
-                                                    Rp <?= number_format($subTotalHonor, 0, ',', '.') ?>
+                                            <td style="padding: 12px 14px; text-align: center;">
+                                                <span class="chip-soft" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; font-size: 0.75rem; font-weight: 800;">
+                                                    <i class="fa-solid fa-circle-check"></i> Terverifikasi Hadir
                                                 </span>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
                                     <tr style="background: #f8fafc; font-weight: 900; border-top: 2px solid #cbd5e1;">
-                                        <td colspan="4" style="padding: 14px; text-align: right; color: #0f172a; font-size: 0.95rem;">TOTAL KESELURUHAN:</td>
+                                        <td colspan="5" style="padding: 14px; text-align: right; color: #0f172a; font-size: 0.95rem;">TOTAL KESELURUHAN SESI DIAWASI:</td>
                                         <td style="padding: 14px; text-align: center; color: #2563eb; font-size: 1rem;"><?= $totalSesiDiawasi ?> Sesi</td>
-                                        <td></td>
-                                        <td style="padding: 14px; text-align: right; color: #059669; font-size: 1.1rem;">Rp <?= number_format($totalHonorSemua, 0, ',', '.') ?></td>
+                                        <td style="padding: 14px; text-align: center; color: #059669; font-size: 0.85rem;">Terdata Lengkap</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -258,7 +298,7 @@ $active_menu = 'pengawas_rekap';
                             <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
                                 <i class="fa-solid fa-clock-rotate-left" style="color: #2563eb;"></i> Riwayat Detail Presensi Pengawas (100 Terakhir)
                             </h3>
-                            <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">Log transaksi presensi per jam scan kartu.</p>
+                            <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">Log transaksi presensi per jam scan kartu pengawas.</p>
                         </div>
                     </div>
 
@@ -327,45 +367,6 @@ $active_menu = 'pengawas_rekap';
 </div>
 
 <script>
-function editTarifHonor() {
-    Swal.fire({
-        title: 'Pengaturan Tarif Honor Pengawas',
-        text: 'Masukkan besaran nominal honorarium per-sesi ujian (Rp):',
-        input: 'number',
-        inputValue: <?= $honorPerSesi ?>,
-        showCancelButton: true,
-        confirmButtonText: 'Simpan Tarif',
-        cancelButtonText: 'Batal',
-        confirmButtonColor: '#059669',
-        inputValidator: (value) => {
-            if (!value || parseInt(value) <= 0) {
-                return 'Nominal honor harus lebih dari Rp 0!';
-            }
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const saveUrl = '<?= function_exists('base_url') ? base_url('cbt/pengaturan/save') : '/cbt/pengaturan/save' ?>';
-            const formData = new FormData();
-            formData.append('honor_pengawas_per_sesi', result.value);
-
-            fetch(saveUrl, {
-                method: 'POST',
-                body: formData
-            }).then(() => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil!',
-                    text: 'Tarif honor per-sesi berhasil diperbarui menjadi Rp ' + parseInt(result.value).toLocaleString('id-ID'),
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    location.reload();
-                });
-            });
-        }
-    });
-}
-
 function hapusPresensi(id, nama, sesi) {
     Swal.fire({
         title: 'Hapus Presensi?',

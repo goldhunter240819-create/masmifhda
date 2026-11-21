@@ -129,16 +129,8 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis', 'daftar_hadir_kelas'
                         <span>Scan Presensi Pengawas</span>
                     </a>
                     <a href="<?php echo base_url('cbt/pengawas/rekap'); ?>" class="z-nav-item <?php echo $active_menu === 'pengawas_rekap' ? 'active' : ''; ?>">
-                        <i data-lucide="coins"></i>
-                        <span>Rekap & Honorarium</span>
-                    </a>
-                    <a href="<?php echo base_url('cbt/ruang/berita-acara'); ?>" class="z-nav-item <?php echo $active_menu === 'berita_acara_ruang' ? 'active' : ''; ?>">
-                        <i data-lucide="file-check-2"></i>
-                        <span>Berita Acara Per-Ruang</span>
-                    </a>
-                    <a href="<?php echo base_url('cbt/hasil/daftar-hadir-kelas'); ?>" class="z-nav-item <?php echo $active_menu === 'daftar_hadir_kelas' ? 'active' : ''; ?>">
-                        <i data-lucide="clipboard-list"></i>
-                        <span>Daftar Hadir Per-Kelas</span>
+                        <i data-lucide="clipboard-check"></i>
+                        <span>Rekap Presensi Pengawas</span>
                     </a>
                 </div>
             </div>

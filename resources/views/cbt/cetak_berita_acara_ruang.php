@@ -412,7 +412,7 @@ $tglFormatIndo = date('j', strtotime($tanggal)) . ' ' . $bulanIndo[(int)date('n'
                     <tr>
                         <td style="text-align: center; font-weight: bold;"><?= $idx + 1 ?></td>
                         <td style="text-align: center; font-family: monospace; font-size: 8pt; font-weight: bold;">
-                            <?= htmlspecialchars($ps['no_peserta'] ?: '-') ?>
+                            <?= htmlspecialchars($ps['no_peserta'] ?? ($ps['nomor_peserta'] ?? ($ps['nis'] ?? '-'))) ?>
                         </td>
                         <td style="text-align: center; font-family: monospace; font-size: 8pt;">
                             <?= htmlspecialchars($ps['nisn'] ?: ($ps['nis'] ?: '-')) ?>

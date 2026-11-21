@@ -2570,6 +2570,7 @@ $router->add('POST', '/cbt/pengawas/scan/process', [\App\Controllers\CbtControll
 $router->add('GET', '/cbt/pengawas/rekap', [\App\Controllers\CbtController::class, 'pengawasRekap']);
 $router->add('POST', '/cbt/pengawas/absensi/delete', [\App\Controllers\CbtController::class, 'deletePengawasAbsensi']);
 $router->add('GET', '/cbt/pengawas/cetak-honor', [\App\Controllers\CbtController::class, 'cetakHonorPengawas']);
+$router->add('GET', '/cbt/pengawas/cetak-rekap', [\App\Controllers\CbtController::class, 'cetakHonorPengawas']);
 $router->add('GET', '/cbt/ruang/berita-acara', [\App\Controllers\CbtController::class, 'cetakBeritaAcaraRuang']);
 $router->add('GET', '/cbt/hasil/daftar-hadir-kelas', [\App\Controllers\CbtController::class, 'cetakDaftarHadirKelas']);
 

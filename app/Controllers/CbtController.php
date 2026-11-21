@@ -5638,6 +5638,7 @@ class CbtController {
             $ruangNama = $stmtR->fetchColumn() ?: ('Ruang ' . $ruangId);
         }
 
+        $savedId = 0;
         if ($topikId > 0 && !empty($hari) && !empty($sesiLabel) && $ruangId > 0 && !empty($guruNama)) {
             if ($id > 0) {
                 $stmtUp = $db->prepare("
@@ -5646,6 +5647,7 @@ class CbtController {
                     WHERE id = ?
                 ");
                 $stmtUp->execute([$topikId, $hari, $tanggal, $sesiLabel, $jamSlot, $ruangId, $ruangNama, $guruId, $guruNama, $guruNip, $id]);
+                $savedId = $id;
             } else {
                 $existingId = null;
                 if (!empty($tanggal)) {
@@ -5665,6 +5667,7 @@ class CbtController {
                         WHERE id = ?
                     ");
                     $stmtUp->execute([$hari, $tanggal, $jamSlot, $ruangNama, $guruId, $guruNama, $guruNip, $existingId]);
+                    $savedId = (int)$existingId;
                 } else {
                     $stmtIns = $db->prepare("
                         INSERT INTO cbt_pengawas_jadwal 
@@ -5672,13 +5675,28 @@ class CbtController {
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmtIns->execute([$topikId, $hari, $tanggal, $sesiLabel, $jamSlot, $ruangId, $ruangNama, $guruId, $guruNama, $guruNip]);
+                    $savedId = (int)$db->lastInsertId();
                 }
             }
         }
 
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => 'Penugasan pengawas berhasil disimpan!']);
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Penugasan pengawas berhasil disimpan!',
+                'id' => $savedId ?? ($id > 0 ? $id : ($existingId ?? 0)),
+                'topik_id' => $topikId,
+                'hari' => $hari,
+                'tanggal' => $tanggal,
+                'sesi_label' => $sesiLabel,
+                'jam_slot' => $jamSlot,
+                'ruang_id' => $ruangId,
+                'ruang_nama' => $ruangNama,
+                'guru_id' => $guruId,
+                'guru_nama' => $guruNama,
+                'guru_nip' => $guruNip
+            ]);
             exit;
         }
 
@@ -6026,13 +6044,20 @@ class CbtController {
         $detailList = $stmtDetail->fetchAll(PDO::FETCH_ASSOC);
 
         $totalSesiDiawasi = 0;
-        $totalHonorSemua = 0;
+        $ruangDiawasiSet = [];
         foreach ($rekapList as $rk) {
             $totalSesiDiawasi += (int)$rk['total_sesi'];
-            $totalHonorSemua += ((int)$rk['total_sesi'] * $honorPerSesi);
+            if (!empty($rk['daftar_ruang'])) {
+                $rArray = explode(',', $rk['daftar_ruang']);
+                foreach ($rArray as $rItem) {
+                    $trimR = trim($rItem);
+                    if ($trimR !== '') $ruangDiawasiSet[$trimR] = true;
+                }
+            }
         }
+        $totalRuangDiawasi = count($ruangDiawasiSet);
 
-        $title = "Rekap Kehadiran & Honorarium Pengawas Ruang - MAS MIFTAHUL HUDA";
+        $title = "Rekap Presensi Pengawas Ruang - MAS MIFTAHUL HUDA";
         $active_menu = 'pengawas_rekap';
         ob_start();
         include __DIR__ . '/../../resources/views/cbt/pengawas_rekap.php';
@@ -6164,6 +6189,7 @@ class CbtController {
         if ($ruangId > 0) {
             $stmtP = $db->prepare("
                 SELECT d.*, 
+                       COALESCE(s.nomor_peserta, s.nis, d.nis, '-') as no_peserta,
                        COALESCE(s.nisn, '-') as nisn
                 FROM cbt_denah_peserta d
                 LEFT JOIN siswa s ON s.id = d.siswa_id

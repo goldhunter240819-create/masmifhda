@@ -17,6 +17,10 @@ $mapelByDayAndSlot = $mapelByDayAndSlot ?? [];
 $topikNama = !empty($topikAktif['nama_topik']) ? $topikAktif['nama_topik'] : 'SIMULASI NEW CBT';
 $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '2026/2027';
 ?>
+<!-- SweetAlert2 Modern -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <style>
     .schedule-wrapper {
         width: 100%;
@@ -120,6 +124,75 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
         border-color: #3b82f6;
         color: #1d4ed8;
     }
+
+    /* Standard Elite Header Buttons */
+    .e-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 18px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        border: none;
+        line-height: 1.2;
+    }
+    .e-btn-primary {
+        background: #ffffff;
+        color: #0284c7;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+    }
+    .e-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        background: #f8fafc;
+        color: #0369a1;
+    }
+    .e-btn-glass {
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .e-btn-glass:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: #ffffff;
+        transform: translateY(-2px);
+    }
+
+    .filter-pill-tab {
+        white-space: nowrap;
+        padding: 7px 16px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+    }
+    .filter-pill-tab.active {
+        background: #0284c7 !important;
+        color: #ffffff !important;
+        border-color: #0284c7 !important;
+        box-shadow: 0 3px 10px rgba(2, 132, 199, 0.3);
+    }
+
+    .swal2-popup.cbt-swal-popup {
+        border-radius: 22px !important;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+        padding: 1.75rem !important;
+    }
+    .swal2-title {
+        font-weight: 800 !important;
+        color: #0f172a !important;
+    }
 </style>
 
 <div class="siakad-container">
@@ -129,20 +202,6 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
         <?php include __DIR__ . '/header.php'; ?>
 
         <div class="z-scroll" style="padding: 0 0 3rem 0;">
-
-            <?php if (isset($_GET['saved'])): ?>
-            <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700;">
-                <i class="fa-solid fa-circle-check" style="font-size: 1.25rem; color: #22c55e;"></i>
-                <div>Penugasan Pengawas Ruang Berhasil Disimpan & Diterapkan!</div>
-            </div>
-            <?php endif; ?>
-
-            <?php if (isset($_GET['deleted'])): ?>
-            <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700;">
-                <i class="fa-solid fa-trash-can" style="font-size: 1.25rem; color: #ef4444;"></i>
-                <div>Penugasan Pengawas Ruang Berhasil Dihapus.</div>
-            </div>
-            <?php endif; ?>
 
             <!-- Page Header Banner -->
             <div class="elite-page-header">
@@ -155,18 +214,15 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                         <h1><i class="fa-solid fa-chalkboard-user" style="color: #0284c7;"></i> Jadwal Pengawas Ruang CBT</h1>
                         <p>Atur penugasan guru pengawas per-ruang dan per-sesi secara terisolasi per topik dan tanggal resmi (mendukung ujian multi-minggu).</p>
                     </div>
-                    <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" onclick="bukaModalTugaskan()" class="btn-head-primary" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                    <div class="header-actions-premium" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" onclick="bukaModalTugaskan()" class="e-btn e-btn-primary">
                             <i class="fa-solid fa-user-plus"></i> Tugaskan Pengawas
                         </button>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/scan') : '/cbt/pengawas/scan' ?>" class="btn-head-outline" style="border-color: #10b981; color: #10b981;">
-                            <i class="fa-solid fa-camera"></i> Scan Presensi Pengawas
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/scan') : '/cbt/pengawas/scan' ?>" class="e-btn e-btn-glass">
+                            <i class="fa-solid fa-id-badge"></i> Scan Presensi Pengawas
                         </a>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/rekap') : '/cbt/pengawas/rekap' ?>" class="btn-head-outline">
-                            <i class="fa-solid fa-file-invoice-dollar"></i> Rekap & Honorarium
-                        </a>
-                        <a href="<?= function_exists('base_url') ? base_url('cbt/ruang/berita-acara?topik_id=' . $selectedTopikId) : '/cbt/ruang/berita-acara' ?>" class="btn-head-outline">
-                            <i class="fa-solid fa-print"></i> Berita Acara Ruang
+                        <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/rekap') : '/cbt/pengawas/rekap' ?>" class="e-btn e-btn-glass">
+                            <i class="fa-solid fa-clipboard-check"></i> Rekap Presensi Pengawas
                         </a>
                     </div>
                 </div>
@@ -196,21 +252,19 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                 </div>
             </div>
 
-            <!-- Date & Day Filter Tabs -->
+            <!-- Date & Day Filter Tabs (Instant Client-Side Filtering - ZERO Reload) -->
             <div style="display: flex; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 1.25rem; scrollbar-width: none;">
-                <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal?topik_id=' . $selectedTopikId . '&filter_tgl=Semua') : '/cbt/pengawas/jadwal?topik_id=' . $selectedTopikId . '&filter_tgl=Semua' ?>" 
-                   style="white-space: nowrap; padding: 7px 18px; border-radius: 20px; font-size: 0.78rem; font-weight: 800; text-decoration: none; transition: 0.2s; border: 1px solid <?= ($selectedFilter === 'Semua') ? '#0284c7; background: #0284c7; color: white;' : '#cbd5e1; background: white; color: #475569;' ?>">
+                <button type="button" class="filter-pill-tab <?= ($selectedFilter === 'Semua') ? 'active' : '' ?>" onclick="filterDayClient(this, 'Semua')">
                    <i class="fa-solid fa-calendar"></i> Semua Hari & Tanggal
-                </a>
+                </button>
 
                 <?php foreach ($scheduleDays as $k => $dayItem): ?>
                     <?php 
                     $isActive = ($selectedFilter === (string)$k || $selectedFilter === $dayItem['hari'] || $selectedFilter === $dayItem['tanggal']);
                     ?>
-                    <a href="<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal?topik_id=' . $selectedTopikId . '&filter_tgl=' . urlencode($k)) : '/cbt/pengawas/jadwal?topik_id=' . $selectedTopikId . '&filter_tgl=' . urlencode($k) ?>" 
-                       style="white-space: nowrap; padding: 7px 16px; border-radius: 20px; font-size: 0.78rem; font-weight: 800; text-decoration: none; transition: 0.2s; border: 1px solid <?= $isActive ? '#0284c7; background: #0284c7; color: white;' : '#cbd5e1; background: white; color: #475569;' ?>">
+                    <button type="button" class="filter-pill-tab <?= $isActive ? 'active' : '' ?>" onclick="filterDayClient(this, '<?= htmlspecialchars($k) ?>')">
                        <?= htmlspecialchars($dayItem['label']) ?>
-                    </a>
+                    </button>
                 <?php endforeach; ?>
             </div>
 
@@ -239,9 +293,10 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                             $dTgl = $dayItem['tanggal'];
                             $dLabel = $dayItem['label'];
                             $dMapel = $dayItem['mapel_list'];
+                            $dKeyHash = md5($dKey);
                             ?>
                             <!-- Baris Header Hari & Tanggal -->
-                            <tr>
+                            <tr class="day-group-header day-key-<?= $dKeyHash ?>" data-daykey="<?= htmlspecialchars($dKey) ?>" data-hari="<?= htmlspecialchars($dHari) ?>" data-tgl="<?= htmlspecialchars($dTgl ?: '') ?>">
                                 <td colspan="<?= max(2, count($ruangList) + 1) ?>" class="hari-header">
                                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -268,13 +323,13 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                                 </td>
                             </tr>
 
-                            <!-- Baris Per Sesi (Deduplikasi, tampil 1 kali per label sesi) -->
+                            <!-- Baris Per Sesi -->
                             <?php foreach ($slotList as $slot): ?>
                                 <?php
                                 $sLabel = $slot['label_sesi'] ?? ('Sesi ' . ($slot['urutan'] ?? 1));
                                 $jRange = (!empty($slot['jam_mulai']) && !empty($slot['jam_selesai'])) ? (substr($slot['jam_mulai'], 0, 5) . ' - ' . substr($slot['jam_selesai'], 0, 5) . ' WIB') : ($slot['jam_slot'] ?? '');
                                 ?>
-                                <tr>
+                                <tr class="day-group-row day-key-<?= $dKeyHash ?>" data-daykey="<?= htmlspecialchars($dKey) ?>" data-hari="<?= htmlspecialchars($dHari) ?>" data-tgl="<?= htmlspecialchars($dTgl ?: '') ?>">
                                     <td class="sticky-sesi-col" style="background: #f8fafc;">
                                         <div style="font-weight: 900; color: #0f172a; font-size: 0.88rem;"><?= htmlspecialchars($sLabel) ?></div>
                                         <div style="font-size: 0.7rem; color: #0284c7; font-weight: 700; margin-top: 3px;">
@@ -285,10 +340,17 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                                     <?php foreach ($ruangList as $rg): ?>
                                         <?php
                                         $rId = (int)$rg['id'];
-                                        // Cari item dengan date key terlebih dahulu, lalu fallback ke day key
+                                        $cellId = 'cell-' . md5($dKey . '::' . $sLabel . '::' . $rId);
                                         $item = $jadwalMatrix[$dKey][$sLabel][$rId] ?? ($jadwalMatrix[$dHari][$sLabel][$rId] ?? null);
                                         ?>
-                                        <td>
+                                        <td id="<?= $cellId ?>" 
+                                            data-dkey="<?= htmlspecialchars($dKey) ?>"
+                                            data-hari="<?= htmlspecialchars($dHari) ?>"
+                                            data-tgl="<?= htmlspecialchars($dTgl ?: '') ?>"
+                                            data-sesi="<?= htmlspecialchars($sLabel) ?>"
+                                            data-jam="<?= htmlspecialchars($jRange) ?>"
+                                            data-ruangid="<?= $rId ?>"
+                                            data-ruangnama="<?= htmlspecialchars($rg['nama_ruang']) ?>">
                                             <?php if ($item): ?>
                                                 <div class="pengawas-card">
                                                     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 6px;">
@@ -304,17 +366,17 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                                                             </div>
                                                         </div>
                                                         <div style="display: flex; align-items: center; gap: 4px;">
-                                                            <button type="button" onclick="editPenugasan(<?= htmlspecialchars(json_encode($item)) ?>)" style="background: #f1f5f9; border: none; color: #475569; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ubah Pengawas">
+                                                            <button type="button" onclick="editPenugasanAjax('<?= $cellId ?>', <?= htmlspecialchars(json_encode($item)) ?>)" style="background: #f1f5f9; border: none; color: #475569; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ubah Pengawas">
                                                                 <i class="fa-solid fa-pen" style="font-size: 0.72rem;"></i>
                                                             </button>
-                                                            <button type="button" onclick="hapusPenugasan(<?= (int)$item['id'] ?>)" style="background: #fee2e2; border: none; color: #ef4444; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Hapus">
+                                                            <button type="button" onclick="hapusPenugasanAjax('<?= $cellId ?>', <?= (int)$item['id'] ?>, '<?= addslashes($item['guru_nama']) ?>', '<?= htmlspecialchars($sLabel) ?>', '<?= htmlspecialchars($rg['nama_ruang']) ?>')" style="background: #fee2e2; border: none; color: #ef4444; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Hapus">
                                                                 <i class="fa-solid fa-trash-can" style="font-size: 0.72rem;"></i>
                                                             </button>
                                                         </div>
                                                     </div>
                                                 </div>
                                             <?php else: ?>
-                                                <div class="cell-empty-assign" onclick="pilihSlotKosong('<?= htmlspecialchars($dHari) ?>', '<?= htmlspecialchars($dTgl ?: '') ?>', '<?= htmlspecialchars($sLabel) ?>', '<?= htmlspecialchars($jRange) ?>', <?= $rId ?>, '<?= htmlspecialchars($rg['nama_ruang']) ?>')">
+                                                <div class="cell-empty-assign" onclick="pilihSlotKosongAjax('<?= $cellId ?>')">
                                                     <i class="fa-solid fa-user-plus" style="font-size: 0.9rem; margin: 0 auto 3px; display: block; color: #94a3b8;"></i>
                                                     <span>+ Tugaskan</span>
                                                 </div>
@@ -338,7 +400,7 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
     </div>
 </div>
 
-<!-- Modal Form Penugasan Pengawas -->
+<!-- Modal Form Penugasan Pengawas (AJAX Powered) -->
 <div id="modalPenugasan" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 9999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem;">
     <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 520px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: popIn 0.2s ease;">
         <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 18px 24px; color: white; display: flex; justify-content: space-between; align-items: center;">
@@ -351,11 +413,12 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
             </button>
         </div>
 
-        <form id="formPenugasan" method="POST" action="<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal/save') : '/cbt/pengawas/jadwal/save' ?>" style="padding: 24px;">
+        <form id="formPenugasan" onsubmit="submitPenugasanAjax(event)" style="padding: 24px;">
             <input type="hidden" name="id" id="inputJadwalId" value="0">
             <input type="hidden" name="topik_id" value="<?= $selectedTopikId ?>">
             <input type="hidden" name="ruang_id" id="inputRuangId" value="0">
             <input type="hidden" name="jam_slot" id="inputJamSlot" value="">
+            <input type="hidden" id="currentCellId" value="">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
                 <div>
@@ -397,8 +460,8 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
                 <button type="button" onclick="tutupModalPenugasan()" style="padding: 10px 18px; border-radius: 10px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 800; font-size: 0.85rem; cursor: pointer;">
                     Batal
                 </button>
-                <button type="submit" style="padding: 10px 22px; border-radius: 10px; background: #0284c7; color: white; border: none; font-weight: 800; font-size: 0.85rem; cursor: pointer;">
-                    <i class="fa-solid fa-check"></i> Simpan Penugasan
+                <button type="submit" id="btnSubmitModal" style="padding: 10px 22px; border-radius: 10px; background: #0284c7; color: white; border: none; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-check"></i> <span>Simpan Penugasan</span>
                 </button>
             </div>
         </form>
@@ -406,6 +469,18 @@ $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '
 </div>
 
 <script>
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 1800,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer);
+        toast.addEventListener('mouseleave', Swal.resumeTimer);
+    }
+});
+
 function autoDetectHari(dateStr) {
     if (!dateStr) return;
     const hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -414,16 +489,63 @@ function autoDetectHari(dateStr) {
     document.getElementById('inputHari').value = dayName;
 }
 
-function pilihSlotKosong(hari, tanggal, sesi, jamRange, ruangId, ruangNama) {
-    document.getElementById('modalTitle').innerText = 'Tugaskan Pengawas - ' + ruangNama;
-    document.getElementById('inputJadwalId').value = '0';
-    document.getElementById('inputHari').value = hari || 'Senin';
-    document.getElementById('inputTanggal').value = tanggal || '';
-    if (tanggal) {
-        autoDetectHari(tanggal);
+// Instant Client-side Tab Filtering (No Page Reload)
+function filterDayClient(btnEl, targetKey) {
+    document.querySelectorAll('.filter-pill-tab').forEach(el => el.classList.remove('active'));
+    btnEl.classList.add('active');
+
+    const headers = document.querySelectorAll('.day-group-header');
+    const rows = document.querySelectorAll('.day-group-row');
+
+    if (targetKey === 'Semua') {
+        headers.forEach(el => el.style.display = '');
+        rows.forEach(el => el.style.display = '');
+        return;
     }
+
+    headers.forEach(el => {
+        const dKey = el.getAttribute('data-daykey');
+        const hari = el.getAttribute('data-hari');
+        const tgl = el.getAttribute('data-tgl');
+        if (dKey === targetKey || hari === targetKey || tgl === targetKey) {
+            el.style.display = '';
+        } else {
+            el.style.display = 'none';
+        }
+    });
+
+    rows.forEach(el => {
+        const dKey = el.getAttribute('data-daykey');
+        const hari = el.getAttribute('data-hari');
+        const tgl = el.getAttribute('data-tgl');
+        if (dKey === targetKey || hari === targetKey || tgl === targetKey) {
+            el.style.display = '';
+        } else {
+            el.style.display = 'none';
+        }
+    });
+}
+
+function pilihSlotKosongAjax(cellId) {
+    const cell = document.getElementById(cellId);
+    if (!cell) return;
+
+    const hari = cell.getAttribute('data-hari') || 'Senin';
+    const tgl = cell.getAttribute('data-tgl') || '';
+    const sesi = cell.getAttribute('data-sesi') || 'Sesi 1';
+    const jam = cell.getAttribute('data-jam') || '';
+    const ruangId = cell.getAttribute('data-ruangid') || 0;
+    const ruangNama = cell.getAttribute('data-ruangnama') || 'Ruang';
+
+    document.getElementById('modalTitle').innerText = 'Tugaskan Pengawas - ' + ruangNama;
+    document.getElementById('currentCellId').value = cellId;
+    document.getElementById('inputJadwalId').value = '0';
+    document.getElementById('inputHari').value = hari;
+    document.getElementById('inputTanggal').value = tgl;
+    if (tgl) autoDetectHari(tgl);
+
     document.getElementById('inputSesiLabel').value = sesi;
-    document.getElementById('inputJamSlot').value = jamRange;
+    document.getElementById('inputJamSlot').value = jam;
     document.getElementById('inputRuangId').value = ruangId;
     document.getElementById('displayRuangNama').value = ruangNama;
     document.getElementById('inputGuruId').value = '';
@@ -432,11 +554,14 @@ function pilihSlotKosong(hari, tanggal, sesi, jamRange, ruangId, ruangNama) {
     modal.style.display = 'flex';
 }
 
-function editPenugasan(item) {
+function editPenugasanAjax(cellId, item) {
     document.getElementById('modalTitle').innerText = 'Ubah Pengawas - ' + (item.ruang_nama || 'Ruang');
+    document.getElementById('currentCellId').value = cellId;
     document.getElementById('inputJadwalId').value = item.id;
     document.getElementById('inputHari').value = item.hari;
     document.getElementById('inputTanggal').value = item.tanggal || '';
+    if (item.tanggal) autoDetectHari(item.tanggal);
+
     document.getElementById('inputSesiLabel').value = item.sesi_label;
     document.getElementById('inputJamSlot').value = item.jam_slot || '';
     document.getElementById('inputRuangId').value = item.ruang_id;
@@ -448,33 +573,168 @@ function editPenugasan(item) {
 }
 
 function bukaModalTugaskan() {
-    pilihSlotKosong('Senin', '', 'Sesi 1', '08:00 - 09:00 WIB', <?= !empty($ruangList) ? (int)$ruangList[0]['id'] : 1 ?>, '<?= !empty($ruangList) ? addslashes($ruangList[0]['nama_ruang']) : 'Ruang 01' ?>');
+    const firstCell = document.querySelector('.cell-empty-assign');
+    if (firstCell && firstCell.parentElement) {
+        pilihSlotKosongAjax(firstCell.parentElement.id);
+    } else {
+        const allCells = document.querySelectorAll('td[id^="cell-"]');
+        if (allCells.length > 0) {
+            pilihSlotKosongAjax(allCells[0].id);
+        }
+    }
 }
 
 function tutupModalPenugasan() {
     document.getElementById('modalPenugasan').style.display = 'none';
 }
 
-function hapusPenugasan(id) {
-    if (confirm('Apakah Anda yakin ingin menghapus penugasan pengawas ini?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal/delete') : '/cbt/pengawas/jadwal/delete' ?>';
+// AJAX SUBMIT (ZERO RELOAD)
+function submitPenugasanAjax(e) {
+    e.preventDefault();
+    const form = document.getElementById('formPenugasan');
+    const submitBtn = document.getElementById('btnSubmitModal');
+    const origHtml = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    submitBtn.disabled = true;
 
-        const inputId = document.createElement('input');
-        inputId.type = 'hidden';
-        inputId.name = 'id';
-        inputId.value = id;
-        form.appendChild(inputId);
+    const cellId = document.getElementById('currentCellId').value;
+    const saveUrl = '<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal/save') : '/cbt/pengawas/jadwal/save' ?>';
+    const formData = new FormData(form);
 
-        const inputTopik = document.createElement('input');
-        inputTopik.type = 'hidden';
-        inputTopik.name = 'topik_id';
-        inputTopik.value = '<?= $selectedTopikId ?>';
-        form.appendChild(inputTopik);
+    fetch(saveUrl, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        submitBtn.innerHTML = origHtml;
+        submitBtn.disabled = false;
 
-        document.body.appendChild(form);
-        form.submit();
-    }
+        if (data.success) {
+            tutupModalPenugasan();
+            Toast.fire({
+                icon: 'success',
+                title: 'Penugasan Pengawas Disimpan!'
+            });
+
+            // Update DOM cell in-place
+            if (cellId) {
+                const targetCell = document.getElementById(cellId);
+                if (targetCell) {
+                    const itemData = {
+                        id: data.id,
+                        topik_id: data.topik_id,
+                        hari: data.hari,
+                        tanggal: data.tanggal,
+                        sesi_label: data.sesi_label,
+                        jam_slot: data.jam_slot,
+                        ruang_id: data.ruang_id,
+                        ruang_nama: data.ruang_nama,
+                        guru_id: data.guru_id,
+                        guru_nama: data.guru_nama,
+                        guru_nip: data.guru_nip
+                    };
+
+                    targetCell.innerHTML = `
+                        <div class="pengawas-card" style="animation: popIn 0.25s ease;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 6px;">
+                                <div style="min-width: 0; flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 3px;">
+                                        <span style="background: #e0f2fe; color: #0284c7; font-size: 0.62rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">PENGAWAS</span>
+                                    </div>
+                                    <div style="font-weight: 800; font-size: 0.82rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${data.guru_nama}">
+                                        ${data.guru_nama}
+                                    </div>
+                                    <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
+                                        NIP: ${data.guru_nip || '-'}
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" onclick='editPenugasanAjax("${cellId}", ${JSON.stringify(itemData)})' style="background: #f1f5f9; border: none; color: #475569; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ubah Pengawas">
+                                        <i class="fa-solid fa-pen" style="font-size: 0.72rem;"></i>
+                                    </button>
+                                    <button type="button" onclick="hapusPenugasanAjax('${cellId}', ${data.id}, '${data.guru_nama.replace(/'/g, "\\'")}', '${data.sesi_label}', '${data.ruang_nama}')" style="background: #fee2e2; border: none; color: #ef4444; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Hapus">
+                                        <i class="fa-solid fa-trash-can" style="font-size: 0.72rem;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyimpan',
+                text: data.message || 'Terjadi kesalahan sistem.'
+            });
+        }
+    })
+    .catch(err => {
+        submitBtn.innerHTML = origHtml;
+        submitBtn.disabled = false;
+        Swal.fire({
+            icon: 'error',
+            title: 'Koneksi Terganggu',
+            text: 'Gagal menghubungi server CBT.'
+        });
+    });
+}
+
+// AJAX DELETE (ZERO RELOAD)
+function hapusPenugasanAjax(cellId, id, guruNama, sesi, ruangNama) {
+    Swal.fire({
+        title: 'Hapus Penugasan?',
+        html: `Apakah Anda yakin ingin menghapus penugasan <strong>${guruNama}</strong> di <strong>${ruangNama}</strong> (${sesi})?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-trash-can"></i> Ya, Hapus',
+        cancelButtonText: 'Batal',
+        customClass: {
+            popup: 'cbt-swal-popup'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const delUrl = '<?= function_exists('base_url') ? base_url('cbt/pengawas/jadwal/delete') : '/cbt/pengawas/jadwal/delete' ?>';
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('topik_id', '<?= $selectedTopikId ?>');
+
+            fetch(delUrl, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Penugasan Berhasil Dihapus'
+                    });
+
+                    const targetCell = document.getElementById(cellId);
+                    if (targetCell) {
+                        targetCell.innerHTML = `
+                            <div class="cell-empty-assign" onclick="pilihSlotKosongAjax('${cellId}')" style="animation: popIn 0.2s ease;">
+                                <i class="fa-solid fa-user-plus" style="font-size: 0.9rem; margin: 0 auto 3px; display: block; color: #94a3b8;"></i>
+                                <span>+ Tugaskan</span>
+                            </div>
+                        `;
+                    }
+                }
+            })
+            .catch(() => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: 'Tidak dapat menghapus data.'
+                });
+            });
+        }
+    });
 }
 </script>
