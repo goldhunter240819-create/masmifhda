@@ -63,11 +63,8 @@ function build_cbt_standalone_package() {
         $zip->addFile($baseDir . '/app/Core/Branding.php', 'app/Core/Branding.php');
     }
     $zip->addFile($baseDir . '/app/Services/AuditLogger.php', 'app/Services/AuditLogger.php');
-    if (file_exists($baseDir . '/app/Services/CbtDummyGenerator.php')) {
-        $zip->addFile($baseDir . '/app/Services/CbtDummyGenerator.php', 'app/Services/CbtDummyGenerator.php');
-    }
-    if (file_exists($baseDir . '/app/Services/CbtBiologiArabGenerator.php')) {
-        $zip->addFile($baseDir . '/app/Services/CbtBiologiArabGenerator.php', 'app/Services/CbtBiologiArabGenerator.php');
+    if (file_exists($baseDir . '/app/Services/CbtAllSubjects20Generator.php')) {
+        $zip->addFile($baseDir . '/app/Services/CbtAllSubjects20Generator.php', 'app/Services/CbtAllSubjects20Generator.php');
     }
     $datasetFiles = glob($baseDir . '/app/Services/Datasets/*.php');
     foreach ($datasetFiles as $df) {

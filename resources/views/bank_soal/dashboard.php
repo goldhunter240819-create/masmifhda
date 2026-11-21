@@ -617,13 +617,6 @@ $active_menu = "bank_soal";
                         </button>
                     </form>
 
-                    <form method="POST" action="<?php echo base_url('bank_soal/generate-dummy'); ?>" style="display: inline;" onsubmit="return confirm('Generate otomatis 10 Soal per mapel untuk 3 Mapel (Matematika, Biologi, Bahasa Arab) di semua tingkat Kelas X, XI, XII (Total 90 Butir Soal AKM Simulasi)?')">
-                        <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
-                        <button type="submit" class="btn btn-outline" style="background: #fdf4ff; border-color: #f5d0fe; color: #9333ea; font-weight: 800;" title="Generate 10 Soal Simulasi Matematika, Biologi, dan Bahasa Arab untuk semua tingkat (Kelas 10, 11, dan 12)">
-                            <i data-lucide="sparkles" style="width: 15px; height: 15px; color: #c026d3;"></i> Buat Contoh Dummy (Matematika, Biologi, Bahasa Arab - 10 Butir per Mapel)
-                        </button>
-                    </form>
-
                     <form method="POST" action="<?php echo base_url('bank_soal/reset-data'); ?>" style="display: inline;" onsubmit="return confirm('Kosongkan semua paket dan butir soal pada topik ini?')">
                         <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
                         <button type="submit" class="btn btn-outline" style="background: #fef2f2; border-color: #fecaca; color: #ef4444; font-weight: 700;" title="Kosongkan bank soal topik ini">

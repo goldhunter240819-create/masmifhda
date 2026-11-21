@@ -6724,6 +6724,17 @@ class CbtController {
 
         // 1c. Butir Soal Bank Soal (bs_soal)
         if (!empty($data['bs_soal'])) {
+            $validSoalIds = array_filter(array_map('intval', array_column($data['bs_soal'], 'id')));
+            if (!empty($validSoalIds)) {
+                $inClauseS = implode(',', $validSoalIds);
+                try {
+                    $db->exec("DELETE FROM bs_soal WHERE id NOT IN ($inClauseS)");
+                    if ($db !== $dbSiakad) {
+                        $dbSiakad->exec("DELETE FROM bs_soal WHERE id NOT IN ($inClauseS)");
+                    }
+                } catch (\Exception $e) {}
+            }
+
             $sqlBS = "INSERT INTO bs_soal (id, topik_id, paket_id, mapel_nama, kelas_nama, nomor_urut, tipe_soal, tingkat_kesulitan, skor_maksimal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE topik_id = VALUES(topik_id), paket_id = VALUES(paket_id), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan), opsi_a = VALUES(opsi_a), opsi_b = VALUES(opsi_b), opsi_c = VALUES(opsi_c), opsi_d = VALUES(opsi_d), opsi_e = VALUES(opsi_e)";
             $stmtBS = $db->prepare($sqlBS);
             $stmtBSSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare($sqlBS) : null;
