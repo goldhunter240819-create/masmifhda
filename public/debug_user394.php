@@ -8,30 +8,15 @@ if ($secret !== 'MIFHDA_DEBUG_394') {
 }
 
 $core = \App\Core\Database::connect('core');
-
-$uids = [385, 386, 389, 394, 395, 415, 417, 429];
-$placeholders = implode(',', $uids);
-
-$siswas = $core->query("SELECT id, user_id, nis, nama, kelas_id FROM siswa WHERE user_id IN ($placeholders)")->fetchAll(PDO::FETCH_ASSOC);
-
-// Also check in siakad
 $siakad = \App\Core\Database::connect('siakad');
-$siakadSiswas = [];
-try {
-    $siakadSiswas = $siakad->query("SELECT id, nis, nama_lengkap, kelas_id FROM siswa WHERE id IN ($placeholders)")->fetchAll(PDO::FETCH_ASSOC);
-} catch (\Throwable $e) {}
 
-// Also check if there is an id_mapping or user relation table in siakad or core!
-$relTables = [];
-$tables = $core->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-foreach ($tables as $t) {
-    if (strpos($t, 'user') !== false || strpos($t, 'map') !== false || strpos($t, 'rfid') !== false || strpos($t, 'kartu') !== false || strpos($t, 'member') !== false) {
-        $relTables[] = $t;
-    }
-}
+$siakadAbsenToday = $siakad->query("SELECT a.*, s.nama_lengkap, s.nis FROM absensi_siswa a LEFT JOIN siswa s ON a.siswa_id = s.id WHERE a.tanggal = '2026-11-21' ORDER BY a.id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+
+// Also let's check core presensi where user_id = 394:
+// Is there a correlation with any row in siakad.absensi_siswa around 08:01:17?
+$siakadAbsen8am = $siakad->query("SELECT a.*, s.nama_lengkap, s.nis FROM absensi_siswa a LEFT JOIN siswa s ON a.siswa_id = s.id WHERE a.tanggal = '2026-11-21' AND a.created_at LIKE '2026-11-21 08:01%'")->fetchAll(PDO::FETCH_ASSOC);
 
 echo json_encode([
-    'siswas_found' => $siswas,
-    'siakadSiswas_found' => $siakadSiswas,
-    'relTables' => $relTables
+    'siakadAbsenToday' => $siakadAbsenToday,
+    'siakadAbsen8am' => $siakadAbsen8am
 ], JSON_PRETTY_PRINT);
