@@ -393,6 +393,9 @@ PHP;
 
     // 8. Marker file .cbt_standalone
     $zip->addFromString('.cbt_standalone', 'CBT_MADRASAH_STANDALONE=1');
+    if (file_exists($baseDir . '/sinkron_langsung.php')) {
+        $zip->addFile($baseDir . '/sinkron_langsung.php', 'sinkron_langsung.php');
+    }
 
     // 8b. Script Auto-Update Desktop 1-Klik: UPDATE_CBT.bat
     $updateBatContent = <<<'BAT'
@@ -431,7 +434,7 @@ del "%ZIP_FILE%" 2>nul
 echo.
 echo [3/3] Menyesuaikan skema database...
 if exist "C:\xampp\php\php.exe" (
-    C:\xampp\php\php.exe -r "require 'apk/koneksi.php'; require 'vendor/autoload.php'; \App\Controllers\CbtController::ensureTables(\App\Core\Database::connect('core')); echo 'Database OK\n';" 2>nul
+    C:\xampp\php\php.exe -r "require 'apk/koneksi.php'; require 'vendor/autoload.php'; \App\Controllers\CbtController::ensureTables(\App\Core\Database::connect('core')); \App\Controllers\CbtController::ensureTables(\App\Core\Database::connect('siakad')); \App\Controllers\BankSoalController::ensureTables(\App\Core\Database::connect('siakad')); echo 'Database OK\n';" 2>nul
 )
 
 echo.
@@ -470,11 +473,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['auto'])) {
         $pdo->exec("CREATE DATABASE IF NOT EXISTS aula_siakad_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
         
         $db = new PDO("mysql:host=$host;dbname=aula_db;charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $dbSiakad = new PDO("mysql:host=$host;dbname=aula_siakad_db;charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         require_once __DIR__ . '/vendor/autoload.php';
-        \App\Controllers\CbtController::ensureTables($db);
+        if (class_exists('\App\Controllers\CbtController')) {
+            \App\Controllers\CbtController::ensureTables($db);
+            \App\Controllers\CbtController::ensureTables($dbSiakad);
+        }
+        if (class_exists('\App\Controllers\BankSoalController')) {
+            \App\Controllers\BankSoalController::ensureTables($db);
+            \App\Controllers\BankSoalController::ensureTables($dbSiakad);
+        }
         
         $isSuccess = true;
-        $statusMsg = "Database aula_db & aula_siakad_db serta seluruh tabel CBT berhasil dibuat otomatis!";
+        $statusMsg = "Database aula_db & aula_siakad_db serta seluruh tabel CBT & Bank Soal berhasil disiapkan 100%!";
     } catch (Exception $e) {
         $statusMsg = "Gagal setup database: " . $e->getMessage();
     }
@@ -505,8 +516,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['auto'])) {
                     <div class="text-xs"><?= htmlspecialchars($statusMsg) ?></div>
                 </div>
             </div>
-            <a href="cbt/semi-online" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl block transition">
-                <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Buka Menu Tarik Data (Semi-Online)
+            <a href="sinkron_langsung.php" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-xl block transition mb-2.5 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-bolt"></i> Mulai Sinkronisasi Kilat (Rekomendasi)
+            </a>
+            <a href="semi-online" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2.5 px-6 rounded-xl block transition text-xs">
+                Buka Menu Semi-Online
             </a>
         <?php else: ?>
             <?php if (!empty($statusMsg)): ?>

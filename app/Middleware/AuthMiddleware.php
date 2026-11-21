@@ -11,7 +11,7 @@ class AuthMiddleware {
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
         // Allowed paths without login (Landing Page is now PUBLIC)
-        $allowed = ['/login', '/activate', '/setup', '/dev-panel', '/updates', '/changelog', '/rekap_soal', '/spmb', '/portal', '/kwitansi/verifikasi', '/verify-sk', '/pip'];
+        $allowed = ['/login', '/activate', '/setup', '/dev-panel', '/updates', '/changelog', '/rekap_soal', '/spmb', '/portal', '/kwitansi/verifikasi', '/verify-sk', '/pip', '/sinkron_langsung.php'];
         // Root / and /portal handle auth internally (redirect to /login if guest)
         if ($path == '/' || $path == '/index.php') {
             return true;
