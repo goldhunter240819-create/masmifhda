@@ -5697,10 +5697,21 @@ class CbtController {
         $dbSiakad = \App\Core\Database::connect('siakad');
         self::ensureTables($db);
 
+        // Export data topik
+        $topikList = [];
+        try {
+            $topikList = $dbSiakad->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+        if (empty($topikList)) {
+            try {
+                $topikList = $db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {}
+        }
+
         $payload = [
             'status' => 'success',
             'exported_at' => date('Y-m-d H:i:s'),
-            'topik' => $dbSiakad->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
+            'topik' => $topikList,
             'jam_slot' => $db->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC),
             'jadwal_grid' => $db->query("SELECT * FROM cbt_jadwal_grid ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'ujian' => $db->query("SELECT * FROM cbt_ujian WHERE status = 'Aktif' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
@@ -5713,6 +5724,35 @@ class CbtController {
             'pengawas_kj' => $db->query("SELECT * FROM cbt_pengawas_kj WHERE status = 'Aktif'")->fetchAll(PDO::FETCH_ASSOC),
         ];
 
+        // Export data mata pelajaran
+        try {
+            $payload['mapel'] = $dbSiakad->query("SELECT id, nama_mapel, kode_mapel, kategori FROM mapel ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            try {
+                $payload['mapel'] = $db->query("SELECT id, nama_mapel, kode_mapel, kategori FROM mapel ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {
+                $payload['mapel'] = [];
+            }
+        }
+
+        // Export data guru & pengawas
+        try {
+            $payload['guru'] = $db->query("SELECT id, user_id, nama, nip, nik, is_kamad FROM guru")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            try {
+                $payload['guru'] = $dbSiakad->query("SELECT id, user_id, nama, nip, nik, is_kamad FROM guru")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e2) {
+                $payload['guru'] = [];
+            }
+        }
+
+        // Export data pengawas ruangan
+        try {
+            $payload['ruang_pengawas'] = $db->query("SELECT * FROM cbt_ruang_pengawas")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $payload['ruang_pengawas'] = [];
+        }
+
         // Export data kelas
         try {
             $payload['kelas'] = $dbSiakad->query("SELECT id, nama_kelas, tingkat FROM kelas ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -5724,28 +5764,30 @@ class CbtController {
             }
         }
 
-        // Export data siswa reguler (hanya data identitas ujian, tanpa informasi keuangan / rapor)
+        // Export data siswa reguler (prioritaskan database siakad yang memuat seluruh siswa aktif madrasah)
+        $siswaList = [];
         try {
-            $payload['siswa'] = $db->query("
-                SELECT id, user_id, nis, nik, nama, status, kelas_id, jenis_kelamin
+            $siswaList = $dbSiakad->query("
+                SELECT id, user_id, nis, nik, COALESCE(nama, nama_lengkap) as nama, status, kelas_id, jenis_kelamin
                 FROM siswa WHERE status = 'Aktif'
             ")->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Exception $e) {
+        } catch (\Exception $e) {}
+
+        if (empty($siswaList)) {
             try {
-                $payload['siswa'] = $dbSiakad->query("
-                    SELECT id, user_id, nis, nik, nama_lengkap as nama, status, kelas_id, jenis_kelamin
+                $siswaList = $db->query("
+                    SELECT id, user_id, nis, nik, nama, status, kelas_id, jenis_kelamin
                     FROM siswa WHERE status = 'Aktif'
                 ")->fetchAll(PDO::FETCH_ASSOC);
-            } catch (\Exception $e2) {
-                $payload['siswa'] = [];
-            }
+            } catch (\Exception $e2) {}
         }
+        $payload['siswa'] = $siswaList;
 
-        // Export akun login siswa & proktor
+        // Export akun login siswa, proktor, dan guru
         try {
             $payload['users'] = $db->query("
                 SELECT id, username, password_hash, plain_password, role_id, status
-                FROM users WHERE role_id IN (1, 3, 6, 7)
+                FROM users WHERE role_id IN (1, 2, 3, 4, 6, 7, 99)
             ")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
             $payload['users'] = [];
@@ -6333,9 +6375,13 @@ class CbtController {
         // 10. Data Kelas
         if (!empty($data['kelas'])) {
             $stmtK = $db->prepare("INSERT INTO kelas (id, nama_kelas, tingkat) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE nama_kelas = VALUES(nama_kelas), tingkat = VALUES(tingkat)");
+            $stmtKSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare("INSERT INTO kelas (id, nama_kelas, tingkat) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE nama_kelas = VALUES(nama_kelas), tingkat = VALUES(tingkat)") : null;
             foreach ($data['kelas'] as $k) {
                 try {
                     $stmtK->execute([$k['id'], $k['nama_kelas'], $k['tingkat'] ?? 'X']);
+                    if ($stmtKSiakad) {
+                        try { $stmtKSiakad->execute([$k['id'], $k['nama_kelas'], $k['tingkat'] ?? 'X']); } catch (\Exception $e2) {}
+                    }
                     $details['kelas']++;
                 } catch (\Exception $e) {}
             }
@@ -6344,20 +6390,65 @@ class CbtController {
         // 11. Data Siswa Reguler
         if (!empty($data['siswa'])) {
             $stmtSsw = $db->prepare("INSERT INTO siswa (id, user_id, nis, nik, nama, status, kelas_id, jenis_kelamin) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama), nis = VALUES(nis), nik = VALUES(nik), status = VALUES(status), kelas_id = VALUES(kelas_id)");
+            $stmtSswSiakad = ($db !== $dbSiakad) ? $dbSiakad->prepare("INSERT INTO siswa (id, user_id, nis, nik, nama, status, kelas_id, jenis_kelamin) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama), nis = VALUES(nis), nik = VALUES(nik), status = VALUES(status), kelas_id = VALUES(kelas_id)") : null;
             foreach ($data['siswa'] as $sw) {
                 try {
-                    $stmtSsw->execute([$sw['id'], $sw['user_id'] ?? null, $sw['nis'], $sw['nik'] ?? null, $sw['nama'] ?? ($sw['nama_lengkap'] ?? ''), $sw['status'] ?? 'Aktif', $sw['kelas_id'] ?? null, $sw['jenis_kelamin'] ?? 'L']);
+                    $valsSw = [$sw['id'], $sw['user_id'] ?? null, $sw['nis'], $sw['nik'] ?? null, $sw['nama'] ?? ($sw['nama_lengkap'] ?? ''), $sw['status'] ?? 'Aktif', $sw['kelas_id'] ?? null, $sw['jenis_kelamin'] ?? 'L'];
+                    $stmtSsw->execute($valsSw);
+                    if ($stmtSswSiakad) {
+                        try { $stmtSswSiakad->execute($valsSw); } catch (\Exception $e2) {}
+                    }
                     $details['siswa']++;
                 } catch (\Exception $e) {}
             }
         }
 
-        // 12. Data User Akun Login Siswa & Proktor
+        // 12. Data User Akun Login Siswa, Guru & Proktor
         if (!empty($data['users'])) {
             $stmtU = $db->prepare("INSERT INTO users (id, username, password_hash, plain_password, role_id, status) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), plain_password = VALUES(plain_password), role_id = VALUES(role_id), status = VALUES(status)");
             foreach ($data['users'] as $u) {
                 try {
                     $stmtU->execute([$u['id'], $u['username'], $u['password_hash'], $u['plain_password'] ?? null, $u['role_id'], $u['status'] ?? 'active']);
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 12b. Data Guru & Pengawas
+        if (!empty($data['guru'])) {
+            $stmtG = $db->prepare("INSERT INTO guru (id, user_id, nama, nip, nik, is_kamad) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama), nip = VALUES(nip), nik = VALUES(nik)");
+            foreach ($data['guru'] as $g) {
+                try {
+                    $stmtG->execute([$g['id'], $g['user_id'] ?? null, $g['nama'], $g['nip'] ?? null, $g['nik'] ?? null, $g['is_kamad'] ?? 0]);
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 12c. Data Mata Pelajaran
+        if (!empty($data['mapel'])) {
+            try {
+                $db->exec("CREATE TABLE IF NOT EXISTS mapel (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nama_mapel VARCHAR(150) NOT NULL,
+                    kode_mapel VARCHAR(50) DEFAULT NULL,
+                    kategori VARCHAR(50) DEFAULT 'Wajib',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            } catch (\Exception $e) {}
+
+            $stmtM = $db->prepare("INSERT INTO mapel (id, nama_mapel, kode_mapel, kategori) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_mapel = VALUES(nama_mapel), kode_mapel = VALUES(kode_mapel), kategori = VALUES(kategori)");
+            foreach ($data['mapel'] as $m) {
+                try {
+                    $stmtM->execute([$m['id'], $m['nama_mapel'], $m['kode_mapel'] ?? null, $m['kategori'] ?? 'Wajib']);
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 12d. Data Pengawas Ruangan
+        if (!empty($data['ruang_pengawas'])) {
+            $stmtRP = $db->prepare("INSERT INTO cbt_ruang_pengawas (id, topik_id, ruang_id, sesi_label, jam_slot, guru_id, guru_nama) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE guru_id = VALUES(guru_id), guru_nama = VALUES(guru_nama)");
+            foreach ($data['ruang_pengawas'] as $rp) {
+                try {
+                    $stmtRP->execute([$rp['id'], $rp['topik_id'], $rp['ruang_id'], $rp['sesi_label'], $rp['jam_slot'] ?? null, $rp['guru_id'] ?? null, $rp['guru_nama']]);
                 } catch (\Exception $e) {}
             }
         }

@@ -190,6 +190,9 @@ $router->add('GET', '/cbt/kerjakan/selesai', [\App\Controllers\CbtController::cl
 $router->add('GET', '/cbt/soal', [\App\Controllers\CbtController::class, 'soal']);
 $router->add('POST', '/cbt/soal/save', [\App\Controllers\CbtController::class, 'saveSoal']);
 $router->add('POST', '/cbt/soal/delete', [\App\Controllers\CbtController::class, 'deleteSoal']);
+$router->add('GET', '/bank_soal', [\App\Controllers\CbtController::class, 'soal']);
+$router->add('GET', '/cbt/bank_soal', [\App\Controllers\CbtController::class, 'soal']);
+$router->add('GET', '/soal', [\App\Controllers\CbtController::class, 'soal']);
 
 $router->add('GET', '/cbt/token', [\App\Controllers\CbtController::class, 'token']);
 $router->add('POST', '/cbt/token/generate', [\App\Controllers\CbtController::class, 'generateToken']);
