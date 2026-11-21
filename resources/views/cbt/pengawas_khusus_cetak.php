@@ -4,8 +4,8 @@ $tglCetakDefault = date('d') . ' ' . ($bulanIndo[(int)date('n')] ?? date('F')) .
 $tglCetak = !empty($_GET['tgl_cetak']) ? htmlspecialchars($_GET['tgl_cetak']) : $tglCetakDefault;
 $kotaCetak = !empty($_GET['kota_cetak']) ? htmlspecialchars($_GET['kota_cetak']) : (!empty($inst['kota']) ? $inst['kota'] : 'Lampung Barat');
 
-$namaKepala = 'Drs. Hamim Hasyim';
-if (!empty($inst['nama_kepala']) && stripos($inst['nama_kepala'], 'Ulfah') === false) {
+$namaKepala = 'AHMAD RIFA\'I, M.Pd';
+if (!empty($inst['nama_kepala']) && stripos($inst['nama_kepala'], 'Ulfah') === false && stripos($inst['nama_kepala'], 'Hamim') === false) {
     $namaKepala = $inst['nama_kepala'];
 }
 $nipKepala = !empty($inst['nip_kepala']) ? $inst['nip_kepala'] : '-';

@@ -3,7 +3,7 @@ $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
 $topik = $topik ?? [];
 $rekapList = $rekapList ?? [];
 $kop = $kop ?? [];
-$inst = $inst ?? ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+$inst = $inst ?? ['nama_kepala' => 'AHMAD RIFA\'I, M.Pd', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
 
 // Logo resmi
 $kopLogoUrl = '/assets/images/logo.png';
@@ -335,7 +335,7 @@ foreach ($rekapList as $rk) {
             <div><?= htmlspecialchars($inst['kota'] ?? 'Lampung Barat') ?>, <?= date('d F Y') ?></div>
             <div style="font-weight: 700;">Kepala Madrasah</div>
             <div class="sig-space"></div>
-            <div class="sig-name"><?= htmlspecialchars($inst['nama_kepala'] ?? 'Drs. Hamim Hasyim') ?></div>
+            <div class="sig-name"><?= htmlspecialchars($inst['nama_kepala'] ?? 'AHMAD RIFA\'I, M.Pd') ?></div>
             <div>NIP. <?= htmlspecialchars($inst['nip_kepala'] ?? '-') ?></div>
         </div>
     </div>

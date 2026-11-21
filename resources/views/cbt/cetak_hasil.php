@@ -3,7 +3,7 @@ $bulanIndo = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli
 $tglCetak = date('d') . ' ' . ($bulanIndo[(int)date('n')] ?? date('F')) . ' ' . date('Y');
 
 $namaInstitusi = 'MADRASAH ALIYAH MIFTAHUL HUDA';
-$namaKepala = 'Drs. Hamim Hasyim';
+$namaKepala = 'AHMAD RIFA\'I, M.Pd';
 $nipKepala = '-';
 $logoUrl = function_exists('base_url') ? base_url('public/uploads/logo/logo.png') : '/public/uploads/logo/logo.png';
 $faviconUrl = $logoUrl;

@@ -16,7 +16,7 @@ $totalTerdaftar = $totalTerdaftar ?? count($pesertaList);
 $totalHadir = $totalHadir ?? 0;
 $totalTidakHadir = $totalTidakHadir ?? 0;
 $kop = $kop ?? [];
-$inst = $inst ?? ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+$inst = $inst ?? ['nama_kepala' => 'AHMAD RIFA\'I, M.Pd', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
 
 // Base URL helper
 $bu = function($path = '') {
@@ -458,7 +458,7 @@ $tglFormatIndo = date('j', strtotime($tanggal)) . ' ' . $bulanIndo[(int)date('n'
             <div><?= htmlspecialchars($inst['kota'] ?? 'Lampung Barat') ?>, <?= htmlspecialchars($tglFormatIndo) ?></div>
             <div style="font-weight: 700;">Kepala Madrasah</div>
             <div class="sig-space"></div>
-            <div class="sig-name"><?= htmlspecialchars($inst['nama_kepala'] ?? 'Drs. Hamim Hasyim') ?></div>
+            <div class="sig-name"><?= htmlspecialchars($inst['nama_kepala'] ?? 'AHMAD RIFA\'I, M.Pd') ?></div>
             <div>NIP. <?= htmlspecialchars($inst['nip_kepala'] ?? '-') ?></div>
         </div>
     </div>

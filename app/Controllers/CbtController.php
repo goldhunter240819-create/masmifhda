@@ -4319,8 +4319,8 @@ class CbtController {
         if (!$inst) {
             $inst = [];
         }
-        if (empty($inst['nama_kepala']) || stripos($inst['nama_kepala'], 'Ulfah') !== false) {
-            $inst['nama_kepala'] = 'Drs. Hamim Hasyim';
+        if (empty($inst['nama_kepala']) || stripos($inst['nama_kepala'], 'Ulfah') !== false || stripos($inst['nama_kepala'], 'Hamim') !== false) {
+            $inst['nama_kepala'] = 'AHMAD RIFA\'I, M.Pd';
         }
         if (empty($inst['nip_kepala'])) {
             $inst['nip_kepala'] = '-';
@@ -4367,8 +4367,8 @@ class CbtController {
         if (!$inst) {
             $inst = [];
         }
-        if (empty($inst['nama_kepala']) || stripos($inst['nama_kepala'], 'Ulfah') !== false) {
-            $inst['nama_kepala'] = 'Drs. Hamim Hasyim';
+        if (empty($inst['nama_kepala']) || stripos($inst['nama_kepala'], 'Ulfah') !== false || stripos($inst['nama_kepala'], 'Hamim') !== false) {
+            $inst['nama_kepala'] = 'AHMAD RIFA\'I, M.Pd';
         }
         if (empty($inst['nip_kepala'])) {
             $inst['nip_kepala'] = '-';
@@ -6145,7 +6145,17 @@ class CbtController {
         $stmtRekap->execute($params);
         $rekapList = $stmtRekap->fetchAll(PDO::FETCH_ASSOC);
 
-        $inst = ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+        $inst = ['nama_kepala' => 'AHMAD RIFA\'I, M.Pd', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+        try {
+            $stmtInst = $db->query("SELECT nama_kepala, nip_kepala, kota FROM institusi LIMIT 1");
+            if ($stmtInst && ($rowInst = $stmtInst->fetch(PDO::FETCH_ASSOC))) {
+                if (!empty($rowInst['nama_kepala']) && stripos($rowInst['nama_kepala'], 'Hamim') === false) {
+                    $inst['nama_kepala'] = $rowInst['nama_kepala'];
+                }
+                if (!empty($rowInst['nip_kepala'])) $inst['nip_kepala'] = $rowInst['nip_kepala'];
+                if (!empty($rowInst['kota'])) $inst['kota'] = $rowInst['kota'];
+            }
+        } catch (\Exception $e) {}
 
         include __DIR__ . '/../../resources/views/cbt/cetak_honor_pengawas.php';
         exit;
@@ -6327,7 +6337,17 @@ class CbtController {
         try {
             $kop = $db->query("SELECT * FROM pengaturan_kop_surat LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
-        $inst = ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+        $inst = ['nama_kepala' => 'AHMAD RIFA\'I, M.Pd', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+        try {
+            $stmtInst = $db->query("SELECT nama_kepala, nip_kepala, kota FROM institusi LIMIT 1");
+            if ($stmtInst && ($rowInst = $stmtInst->fetch(PDO::FETCH_ASSOC))) {
+                if (!empty($rowInst['nama_kepala']) && stripos($rowInst['nama_kepala'], 'Hamim') === false) {
+                    $inst['nama_kepala'] = $rowInst['nama_kepala'];
+                }
+                if (!empty($rowInst['nip_kepala'])) $inst['nip_kepala'] = $rowInst['nip_kepala'];
+                if (!empty($rowInst['kota'])) $inst['kota'] = $rowInst['kota'];
+            }
+        } catch (\Exception $e) {}
 
         return [
             'topikId' => $topikId,
@@ -6531,7 +6551,17 @@ class CbtController {
         try {
             $kop = $db->query("SELECT * FROM pengaturan_kop_surat LIMIT 1")->fetch(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {}
-        $inst = ['nama_kepala' => 'Drs. Hamim Hasyim', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+        $inst = ['nama_kepala' => 'AHMAD RIFA\'I, M.Pd', 'nip_kepala' => '-', 'kota' => 'Lampung Barat'];
+        try {
+            $stmtInst = $db->query("SELECT nama_kepala, nip_kepala, kota FROM institusi LIMIT 1");
+            if ($stmtInst && ($rowInst = $stmtInst->fetch(PDO::FETCH_ASSOC))) {
+                if (!empty($rowInst['nama_kepala']) && stripos($rowInst['nama_kepala'], 'Hamim') === false) {
+                    $inst['nama_kepala'] = $rowInst['nama_kepala'];
+                }
+                if (!empty($rowInst['nip_kepala'])) $inst['nip_kepala'] = $rowInst['nip_kepala'];
+                if (!empty($rowInst['kota'])) $inst['kota'] = $rowInst['kota'];
+            }
+        } catch (\Exception $e) {}
 
         include __DIR__ . '/../../resources/views/cbt/cetak_daftar_hadir_kelas.php';
         exit;
