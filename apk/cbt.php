@@ -452,8 +452,9 @@ try {
     $jadwalSiswaList = $processedGrids;
 } catch (\Exception $e) {}
 
-// Ambil Data Absensi Siswa Hari Ini jika Wajib Absensi Aktif
+// Ambil Data Absensi Siswa Hari Ini jika Wajib Absensi Aktif (Disimpan Per-Mata Pelajaran & Sesi)
 $absenHariIniMap = [];
+$absenHariIniList = [];
 if ($requireAttendance) {
     try {
         if ($is_cbt_only) {
@@ -486,13 +487,8 @@ if ($requireAttendance) {
                 ':today2' => $todayDate
             ]);
         }
-        $hasAnyAbsenToday = false;
-        $firstAbsenRow = null;
         while ($abRow = $stmtAbs->fetch(PDO::FETCH_ASSOC)) {
-            $hasAnyAbsenToday = true;
-            if (!$firstAbsenRow) {
-                $firstAbsenRow = $abRow;
-            }
+            $absenHariIniList[] = $abRow;
             if (!empty($abRow['ujian_id'])) {
                 $absenHariIniMap['uid_' . $abRow['ujian_id']] = $abRow;
             }
@@ -855,22 +851,32 @@ foreach ($ujianListRaw as $u) {
             }
         } catch (\Exception $e) {}
 
-    // Evaluasi Verifikasi Absensi 1 Pintu (Jika Diwajibkan di Pengaturan CBT)
+    // Evaluasi Verifikasi Absensi 1 Pintu (Per-Mata Pelajaran & Sesi)
     $hasAbsen = true;
     $absenInfo = null;
     if ($requireAttendance) {
         $hasAbsen = false;
-        if (!empty($u['id']) && isset($absenHariIniMap['uid_' . $u['id']])) {
+        $uId = !empty($u['id']) ? (int)$u['id'] : 0;
+        $uMapelClean = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $u['mapel_nama'] ?? '')));
+
+        if ($uId > 0 && isset($absenHariIniMap['uid_' . $uId])) {
             $hasAbsen = true;
-            $absenInfo = $absenHariIniMap['uid_' . $u['id']];
-        } elseif ($mKeyNorm && isset($absenHariIniMap['mapel_' . $mKeyNorm])) {
+            $absenInfo = $absenHariIniMap['uid_' . $uId];
+        } elseif (!empty($uMapelClean) && isset($absenHariIniMap['mapel_' . $uMapelClean])) {
             $hasAbsen = true;
-            $absenInfo = $absenHariIniMap['mapel_' . $mKeyNorm];
-        } elseif (!empty($hasAnyAbsenToday) && !empty($firstAbsenRow)) {
-            // Siswa sudah scan presensi hari ini di gerbang / per-sesi -> izinkan akses ujian hari ini
-            $hasAbsen = true;
-            $absenInfo = $firstAbsenRow;
+            $absenInfo = $absenHariIniMap['mapel_' . $uMapelClean];
+        } elseif (!empty($uMapelClean) && !empty($absenHariIniList)) {
+            // Cek pencocokan parsial nama mapel spesifik
+            foreach ($absenHariIniList as $ab) {
+                $abMapelClean = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $ab['mapel_nama'] ?? '')));
+                if (!empty($abMapelClean) && (strpos($uMapelClean, $abMapelClean) !== false || strpos($abMapelClean, $uMapelClean) !== false)) {
+                    $hasAbsen = true;
+                    $absenInfo = $ab;
+                    break;
+                }
+            }
         }
+        // Catatan: Absensi bersifat KETAT per mapel/sesi. Sekali scan hanya berlaku untuk 1 mapel sesi tersebut!
     }
     $u['has_absen'] = $hasAbsen;
     $u['absen_info'] = $absenInfo;
@@ -2189,8 +2195,13 @@ function verifikasiDanMulaiUjian() {
 
     // Token cocok -> Redirect ke kerjakan ujian dengan token resmi yang valid!
     let curPath = window.location.pathname;
-    let pathPrefix = (curPath.indexOf('/masmifhda/') !== -1) ? '/masmifhda' : '';
-    window.location.href = pathPrefix + '/cbt/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken);
+    let cbtPrefix = '/cbt';
+    if (curPath.indexOf('/masmifhda/') !== -1) {
+        cbtPrefix = '/masmifhda/cbt';
+    } else if (curPath.indexOf('/cbt/') !== -1) {
+        cbtPrefix = curPath.substring(0, curPath.indexOf('/cbt/') + 4);
+    }
+    window.location.href = cbtPrefix + '/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken);
 }
 
 // Enter key submit on input token

@@ -28,13 +28,17 @@ class AuthMiddleware {
             }
         }
 
-        // Security Guard: Jika Siswa (role_id = 3 / akun CBT siswa) iseng membuka portal proktor/admin/bank soal
+        // Security Guard: Jika Siswa (role_id = 3 / role_id = 7 / akun CBT siswa) iseng membuka portal proktor/admin/bank soal
         $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
-        $isCbtPeserta = !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta']);
-        if (($roleId === 3 || $isCbtPeserta) && isset($_SESSION['user_id'])) {
+        $isAdminOrDev = ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad']) || (isset($_SESSION['role']) && in_array(strtolower($_SESSION['role']), ['admin', 'developer', 'kamad', 'proktor'])));
+
+        if ($isAdminOrDev) {
+            unset($_SESSION['cbt_student_id'], $_SESSION['no_peserta']);
+        } elseif (($roleId === 3 || $roleId === 7 || !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta'])) && isset($_SESSION['user_id'])) {
             $isManagementPath = (
                 strpos($path, '/cbt') !== false 
                 && strpos($path, '/cbt/kerjakan') === false 
+                && strpos($path, '/kerjakan') === false 
                 && strpos($path, '/apk/') === false
             ) || strpos($path, '/bank_soal') !== false 
               || strpos($path, '/admin') !== false 

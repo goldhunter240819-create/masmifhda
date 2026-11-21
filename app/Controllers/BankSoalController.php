@@ -274,7 +274,10 @@ class BankSoalController {
 
         $userId = (int)$_SESSION['user_id'];
         $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
-        if ($roleId === 3 || !empty($_SESSION['cbt_student_id'])) {
+        $isAdminOrDev = ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad']) || (isset($_SESSION['role']) && in_array(strtolower($_SESSION['role']), ['admin', 'developer', 'kamad', 'proktor'])));
+        if ($isAdminOrDev) {
+            unset($_SESSION['cbt_student_id'], $_SESSION['no_peserta']);
+        } elseif ($roleId === 3 || $roleId === 7 || !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta'])) {
             $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
             header("Location: {$cbtApkUrl}");
             exit;
@@ -356,7 +359,10 @@ class BankSoalController {
         }
 
         $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
-        if ($roleId === 3 || !empty($_SESSION['cbt_student_id'])) {
+        $isAdminOrDev = ($roleId === 1 || $roleId === 99 || !empty($_SESSION['is_kamad']) || (isset($_SESSION['role']) && in_array(strtolower($_SESSION['role']), ['admin', 'developer', 'kamad', 'proktor'])));
+        if ($isAdminOrDev) {
+            unset($_SESSION['cbt_student_id'], $_SESSION['no_peserta']);
+        } elseif ($roleId === 3 || $roleId === 7 || !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta'])) {
             $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
             header("Location: {$cbtApkUrl}");
             exit;

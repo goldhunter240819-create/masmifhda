@@ -211,6 +211,12 @@ $router->add('POST', '/cbt/kerjakan/pelanggaran', [\App\Controllers\CbtControlle
 $router->add('POST', '/cbt/kerjakan/submit', [\App\Controllers\CbtController::class, 'submitKerjakan']);
 $router->add('GET', '/cbt/kerjakan/selesai', [\App\Controllers\CbtController::class, 'selesaiKerjakan']);
 
+$router->add('GET', '/kerjakan', [\App\Controllers\CbtController::class, 'kerjakan']);
+$router->add('POST', '/kerjakan/simpan-jawaban', [\App\Controllers\CbtController::class, 'ajaxSimpanJawaban']);
+$router->add('POST', '/kerjakan/pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCatatPelanggaran']);
+$router->add('POST', '/kerjakan/submit', [\App\Controllers\CbtController::class, 'submitKerjakan']);
+$router->add('GET', '/kerjakan/selesai', [\App\Controllers\CbtController::class, 'selesaiKerjakan']);
+
 $router->add('GET', '/cbt/soal', [\App\Controllers\CbtController::class, 'soal']);
 $router->add('POST', '/cbt/soal/save', [\App\Controllers\CbtController::class, 'saveSoal']);
 $router->add('POST', '/cbt/soal/delete', [\App\Controllers\CbtController::class, 'deleteSoal']);

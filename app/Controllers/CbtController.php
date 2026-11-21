@@ -800,31 +800,44 @@ class CbtController {
     /**
      * Inisialisasi Auth & Koneksi Database
      */
-    private static function getAuthContext() {
+    private static function getAuthContext($allowStudent = false) {
         self::ensureSession();
 
-        if (!isset($_SESSION['user_id'])) {
-            redirect('/login');
-            exit;
+        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+        $isKamad = !empty($_SESSION['is_kamad']);
+        $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || $isKamad || (isset($_SESSION['role']) && in_array(strtolower($_SESSION['role']), ['admin', 'developer', 'kamad', 'proktor'])));
+
+        if ($isAdminOrKamad) {
+            unset($_SESSION['cbt_student_id'], $_SESSION['no_peserta']);
         }
 
-        $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
-        $isCbtPeserta = !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta']);
+        if (!$allowStudent) {
+            if (!isset($_SESSION['user_id'])) {
+                redirect('/login');
+                exit;
+            }
 
-        // Siswa (role_id = 3 / akun CBT siswa) DILARANG masuk ke portal manajemen proktor/admin
-        if ($roleId === 3 || $isCbtPeserta) {
-            $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
-            header("Location: {$cbtApkUrl}");
-            exit;
+            $isCbtPeserta = !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta']);
+            // Siswa (role_id = 3 / role_id = 7 / akun CBT siswa) DILARANG masuk ke portal manajemen proktor/admin
+            if (!$isAdminOrKamad && ($roleId === 3 || $roleId === 7 || $isCbtPeserta)) {
+                $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+                header("Location: {$cbtApkUrl}");
+                exit;
+            }
+        } else {
+            // Mode Pengerjaan Ujian Siswa (kerjakan, submit, simpan-jawaban, pelanggaran, selesai)
+            $hasAnyLogin = isset($_SESSION['user_id']) || isset($_SESSION['siswa_id']) || isset($_SESSION['cbt_khusus_id']) || isset($_SESSION['cbt_student_id']) || isset($_SESSION['guru_id']);
+            if (!$hasAnyLogin) {
+                $cbtLoginUrl = function_exists('base_url') ? base_url('apk/login.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/login.php' : '/apk/login.php');
+                header("Location: {$cbtLoginUrl}");
+                exit;
+            }
         }
 
         $db_core = Database::connect('core');
         $db_siakad = Database::connect('siakad');
 
         self::ensureTables($db_core);
-
-        $isKamad = !empty($_SESSION['is_kamad']);
-        $isAdminOrKamad = ($roleId === 1 || $roleId === 99 || $isKamad);
 
         return [
             'db_core' => $db_core,
@@ -2983,7 +2996,7 @@ class CbtController {
      * Ruang Ujian CBT (CBT Player untuk Siswa & Pengawas)
      */
     public static function kerjakan() {
-        $ctx = self::getAuthContext();
+        $ctx = self::getAuthContext(true);
         $db = $ctx['db_core'];
 
         $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
@@ -3180,6 +3193,51 @@ class CbtController {
             }
         }
 
+        // Security Guard: Wajib Absensi Per-Mata Pelajaran (Anti-Kerjakan dari Kantin/Luar)
+        $requireAttendance = ($cbtSettings['require_attendance_to_start'] ?? '1') === '1';
+        if ($requireAttendance && ($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0)) {
+            $hasAbsenForThisMapel = false;
+            $apkCbtRedirectUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+
+            if ($isCbtOnly || $roleId === 7) {
+                $stK = $db->prepare("SELECT no_peserta, nis, nama_siswa FROM cbt_peserta_khusus WHERE id = ? LIMIT 1");
+                $stK->execute([$siswaSessionId]);
+                $rK = $stK->fetch(PDO::FETCH_ASSOC);
+                $swNis = $rK['no_peserta'] ?? ($rK['nis'] ?? '');
+                $swNama = $rK['nama_siswa'] ?? '';
+                $stA = $db->prepare("
+                    SELECT id FROM cbt_absensi 
+                    WHERE (nis = ? OR (nis = ? AND ? != '') OR nama_siswa = ?)
+                      AND (tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE())
+                      AND (ujian_id = ? OR mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+                      AND status IN ('Hadir', 'Terlambat')
+                    LIMIT 1
+                ");
+                $stA->execute([$swNis, $swNis, $swNis, $swNama, $ujian_id, $mapelNama, $mapelNama, $mapelNama]);
+                $hasAbsenForThisMapel = (bool)$stA->fetchColumn();
+            } else {
+                $stS = $db->prepare("SELECT id, nis, nama FROM siswa WHERE (user_id = ? AND ? > 0) OR (id = ? AND ? > 0) LIMIT 1");
+                $stS->execute([$userId, $userId, $siswaSessionId, $siswaSessionId]);
+                $rS = $stS->fetch(PDO::FETCH_ASSOC);
+                $swNis = $rS['nis'] ?? '';
+                $swId = $rS['id'] ?? $siswaSessionId;
+                $stA = $db->prepare("
+                    SELECT id FROM cbt_absensi 
+                    WHERE ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != ''))
+                      AND (tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE())
+                      AND (ujian_id = ? OR mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+                      AND status IN ('Hadir', 'Terlambat')
+                    LIMIT 1
+                ");
+                $stA->execute([$swId ?: -1, $swNis, $swNis, $ujian_id, $mapelNama, $mapelNama, $mapelNama]);
+                $hasAbsenForThisMapel = (bool)$stA->fetchColumn();
+            }
+
+            if (!$hasAbsenForThisMapel) {
+                echo "<script>alert('⚠️ Anda belum melakukan scan absensi untuk mata pelajaran {$mapelNama}! Silakan lakukan scan kartu ke pengawas ujian terlebih dahulu.'); window.location.href='{$apkCbtRedirectUrl}';</script>";
+                exit;
+            }
+        }
 
         $pesertaInfo = null;
 
@@ -3309,7 +3367,7 @@ class CbtController {
      */
     public static function ajaxCatatPelanggaran() {
         header('Content-Type: application/json; charset=utf-8');
-        $ctx = self::getAuthContext();
+        $ctx = self::getAuthContext(true);
         $db = $ctx['db_core'];
 
         $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
@@ -3328,7 +3386,7 @@ class CbtController {
      */
     public static function ajaxSimpanJawaban() {
         header('Content-Type: application/json; charset=utf-8');
-        $ctx = self::getAuthContext();
+        $ctx = self::getAuthContext(true);
         $db = $ctx['db_core'];
 
         $ujian_id = isset($_POST['ujian_id']) ? (int)$_POST['ujian_id'] : 0;
@@ -3354,7 +3412,7 @@ class CbtController {
      * Submit Jawaban Ujian Siswa & Hitung Nilai Real Otomatis
      */
     public static function submitKerjakan() {
-        $ctx = self::getAuthContext();
+        $ctx = self::getAuthContext(true);
         $db = $ctx['db_core'];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -3476,7 +3534,7 @@ class CbtController {
      * Halaman Konfirmasi Selesai Ujian & Tampilan Skor
      */
     public static function selesaiKerjakan() {
-        $ctx = self::getAuthContext();
+        $ctx = self::getAuthContext(true);
         $db = $ctx['db_core'];
 
         $peserta_id = isset($_GET['peserta_id']) ? (int)$_GET['peserta_id'] : 0;
@@ -3491,7 +3549,8 @@ class CbtController {
         $ujianInfo = $stmtU->fetch(PDO::FETCH_ASSOC);
 
         if (!$pesertaInfo || !$ujianInfo) {
-            redirect('/cbt/dashboard');
+            $fallbackUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
+            redirect($fallbackUrl);
             exit;
         }
 
