@@ -24,15 +24,24 @@ if (file_exists($apk_settings_file)) {
 }
 
 // Fetch favicon and school info
-$favicon_url = '/public/uploads/logo/logo_1781854511.png'; // default
+$logo_file = 'public/assets/images/logo.png';
+if (file_exists(__DIR__ . '/../public/uploads/logo/logo_1781854511.png')) {
+    $logo_file = 'public/uploads/logo/logo_1781854511.png';
+}
+
+$scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+$baseFolder = dirname($scriptDir);
+if ($baseFolder === '/' || $baseFolder === '\\' || $baseFolder === '.') $baseFolder = '';
+$favicon_url = ($baseFolder ? $baseFolder . '/' : '/') . $logo_file;
 $school_name = 'MAS Mifhda';
+
 if (isset($core_db)) {
     try {
         $stmt_inst = $core_db->query("SELECT logo, nama_institusi FROM institusi LIMIT 1");
         $inst = $stmt_inst->fetch(PDO::FETCH_ASSOC);
         if ($inst) {
-            if (!empty($inst['logo'])) {
-                $favicon_url = '/public/uploads/logo/' . $inst['logo'];
+            if (!empty($inst['logo']) && file_exists(__DIR__ . '/../public/uploads/logo/' . $inst['logo'])) {
+                $favicon_url = ($baseFolder ? $baseFolder . '/' : '/') . 'public/uploads/logo/' . $inst['logo'];
             }
             if (!empty($inst['nama_institusi'])) {
                 $school_name = $inst['nama_institusi'];

@@ -6206,6 +6206,12 @@ class CbtController {
         $zip->close();
         @unlink($tempZip);
 
+        // Pastikan direktori storage & uploads ada
+        @mkdir($baseDir . '/storage/sessions', 0777, true);
+        @mkdir($baseDir . '/storage/cache', 0777, true);
+        @mkdir($baseDir . '/storage/logs', 0777, true);
+        @mkdir($baseDir . '/public/uploads/logo', 0777, true);
+
         // 3. Pastikan skema database tabel CBT lokal up to date
         try {
             $db = \App\Core\Database::connect('core');

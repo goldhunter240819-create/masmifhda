@@ -1,10 +1,16 @@
 <?php
 session_name("AULA_SYSTEM_PORTAL");
 if (session_status() === PHP_SESSION_NONE) {
-    session_save_path(__DIR__ . '/../storage/sessions');
+    $sessDir = __DIR__ . '/../storage/sessions';
+    if (!is_dir($sessDir)) {
+        @mkdir($sessDir, 0777, true);
+    }
+    if (is_dir($sessDir) && is_writable($sessDir)) {
+        @session_save_path($sessDir);
+    }
     ini_set('session.gc_maxlifetime', 31536000);
     ini_set('session.cookie_lifetime', 31536000);
-    session_start();
+    @session_start();
 }
 
 date_default_timezone_set('Asia/Jakarta');

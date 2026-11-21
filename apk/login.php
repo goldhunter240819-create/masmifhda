@@ -10,6 +10,10 @@ if (!empty($_SESSION['is_cbt_only'])) {
     exit;
 }
 if (isset($_SESSION['siswa_id'])) {
+    if (file_exists(__DIR__ . '/../.cbt_standalone') || !file_exists(__DIR__ . '/index.php')) {
+        header("Location: cbt.php");
+        exit;
+    }
     if (isset($_SESSION['siswa_status']) && $_SESSION['siswa_status'] === 'Alumni') {
         header("Location: alumni_dashboard.php");
     } else {
@@ -435,6 +439,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 
                                 \App\Services\AuditLogger::loginSuccess($_SESSION['siswa_nama'], 'Siswa (APK)');
                                 
+                                if (file_exists(__DIR__ . '/../.cbt_standalone') || !file_exists(__DIR__ . '/index.php')) {
+                                    header("Location: cbt.php");
+                                    exit;
+                                }
                                 if ($siswa['status'] === 'Alumni') {
                                     header("Location: alumni_dashboard.php");
                                 } else {
@@ -495,7 +503,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $page_title = 'Login Portal';
-$favicon_url = '/public/uploads/logo/logo_1781854511.png';
+
+$logo_file = 'public/assets/images/logo.png';
+if (file_exists(__DIR__ . '/../public/uploads/logo/logo_1781854511.png')) {
+    $logo_file = 'public/uploads/logo/logo_1781854511.png';
+} elseif (file_exists(__DIR__ . '/../public/assets/images/logo.png')) {
+    $logo_file = 'public/assets/images/logo.png';
+} elseif (file_exists(__DIR__ . '/../public/logo_kemenag.png')) {
+    $logo_file = 'public/logo_kemenag.png';
+}
+
+$scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+$baseFolder = dirname($scriptDir);
+if ($baseFolder === '/' || $baseFolder === '\\' || $baseFolder === '.') $baseFolder = '';
+$favicon_url = ($baseFolder ? $baseFolder . '/' : '/') . $logo_file;
+$relative_logo_fallback = '../' . $logo_file;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -874,7 +896,7 @@ $favicon_url = '/public/uploads/logo/logo_1781854511.png';
     <div class="mobile-wrapper">
         <div class="login-card">
             <div class="logo-box">
-                <img src="<?= htmlspecialchars($favicon_url) ?>" alt="Logo">
+                <img src="<?= htmlspecialchars($favicon_url) ?>" alt="Logo" onerror="this.onerror=null; this.src='<?= htmlspecialchars($relative_logo_fallback) ?>';">
             </div>
             <h3 class="title-school">MA MIFTAHUL HUDA</h3>
 

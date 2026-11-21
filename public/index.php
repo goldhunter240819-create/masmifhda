@@ -54,10 +54,16 @@ if (!function_exists('redirect')) {
 
 if (session_status() === PHP_SESSION_NONE) {
     // Perpanjang masa aktif sesi menjadi 1 Hari (86400 detik)
-    session_save_path(__DIR__ . '/../storage/sessions');
+    $sessDir = __DIR__ . '/../storage/sessions';
+    if (!is_dir($sessDir)) {
+        @mkdir($sessDir, 0777, true);
+    }
+    if (is_dir($sessDir) && is_writable($sessDir)) {
+        @session_save_path($sessDir);
+    }
     ini_set('session.gc_maxlifetime', 86400);
     ini_set('session.cookie_lifetime', 86400);
-    session_start();
+    @session_start();
 }
 
 use App\Core\Router;

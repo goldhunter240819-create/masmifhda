@@ -267,6 +267,25 @@ PHP;
         $zip->addFile($baseDir . '/public/logo_kemenag.png', 'public/logo_kemenag.png');
     }
 
+    // Logo uploads & default fallbacks
+    if (file_exists($baseDir . '/public/assets/images/logo.png')) {
+        $zip->addFile($baseDir . '/public/assets/images/logo.png', 'public/uploads/logo/logo_1781854511.png');
+        $zip->addFile($baseDir . '/public/assets/images/logo.png', 'public/uploads/logo/logo.png');
+    }
+    if (is_dir($baseDir . '/public/uploads/logo')) {
+        $logoIterator = glob($baseDir . '/public/uploads/logo/*');
+        foreach ($logoIterator as $lf) {
+            if (is_file($lf)) {
+                $zip->addFile($lf, 'public/uploads/logo/' . basename($lf));
+            }
+        }
+    }
+
+    // Storage folders
+    $zip->addFromString('storage/sessions/.gitkeep', '');
+    $zip->addFromString('storage/cache/.gitkeep', '');
+    $zip->addFromString('storage/logs/.gitkeep', '');
+
     // Assets css/js/fonts
     if (is_dir($baseDir . '/public/assets')) {
         $assetsIterator = new RecursiveIteratorIterator(
@@ -333,6 +352,10 @@ if not exist "%ZIP_FILE%" (
 
 echo.
 echo [2/3] Memperbarui berkas engine CBT lokal...
+if not exist "%~dp0storage\sessions" mkdir "%~dp0storage\sessions" 2>nul
+if not exist "%~dp0storage\cache" mkdir "%~dp0storage\cache" 2>nul
+if not exist "%~dp0storage\logs" mkdir "%~dp0storage\logs" 2>nul
+if not exist "%~dp0public\uploads\logo" mkdir "%~dp0public\uploads\logo" 2>nul
 powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead('%ZIP_FILE%'); foreach ($entry in $zip.Entries) { if ($entry.FullName -ne 'config/database.php') { $targetPath = Join-Path '%~dp0' $entry.FullName; $dir = [System.IO.Path]::GetDirectoryName($targetPath); if (-not (Test-Path $dir)) { [System.IO.Directory]::CreateDirectory($dir) | Out-Null }; if (-not $entry.FullName.EndsWith('/')) { [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $targetPath, $true) } } }; $zip.Dispose();"
 
 del "%ZIP_FILE%" 2>nul
@@ -362,6 +385,11 @@ $pass = '';
 
 $statusMsg = '';
 $isSuccess = false;
+
+@mkdir(__DIR__ . '/storage/sessions', 0777, true);
+@mkdir(__DIR__ . '/storage/cache', 0777, true);
+@mkdir(__DIR__ . '/storage/logs', 0777, true);
+@mkdir(__DIR__ . '/public/uploads/logo', 0777, true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['auto'])) {
     try {
