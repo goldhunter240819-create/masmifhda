@@ -12,7 +12,6 @@ $siakad = \App\Core\Database::connect('siakad');
 
 $user394 = $core->query("SELECT * FROM users WHERE id = 394")->fetch(PDO::FETCH_ASSOC);
 
-// Cari di semua tabel core dan siakad
 $results = [
     'user394' => $user394,
     'core_matches' => [],
@@ -20,10 +19,10 @@ $results = [
 ];
 
 // Search core
-$coreTables = ['siswa', 'guru', 'users', 'cbt_peserta_khusus', 'cbt_absensi', 'presensi'];
+$coreTables = ['siswa', 'guru', 'cbt_peserta_khusus'];
 foreach ($coreTables as $t) {
     try {
-        $rows = $core->query("SELECT * FROM `$t` WHERE id = 394 OR user_id = 394 OR nis = '46278530' OR nisn = '46278530' OR username = '46278530' LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $core->query("SELECT * FROM `$t` WHERE id = 394 OR user_id = 394 OR nis = '46278530' OR nisn = '46278530' LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
         if ($rows) {
             $results['core_matches'][$t] = $rows;
         }
@@ -33,7 +32,7 @@ foreach ($coreTables as $t) {
 }
 
 // Search siakad
-$siakadTables = ['siswa', 'guru', 'users', 'presensi'];
+$siakadTables = ['siswa', 'guru'];
 foreach ($siakadTables as $t) {
     try {
         $rows = $siakad->query("SELECT * FROM `$t` WHERE id = 394 OR nis = '46278530' OR nisn = '46278530' LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
@@ -45,9 +44,15 @@ foreach ($siakadTables as $t) {
     }
 }
 
-// Also let's check who the last presensi was in presensi where user_id = 394!
-$pres = $core->query("SELECT p.*, u.username, u.nama as u_nama, u.role_id FROM presensi p LEFT JOIN users u ON p.user_id = u.id WHERE p.user_id = 394 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$results['presensi_detail'] = $pres;
+// Check who is logged in or user info
+$results['user_columns'] = $core->query("DESCRIBE users")->fetchAll(PDO::FETCH_COLUMN);
 
-// Also check ALL columns of users for 394
+// Let's also check if username '46278530' matches any NIK or NISN or no_kk or similar in core.siswa!
+try {
+    $cs = $core->query("SELECT id, user_id, nis, nisn, nik, nama, kelas_id FROM siswa WHERE nik = '46278530' OR no_kk = '46278530' OR nis = '46278530' OR nisn = '46278530' OR nama LIKE '%Faiz%' OR nama LIKE '%46278530%'")->fetchAll(PDO::FETCH_ASSOC);
+    $results['siswa_by_various'] = $cs;
+} catch (\Exception $e) {
+    $results['siswa_by_various_err'] = $e->getMessage();
+}
+
 echo json_encode($results, JSON_PRETTY_PRINT);
