@@ -219,6 +219,8 @@ $router->add('GET', '/cbt/semi-online', [\App\Controllers\CbtController::class, 
 $router->add('POST', '/cbt/semi-online/pull', [\App\Controllers\CbtController::class, 'ajaxPullDataOnline']);
 $router->add('POST', '/cbt/semi-online/pull-absen', [\App\Controllers\CbtController::class, 'ajaxPullAbsensiOnline']);
 $router->add('POST', '/cbt/semi-online/push', [\App\Controllers\CbtController::class, 'ajaxPushHasilOnline']);
+$router->add('POST', '/cbt/semi-online/update-engine', [\App\Controllers\CbtController::class, 'ajaxUpdateEngine']);
+$router->add('GET', '/cbt/semi-online/api/version', [\App\Controllers\CbtController::class, 'apiCheckVersionOnline']);
 $router->add('POST', '/cbt/semi-online/export-file', [\App\Controllers\CbtController::class, 'exportBackupFile']);
 $router->add('POST', '/cbt/semi-online/import-file', [\App\Controllers\CbtController::class, 'importBackupFile']);
 $router->add('GET', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtController::class, 'apiExportPaketOnline']);
@@ -237,7 +239,11 @@ if ($base !== '/' && $base !== '') {
 }
 if (empty($requestUri)) $requestUri = '/';
 
-$router->dispatch($requestMethod, $requestUri);
+if (method_exists($router, 'dispatch')) {
+    $router->dispatch($requestMethod, $requestUri);
+} else {
+    $router->run();
+}
 PHP;
     $zip->addFromString('public/index.php', $publicIndexContent);
     if (file_exists($baseDir . '/public/.htaccess')) {
@@ -285,6 +291,52 @@ PHP;
 
     // 8. Marker file .cbt_standalone
     $zip->addFromString('.cbt_standalone', 'CBT_MADRASAH_STANDALONE=1');
+
+    // 8b. Script Auto-Update Desktop 1-Klik: UPDATE_CBT.bat
+    $updateBatContent = <<<'BAT'
+@echo off
+title Update Engine CBT Madrasah - MAS MIFHDA
+color 0b
+echo =======================================================================
+echo          PEMBARUAN ENGINE CBT MADRASAH (1-KLIK AUTO-UPDATE)
+echo                      MAS MIFTAHUL HUDA
+echo =======================================================================
+echo.
+echo [1/3] Menghubungkan ke server pusat online...
+set SERVER_URL=https://apk.masmifhda.sch.id/apk/download_standalone.php?token=MIFHDA_CBT_SYNC_2026
+set ZIP_FILE=%~dp0cbt_latest_update.zip
+
+powershell -Command "Write-Host 'Mengunduh paket CBT terbaru...' -ForegroundColor Cyan; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('%SERVER_URL%', '%ZIP_FILE%')"
+
+if not exist "%ZIP_FILE%" (
+    echo.
+    echo [ERROR] Gagal mengunduh paket dari server pusat!
+    echo Pastikan laptop ini terhubung ke internet saat melakukan update.
+    pause
+    exit /b 1
+)
+
+echo.
+echo [2/3] Memperbarui berkas engine CBT lokal...
+powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead('%ZIP_FILE%'); foreach ($entry in $zip.Entries) { if ($entry.FullName -ne 'config/database.php') { $targetPath = Join-Path '%~dp0' $entry.FullName; $dir = [System.IO.Path]::GetDirectoryName($targetPath); if (-not (Test-Path $dir)) { [System.IO.Directory]::CreateDirectory($dir) | Out-Null }; if (-not $entry.FullName.EndsWith('/')) { [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $targetPath, $true) } } }; $zip.Dispose();"
+
+del "%ZIP_FILE%" 2>nul
+
+echo.
+echo [3/3] Menyesuaikan skema database...
+if exist "C:\xampp\php\php.exe" (
+    C:\xampp\php\php.exe -r "require 'apk/koneksi.php'; require 'vendor/autoload.php'; \App\Controllers\CbtController::ensureTables(\App\Core\Database::connect('core')); echo 'Database OK\n';" 2>nul
+)
+
+echo.
+echo =======================================================================
+echo          ALHAMDULILLAH! ENGINE CBT BERHASIL DIPERBARUI!
+echo =======================================================================
+echo Silakan buka kembali browser di: http://localhost/cbt/semi-online
+echo.
+pause
+BAT;
+    $zip->addFromString('UPDATE_CBT.bat', $updateBatContent);
 
     // 9. Installer Web 1-Klik: setup_db.php
     $setupDbContent = <<<'PHP'

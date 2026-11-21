@@ -23,6 +23,8 @@ if ($action === 'export') {
     \App\Controllers\CbtController::apiExportPaketOnline();
 } elseif ($action === 'export_absen') {
     \App\Controllers\CbtController::apiExportAbsensiOnline();
+} elseif ($action === 'version') {
+    \App\Controllers\CbtController::apiCheckVersionOnline();
 } elseif ($action === 'import') {
     \App\Controllers\CbtController::apiImportHasilOnline();
 } else {

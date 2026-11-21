@@ -2542,6 +2542,8 @@ $router->add('POST', '/cbt/semi-online/api/export-paket', [\App\Controllers\CbtC
 $router->add('GET', '/cbt/semi-online/api/export-absen', [\App\Controllers\CbtController::class, 'apiExportAbsensiOnline']);
 $router->add('POST', '/cbt/semi-online/api/export-absen', [\App\Controllers\CbtController::class, 'apiExportAbsensiOnline']);
 $router->add('POST', '/cbt/semi-online/api/import-hasil', [\App\Controllers\CbtController::class, 'apiImportHasilOnline']);
+$router->add('POST', '/cbt/semi-online/update-engine', [\App\Controllers\CbtController::class, 'ajaxUpdateEngine']);
+$router->add('GET', '/cbt/semi-online/api/version', [\App\Controllers\CbtController::class, 'apiCheckVersionOnline']);
 $router->add('GET', '/cbt/semi-online/download-standalone', [\App\Controllers\CbtController::class, 'downloadStandaloneZip']);
 
 

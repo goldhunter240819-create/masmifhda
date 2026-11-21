@@ -105,7 +105,34 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                 </div>
             </div>
 
-            <!-- PAKET STANDALONE LAPTOP SERVER MADRASAH -->
+            <!-- CARD UPDATE / UNDUH ENGINE CBT -->
+            <?php if (!$isServerPusat): ?>
+            <!-- Mode Server Lokal: 1-Klik Auto Update dari Pusat -->
+            <div style="background: linear-gradient(135deg, #0369a1 0%, #0c4a6e 100%); border-radius: 20px; padding: 1.75rem 2rem; color: white; margin-bottom: 2rem; border: 1px solid #0284c7; box-shadow: 0 8px 24px rgba(3, 105, 161, 0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 300px;">
+                    <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
+                        <i data-lucide="refresh-cw"></i>
+                    </div>
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.2); color: #e0f2fe; padding: 3px 10px; border-radius: 100px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">
+                            Pembaruan Sistem Otomatis (1-Klik)
+                        </div>
+                        <h3 style="font-size: 1.18rem; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">Update Engine CBT dari Server Pusat</h3>
+                        <p style="font-size: 0.82rem; color: #bae6fd; margin: 0; line-height: 1.4;">
+                            Ketika kami update fitur/perbaikan baru di pusat, Anda <b>tidak perlu download & ekstrak zip manual lagi</b>. Cukup klik tombol di samping, sistem lokal ini langsung memperbarui berkasnya otomatis!
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" id="btnUpdateEngine" onclick="executeUpdateEngine()" style="background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #082f49; border: none; padding: 13px 22px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4); transition: 0.2s;">
+                        <i data-lucide="sparkles"></i>
+                        <span>Perbarui Engine CBT (1-Klik)</span>
+                    </button>
+                </div>
+            </div>
+            <?php else: ?>
+            <!-- Mode Server Pusat Online: Tombol Unduh Zip Standalone -->
             <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 20px; padding: 1.75rem 2rem; color: white; margin-bottom: 2rem; border: 1px solid #334155; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
                 <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 300px;">
                     <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
@@ -129,6 +156,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                     </a>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Two Main Action Panels (Tahap 1 & Tahap 2) -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
@@ -442,6 +470,57 @@ function executePushData() {
             })
             .catch(err => {
                 Swal.fire('Koneksi Gagal', 'Gagal menghubungi server pusat. Pastikan laptop proktor terhubung ke internet saat mengirim hasil.', 'error');
+            });
+        }
+    });
+}
+
+function executeUpdateEngine() {
+    const serverUrl = document.getElementById('targetServerUrl') ? document.getElementById('targetServerUrl').value.trim() : 'https://apk.masmifhda.sch.id';
+
+    Swal.fire({
+        title: 'Perbarui Engine CBT?',
+        html: `Sistem akan mengunduh paket kode CBT paling mutakhir dari server pusat (<b style="color: #0284c7;">${serverUrl}</b>) dan memperbarui berkas aplikasi secara otomatis.<br><br><span style="font-size: 0.8rem; color: #16a34a; font-weight: 700;">✓ Konfigurasi database & data siswa lokal dijamin 100% aman (tidak tertimpa).</span>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0284c7',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-arrows-rotate"></i> Ya, Perbarui Sekarang',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Sedang Memperbarui Engine...',
+                html: 'Mengunduh dan menerapkan berkas sistem terbaru dari pusat...<br>Mohon tunggu beberapa detik.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('<?= base_url('cbt/semi-online/update-engine') ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ server_url: serverUrl })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    Swal.fire({
+                        title: 'Pembaruan Berhasil!',
+                        text: res.message,
+                        icon: 'success',
+                        confirmButtonText: 'Alhamdulillah, Muat Ulang'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Update Gagal', res.message || 'Terjadi kesalahan saat pembaruan.', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Koneksi Gagal', 'Gagal menghubungi server pusat untuk mengunduh update.', 'error');
             });
         }
     });

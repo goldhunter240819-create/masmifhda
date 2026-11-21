@@ -6121,6 +6121,106 @@ class CbtController {
     }
 
     /**
+     * API Cek Versi Terkini CBT dari Server Pusat
+     */
+    public static function apiCheckVersionOnline() {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 'success',
+            'version' => '2.2.0',
+            'build' => '2026.11.21',
+            'release_date' => date('Y-m-d H:i:s'),
+            'features' => [
+                'Fix Router::dispatch() method compatibility',
+                '1-Click Auto Update Engine CBT',
+                'Presensi Kilat Hari Ini',
+                'Isolasi Data Siswa Kelas Jauh'
+            ]
+        ]);
+        exit;
+    }
+
+    /**
+     * AJAX 1-Klik Pembaruan Engine CBT dari Server Pusat ke Server Lokal
+     * Mengunduh paket standalone terbaru dari server online pusat,
+     * lalu mengekstraknya menimpa berkas aplikasi tanpa merusak database & config lokal.
+     */
+    public static function ajaxUpdateEngine() {
+        header('Content-Type: application/json');
+        
+        $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
+        $downloadUrl = $serverUrl . '/apk/download_standalone.php?token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+
+        $baseDir = realpath(__DIR__ . '/../..');
+        $tempZip = $baseDir . '/temp_cbt_update_' . time() . '.zip';
+
+        // 1. Download zip dari server pusat via cURL
+        $fp = fopen($tempZip, 'w+');
+        $ch = curl_init($downloadUrl);
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        $exec = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+        fclose($fp);
+
+        if (!$exec || $httpCode !== 200 || !file_exists($tempZip) || filesize($tempZip) < 1000) {
+            @unlink($tempZip);
+            echo json_encode([
+                'success' => false,
+                'message' => "Gagal mengunduh pembaruan dari server pusat. HTTP: {$httpCode}. Error: {$curlErr}"
+            ]);
+            exit;
+        }
+
+        // 2. Ekstrak file zip dengan aman (menjaga config/database.php)
+        $zip = new \ZipArchive();
+        if ($zip->open($tempZip) !== true) {
+            @unlink($tempZip);
+            echo json_encode(['success' => false, 'message' => 'Gagal membuka berkas zip paket pembaruan.']);
+            exit;
+        }
+
+        $updatedFiles = 0;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $filename = $zip->getNameIndex($i);
+            
+            // Lindungi konfigurasi koneksi database lokal
+            if ($filename === 'config/database.php' && file_exists($baseDir . '/config/database.php')) {
+                continue;
+            }
+
+            // Lindungi folder upload siswa jika ada
+            if (strpos($filename, 'public/uploads/') === 0 && file_exists($baseDir . '/' . $filename)) {
+                continue;
+            }
+
+            if ($zip->extractTo($baseDir, [$filename])) {
+                $updatedFiles++;
+            }
+        }
+        $zip->close();
+        @unlink($tempZip);
+
+        // 3. Pastikan skema database tabel CBT lokal up to date
+        try {
+            $db = \App\Core\Database::connect('core');
+            self::ensureTables($db);
+        } catch (\Exception $e) {}
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Engine CBT berhasil diperbarui ke versi paling mutakhir! ({$updatedFiles} berkas ter-update).",
+            'updated_files' => $updatedFiles
+        ]);
+        exit;
+    }
+
+    /**
      * Helper untuk memasukkan payload data sinkronisasi ke database lokal
      */
     private static function importDataPayload($db, $dbSiakad, $data) {

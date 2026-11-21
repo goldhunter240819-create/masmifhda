@@ -13,9 +13,13 @@ class Router {
         ];
     }
 
-    public function run() {
-        $method = $_SERVER['REQUEST_METHOD'];
-        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    public function dispatch($customMethod = null, $customPath = null) {
+        return $this->run($customMethod, $customPath);
+    }
+
+    public function run($customMethod = null, $customPath = null) {
+        $method = $customMethod ?: $_SERVER['REQUEST_METHOD'];
+        $path = $customPath ?: parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
         // Find the base path by looking at where index.php is
         // Usually something like /public/index.php
