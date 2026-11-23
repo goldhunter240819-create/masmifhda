@@ -10,8 +10,71 @@ if (!isset($_SESSION['guru_id']) && !isset($_SESSION['user_id'])) {
 $guru_id = (int)($_SESSION['guru_id'] ?? 0);
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 $guru_nama = $_SESSION['guru_nama'] ?? ($_SESSION['nama'] ?? '');
+$role_id = (int)($_SESSION['role_id'] ?? 0);
+$isAdmin = ($role_id == 1 || $role_id == 99);
 
 $db = $siakad_db ?: $core_db;
+
+// 1. Ambil info paket jika paket_id disertakan dari link Bank Soal
+$paket_id = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
+$ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+$paket = null;
+if ($paket_id > 0) {
+    try {
+        $stmtP = $db->prepare("SELECT * FROM bs_paket WHERE id = ?");
+        $stmtP->execute([$paket_id]);
+        $paket = $stmtP->fetch(PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {}
+}
+
+// 2. Ambil seluruh Mapel yang diampu oleh Guru ini (Isolasi Akun Guru)
+$guruMapelList = [];
+if ($guru_id > 0) {
+    // Dari siakad.mengajar
+    if (!empty($siakad_db)) {
+        try {
+            $stmtM = $siakad_db->prepare("
+                SELECT DISTINCT mp.nama_mapel 
+                FROM mengajar m
+                JOIN mapel mp ON m.mapel_id = mp.id
+                WHERE m.guru_id = ? AND mp.nama_mapel IS NOT NULL AND mp.nama_mapel != ''
+                ORDER BY mp.nama_mapel ASC
+            ");
+            $stmtM->execute([$guru_id]);
+            foreach ($stmtM->fetchAll(PDO::FETCH_COLUMN) as $m) {
+                $m = trim($m);
+                if (!empty($m) && !in_array($m, $guruMapelList)) {
+                    $guruMapelList[] = $m;
+                }
+            }
+        } catch (\Exception $e) {}
+    }
+
+    // Dari bs_paket
+    try {
+        $stmtP = $core_db->prepare("
+            SELECT DISTINCT mapel_nama 
+            FROM bs_paket 
+            WHERE (guru_id = ? OR (? != '' AND guru_nama = ?) OR (? != '' AND guru_nama LIKE ?))
+              AND mapel_nama IS NOT NULL AND mapel_nama != ''
+            ORDER BY mapel_nama ASC
+        ");
+        $stmtP->execute([$guru_id, $guru_nama, $guru_nama, $guru_nama, "%{$guru_nama}%"]);
+        foreach ($stmtP->fetchAll(PDO::FETCH_COLUMN) as $m) {
+            $m = trim($m);
+            if (!empty($m) && !in_array($m, $guruMapelList)) {
+                $guruMapelList[] = $m;
+            }
+        }
+    } catch (\Exception $e) {}
+}
+
+if ($paket && !empty($paket['mapel_nama'])) {
+    $pMapel = trim($paket['mapel_nama']);
+    if (!in_array($pMapel, $guruMapelList)) {
+        $guruMapelList[] = $pMapel;
+    }
+}
 
 // Parameter filter
 $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
@@ -19,8 +82,17 @@ if ($selectedTopikId == 5) $selectedTopikId = 3;
 $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
 $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
-$paket_id = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
-$ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+
+// Jika datang dari link paket soal tapi belum ada parameter URL
+if ($paket) {
+    if ($selectedTopikId === 0 && !empty($paket['topik_id'])) {
+        $selectedTopikId = (int)$paket['topik_id'];
+        if ($selectedTopikId == 5) $selectedTopikId = 3;
+    }
+    if (empty($selectedMapel) && !empty($paket['mapel_nama'])) {
+        $selectedMapel = trim($paket['mapel_nama']);
+    }
+}
 
 // Action Buka Kunci Siswa (Reset Pelanggaran / Izinkan Lanjut)
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'unlock') {
@@ -44,29 +116,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     exit;
 }
 
-// 1. Ambil info paket jika paket_id disertakan dari link Bank Soal
-$paket = null;
-if ($paket_id > 0) {
-    try {
-        $stmtP = $db->prepare("SELECT * FROM bs_paket WHERE id = ?");
-        $stmtP->execute([$paket_id]);
-        $paket = $stmtP->fetch(PDO::FETCH_ASSOC);
-        if ($paket) {
-            if ($selectedTopikId === 0 && !empty($paket['topik_id'])) {
-                $selectedTopikId = (int)$paket['topik_id'];
-                if ($selectedTopikId == 5) $selectedTopikId = 3;
-            }
-            if (empty($selectedMapel) && !empty($paket['mapel_nama'])) {
-                $selectedMapel = trim($paket['mapel_nama']);
-            }
-            if (empty($selectedKelas) && !empty($paket['kelas_nama']) && !in_array($paket['kelas_nama'], ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas'])) {
-                $selectedKelas = trim($paket['kelas_nama']);
-            }
-        }
-    } catch (\Exception $e) {}
-}
-
-// 2. Ambil Data Topik Ujian (HANYA TOPIK YANG AKTIF)
+// 3. Ambil Data Topik Ujian (HANYA TOPIK YANG AKTIF)
 $topikList = [];
 try {
     $rawTopik = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status = 'Aktif' ORDER BY (id = 3) DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -94,48 +144,87 @@ foreach ($topikList as $tp) {
     }
 }
 
-// 3. Ambil Daftar Mata Pelajaran berdasarkan Topik Aktif
+// 4. Daftar Mata Pelajaran (ISOLASI GURU: HANYA MAPEL YANG DIAMPU)
 $mapelList = [];
-try {
-    if ($selectedTopikId > 0) {
-        $stmtM = $core_db->prepare("
-            SELECT DISTINCT mapel_nama 
-            FROM cbt_ujian 
-            WHERE (topik_id = ? OR (? != '' AND nama_ujian LIKE ?)) 
-              AND mapel_nama IS NOT NULL AND mapel_nama != '' 
-            ORDER BY mapel_nama ASC
-        ");
-        $stmtM->execute([$selectedTopikId, $activeTopikNama, "%{$activeTopikNama}%"]);
-        $mapelList = $stmtM->fetchAll(PDO::FETCH_COLUMN);
-    }
-    if (empty($mapelList)) {
-        $mapelList = $core_db->query("
-            SELECT DISTINCT mapel_nama 
-            FROM cbt_ujian 
-            WHERE mapel_nama IS NOT NULL AND mapel_nama != '' 
-            ORDER BY mapel_nama ASC
-        ")->fetchAll(PDO::FETCH_COLUMN);
-    }
-} catch (\Exception $e) {}
+if (!$isAdmin && !empty($guruMapelList)) {
+    // Guru HANYA melihat mata pelajaran miliknya sendiri
+    $mapelList = $guruMapelList;
 
-// Jika selectedMapel belum ada di URL dan bukan sengaja dikosongkan, default ke mapel pertama jika ada
-if (empty($selectedMapel) && !empty($mapelList) && !isset($_GET['mapel'])) {
-    $selectedMapel = $mapelList[0];
+    // Pastikan selectedMapel terkunci pada salah satu mapel yang diampu
+    $foundMapel = false;
+    foreach ($mapelList as $mp) {
+        if (strcasecmp($selectedMapel, $mp) === 0) {
+            $foundMapel = true;
+            $selectedMapel = $mp;
+            break;
+        }
+    }
+    // Jika tidak sesuai atau belum milih, kunci ke mapel pertama guru
+    if (!$foundMapel) {
+        $selectedMapel = $mapelList[0];
+    }
+} else {
+    // Fallback Admin: Ambil semua mapel dari cbt_ujian
+    try {
+        if ($selectedTopikId > 0) {
+            $stmtM = $core_db->prepare("
+                SELECT DISTINCT mapel_nama 
+                FROM cbt_ujian 
+                WHERE (topik_id = ? OR (? != '' AND nama_ujian LIKE ?)) 
+                  AND mapel_nama IS NOT NULL AND mapel_nama != '' 
+                ORDER BY mapel_nama ASC
+            ");
+            $stmtM->execute([$selectedTopikId, $activeTopikNama, "%{$activeTopikNama}%"]);
+            $mapelList = $stmtM->fetchAll(PDO::FETCH_COLUMN);
+        }
+        if (empty($mapelList)) {
+            $mapelList = $core_db->query("
+                SELECT DISTINCT mapel_nama 
+                FROM cbt_ujian 
+                WHERE mapel_nama IS NOT NULL AND mapel_nama != '' 
+                ORDER BY mapel_nama ASC
+            ")->fetchAll(PDO::FETCH_COLUMN);
+        }
+    } catch (\Exception $e) {}
+
+    if (empty($selectedMapel) && !empty($mapelList) && !isset($_GET['mapel'])) {
+        $selectedMapel = $mapelList[0];
+    }
 }
 
-// 4. Ambil Daftar Seluruh Kelas (Reguler & Kelas Jauh)
+// 5. Ambil Daftar Kelas (Diprioritaskan sesuai kelas dari mapel yang dipilih)
 $kelasList = [];
 try {
-    $k1 = $core_db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
-    $k2 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-    $k3 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-    $mergedKls = array_unique(array_filter(array_merge($k1, $k2, $k3)));
-    $mergedKls = array_diff($mergedKls, ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas']);
-    usort($mergedKls, function($a, $b) { return strnatcasecmp($a, $b); });
-    $kelasList = array_values($mergedKls);
+    if (!empty($selectedMapel)) {
+        $stmtK = $core_db->prepare("
+            SELECT DISTINCT p.kelas_nama 
+            FROM cbt_peserta p
+            JOIN cbt_ujian u ON p.ujian_id = u.id
+            WHERE (u.mapel_nama = ? OR u.mapel_nama LIKE ? OR u.nama_ujian LIKE ?)
+              AND p.kelas_nama IS NOT NULL AND p.kelas_nama != ''
+            ORDER BY p.kelas_nama ASC
+        ");
+        $stmtK->execute([$selectedMapel, "%{$selectedMapel}%", "%{$selectedMapel}%"]);
+        $kelasList = $stmtK->fetchAll(PDO::FETCH_COLUMN);
+    }
 } catch (\Exception $e) {}
 
-// 5. Query Daftar Peserta & Nilai CBT
+// Fallback jika belum ada peserta yang ujian pada mapel ini
+if (empty($kelasList)) {
+    try {
+        $k1 = $core_db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
+        $k2 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+        $k3 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+        $mergedKls = array_unique(array_filter(array_merge($k1, $k2, $k3)));
+        $mergedKls = array_diff($mergedKls, ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas']);
+        usort($mergedKls, function($a, $b) { return strnatcasecmp($a, $b); });
+        $kelasList = array_values($mergedKls);
+    } catch (\Exception $e) {}
+} else {
+    usort($kelasList, function($a, $b) { return strnatcasecmp($a, $b); });
+}
+
+// 6. Query Daftar Peserta & Nilai CBT (100% Terisolasi per Mapel Guru)
 $sql = "SELECT p.*, u.nama_ujian, u.kode_ujian, u.mapel_nama as ujian_mapel, u.kkm as kkm_ujian, u.durasi_menit,
                (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as total_soal_ujian
         FROM cbt_peserta p
@@ -159,6 +248,15 @@ if (!empty($selectedMapel)) {
     $params[':mapel'] = $selectedMapel;
     $params[':mapel_like'] = "%{$selectedMapel}%";
     $params[':mapel_like2'] = "%{$selectedMapel}%";
+} elseif (!$isAdmin && !empty($guruMapelList)) {
+    // Jika tidak spesifik, batasi HANYA pada mapel-mapel guru ini
+    $inPlaceholders = [];
+    foreach ($guruMapelList as $idx => $gm) {
+        $key = ":gm_" . $idx;
+        $inPlaceholders[] = $key;
+        $params[$key] = $gm;
+    }
+    $sql .= " AND u.mapel_nama IN (" . implode(',', $inPlaceholders) . ")";
 }
 
 if (!empty($selectedKelas)) {
@@ -193,7 +291,7 @@ try {
 // KKM Ujian
 $kkm = !empty($pesertaList) ? (int)($pesertaList[0]['kkm_ujian'] ?? 75) : (int)($paket['kkm'] ?? 75);
 
-// 6. Kalkulasi Statistik & Metrik KPI
+// 7. Kalkulasi Statistik & Metrik KPI
 $totalPeserta = count($pesertaList);
 $selesaiList = array_filter($pesertaList, fn($p) => $p['status_pengerjaan'] === 'Selesai');
 $totalSelesai = count($selesaiList);
@@ -433,6 +531,10 @@ include 'header.php';
 <!-- Form Filter Bertingkat: 1. Topik -> 2. Mapel -> 3. Kelas -> 4. Urutan -->
 <div style="padding: 0 16px 12px;">
     <form id="formFilterHasil" method="GET" action="hasil_ujian.php" style="background: white; border-radius: 16px; padding: 14px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+        <?php if ($paket_id > 0): ?>
+            <input type="hidden" name="paket_id" value="<?= $paket_id ?>">
+        <?php endif; ?>
+
         <!-- 1. Topik Ujian (Aktif) -->
         <div>
             <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
@@ -448,13 +550,17 @@ include 'header.php';
             </select>
         </div>
 
-        <!-- 2. Mata Pelajaran -->
+        <!-- 2. Mata Pelajaran (Terisolasi Mapel Guru) -->
         <div>
             <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                <i class="fa-solid fa-book-open" style="color: #2563eb;"></i> 2. Mata Pelajaran:
+                <i class="fa-solid fa-book-open" style="color: #2563eb;"></i> 2. Mata Pelajaran <?= (!$isAdmin && !empty($guruMapelList)) ? '(Yang Diampu)' : '' ?>:
             </label>
             <select name="mapel" id="selMapel" onchange="applyFilter(false)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
-                <option value="">-- Semua Mata Pelajaran --</option>
+                <?php if ($isAdmin || empty($guruMapelList)): ?>
+                    <option value="">-- Semua Mata Pelajaran --</option>
+                <?php elseif (count($mapelList) > 1): ?>
+                    <option value="">-- Semua Mapel yang Diampu --</option>
+                <?php endif; ?>
                 <?php foreach ($mapelList as $mp): ?>
                     <option value="<?= htmlspecialchars($mp) ?>" <?= ($selectedMapel === $mp) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($mp) ?>
@@ -490,7 +596,7 @@ include 'header.php';
                     <option value="nama_asc" <?= ($sort === 'nama_asc') ? 'selected' : '' ?>>Alphabet Nama Siswa (A ➔ Z)</option>
                     <option value="nama_desc" <?= ($sort === 'nama_desc') ? 'selected' : '' ?>>Alphabet Nama Siswa (Z ➔ A)</option>
                 </select>
-                <button type="button" onclick="resetFilterHasil()" style="padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 10px; display: <?= ($selectedTopikId > 0 || !empty($selectedMapel) || !empty($selectedKelas) || $sort !== 'nilai_desc') ? 'flex' : 'none' ?>; align-items: center; justify-content: center; cursor: pointer;" title="Reset Filter">
+                <button type="button" onclick="resetFilterHasil()" style="padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 10px; display: <?= ($selectedTopikId > 0 || !empty($selectedKelas) || $sort !== 'nilai_desc') ? 'flex' : 'none' ?>; align-items: center; justify-content: center; cursor: pointer;" title="Reset Filter">
                     <i class="fa-solid fa-rotate-left"></i>
                 </button>
             </div>
@@ -525,7 +631,7 @@ include 'header.php';
         </div>
         <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; color: #1e293b; font-weight: 800;">Belum Ada Hasil Ujian Terdata</h4>
         <p style="margin: 0; font-size: 0.8rem; color: #64748b; line-height: 1.4;">
-            Belum ada data siswa untuk kombinasi topik, mata pelajaran, atau kelas yang dipilih.<br>Silakan pilih mata pelajaran atau kelas lain di atas.
+            Belum ada data siswa untuk kombinasi topik, mata pelajaran, atau kelas yang dipilih.<br>Silakan pilih kelas lain di atas.
         </p>
     </div>
 <?php else: ?>

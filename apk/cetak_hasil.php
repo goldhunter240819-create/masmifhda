@@ -9,6 +9,38 @@ if (!isset($_SESSION['guru_id']) && !isset($_SESSION['user_id'])) {
 
 $db = $siakad_db ?: $core_db;
 
+// Isolasi Mapel Akun Guru (Non-Admin)
+$guru_id = (int)($_SESSION['guru_id'] ?? 0);
+$role_id = (int)($_SESSION['role_id'] ?? 0);
+$isAdmin = ($role_id == 1 || $role_id == 99);
+$guruMapelList = [];
+$mapelList = [];
+
+if ($guru_id > 0 && !$isAdmin) {
+    if (!empty($siakad_db)) {
+        try {
+            $stmtM = $siakad_db->prepare("SELECT DISTINCT mp.nama_mapel FROM mengajar m JOIN mapel mp ON m.mapel_id = mp.id WHERE m.guru_id = ? AND mp.nama_mapel IS NOT NULL AND mp.nama_mapel != '' ORDER BY mp.nama_mapel ASC");
+            $stmtM->execute([$guru_id]);
+            foreach ($stmtM->fetchAll(PDO::FETCH_COLUMN) as $m) {
+                $m = trim($m);
+                if (!empty($m) && !in_array($m, $guruMapelList)) $guruMapelList[] = $m;
+            }
+        } catch (\Exception $e) {}
+    }
+    try {
+        $stmtP = $core_db->prepare("SELECT DISTINCT mapel_nama FROM bs_paket WHERE guru_id = ? AND mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC");
+        $stmtP->execute([$guru_id]);
+        foreach ($stmtP->fetchAll(PDO::FETCH_COLUMN) as $m) {
+            $m = trim($m);
+            if (!empty($m) && !in_array($m, $guruMapelList)) $guruMapelList[] = $m;
+        }
+    } catch (\Exception $e) {}
+
+    if (!empty($guruMapelList)) {
+        $mapelList = $guruMapelList;
+    }
+}
+
 $paket_id = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
 $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
 $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
@@ -16,6 +48,21 @@ if ($selectedTopikId == 5) {
     $selectedTopikId = 3;
 }
 $selectedMapel = trim($_GET['mapel'] ?? '');
+
+// Kunci ke mapel guru jika akun guru
+if (!$isAdmin && !empty($guruMapelList)) {
+    $foundM = false;
+    foreach ($guruMapelList as $gm) {
+        if (strcasecmp($selectedMapel, $gm) === 0) {
+            $foundM = true;
+            $selectedMapel = $gm;
+            break;
+        }
+    }
+    if (!$foundM) {
+        $selectedMapel = $guruMapelList[0];
+    }
+}
 $selectedKelas = trim($_GET['kelas'] ?? '');
 $search = trim($_GET['q'] ?? '');
 $sort = trim($_GET['sort'] ?? 'nilai_desc');
