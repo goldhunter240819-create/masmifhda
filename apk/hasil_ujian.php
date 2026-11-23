@@ -14,11 +14,13 @@ $guru_nama = $_SESSION['guru_nama'] ?? ($_SESSION['nama'] ?? '');
 $db = $siakad_db ?: $core_db;
 
 // Parameter filter
+$selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+if ($selectedTopikId == 5) $selectedTopikId = 3;
+$selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
+$selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
+$sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
 $paket_id = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
 $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
-$selected_kelas = trim($_GET['kelas'] ?? '');
-$search = trim($_GET['q'] ?? '');
-$sort = trim($_GET['sort'] ?? 'nilai_desc');
 
 // Action Buka Kunci Siswa (Reset Pelanggaran / Izinkan Lanjut)
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'unlock') {
@@ -42,244 +44,156 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     exit;
 }
 
-// 1. Ambil info paket jika paket_id disertakan
+// 1. Ambil info paket jika paket_id disertakan dari link Bank Soal
 $paket = null;
-$topik = null;
 if ($paket_id > 0) {
     try {
         $stmtP = $db->prepare("SELECT * FROM bs_paket WHERE id = ?");
         $stmtP->execute([$paket_id]);
         $paket = $stmtP->fetch(PDO::FETCH_ASSOC);
-
-        if ($paket && !empty($paket['topik_id'])) {
-            $stmtT = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
-            $stmtT->execute([(int)$paket['topik_id']]);
-            $topik = $stmtT->fetch(PDO::FETCH_ASSOC);
+        if ($paket) {
+            if ($selectedTopikId === 0 && !empty($paket['topik_id'])) {
+                $selectedTopikId = (int)$paket['topik_id'];
+                if ($selectedTopikId == 5) $selectedTopikId = 3;
+            }
+            if (empty($selectedMapel) && !empty($paket['mapel_nama'])) {
+                $selectedMapel = trim($paket['mapel_nama']);
+            }
+            if (empty($selectedKelas) && !empty($paket['kelas_nama']) && !in_array($paket['kelas_nama'], ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas'])) {
+                $selectedKelas = trim($paket['kelas_nama']);
+            }
         }
     } catch (\Exception $e) {}
 }
 
-// 2. Daftar seluruh paket soal milik guru / topik untuk selector dropdown
-$allPaketList = [];
+// 2. Ambil Data Topik Ujian (HANYA TOPIK YANG AKTIF)
+$topikList = [];
 try {
-    if ($guru_id > 0) {
-        $stmtAll = $db->prepare("
-            SELECT p.id, p.mapel_nama, p.kelas_nama, p.kelas_sasaran, t.nama_topik, t.jenis
-            FROM bs_paket p
-            LEFT JOIN bs_topik t ON p.topik_id = t.id
-            WHERE (p.guru_id = ? OR p.guru_nama = ? OR p.guru_nama LIKE ?)
-            ORDER BY t.id DESC, p.kelas_nama ASC, p.mapel_nama ASC
-        ");
-        $stmtAll->execute([$guru_id, $guru_nama, '%' . $guru_nama . '%']);
-        $allPaketList = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $stmtAll = $db->query("
-            SELECT p.id, p.mapel_nama, p.kelas_nama, p.kelas_sasaran, t.nama_topik, t.jenis
-            FROM bs_paket p
-            LEFT JOIN bs_topik t ON p.topik_id = t.id
-            ORDER BY t.id DESC, p.kelas_nama ASC, p.mapel_nama ASC LIMIT 50
-        ");
-        $allPaketList = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
+    $rawTopik = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status = 'Aktif' ORDER BY (id = 3) DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $seenNames = [];
+    foreach ($rawTopik as $rt) {
+        $normName = trim($rt['nama_topik']);
+        if (!isset($seenNames[$normName])) {
+            $seenNames[$normName] = true;
+            $topikList[] = $rt;
+        }
     }
 } catch (\Exception $e) {}
 
-// Jika belum ada paket_id terpilih tapi ada daftar paket, gunakan paket pertama
-if (!$paket && $paket_id === 0 && $ujian_id === 0 && !empty($allPaketList)) {
-    $paket_id = (int)$allPaketList[0]['id'];
-    try {
-        $stmtP = $db->prepare("SELECT * FROM bs_paket WHERE id = ?");
-        $stmtP->execute([$paket_id]);
-        $paket = $stmtP->fetch(PDO::FETCH_ASSOC);
-        if ($paket && !empty($paket['topik_id'])) {
-            $stmtT = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
-            $stmtT->execute([(int)$paket['topik_id']]);
-            $topik = $stmtT->fetch(PDO::FETCH_ASSOC);
-        }
-    } catch (\Exception $e) {}
+// Default ke topik aktif pertama jika belum dipilih
+if ($selectedTopikId === 0 && !empty($topikList)) {
+    $selectedTopikId = (int)$topikList[0]['id'];
 }
 
-// 3. Cari ujian_id yang berelasi di cbt_ujian
-$matchedUjianIds = [];
-$cbtUjianList = [];
+// Ambil Nama Topik yang Aktif
+$activeTopikNama = '';
+foreach ($topikList as $tp) {
+    if ((int)$tp['id'] === $selectedTopikId) {
+        $activeTopikNama = trim($tp['nama_topik']);
+        break;
+    }
+}
 
-if ($ujian_id > 0) {
-    $matchedUjianIds[] = $ujian_id;
-    try {
-        $stmtU = $core_db->prepare("SELECT * FROM cbt_ujian WHERE id = ?");
-        $stmtU->execute([$ujian_id]);
-        $uRow = $stmtU->fetch(PDO::FETCH_ASSOC);
-        if ($uRow) {
-            $cbtUjianList[] = $uRow;
-            if (!$paket) {
-                $paket = [
-                    'mapel_nama' => $uRow['mapel_nama'],
-                    'kelas_nama' => $uRow['kelas_nama'],
-                    'kelas_sasaran' => $uRow['kelas_nama'],
-                    'kkm' => $uRow['kkm'] ?? 75,
-                    'durasi_menit' => $uRow['durasi_menit'] ?? 90
-                ];
-            }
-        }
-    } catch (\Exception $e) {}
-} elseif ($paket) {
-    try {
-        $mMapel = trim($paket['mapel_nama'] ?? '');
-        $mKelas = trim($paket['kelas_nama'] ?? '');
-        $mSasaran = trim($paket['kelas_sasaran'] ?? '');
-        $mTopik = (int)($paket['topik_id'] ?? 0);
-
-        $stmtFind = $core_db->prepare("
-            SELECT * FROM cbt_ujian 
-            WHERE (topik_id = :topik OR :topik = 0)
-              AND (
-                  mapel_nama = :mapel 
-                  OR mapel_nama LIKE CONCAT('%', :mapel2, '%') 
-                  OR :mapel3 LIKE CONCAT('%', mapel_nama, '%')
-              )
-              AND (
-                  kelas_nama = :kelas 
-                  OR :sasaran LIKE CONCAT('%', kelas_nama, '%')
-                  OR kelas_nama LIKE CONCAT('%', :kelas2, '%')
-                  OR kelas_nama = 'Semua Kelas'
-                  OR kelas_nama IS NULL
-                  OR kelas_nama = ''
-              )
-            ORDER BY (kelas_nama = :kelas3) DESC, id DESC
+// 3. Ambil Daftar Mata Pelajaran berdasarkan Topik Aktif
+$mapelList = [];
+try {
+    if ($selectedTopikId > 0) {
+        $stmtM = $core_db->prepare("
+            SELECT DISTINCT mapel_nama 
+            FROM cbt_ujian 
+            WHERE (topik_id = ? OR (? != '' AND nama_ujian LIKE ?)) 
+              AND mapel_nama IS NOT NULL AND mapel_nama != '' 
+            ORDER BY mapel_nama ASC
         ");
-        $stmtFind->execute([
-            ':topik' => $mTopik,
-            ':mapel' => $mMapel,
-            ':mapel2' => $mMapel,
-            ':mapel3' => $mMapel,
-            ':kelas' => $mKelas,
-            ':sasaran' => $mSasaran,
-            ':kelas2' => $mKelas,
-            ':kelas3' => $mKelas
-        ]);
-        $cbtUjianList = $stmtFind->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($cbtUjianList as $cu) {
-            $matchedUjianIds[] = (int)$cu['id'];
-        }
-    } catch (\Exception $e) {}
+        $stmtM->execute([$selectedTopikId, $activeTopikNama, "%{$activeTopikNama}%"]);
+        $mapelList = $stmtM->fetchAll(PDO::FETCH_COLUMN);
+    }
+    if (empty($mapelList)) {
+        $mapelList = $core_db->query("
+            SELECT DISTINCT mapel_nama 
+            FROM cbt_ujian 
+            WHERE mapel_nama IS NOT NULL AND mapel_nama != '' 
+            ORDER BY mapel_nama ASC
+        ")->fetchAll(PDO::FETCH_COLUMN);
+    }
+} catch (\Exception $e) {}
+
+// Jika selectedMapel belum ada di URL dan bukan sengaja dikosongkan, default ke mapel pertama jika ada
+if (empty($selectedMapel) && !empty($mapelList) && !isset($_GET['mapel'])) {
+    $selectedMapel = $mapelList[0];
 }
 
-$matchedUjianIds = array_unique(array_filter($matchedUjianIds));
-
-// 4. Ambil Daftar Peserta Ujian dari cbt_peserta
-$pesertaList = [];
+// 4. Ambil Daftar Seluruh Kelas (Reguler & Kelas Jauh)
 $kelasList = [];
-$kkm = (int)($paket['kkm'] ?? 75);
+try {
+    $k1 = $core_db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $k2 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $k3 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $mergedKls = array_unique(array_filter(array_merge($k1, $k2, $k3)));
+    $mergedKls = array_diff($mergedKls, ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas']);
+    usort($mergedKls, function($a, $b) { return strnatcasecmp($a, $b); });
+    $kelasList = array_values($mergedKls);
+} catch (\Exception $e) {}
 
-if (!empty($matchedUjianIds)) {
-    try {
-        $inIds = implode(',', $matchedUjianIds);
-        
-        // Ambil daftar kelas rombel spesifik & kelas jauh yang relevan dengan paket
-        $candidateKelas = [];
-        $pktTingkat = trim($paket['kelas_nama'] ?? '');
-        $pktSasaran = trim($paket['kelas_sasaran'] ?? '');
+// 5. Query Daftar Peserta & Nilai CBT
+$sql = "SELECT p.*, u.nama_ujian, u.kode_ujian, u.mapel_nama as ujian_mapel, u.kkm as kkm_ujian, u.durasi_menit,
+               (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as total_soal_ujian
+        FROM cbt_peserta p
+        LEFT JOIN cbt_ujian u ON p.ujian_id = u.id
+        WHERE 1=1";
+$params = [];
 
-        // Kelas dari database Siakad/Core
-        try {
-            $stmtAllKls = $db->query("SELECT nama_kelas, tingkat FROM kelas ORDER BY tingkat ASC, nama_kelas ASC");
-            $allRombel = $stmtAllKls->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($allRombel as $rk) {
-                $nKls = trim($rk['nama_kelas']);
-                if (stripos($pktTingkat, 'XII') !== false || stripos($pktTingkat, '12') !== false) {
-                    if (str_starts_with($nKls, 'XII')) $candidateKelas[] = $nKls;
-                } elseif (stripos($pktTingkat, 'XI') !== false || stripos($pktTingkat, '11') !== false) {
-                    if (str_starts_with($nKls, 'XI')) $candidateKelas[] = $nKls;
-                } elseif (stripos($pktTingkat, 'X') !== false || stripos($pktTingkat, '10') !== false) {
-                    if (str_starts_with($nKls, 'X ') || str_starts_with($nKls, 'X-') || str_starts_with($nKls, 'X.')) $candidateKelas[] = $nKls;
-                } else {
-                    $candidateKelas[] = $nKls;
-                }
-            }
-        } catch (\Exception $e) {}
-
-        // Tambahkan rombel dari kelas_sasaran jika ada
-        if (!empty($pktSasaran)) {
-            $parts = explode(',', $pktSasaran);
-            foreach ($parts as $pt) {
-                $pt = trim($pt);
-                if (!empty($pt)) $candidateKelas[] = $pt;
-            }
-        }
-
-        // Tambahkan Kelas Jauh sesuai tingkatan
-        if (stripos($pktTingkat, 'XII') !== false || stripos($pktTingkat, '12') !== false) {
-            $candidateKelas[] = 'XII - Kelas Jauh';
-        } elseif (stripos($pktTingkat, 'XI') !== false || stripos($pktTingkat, '11') !== false) {
-            $candidateKelas[] = 'XI - Kelas Jauh';
-        } elseif (stripos($pktTingkat, 'X') !== false || stripos($pktTingkat, '10') !== false) {
-            $candidateKelas[] = 'X - Kelas Jauh';
-        } else {
-            $candidateKelas[] = 'X - Kelas Jauh';
-            $candidateKelas[] = 'XI - Kelas Jauh';
-            $candidateKelas[] = 'XII - Kelas Jauh';
-        }
-
-        // Tambahkan kelas riil dari cbt_peserta
-        $stmtKls = $core_db->query("
-            SELECT DISTINCT kelas_nama 
-            FROM cbt_peserta 
-            WHERE ujian_id IN ($inIds) AND kelas_nama IS NOT NULL AND kelas_nama != ''
-        ");
-        $realKls = $stmtKls->fetchAll(PDO::FETCH_COLUMN);
-
-        $mergedKls = array_unique(array_filter(array_merge($candidateKelas, $realKls)));
-        usort($mergedKls, function($a, $b) {
-            return strnatcasecmp($a, $b);
-        });
-        $kelasList = array_values($mergedKls);
-
-        $sqlPeserta = "
-            SELECT p.*, u.nama_ujian, u.kode_ujian, u.mapel_nama as ujian_mapel, u.kkm as kkm_ujian
-            FROM cbt_peserta p
-            JOIN cbt_ujian u ON p.ujian_id = u.id
-            WHERE p.ujian_id IN ($inIds)
-        ";
-        $paramsP = [];
-
-        if (!empty($selected_kelas)) {
-            $sqlPeserta .= " AND p.kelas_nama = :kelas";
-            $paramsP[':kelas'] = $selected_kelas;
-        }
-
-        if (!empty($search)) {
-            $sqlPeserta .= " AND (p.nama_siswa LIKE :q OR p.nis LIKE :q)";
-            $paramsP[':q'] = "%{$search}%";
-        }
-
-                // Custom sorting
-        switch ($sort) {
-            case 'nilai_asc':
-                $sqlPeserta .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir ASC, p.nama_siswa ASC";
-                break;
-            case 'nama_asc':
-                $sqlPeserta .= " ORDER BY p.nama_siswa ASC, p.nilai_akhir DESC";
-                break;
-            case 'nama_desc':
-                $sqlPeserta .= " ORDER BY p.nama_siswa DESC, p.nilai_akhir DESC";
-                break;
-            case 'nis_asc':
-                $sqlPeserta .= " ORDER BY p.nis ASC, p.nama_siswa ASC";
-                break;
-            case 'waktu_desc':
-                $sqlPeserta .= " ORDER BY (p.waktu_selesai IS NOT NULL) DESC, p.waktu_selesai DESC, p.nilai_akhir DESC";
-                break;
-            case 'nilai_desc':
-            default:
-                $sqlPeserta .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
-                break;
-        }
-        $stmtPeserta = $core_db->prepare($sqlPeserta);
-        $stmtPeserta->execute($paramsP);
-        $pesertaList = $stmtPeserta->fetchAll(PDO::FETCH_ASSOC);
-    } catch (\Exception $e) {}
+if ($selectedTopikId > 0) {
+    if (!empty($activeTopikNama)) {
+        $sql .= " AND (u.topik_id = :topik_id OR u.nama_ujian LIKE :topik_like)";
+        $params[':topik_id'] = $selectedTopikId;
+        $params[':topik_like'] = "%{$activeTopikNama}%";
+    } else {
+        $sql .= " AND (u.topik_id = :topik_id)";
+        $params[':topik_id'] = $selectedTopikId;
+    }
 }
 
-// 5. Kalkulasi Ringkasan Nilai & Statistik
+if (!empty($selectedMapel)) {
+    $sql .= " AND (u.mapel_nama = :mapel OR u.mapel_nama LIKE :mapel_like OR u.nama_ujian LIKE :mapel_like2)";
+    $params[':mapel'] = $selectedMapel;
+    $params[':mapel_like'] = "%{$selectedMapel}%";
+    $params[':mapel_like2'] = "%{$selectedMapel}%";
+}
+
+if (!empty($selectedKelas)) {
+    $sql .= " AND (p.kelas_nama = :kelas OR p.kelas_nama LIKE :kelas_like)";
+    $params[':kelas'] = $selectedKelas;
+    $params[':kelas_like'] = "%{$selectedKelas}%";
+}
+
+switch ($sort) {
+    case 'nilai_asc':
+        $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir ASC, p.nama_siswa ASC";
+        break;
+    case 'nama_asc':
+        $sql .= " ORDER BY p.nama_siswa ASC, p.nilai_akhir DESC";
+        break;
+    case 'nama_desc':
+        $sql .= " ORDER BY p.nama_siswa DESC, p.nilai_akhir DESC";
+        break;
+    case 'nilai_desc':
+    default:
+        $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+        break;
+}
+
+$pesertaList = [];
+try {
+    $stmtP = $core_db->prepare($sql);
+    $stmtP->execute($params);
+    $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+} catch (\Exception $e) {}
+
+// KKM Ujian
+$kkm = !empty($pesertaList) ? (int)($pesertaList[0]['kkm_ujian'] ?? 75) : (int)($paket['kkm'] ?? 75);
+
+// 6. Kalkulasi Statistik & Metrik KPI
 $totalPeserta = count($pesertaList);
 $selesaiList = array_filter($pesertaList, fn($p) => $p['status_pengerjaan'] === 'Selesai');
 $totalSelesai = count($selesaiList);
@@ -299,7 +213,7 @@ foreach ($selesaiList as $sp) {
 }
 $tuntasPercent = $totalSelesai > 0 ? round(($tuntasCount / $totalSelesai) * 100, 1) : 0;
 
-$page_title = 'Hasil Ujian: ' . ($paket['mapel_nama'] ?? 'CBT');
+$page_title = 'Hasil Ujian: ' . (!empty($selectedMapel) ? $selectedMapel : 'CBT');
 include 'header.php';
 ?>
 
@@ -310,7 +224,7 @@ include 'header.php';
     /* Header Gradient Modern */
     .hasil-header {
         background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%);
-        padding: 68px 18px 36px;
+        padding: 68px 18px 30px;
         color: white;
         border-bottom-left-radius: 26px;
         border-bottom-right-radius: 26px;
@@ -319,33 +233,33 @@ include 'header.php';
     }
     .hasil-topbar {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        margin-bottom: 12px;
+        align-items: center;
+        margin-bottom: 16px;
     }
     .btn-back-round {
         width: 38px;
         height: 38px;
-        border-radius: 12px;
+        border-radius: 50%;
         background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
         text-decoration: none;
-        border: 1px solid rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         transition: 0.2s;
     }
-    .btn-back-round:hover {
+    .btn-back-round:active {
+        transform: scale(0.95);
         background: rgba(255, 255, 255, 0.25);
     }
     .hasil-badge-top {
         background: rgba(16, 185, 129, 0.2);
         color: #6ee7b7;
-        border: 1px solid rgba(16, 185, 129, 0.4);
-        padding: 3px 10px;
+        border: 1px solid rgba(110, 231, 183, 0.35);
+        padding: 4px 12px;
         border-radius: 20px;
         font-size: 0.68rem;
         font-weight: 800;
@@ -361,7 +275,7 @@ include 'header.php';
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
-        margin: -24px 16px 16px;
+        margin: -20px 16px 14px;
         position: relative;
         z-index: 10;
     }
@@ -400,7 +314,7 @@ include 'header.php';
         letter-spacing: 0.3px;
     }
 
-    /* Card Student */
+    /* Student Card */
     .student-card {
         background: #ffffff;
         border-radius: 16px;
@@ -441,34 +355,6 @@ include 'header.php';
         color: #d97706;
         border: 1.5px solid #fde68a;
     }
-
-    /* Filter pills */
-    .filter-pills {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        padding: 0 16px 14px;
-        scrollbar-width: none;
-    }
-    .filter-pills::-webkit-scrollbar { display: none; }
-    .pill-item {
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        color: #475569;
-        font-size: 0.75rem;
-        font-weight: 800;
-        padding: 6px 12px;
-        border-radius: 20px;
-        white-space: nowrap;
-        text-decoration: none;
-        transition: 0.2s;
-    }
-    .pill-item.active {
-        background: #2563eb;
-        color: white;
-        border-color: #2563eb;
-        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-    }
 </style>
 
 <!-- Header View Hasil Ujian -->
@@ -480,40 +366,25 @@ include 'header.php';
         <div class="hasil-badge-top">
             <i class="fa-solid fa-square-poll-vertical"></i> Evaluasi CBT Mobile
         </div>
-        <a href="cetak_hasil.php?paket_id=<?= $paket_id ?>&ujian_id=<?= $ujian_id ?>&kelas=<?= urlencode($selected_kelas) ?>&sort=<?= urlencode($sort) ?>&q=<?= urlencode($search) ?>" target="_blank" class="btn-back-round" title="Cetak Rekap Nilai Resmi Kemenag A4">
+        <a href="cetak_hasil.php?topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($sort) ?>" target="_blank" class="btn-back-round" title="Cetak Rekap Nilai Resmi Kemenag A4">
             <i class="fa-solid fa-print"></i>
         </a>
     </div>
 
     <div>
         <h2 style="margin: 0 0 4px; font-size: 1.35rem; font-weight: 900; letter-spacing: -0.3px;">
-            <?= htmlspecialchars($paket['mapel_nama'] ?? 'Mata Pelajaran') ?>
+            <?= htmlspecialchars(!empty($selectedMapel) ? $selectedMapel : 'Rekap Nilai Siswa') ?>
         </h2>
         <div style="font-size: 0.78rem; color: #bae6fd; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span><i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars($paket['kelas_nama'] ?? 'Semua Tingkat') ?></span>
+            <span><i class="fa-solid fa-graduation-cap"></i> <?= htmlspecialchars(!empty($selectedKelas) ? $selectedKelas : 'Semua Kelas') ?></span>
             <span>&bull;</span>
             <span><i class="fa-solid fa-bullseye"></i> KKM: <b><?= $kkm ?></b></span>
-            <?php if (!empty($topik['nama_topik'])): ?>
+            <?php if (!empty($activeTopikNama)): ?>
                 <span>&bull;</span>
-                <span><i class="fa-solid fa-folder"></i> <?= htmlspecialchars($topik['nama_topik']) ?></span>
+                <span><i class="fa-solid fa-folder"></i> <?= htmlspecialchars($activeTopikNama) ?></span>
             <?php endif; ?>
         </div>
     </div>
-
-    <!-- Dropdown Selector Ganti Paket Soal -->
-    <?php if (!empty($allPaketList)): ?>
-        <div style="margin-top: 14px;">
-            <form method="GET" action="hasil_ujian.php">
-                <select name="paket_id" onchange="this.form.submit()" style="width: 100%; background: rgba(255, 255, 255, 0.12); color: white; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 12px; padding: 8px 12px; font-size: 0.78rem; font-weight: 700; outline: none;">
-                    <?php foreach ($allPaketList as $ap): ?>
-                        <option value="<?= $ap['id'] ?>" <?= ((int)$ap['id'] === $paket_id) ? 'selected' : '' ?> style="color: #0f172a; background: white;">
-                            <?= htmlspecialchars($ap['mapel_nama'] . ' - ' . $ap['kelas_nama'] . ' (' . ($ap['nama_topik'] ?: 'Topik') . ')') ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
-        </div>
-    <?php endif; ?>
 </div>
 
 <!-- 4 KPI Summary Cards -->
@@ -559,57 +430,91 @@ include 'header.php';
     </div>
 </div>
 
-<!-- Search & Form Filter -->
-<div style="padding: 0 16px 10px;">
-    <form method="GET" action="hasil_ujian.php" style="display: flex; gap: 8px;">
-        <input type="hidden" name="paket_id" value="<?= $paket_id ?>">
-        <input type="hidden" name="kelas" value="<?= htmlspecialchars($selected_kelas) ?>">
-        <div style="position: relative; flex: 1;">
-            <input type="text" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="Cari nama atau NIS siswa..." style="width: 100%; box-sizing: border-box; background: white; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px 14px 10px 38px; font-size: 0.82rem; font-weight: 600; outline: none;">
-            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem;"></i>
+<!-- Form Filter Bertingkat: 1. Topik -> 2. Mapel -> 3. Kelas -> 4. Urutan -->
+<div style="padding: 0 16px 12px;">
+    <form id="formFilterHasil" method="GET" action="hasil_ujian.php" style="background: white; border-radius: 16px; padding: 14px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+        <!-- 1. Topik Ujian (Aktif) -->
+        <div>
+            <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
+                <i class="fa-solid fa-layer-group" style="color: #2563eb;"></i> 1. Topik Ujian (Aktif):
+            </label>
+            <select name="topik_id" id="selTopik" onchange="applyFilter(true)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
+                <option value="0">-- Semua Topik Ujian --</option>
+                <?php foreach ($topikList as $tp): ?>
+                    <option value="<?= (int)$tp['id'] ?>" <?= ($selectedTopikId == $tp['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($tp['nama_topik']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
-        <button type="submit" style="background: #2563eb; color: white; border: none; border-radius: 12px; padding: 0 16px; font-weight: 800; font-size: 0.82rem; cursor: pointer;">
-            Cari
-        </button>
+
+        <!-- 2. Mata Pelajaran -->
+        <div>
+            <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
+                <i class="fa-solid fa-book-open" style="color: #2563eb;"></i> 2. Mata Pelajaran:
+            </label>
+            <select name="mapel" id="selMapel" onchange="applyFilter(false)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
+                <option value="">-- Semua Mata Pelajaran --</option>
+                <?php foreach ($mapelList as $mp): ?>
+                    <option value="<?= htmlspecialchars($mp) ?>" <?= ($selectedMapel === $mp) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($mp) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- 3. Filter Kelas -->
+        <div>
+            <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
+                <i class="fa-solid fa-graduation-cap" style="color: #2563eb;"></i> 3. Filter Kelas:
+            </label>
+            <select name="kelas" id="selKelas" onchange="applyFilter(false)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
+                <option value="">-- Semua Kelas --</option>
+                <?php foreach ($kelasList as $kls): ?>
+                    <option value="<?= htmlspecialchars($kls) ?>" <?= ($selectedKelas === $kls) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($kls) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- 4. Urutan Data Siswa -->
+        <div>
+            <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
+                <i class="fa-solid fa-arrow-down-wide-short" style="color: #2563eb;"></i> 4. Urutan Data Siswa:
+            </label>
+            <div style="display: flex; gap: 8px;">
+                <select name="sort" id="selSort" onchange="applyFilter(false)" style="flex: 1; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
+                    <option value="nilai_desc" <?= ($sort === 'nilai_desc') ? 'selected' : '' ?>>Nilai Tertinggi (Rank 1 ➔ Terendah)</option>
+                    <option value="nilai_asc" <?= ($sort === 'nilai_asc') ? 'selected' : '' ?>>Nilai Terendah ➔ Tertinggi</option>
+                    <option value="nama_asc" <?= ($sort === 'nama_asc') ? 'selected' : '' ?>>Alphabet Nama Siswa (A ➔ Z)</option>
+                    <option value="nama_desc" <?= ($sort === 'nama_desc') ? 'selected' : '' ?>>Alphabet Nama Siswa (Z ➔ A)</option>
+                </select>
+                <button type="button" onclick="resetFilterHasil()" style="padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 10px; display: <?= ($selectedTopikId > 0 || !empty($selectedMapel) || !empty($selectedKelas) || $sort !== 'nilai_desc') ? 'flex' : 'none' ?>; align-items: center; justify-content: center; cursor: pointer;" title="Reset Filter">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            </div>
+        </div>
     </form>
-    
-    <!-- Pilihan Urutan Siswa -->
-    <div style="margin-top: 8px;">
-        <select onchange="location.href='hasil_ujian.php?paket_id=<?= $paket_id ?>&ujian_id=<?= $ujian_id ?>&kelas=<?= urlencode($selected_kelas) ?>&q=<?= urlencode($search) ?>&sort=' + this.value" style="width: 100%; box-sizing: border-box; background: white; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 8px 12px; font-size: 0.78rem; font-weight: 700; color: #1e293b; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <option value="nilai_desc" <?= ($sort === 'nilai_desc') ? 'selected' : '' ?>>📊 Urutan: Nilai Tertinggi (Rank)</option>
-            <option value="nilai_asc" <?= ($sort === 'nilai_asc') ? 'selected' : '' ?>>📉 Urutan: Nilai Terendah</option>
-            <option value="nama_asc" <?= ($sort === 'nama_asc') ? 'selected' : '' ?>>🔤 Urutan: Nama Siswa (A - Z)</option>
-            <option value="nama_desc" <?= ($sort === 'nama_desc') ? 'selected' : '' ?>>🔤 Urutan: Nama Siswa (Z - A)</option>
-            <option value="nis_asc" <?= ($sort === 'nis_asc') ? 'selected' : '' ?>>🔢 Urutan: Nomor Peserta / NIS</option>
-            <option value="waktu_desc" <?= ($sort === 'waktu_desc') ? 'selected' : '' ?>>⏱️ Urutan: Waktu Selesai (Terbaru)</option>
-        </select>
-    </div>
 </div>
 
-<!-- Filter Pills Kelas -->
-<?php if (!empty($kelasList)): ?>
-    <div class="filter-pills">
-        <a href="hasil_ujian.php?paket_id=<?= $paket_id ?>&sort=<?= urlencode($sort) ?>&q=<?= urlencode($search) ?>" class="pill-item <?= empty($selected_kelas) ? 'active' : '' ?>">
-            Semua Kelas (<?= $totalPeserta ?>)
-        </a>
-        <?php foreach ($kelasList as $kName): ?>
-            <?php
-            $cntKls = count(array_filter($pesertaList, fn($p) => $p['kelas_nama'] === $kName));
-            ?>
-            <a href="hasil_ujian.php?paket_id=<?= $paket_id ?>&kelas=<?= urlencode($kName) ?>&sort=<?= urlencode($sort) ?>&q=<?= urlencode($search) ?>" class="pill-item <?= ($selected_kelas === $kName) ? 'active' : '' ?>">
-                <?= htmlspecialchars($kName) ?>
-            </a>
-        <?php endforeach; ?>
-    </div>
-<?php endif; ?>
+<!-- Tombol Cepat Unduh Excel & Cetak Dokumen Resmi -->
+<div style="padding: 0 16px 14px; display: flex; gap: 8px;">
+    <a href="cetak_hasil.php?export=excel&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($sort) ?>" style="flex: 1; box-sizing: border-box; padding: 12px 14px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">
+        <i class="fa-solid fa-file-excel" style="font-size: 1.1rem;"></i> Unduh Excel (.xls)
+    </a>
+    <a href="cetak_hasil.php?topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($sort) ?>" target="_blank" style="flex: 1; box-sizing: border-box; padding: 12px 14px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+        <i class="fa-solid fa-print" style="font-size: 1.1rem;"></i> Cetak / Simpan PDF
+    </a>
+</div>
 
-<!-- Section List Nilai Peserta -->
-<div style="padding: 4px 16px 8px; display: flex; align-items: center; justify-content: space-between;">
-    <h3 style="margin: 0; font-size: 0.95rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+<!-- Judul Daftar Nilai Siswa -->
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px 12px;">
+    <h3 style="margin: 0; font-size: 0.95rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px;">
         <i class="fa-solid fa-list-check" style="color: #2563eb;"></i> Daftar Nilai Siswa
     </h3>
-    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">
-        <?= count($pesertaList) ?> Peserta
+    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 3px 8px; border-radius: 20px;">
+        <?= count($pesertaList) ?> Siswa Terdata
     </span>
 </div>
 
@@ -620,7 +525,7 @@ include 'header.php';
         </div>
         <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; color: #1e293b; font-weight: 800;">Belum Ada Hasil Ujian Terdata</h4>
         <p style="margin: 0; font-size: 0.8rem; color: #64748b; line-height: 1.4;">
-            Belum ada siswa yang menyelesaikan atau mengerjakan ujian untuk mata pelajaran ini.
+            Belum ada data siswa untuk kombinasi topik, mata pelajaran, atau kelas yang dipilih.<br>Silakan pilih mata pelajaran atau kelas lain di atas.
         </p>
     </div>
 <?php else: ?>
@@ -713,5 +618,46 @@ include 'header.php';
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+
+<script>
+function applyFilter(isTopikChange) {
+    const fTopik = document.getElementById('selTopik') ? document.getElementById('selTopik').value : '0';
+    const fMapel = (isTopikChange || !document.getElementById('selMapel')) ? '' : document.getElementById('selMapel').value;
+    const fKelas = document.getElementById('selKelas') ? document.getElementById('selKelas').value : '';
+    const fSort = document.getElementById('selSort') ? document.getElementById('selSort').value : 'nilai_desc';
+
+    const url = new URL(window.location.href);
+    if (fTopik && fTopik !== '0') {
+        url.searchParams.set('topik_id', fTopik);
+    } else {
+        url.searchParams.delete('topik_id');
+    }
+
+    if (isTopikChange) {
+        url.searchParams.delete('mapel');
+    } else if (fMapel) {
+        url.searchParams.set('mapel', fMapel);
+    } else {
+        url.searchParams.delete('mapel');
+    }
+
+    if (fKelas) {
+        url.searchParams.set('kelas', fKelas);
+    } else {
+        url.searchParams.delete('kelas');
+    }
+
+    url.searchParams.set('sort', fSort);
+    url.searchParams.delete('paket_id');
+    url.searchParams.delete('ujian_id');
+    url.searchParams.delete('q');
+
+    window.location.href = url.toString();
+}
+
+function resetFilterHasil() {
+    window.location.href = 'hasil_ujian.php';
+}
+</script>
 
 <?php include 'footer.php'; ?>
