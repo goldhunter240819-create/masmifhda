@@ -72,11 +72,31 @@ $active_menu = 'hasil';
                         <label class="label-sm">Filter Kelas</label>
                         <select name="kelas" class="input-sm" onchange="this.form.submit()">
                             <option value="">-- Semua Kelas --</option>
-                            <?php foreach($kelasList as $kls): ?>
-                                <option value="<?php echo htmlspecialchars($kls); ?>" <?php echo ($selectedKelas === $kls) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($kls); ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <?php if (!empty($kelasListReguler)): ?>
+                                <optgroup label="🏛️ Kelas Reguler (Madrasah)">
+                                    <?php foreach($kelasListReguler as $kls): ?>
+                                        <option value="<?php echo htmlspecialchars($kls); ?>" <?php echo ($selectedKelas === $kls) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($kls); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endif; ?>
+                            <?php if (!empty($kelasListJauh)): ?>
+                                <optgroup label="📡 Kelas Jauh (Khusus CBT)">
+                                    <?php foreach($kelasListJauh as $kls): ?>
+                                        <option value="<?php echo htmlspecialchars($kls); ?>" <?php echo ($selectedKelas === $kls) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($kls); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endif; ?>
+                            <?php if (empty($kelasListReguler) && empty($kelasListJauh)): ?>
+                                <?php foreach($kelasList as $kls): ?>
+                                    <option value="<?php echo htmlspecialchars($kls); ?>" <?php echo ($selectedKelas === $kls) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($kls); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
 

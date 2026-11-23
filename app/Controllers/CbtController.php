@@ -2672,18 +2672,27 @@ class CbtController {
 
         $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
-        // Daftar kelas real dari database kelas + kelas jauh + cbt_peserta + cbt_ujian
+        // Daftar kelas resmi madrasah (Reguler) dan Kelas Jauh (Khusus CBT)
+        $kelasListReguler = [];
+        $kelasListJauh = [];
         $kelasList = [];
         try {
+            $genericTingkat = ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas'];
+            // 1. Kelas Reguler dari tabel kelas (Siakad) & peserta madrasah
             $k1 = $db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
+            $k3 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != '' AND kelas_nama NOT LIKE '%Jauh%'")->fetchAll(PDO::FETCH_COLUMN);
+            $regMerged = array_diff(array_unique(array_filter(array_merge($k1, $k3))), $genericTingkat);
+            usort($regMerged, function($a, $b) { return strnatcasecmp($a, $b); });
+            $kelasListReguler = array_values($regMerged);
+
+            // 2. Kelas Jauh dari cbt_peserta_khusus & cbt_peserta
             $k2 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-            $k3 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-            $k4 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_ujian WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-            $merged = array_unique(array_filter(array_merge($k1, $k2, $k3, $k4)));
-            usort($merged, function($a, $b) {
-                return strnatcasecmp($a, $b);
-            });
-            $kelasList = array_values($merged);
+            $k3Jauh = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama LIKE '%Jauh%'")->fetchAll(PDO::FETCH_COLUMN);
+            $jauhMerged = array_unique(array_filter(array_merge($k2, $k3Jauh)));
+            usort($jauhMerged, function($a, $b) { return strnatcasecmp($a, $b); });
+            $kelasListJauh = array_values($jauhMerged);
+
+            $kelasList = array_merge($kelasListReguler, $kelasListJauh);
         } catch (\Exception $e) {}
 
         // Query Peserta Real
@@ -2724,10 +2733,9 @@ class CbtController {
         }
 
         if (!empty($selectedKelas)) {
-            $sql .= " AND (p.kelas_nama = :kelas OR p.kelas_nama LIKE :kelas_like OR u.kelas_nama = :kelas2)";
+            $sql .= " AND (p.kelas_nama = :kelas OR p.kelas_nama LIKE :kelas_like)";
             $params[':kelas'] = $selectedKelas;
             $params[':kelas_like'] = "%{$selectedKelas}%";
-            $params[':kelas2'] = $selectedKelas;
         }
 
         if (!empty($search)) {
@@ -2864,10 +2872,9 @@ class CbtController {
         }
 
         if (!empty($selectedKelas)) {
-            $sql .= " AND (p.kelas_nama = :kelas OR p.kelas_nama LIKE :kelas_like OR u.kelas_nama = :kelas2)";
+            $sql .= " AND (p.kelas_nama = :kelas OR p.kelas_nama LIKE :kelas_like)";
             $params[':kelas'] = $selectedKelas;
             $params[':kelas_like'] = "%{$selectedKelas}%";
-            $params[':kelas2'] = $selectedKelas;
         }
 
         if (!empty($search)) {

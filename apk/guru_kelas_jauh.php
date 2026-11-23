@@ -18,7 +18,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'unlock_peserta') {
         try {
             $stmtUn = $core_db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Mengerjakan', status_kunci = 'Unlocked', pelanggaran_count = 0, is_locked = 0 WHERE id = ?");
             $stmtUn->execute([$peserta_id]);
-            echo json_encode(['success' => true, 'message' => 'Status ujian siswa berhasil dibuka kuncinya!']);
+            echo json_encode(['success' => true, 'message' => 'Status ujian siswa berhasil dibuka kuncinya! Siswa dapat login kembali.']);
             exit;
         } catch (\Exception $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -29,11 +29,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'unlock_peserta') {
     exit;
 }
 
-// 1. Ambil Data Siswa Kelas Jauh
+// 1. Ambil Data Siswa Kelas Jauh & Rombel
 $totalSiswaKJ = 0;
+$rombelKJ = [];
 try {
     $stmtTot = $core_db->query("SELECT COUNT(*) FROM cbt_peserta_khusus");
     $totalSiswaKJ = (int)$stmtTot->fetchColumn();
+
+    $stmtRomb = $core_db->query("SELECT kelas_nama, COUNT(*) as jml FROM cbt_peserta_khusus GROUP BY kelas_nama ORDER BY kelas_nama ASC");
+    $rombelKJ = $stmtRomb->fetchAll(PDO::FETCH_ASSOC);
 } catch (\Exception $e) {}
 
 // 2. Ambil Rekap Absensi Siswa Kelas Jauh Hari Ini
@@ -47,37 +51,57 @@ try {
         LEFT JOIN cbt_peserta_khusus k ON (a.nis = k.no_peserta OR a.nis = k.username)
         WHERE (a.tipe_peserta = 'khusus' OR a.kelas_nama LIKE '%Jauh%' OR a.ruang_nama LIKE '%Jauh%')
           AND a.tanggal = ?
-        ORDER BY a.waktu_scan DESC
+        ORDER BY a.waktu_scan DESC, a.id DESC
     ");
     $stmtAbsKJ->execute([$todayDate]);
     $listAbsenKJ = $stmtAbsKJ->fetchAll(PDO::FETCH_ASSOC);
     $hadirHariIniKJ = count($listAbsenKJ);
 } catch (\Exception $e) {}
 
-// 3. Ambil Daftar Ujian CBT yang Tersedia untuk Kelas Jauh
+// 3. Ambil Daftar Ujian CBT yang Diikuti atau Tersedia untuk Kelas Jauh
 $ujianListKJ = [];
 try {
     $stmtUjn = $core_db->query("
-        SELECT id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, kkm, durasi_menit 
-        FROM cbt_ujian 
-        WHERE status = 'Aktif' 
-          AND (kelas_nama = 'Semua Kelas' OR kelas_nama LIKE '%Jauh%' OR kelas_nama = '' OR kelas_nama IS NULL)
-        ORDER BY id DESC
+        SELECT DISTINCT u.id, u.kode_ujian, u.nama_ujian, u.mapel_nama, u.kelas_nama, u.kkm, u.durasi_menit 
+        FROM cbt_ujian u 
+        WHERE u.id IN (
+            SELECT DISTINCT p.ujian_id 
+            FROM cbt_peserta p 
+            INNER JOIN cbt_peserta_khusus k ON (p.nis = k.no_peserta OR p.nis = k.username OR p.nama_siswa = k.nama_siswa)
+        )
+        OR u.status = 'Aktif'
+        OR u.kelas_nama LIKE '%Jauh%'
+        ORDER BY u.id DESC
+        LIMIT 50
     ");
     $ujianListKJ = $stmtUjn->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($ujianListKJ)) {
+        $ujianListKJ = $core_db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, kkm, durasi_menit FROM cbt_ujian ORDER BY id DESC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (\Exception $e) {}
+
+// Hitung total peserta KJ yang sudah selesai ujian
+$totalSelesaiKJ = 0;
+try {
+    $stmtSel = $core_db->query("
+        SELECT COUNT(*) 
+        FROM cbt_peserta p 
+        INNER JOIN cbt_peserta_khusus k ON (p.nis = k.no_peserta OR p.nis = k.username OR p.nama_siswa = k.nama_siswa)
+        WHERE p.status_pengerjaan = 'Selesai'
+    ");
+    $totalSelesaiKJ = (int)$stmtSel->fetchColumn();
 } catch (\Exception $e) {}
 
 // 4. Ambil Hasil Ujian Siswa Kelas Jauh (Filter Ujian)
-$selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : ($ujianListKJ[0]['id'] ?? 0);
+$selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
 $hasilListKJ = [];
 $statRata2 = 0;
 $statTertinggi = 0;
 $statTuntasCount = 0;
 $kkmAktif = 75;
 
-if ($selectedUjianId > 0) {
-    try {
-        // Ambil info KKM ujian aktif
+try {
+    if ($selectedUjianId > 0) {
         foreach ($ujianListKJ as $uj) {
             if ($uj['id'] == $selectedUjianId) {
                 $kkmAktif = (float)($uj['kkm'] ?? 75);
@@ -86,26 +110,43 @@ if ($selectedUjianId > 0) {
         }
 
         $stmtHsl = $core_db->prepare("
-            SELECT p.*, k.nama_siswa as nama_lengkap, k.no_peserta, k.kelas_nama as rombel_kj
+            SELECT p.*, k.nama_siswa as nama_lengkap, k.no_peserta, k.kelas_nama as rombel_kj, u.nama_ujian, u.mapel_nama
             FROM cbt_peserta p
             INNER JOIN cbt_peserta_khusus k ON (p.nis = k.no_peserta OR p.nis = k.username OR p.nama_siswa = k.nama_siswa)
+            LEFT JOIN cbt_ujian u ON u.id = p.ujian_id
             WHERE p.ujian_id = ?
             ORDER BY p.nilai_akhir DESC, p.nama_siswa ASC
         ");
         $stmtHsl->execute([$selectedUjianId]);
         $hasilListKJ = $stmtHsl->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        // Tampilkan semua riwayat pengerjaan siswa kelas jauh
+        $stmtHsl = $core_db->query("
+            SELECT p.*, k.nama_siswa as nama_lengkap, k.no_peserta, k.kelas_nama as rombel_kj, u.nama_ujian, u.mapel_nama
+            FROM cbt_peserta p
+            INNER JOIN cbt_peserta_khusus k ON (p.nis = k.no_peserta OR p.nis = k.username OR p.nama_siswa = k.nama_siswa)
+            LEFT JOIN cbt_ujian u ON u.id = p.ujian_id
+            ORDER BY p.nilai_akhir DESC, p.id DESC
+            LIMIT 150
+        ");
+        $hasilListKJ = $stmtHsl->fetchAll(PDO::FETCH_ASSOC);
+    }
 
-        if (!empty($hasilListKJ)) {
-            $totalNilai = 0;
-            foreach ($hasilListKJ as $h) {
-                $nilai = (float)($h['nilai_akhir'] ?? 0);
-                $totalNilai += $nilai;
-                if ($nilai > $statTertinggi) $statTertinggi = $nilai;
-                if ($nilai >= $kkmAktif) $statTuntasCount++;
-            }
-            $statRata2 = round($totalNilai / count($hasilListKJ), 1);
+    if (!empty($hasilListKJ)) {
+        $totalNilai = 0;
+        foreach ($hasilListKJ as $h) {
+            $nilai = (float)($h['nilai_akhir'] ?? 0);
+            $totalNilai += $nilai;
+            if ($nilai > $statTertinggi) $statTertinggi = $nilai;
+            if ($nilai >= $kkmAktif) $statTuntasCount++;
         }
-    } catch (\Exception $e) {}
+        $statRata2 = round($totalNilai / count($hasilListKJ), 1);
+    }
+} catch (\Exception $e) {}
+
+$activeTab = isset($_GET['tab']) ? trim($_GET['tab']) : 'beranda';
+if (!in_array($activeTab, ['beranda', 'scan', 'nilai'])) {
+    $activeTab = 'beranda';
 }
 
 $page_title = 'Portal Pengawas - Kelas Jauh CBT';
@@ -159,18 +200,89 @@ include 'header.php';
         </div>
     </div>
 
-    <!-- Switch Navigation Pills -->
-    <div style="display: flex; gap: 8px; margin-bottom: 16px; background: #e2e8f0; padding: 4px; border-radius: 12px;">
-        <button type="button" id="tabBtnScan" onclick="switchKJTab('scan')" style="flex: 1; padding: 10px; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; background: #059669; color: white; transition: 0.2s;">
-            <i class="fa-solid fa-qrcode"></i> Scan Absensi
+    <!-- Switch Navigation Pills: 3 TAB JELAS & BERBEDA -->
+    <div style="display: flex; gap: 6px; margin-bottom: 16px; background: #f1f5f9; padding: 4px; border-radius: 14px; border: 1px solid #e2e8f0;">
+        <button type="button" id="tabBtn_beranda" onclick="switchKJTab('beranda')" style="flex: 1; padding: 10px 6px; border: none; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: 0.2s; background: <?= ($activeTab === 'beranda') ? '#059669' : 'transparent' ?>; color: <?= ($activeTab === 'beranda') ? '#ffffff' : '#475569' ?>;">
+            <i class="fa-solid fa-house"></i> Beranda
         </button>
-        <button type="button" id="tabBtnNilai" onclick="switchKJTab('nilai')" style="flex: 1; padding: 10px; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; background: transparent; color: #475569; transition: 0.2s;">
-            <i class="fa-solid fa-square-poll-vertical"></i> Hasil Nilai
+        <button type="button" id="tabBtn_scan" onclick="switchKJTab('scan')" style="flex: 1; padding: 10px 6px; border: none; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: 0.2s; background: <?= ($activeTab === 'scan') ? '#059669' : 'transparent' ?>; color: <?= ($activeTab === 'scan') ? '#ffffff' : '#475569' ?>;">
+            <i class="fa-solid fa-qrcode"></i> Scan Absen
+        </button>
+        <button type="button" id="tabBtn_nilai" onclick="switchKJTab('nilai')" style="flex: 1; padding: 10px 6px; border: none; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: 0.2s; background: <?= ($activeTab === 'nilai') ? '#059669' : 'transparent' ?>; color: <?= ($activeTab === 'nilai') ? '#ffffff' : '#475569' ?>;">
+            <i class="fa-solid fa-chart-column"></i> Hasil Nilai
         </button>
     </div>
 
-    <!-- ================= TAB 1: SCAN ABSENSI KELAS JAUH ================= -->
-    <div id="tabContentScan">
+    <!-- ================= TAB 1: BERANDA DASHBOARD ================= -->
+    <div id="tabContent_beranda" style="display: <?= ($activeTab === 'beranda') ? 'block' : 'none' ?>;">
+        <!-- Card Menu Aksi Cepat Pengawas -->
+        <div style="background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+            <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-bolt" style="color: #059669;"></i> Menu Aksi Cepat Pengawas
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div onclick="switchKJTab('scan')" style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: #059669; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <div style="font-weight: 800; font-size: 0.86rem; color: #065f46;">Scan Absen</div>
+                    <div style="font-size: 0.7rem; color: #15803d;">Buka kamera scanner & input nomor peserta</div>
+                </div>
+
+                <div onclick="switchKJTab('nilai')" style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                        <i class="fa-solid fa-square-poll-vertical"></i>
+                    </div>
+                    <div style="font-weight: 800; font-size: 0.86rem; color: #1e40af;">Hasil Nilai</div>
+                    <div style="font-size: 0.7rem; color: #2563eb;">Rekap skor ujian & buka kunci siswa</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rombongan Belajar Siswa Kelas Jauh -->
+        <div style="background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-users" style="color: #059669;"></i> Rombel Siswa Kelas Jauh
+                </div>
+                <span style="font-size: 0.7rem; font-weight: 800; color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 20px;">
+                    <?= $totalSiswaKJ ?> Siswa Total
+                </span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <?php if (empty($rombelKJ)): ?>
+                    <div style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 12px;">Data rombel belum tersedia.</div>
+                <?php else: ?>
+                    <?php foreach ($rombelKJ as $r): ?>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 10px;">
+                            <div style="font-weight: 700; font-size: 0.82rem; color: #1e293b;">
+                                <i class="fa-solid fa-graduation-cap" style="color: #059669; margin-right: 6px;"></i>
+                                <?= htmlspecialchars($r['kelas_nama']) ?>
+                            </div>
+                            <span style="font-weight: 800; font-size: 0.78rem; color: #0f172a; background: white; border: 1px solid #e2e8f0; padding: 2px 10px; border-radius: 8px;">
+                                <?= (int)$r['jml'] ?> Siswa
+                            </span>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Panduan & Pengingat Pengawas -->
+        <div style="background: #f0fdf4; border-radius: 16px; padding: 16px; border: 1.5px dashed #86efac;">
+            <div style="font-weight: 800; font-size: 0.85rem; color: #166534; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-circle-info"></i> Petunjuk Pengawas CBT Kelas Jauh
+            </div>
+            <ul style="margin: 0; padding-left: 18px; font-size: 0.75rem; color: #15803d; line-height: 1.6;">
+                <li>Siswa wajib terabsen terlebih dahulu di menu <b>Scan Absen</b> sebelum mengerjakan soal ujian.</li>
+                <li>Jika siswa mengalami kendala koneksi atau akun terkunci, buka menu <b>Hasil Nilai</b> lalu klik tombol <b>Buka Kunci</b>.</li>
+                <li>Data absensi dan nilai siswa tersinkronisasi otomatis dengan server CBT Madrasah.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ================= TAB 2: SCAN ABSENSI KELAS JAUH ================= -->
+    <div id="tabContent_scan" style="display: <?= ($activeTab === 'scan') ? 'block' : 'none' ?>;">
         <!-- Shortcut Masuk Scanner Mobile Full Camera -->
         <a href="cbt_scan.php" style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 14px 18px; border-radius: 14px; text-decoration: none; font-weight: 800; font-size: 0.95rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -213,9 +325,10 @@ include 'header.php';
                 Belum ada siswa kelas jauh yang terabsen pada hari ini.<br>Gunakan scanner kamera atau input cepat nomor peserta di atas.
             </div>
         <?php else: ?>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <?php foreach ($listAbsenKJ as $a): ?>
-                    <div style="background: white; border-radius: 12px; padding: 12px 14px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <!-- Menampilkan 10 data pertama secara default, sisanya disembunyikan dan dibuka bertahap (+10) -->
+            <div id="absenKJListContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                <?php foreach ($listAbsenKJ as $idx => $a): ?>
+                    <div class="absen-kj-item" style="background: white; border-radius: 12px; padding: 12px 14px; border: 1px solid #e2e8f0; display: <?= ($idx < 10) ? 'flex' : 'none' ?>; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 38px; height: 38px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.05rem;">
                                 <i class="fa-solid fa-user-check"></i>
@@ -235,20 +348,30 @@ include 'header.php';
                     </div>
                 <?php endforeach; ?>
             </div>
+
+            <?php if (count($listAbsenKJ) > 10): ?>
+                <div id="wrapLoadMoreAbsen" style="margin-top: 12px; text-align: center;">
+                    <button type="button" id="btnLoadMoreAbsen" onclick="loadMoreAbsenKJ()" style="width: 100%; padding: 12px 16px; background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; border-radius: 12px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;">
+                        <i class="fa-solid fa-chevron-down"></i>
+                        <span>Lihat Selengkapnya (+10 Siswa, Sisa <?= count($listAbsenKJ) - 10 ?> Lagi)</span>
+                    </button>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 
-    <!-- ================= TAB 2: REKAP HASIL & NILAI KELAS JAUH ================= -->
-    <div id="tabContentNilai" style="display: none;">
+    <!-- ================= TAB 3: REKAP HASIL & NILAI KELAS JAUH ================= -->
+    <div id="tabContent_nilai" style="display: <?= ($activeTab === 'nilai') ? 'block' : 'none' ?>;">
         <!-- Filter Pilih Paket Ujian -->
         <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
             <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 6px; text-transform: uppercase;">
                 <i class="fa-solid fa-filter" style="color: #059669;"></i> Pilih Paket Ujian CBT:
             </label>
             <select onchange="window.location.href='guru_kelas_jauh.php?tab=nilai&ujian_id=' + this.value" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc;">
+                <option value="0" <?= ($selectedUjianId == 0) ? 'selected' : '' ?>>-- Semua Paket Ujian (Semua Mapel) --</option>
                 <?php foreach ($ujianListKJ as $uj): ?>
-                    <option value="<?= (int)$uj['id'] ?>" <?= $uj['id'] == $selectedUjianId ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($uj['nama_ujian']) ?> (<?= htmlspecialchars($uj['mapel_nama']) ?>)
+                    <option value="<?= (int)$uj['id'] ?>" <?= ($uj['id'] == $selectedUjianId) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($uj['nama_ujian']) ?> (<?= htmlspecialchars($uj['mapel_nama'] ?: 'CBT') ?>)
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -301,8 +424,13 @@ include 'header.php';
                                         <?= htmlspecialchars($h['nama_siswa']) ?>
                                     </h4>
                                     <div style="font-size: 0.72rem; color: #64748b;">
-                                        No. Peserta: <b><?= htmlspecialchars($h['nis']) ?></b> • <?= htmlspecialchars($h['rombel_kj'] ?: 'Kelas Jauh') ?>
+                                        No: <b><?= htmlspecialchars($h['nis']) ?></b> • <?= htmlspecialchars($h['rombel_kj'] ?: 'Kelas Jauh') ?>
                                     </div>
+                                    <?php if (!empty($h['nama_ujian'])): ?>
+                                        <div style="font-size: 0.68rem; color: #0284c7; font-weight: 700; margin-top: 2px;">
+                                            <i class="fa-solid fa-file-lines"></i> <?= htmlspecialchars($h['nama_ujian']) ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div style="text-align: right;">
@@ -334,41 +462,74 @@ include 'header.php';
 </div>
 
 <script>
+    // Tab Switch Controller (Beranda, Scan, Nilai)
     function switchKJTab(tab) {
-        const btnScan = document.getElementById('tabBtnScan');
-        const btnNilai = document.getElementById('tabBtnNilai');
-        const contentScan = document.getElementById('tabContentScan');
-        const contentNilai = document.getElementById('tabContentNilai');
-        const navScan = document.getElementById('navItemScan');
-        const navNilai = document.getElementById('navItemNilai');
+        const tabs = ['beranda', 'scan', 'nilai'];
+        tabs.forEach(t => {
+            const btn = document.getElementById('tabBtn_' + t);
+            const content = document.getElementById('tabContent_' + t);
+            const nav = document.getElementById('navItem_' + t);
 
-        if (tab === 'scan') {
-            btnScan.style.background = '#059669';
-            btnScan.style.color = '#ffffff';
-            btnNilai.style.background = 'transparent';
-            btnNilai.style.color = '#475569';
-            contentScan.style.display = 'block';
-            contentNilai.style.display = 'none';
+            if (t === tab) {
+                if (btn) {
+                    btn.style.background = '#059669';
+                    btn.style.color = '#ffffff';
+                }
+                if (content) {
+                    content.style.display = 'block';
+                }
+                if (nav) {
+                    nav.style.color = '#059669';
+                }
+            } else {
+                if (btn) {
+                    btn.style.background = 'transparent';
+                    btn.style.color = '#475569';
+                }
+                if (content) {
+                    content.style.display = 'none';
+                }
+                if (nav) {
+                    nav.style.color = '#64748b';
+                }
+            }
+        });
 
-            if (navScan) { navScan.style.color = '#059669'; }
-            if (navNilai) { navNilai.style.color = '#64748b'; }
-        } else {
-            btnNilai.style.background = '#059669';
-            btnNilai.style.color = '#ffffff';
-            btnScan.style.background = 'transparent';
-            btnScan.style.color = '#475569';
-            contentNilai.style.display = 'block';
-            contentScan.style.display = 'none';
-
-            if (navNilai) { navNilai.style.color = '#059669'; }
-            if (navScan) { navScan.style.color = '#64748b'; }
-        }
+        // Update URL tanpa reload
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', tab);
+            window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
     }
 
-    // Auto switch jika URL memiliki parameter tab=nilai
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tab') === 'nilai') {
-        switchKJTab('nilai');
+    // Pagination Riwayat Kehadiran (Tampilkan 10, klik lagi tambah 10 seterusnya)
+    let currentAbsenVisible = 10;
+    function loadMoreAbsenKJ() {
+        const items = document.querySelectorAll('.absen-kj-item');
+        const total = items.length;
+        currentAbsenVisible += 10;
+
+        items.forEach((item, idx) => {
+            if (idx < currentAbsenVisible) {
+                item.style.display = 'flex';
+            }
+        });
+
+        const btn = document.getElementById('btnLoadMoreAbsen');
+        const wrap = document.getElementById('wrapLoadMoreAbsen');
+        if (currentAbsenVisible >= total) {
+            if (btn) btn.style.display = 'none';
+            if (wrap) {
+                wrap.innerHTML = '<span style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;"><i class="fa-solid fa-check-circle" style="color: #059669;"></i> Seluruh riwayat kehadiran (' + total + ' siswa) telah ditampilkan</span>';
+            }
+        } else {
+            const sisa = total - currentAbsenVisible;
+            const nextBatch = Math.min(10, sisa);
+            if (btn) {
+                btn.innerHTML = `<i class="fa-solid fa-chevron-down"></i> <span>Lihat Selengkapnya (+${nextBatch} Siswa, Sisa ${sisa} Lagi)</span>`;
+            }
+        }
     }
 
     function submitScanKJ() {
@@ -438,62 +599,58 @@ include 'header.php';
         .catch(() => {
             alert('Gagal menghubungi server.');
         });
+    }
+
     function confirmLogoutPengawasKJ(e) {
         if (e && e.preventDefault) e.preventDefault();
-        Swal.fire({
-            title: '<div style="font-size: 1.25rem; font-weight: 900; color: #0f172a; margin-top: 4px;">Keluar Akun Pengawas?</div>',
-            html: `
-                <div style="font-size: 0.88rem; color: #64748b; line-height: 1.5; margin: 8px 0 14px;">
-                    Bapak/Ibu <b><?= htmlspecialchars($pengawas_kj['nama'] ?? 'Pengawas CBT') ?></b>, Anda akan mengakhiri sesi pada <b>Portal Pengawas Kelas Jauh</b>.
-                </div>
-                <div style="background: #fef2f2; border: 1.5px dashed #fca5a5; border-radius: 12px; padding: 10px 14px; font-size: 0.78rem; color: #b91c1c; display: flex; align-items: center; gap: 10px; text-align: left;">
-                    <i class="fa-solid fa-shield-halved" style="font-size: 1.2rem; flex-shrink: 0; color: #ef4444;"></i>
-                    <span>Pastikan Anda telah selesai memantau ujian & seluruh absensi siswa cabang telah tersimpan.</span>
-                </div>
-            `,
-            icon: 'warning',
-            iconColor: '#ef4444',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: '<i class="fa-solid fa-arrow-right-from-bracket" style="margin-right: 6px;"></i> Ya, Keluar Sekarang',
-            cancelButtonText: '<i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Batal',
-            reverseButtons: true,
-            background: '#ffffff',
-            padding: '24px 20px',
-            borderRadius: '20px'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: '<span style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">Menutup Sesi...</span>',
-                    html: '<span style="font-size: 0.82rem; color: #64748b;">Terima kasih atas dedikasi pengawasan ujian Anda!</span>',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    timer: 900,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-                setTimeout(() => {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: '<div style="font-size: 1.25rem; font-weight: 900; color: #0f172a; margin-top: 4px;">Keluar Akun Pengawas?</div>',
+                html: `
+                    <div style="font-size: 0.88rem; color: #64748b; line-height: 1.5; margin: 8px 0 14px;">
+                        Bapak/Ibu <b><?= htmlspecialchars($nama_petugas) ?></b>, Anda akan mengakhiri sesi pada <b>Portal Pengawas Kelas Jauh</b>.
+                    </div>
+                    <div style="background: #fef2f2; border: 1.5px dashed #fca5a5; border-radius: 12px; padding: 10px 14px; font-size: 0.78rem; color: #b91c1c; display: flex; align-items: center; gap: 10px; text-align: left;">
+                        <i class="fa-solid fa-shield-halved" style="font-size: 1.2rem; flex-shrink: 0; color: #ef4444;"></i>
+                        <span>Pastikan Anda telah selesai memantau ujian & seluruh absensi siswa cabang telah tersimpan.</span>
+                    </div>
+                `,
+                icon: 'warning',
+                iconColor: '#ef4444',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: '<i class="fa-solid fa-arrow-right-from-bracket" style="margin-right: 6px;"></i> Ya, Keluar Sekarang',
+                cancelButtonText: '<i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Batal',
+                reverseButtons: true,
+                background: '#ffffff',
+                padding: '24px 20px',
+                borderRadius: '20px'
+            }).then((result) => {
+                if (result.isConfirmed) {
                     window.location.href = 'logout.php';
-                }, 750);
+                }
+            });
+        } else {
+            if (confirm('Keluar dari akun pengawas?')) {
+                window.location.href = 'logout.php';
             }
-        });
+        }
     }
 </script>
 
 <!-- BOTTOM NAVIGATION FOOTER PENGAWAS CBT KELAS JAUH -->
 <div class="bottom-nav" style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; border-top: 1px solid #e2e8f0; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); display: flex; justify-content: space-around; align-items: center; min-height: 68px; padding-top: 6px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 9999; background: #ffffff;">
-    <a href="guru_dashboard.php" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #64748b;">
+    <a href="javascript:void(0)" onclick="switchKJTab('beranda'); window.scrollTo({top: 0, behavior: 'smooth'});" id="navItem_beranda" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($activeTab === 'beranda') ? '#059669' : '#64748b' ?>;">
         <i class="fa-solid fa-house" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
         <span style="font-size: 0.72rem; font-weight: 700;">Beranda</span>
     </a>
-    <a href="javascript:void(0)" onclick="switchKJTab('scan'); window.scrollTo({top: 0, behavior: 'smooth'});" id="navItemScan" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #059669;">
+    <a href="javascript:void(0)" onclick="switchKJTab('scan'); window.scrollTo({top: 0, behavior: 'smooth'});" id="navItem_scan" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($activeTab === 'scan') ? '#059669' : '#64748b' ?>;">
         <i class="fa-solid fa-qrcode" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
         <span style="font-size: 0.72rem; font-weight: 700;">Scan Absen</span>
     </a>
-    <a href="javascript:void(0)" onclick="switchKJTab('nilai'); window.scrollTo({top: 0, behavior: 'smooth'});" id="navItemNilai" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #64748b;">
-        <i class="fa-solid fa-chart-line" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
+    <a href="javascript:void(0)" onclick="switchKJTab('nilai'); window.scrollTo({top: 0, behavior: 'smooth'});" id="navItem_nilai" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: <?= ($activeTab === 'nilai') ? '#059669' : '#64748b' ?>;">
+        <i class="fa-solid fa-chart-column" style="font-size: 1.25rem; margin-bottom: 4px;"></i>
         <span style="font-size: 0.72rem; font-weight: 700;">Hasil Nilai</span>
     </a>
     <a href="javascript:void(0)" onclick="confirmLogoutPengawasKJ(event)" class="nav-item" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;">
