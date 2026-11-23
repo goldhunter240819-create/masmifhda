@@ -174,6 +174,15 @@ try {
         $output .= "\nAuto-populated today's attendance: " . ($resBulk['inserted'] ?? 0) . " entries created (" . ($resBulk['message'] ?? '') . ").\n";
         $resBulk2 = \App\Controllers\CbtController::bulkPopulateAbsensiHariIni('2026-11-23');
         $output .= "Populated 2026-11-23: " . ($resBulk2['inserted'] ?? 0) . " entries (" . ($resBulk2['message'] ?? '') . ").\n";
+
+        $diagGrid = $dbCore->query("SELECT id, topik_id, mapel_nama, hari, jam_slot, kelas_nama, tanggal FROM cbt_jadwal_grid")->fetchAll(PDO::FETCH_ASSOC);
+        $output .= "Diag cbt_jadwal_grid (" . count($diagGrid) . " rows): " . json_encode($diagGrid) . "\n";
+
+        $diagAbs = $dbCore->query("SELECT tipe_peserta, kelas_nama, COUNT(*) as c FROM cbt_absensi WHERE tanggal = '2026-11-23' GROUP BY tipe_peserta, kelas_nama")->fetchAll(PDO::FETCH_ASSOC);
+        $output .= "Diag cbt_absensi: " . json_encode($diagAbs) . "\n";
+
+        $diagDenah = $dbCore->query("SELECT COUNT(*) FROM cbt_denah_peserta WHERE siswa_id IS NOT NULL AND siswa_id > 0")->fetchColumn();
+        $output .= "Diag cbt_denah_peserta with siswa: " . $diagDenah . "\n";
     } catch (\Throwable $e) {
         $output .= "\nAuto-populate attendance error: " . $e->getMessage() . "\n";
     }
