@@ -95,6 +95,13 @@ $is_standalone_env = !$is_online_server && (
 );
 $activeTab = $_GET['tab'] ?? 'beranda';
 
+// Proteksi: Siswa reguler hanya diizinkan ujian offline di Laboratorium Komputer Madrasah
+$is_kelas_jauh = $is_cbt_only || (isset($siswa['nama_kelas']) && stripos($siswa['nama_kelas'], 'jauh') !== false);
+if ($is_online_server && !$is_kelas_jauh) {
+    header("Location: aplikasi_siswa.php?msg=offline_only");
+    exit;
+}
+
 // Self Check-in / Verifikasi Presensi Mandiri
 if (isset($_GET['self_checkin'])) {
     $nowStr = date('Y-m-d H:i:s');
@@ -1231,9 +1238,9 @@ include 'header.php';
     /* Action bar & Top Tata Tertib Button */
     .cbt-actions-bar {
         display: flex;
-        align-items: center;
+        align-items: stretch;
         justify-content: space-between;
-        gap: 10px;
+        gap: 8px;
         padding: 0 16px;
         margin-bottom: 16px;
     }
@@ -1241,17 +1248,20 @@ include 'header.php';
         background: #ffffff;
         color: #0f172a;
         border: 1.5px solid #cbd5e1;
-        padding: 9px 14px;
+        padding: 8px 6px;
         border-radius: 12px;
-        font-size: 0.78rem;
+        font-size: 0.74rem;
         font-weight: 800;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        gap: 5px;
         cursor: pointer;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03);
         transition: all 0.2s;
         flex: 1;
+        text-align: center;
+        text-decoration: none;
     }
     .btn-tatatertib-top:hover {
         background: #f8fafc;
@@ -1437,15 +1447,19 @@ include 'header.php';
         <?php endif; ?>
     </div>
 
-    <!-- Action Bar: Tombol Tata Tertib, Jadwal Ujian & Mode Jadwal -->
-    <div class="cbt-actions-bar" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+    <!-- Action Bar: Tombol Tata Tertib, Jadwal Ujian & Histori Pengerjaan -->
+    <div class="cbt-actions-bar" style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: stretch;">
         <button type="button" onclick="bukaModalTataTertib()" class="btn-tatatertib-top">
-            <i class="fa-solid fa-file-shield" style="color: #2563eb; font-size: 0.95rem;"></i>
+            <i class="fa-solid fa-clipboard-list" style="color: #2563eb; font-size: 0.95rem;"></i>
             <span>Tata Tertib</span>
         </button>
         <button type="button" onclick="bukaModalJadwalSiswa()" class="btn-tatatertib-top" style="border-color: #cbd5e1; background: #ffffff;">
             <i class="fa-solid fa-calendar-days" style="color: #059669; font-size: 0.95rem;"></i>
             <span>Jadwal Ujian</span>
+        </button>
+        <button type="button" onclick="bukaModalRiwayatUjian()" class="btn-tatatertib-top" style="border-color: #cbd5e1; background: #ffffff;">
+            <i class="fa-solid fa-clock-rotate-left" style="color: #7c3aed; font-size: 0.95rem;"></i>
+            <span>Histori Pengerjaan</span>
         </button>
         <?php if ($is_standalone_env): ?>
             <a href="cbt.php" class="btn-tatatertib-top" style="<?= $activeTab !== 'riwayat' ? 'background: #2563eb; color: #ffffff; border-color: #2563eb;' : 'background: #ffffff; color: #475569; border-color: #cbd5e1;' ?> text-decoration: none;">
@@ -1921,12 +1935,92 @@ include 'header.php';
         </div>
     </div>
 
+    <!-- MODAL: HISTORI PENGERJAAN UJIAN SISWA -->
+    <div id="modalRiwayatSiswa" class="cbt-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px 16px 85px 16px;">
+        <div class="cbt-modal-box" style="background: white; border-radius: 20px; max-width: 520px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; overflow: hidden; animation: slideUp 0.25s ease-out; max-height: calc(85vh - 75px); margin-bottom: 40px; display: flex; flex-direction: column;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(168, 85, 247, 0.2); color: #c084fc; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; border: 1px solid rgba(192, 132, 252, 0.3);">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 0.98rem; font-weight: 900;">Histori Pengerjaan Ujian</h3>
+                        <p style="margin: 2px 0 0; font-size: 0.72rem; color: #cbd5e1;">
+                            Daftar ujian yang telah Anda selesaikan
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="tutupModalRiwayatUjian()" style="background: none; border: none; color: #94a3b8; font-size: 1.25rem; cursor: pointer;">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 16px 20px; overflow-y: auto; flex: 1;">
+                <?php if (empty($riwayatUjian)): ?>
+                    <div style="text-align: center; padding: 35px 10px; color: #94a3b8;">
+                        <i class="fa-solid fa-clock-rotate-left" style="font-size: 2.5rem; margin-bottom: 10px; color: #cbd5e1;"></i>
+                        <div style="font-weight: 800; font-size: 0.92rem; color: #475569;">Belum Ada Histori Pengerjaan</div>
+                        <div style="font-size: 0.76rem; margin-top: 4px;">Ujian yang telah selesai dikerjakan akan otomatis tercatat di sini.</div>
+                    </div>
+                <?php else: ?>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <?php foreach ($riwayatUjian as $r): 
+                            $isTuntas = ((float)($r['nilai_akhir'] ?? 0) >= (float)($r['kkm'] ?? 75));
+                        ?>
+                            <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 13px 15px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                                    <div style="min-width: 0; flex: 1;">
+                                        <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a; line-height: 1.3;">
+                                            <?= htmlspecialchars($r['nama_ujian']) ?>
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                                            <span style="font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 7px; border-radius: 6px; border: 1px solid #bfdbfe; font-size: 0.7rem;">
+                                                <?= htmlspecialchars($r['mapel_nama']) ?>
+                                            </span>
+                                            <span>• <?= !empty($r['waktu_selesai']) ? date('d M Y, H:i', strtotime($r['waktu_selesai'])) . ' WIB' : 'Selesai' ?></span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; flex-shrink: 0;">
+                                        <?php if ($showScoreToStudent): ?>
+                                            <div style="font-size: 1.25rem; font-weight: 900; color: <?= $isTuntas ? '#10b981' : '#ef4444' ?>; line-height: 1;">
+                                                <?= number_format((float)($r['nilai_akhir'] ?? 0), 1) ?>
+                                            </div>
+                                            <span style="display: inline-block; margin-top: 3px; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; background: <?= $isTuntas ? '#ecfdf5' : '#fef2f2' ?>; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>; border: 1px solid <?= $isTuntas ? '#a7f3d0' : '#fecaca' ?>;">
+                                                <?= $isTuntas ? 'TUNTAS' : 'REMEDIAL' ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span style="font-size: 0.68rem; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 6px;">
+                                                SELESAI
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #f1f5f9; display: flex; gap: 12px; font-size: 0.72rem; color: #64748b; font-weight: 600;">
+                                    <span><i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Benar: <b style="color: #334155;"><?= (int)($r['jml_benar'] ?? 0) ?></b></span>
+                                    <span><i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i> Salah: <b style="color: #334155;"><?= (int)($r['jml_salah'] ?? 0) ?></b></span>
+                                    <span><i class="fa-solid fa-circle-minus" style="color: #94a3b8;"></i> Kosong: <b style="color: #334155;"><?= (int)($r['jml_kosong'] ?? 0) ?></b></span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: right;">
+                <button type="button" onclick="tutupModalRiwayatUjian()" style="background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; padding: 8px 18px; cursor: pointer;">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL 1: TATA TERTIB & LARANGAN UJIAN CBT -->
     <div id="modalTataTertib" class="cbt-modal-backdrop">
         <div class="cbt-modal-box">
             <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 18px 20px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-file-shield" style="font-size: 1.2rem; color: #93c5fd;"></i>
+                    <i class="fa-solid fa-clipboard-list" style="font-size: 1.2rem; color: #93c5fd;"></i>
                     <h3 style="margin: 0; font-size: 1rem; font-weight: 800;">Tata Tertib Ujian CBT</h3>
                 </div>
                 <button type="button" onclick="tutupModalTataTertib()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 0.9rem;">
@@ -2066,6 +2160,15 @@ function bukaModalJadwalSiswa() {
 }
 function tutupModalJadwalSiswa() {
     document.getElementById('modalJadwalSiswa').style.display = 'none';
+}
+
+function bukaModalRiwayatUjian() {
+    var modal = document.getElementById('modalRiwayatSiswa');
+    if (modal) modal.style.display = 'flex';
+}
+function tutupModalRiwayatUjian() {
+    var modal = document.getElementById('modalRiwayatSiswa');
+    if (modal) modal.style.display = 'none';
 }
 
 function bukaModalTataTertib() {

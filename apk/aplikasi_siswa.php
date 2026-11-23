@@ -13,6 +13,19 @@ $stmt_gw = $core_db->prepare("SELECT COUNT(*) FROM guru_wali_siswa WHERE siswa_i
 $stmt_gw->execute([$_SESSION['siswa_id']]);
 $punya_mentor = $stmt_gw->fetchColumn() > 0;
 
+// Cek apakah siswa kelas jauh (hanya kelas jauh yang bisa akses CBT online via aplikasi)
+$is_kelas_jauh = !empty($_SESSION['is_cbt_only']);
+if (!$is_kelas_jauh && !empty($_SESSION['siswa_id'])) {
+    try {
+        $stmt_kj = $core_db->prepare("SELECT k.nama_kelas FROM siswa s LEFT JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
+        $stmt_kj->execute([$_SESSION['siswa_id']]);
+        $nama_kelas_siswa = (string)$stmt_kj->fetchColumn();
+        if (stripos($nama_kelas_siswa, 'jauh') !== false) {
+            $is_kelas_jauh = true;
+        }
+    } catch (\Throwable $e) {}
+}
+
 include 'header.php';
 ?>
 
@@ -30,6 +43,13 @@ include 'header.php';
 
 <div class="main-content">
     <div class="data-card" style="margin-top: -2.5rem; z-index: 10;">
+        <?php if (isset($_GET['msg']) && $_GET['msg'] === 'offline_only'): ?>
+        <div style="margin-bottom: 16px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 14px; border-radius: 12px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-circle-info" style="font-size: 1.15rem; color: #2563eb; flex-shrink: 0;"></i>
+            <div style="line-height: 1.4;">Pelaksanaan Ujian CBT untuk siswa reguler dilaksanakan secara luring (offline) di Laboratorium Komputer Madrasah.</div>
+        </div>
+        <?php endif; ?>
+
         <h3 class="section-title" style="margin-top: 0; margin-bottom: 15px;">Daftar Layanan</h3>
         
         <div style="margin-bottom: 24px;">
@@ -58,7 +78,8 @@ include 'header.php';
                     <h3 style="margin: 0; font-size: 0.75rem; color: #1e293b; font-weight: 700; line-height: 1.2;">Tabungan</h3>
                 </a>
 
-                <!-- CBT Ujian Online -->
+                <?php if (!empty($is_kelas_jauh)): ?>
+                <!-- CBT Ujian Online (Khusus Kelas Jauh) -->
                 <a href="cbt.php" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: white; padding: 15px 10px; border-radius: 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; gap: 8px; position: relative;">
                     <div style="position: absolute; top: -6px; right: -6px; background: #6366f1; color: white; font-size: 0.55rem; font-weight: 800; padding: 2px 6px; border-radius: 8px;">CBT v2.5</div>
                     <div style="width: 45px; height: 45px; border-radius: 14px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 20px;">
@@ -66,6 +87,7 @@ include 'header.php';
                     </div>
                     <h3 style="margin: 0; font-size: 0.75rem; color: #1e293b; font-weight: 700; line-height: 1.2;">CBT Ujian</h3>
                 </a>
+                <?php endif; ?>
                 
                 
                 <!-- Chat Wali Kelas -->
