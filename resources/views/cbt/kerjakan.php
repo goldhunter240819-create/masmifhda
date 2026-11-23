@@ -904,9 +904,233 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 font-size: 0.85rem;
             }
         }
+
+        /* ══════════════════════════════════════════════════════════════════════════
+           SIMULASI TAMPILAN HP SISWA (SMARTPHONE MOCKUP FRAME)
+           ══════════════════════════════════════════════════════════════════════════ */
+        body.view-mode-hp {
+            background: #090d16 !important;
+            min-height: 100vh;
+        }
+
+        body.view-mode-hp .simulasi-phone-shell {
+            max-width: 420px;
+            width: 100%;
+            margin: 20px auto 40px;
+            background: #ffffff;
+            border-radius: 40px;
+            border: 10px solid #1e293b;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.12);
+            min-height: 820px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .phone-status-bar {
+            display: none;
+            background: #ffffff;
+            padding: 8px 18px 4px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #1e293b;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1f5f9;
+            user-select: none;
+        }
+        body.view-mode-hp .phone-status-bar {
+            display: flex !important;
+        }
+
+        /* Force Mobile Layout Rules inside .view-mode-hp */
+        body.view-mode-hp .cbt-topbar {
+            padding: 8px 10px !important;
+            gap: 6px !important;
+            flex-wrap: nowrap !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 40 !important;
+            background: #ffffff !important;
+        }
+        body.view-mode-hp .cbt-brand {
+            gap: 6px !important;
+            min-width: 0 !important;
+            flex: 1 1 auto !important;
+            overflow: hidden !important;
+        }
+        body.view-mode-hp .cbt-brand img {
+            width: 28px !important;
+            height: 28px !important;
+            flex-shrink: 0 !important;
+        }
+        body.view-mode-hp .cbt-exam-title {
+            font-size: 0.8rem !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            max-width: 130px !important;
+        }
+        body.view-mode-hp .cbt-exam-sub {
+            display: none !important;
+        }
+        body.view-mode-hp .cbt-timer-box {
+            padding: 5px 8px !important;
+            border-radius: 8px !important;
+            gap: 4px !important;
+            flex-shrink: 0 !important;
+            white-space: nowrap !important;
+        }
+        body.view-mode-hp .cbt-timer-box i, body.view-mode-hp .cbt-timer-box svg {
+            display: none !important;
+        }
+        body.view-mode-hp .cbt-timer-val {
+            font-size: 0.88rem !important;
+            letter-spacing: 0.5px !important;
+            white-space: nowrap !important;
+        }
+        body.view-mode-hp .cbt-timer-label {
+            display: none !important;
+        }
+        body.view-mode-hp #saveIndicator {
+            display: none !important;
+        }
+
+        body.view-mode-hp .cbt-mobile-palette-toggle {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 4px;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1.5px solid #bfdbfe;
+            padding: 5px 8px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            cursor: pointer;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        body.view-mode-hp .cbt-workspace {
+            grid-template-columns: 1fr !important;
+            padding: 10px 12px 20px !important;
+            margin-bottom: 76px !important;
+            gap: 0 !important;
+        }
+        body.view-mode-hp .cbt-main-card {
+            padding: 14px 16px !important;
+            border-radius: 14px !important;
+            min-height: auto !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        body.view-mode-hp .q-header {
+            margin-bottom: 1rem !important;
+            padding-bottom: 0.75rem !important;
+            gap: 8px !important;
+            flex-wrap: nowrap !important;
+        }
+        body.view-mode-hp .q-badge-num {
+            font-size: 0.8rem !important;
+            padding: 5px 10px !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+        }
+        body.view-mode-hp .q-badge-num i, body.view-mode-hp .q-badge-num svg {
+            width: 14px !important;
+            height: 14px !important;
+        }
+
+        /* Sembunyikan footer & sidebar desktop di Mode HP */
+        body.view-mode-hp .q-nav-footer {
+            display: none !important;
+        }
+        body.view-mode-hp .cbt-side-card {
+            display: none !important;
+        }
+
+        /* Tampilkan Bottom Nav Bar Mobile */
+        body.view-mode-hp .cbt-mobile-bottom-bar {
+            display: flex !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 64px !important;
+            background: #ffffff !important;
+            border-top: 1px solid #e2e8f0 !important;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08) !important;
+            z-index: 1000 !important;
+            padding: 8px 12px !important;
+            gap: 8px !important;
+            align-items: center !important;
+        }
+        body.view-mode-hp .simulasi-phone-shell .cbt-mobile-bottom-bar {
+            position: sticky !important;
+            bottom: 0 !important;
+            margin-top: auto !important;
+            border-bottom-left-radius: 30px !important;
+            border-bottom-right-radius: 30px !important;
+        }
+        body.view-mode-hp .m-nav-btn {
+            flex: 1;
+            height: 48px;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        body.view-mode-hp .m-prev {
+            background: #f1f5f9;
+            color: #475569;
+        }
+        body.view-mode-hp .m-ragu {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        body.view-mode-hp .m-ragu.active {
+            background: #f59e0b;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+        }
+        body.view-mode-hp .m-next {
+            background: #4f46e5;
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+        }
+
+        body.view-mode-hp .simulasi-phone-shell .cbt-palette-drawer-backdrop {
+            position: absolute !important;
+            border-radius: 30px !important;
+            overflow: hidden !important;
+        }
+        body.view-mode-hp .matching-board {
+            gap: 40px !important;
+            min-height: 220px !important;
+        }
+        body.view-mode-hp .matching-card {
+            padding: 10px 12px !important;
+            font-size: 0.82rem !important;
+            min-height: 44px !important;
+            border-radius: 10px !important;
+        }
+        body.view-mode-hp .matching-hint {
+            font-size: 0.72rem !important;
+            padding: 8px 10px !important;
+        }
     </style>
 </head>
-<body>
+<body class="<?php echo $isSimulasi ? 'view-mode-hp' : ''; ?>">
 
     <?php if ($watermark): ?>
     <!-- Watermark Identitas Siswa -->
@@ -922,19 +1146,44 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
     <?php if ($isSimulasi): ?>
     <!-- Topbar Banner Mode Simulasi / Pratinjau Siswa -->
-    <div style="background: linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #0284c7 100%); color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25); z-index: 100; position: sticky; top: 0; flex-wrap: wrap; gap: 10px;">
+    <div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0369a1 100%); color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); z-index: 10000; position: sticky; top: 0; flex-wrap: wrap; gap: 10px;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <span style="background: rgba(255,255,255,0.22); padding: 4px 12px; border-radius: 99px; font-size: 0.72rem; letter-spacing: 0.5px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px;">
-                <i data-lucide="smartphone" style="width: 13px; height: 13px;"></i> PRATINJAU TAMPILAN SISWA
+            <span style="background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 4px 12px; border-radius: 99px; font-size: 0.72rem; letter-spacing: 0.8px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; font-weight: 800;">
+                <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i> TAMPILAN HP SISWA
             </span>
-            <span style="color: #f1f5f9; font-weight: 600;">Ini adalah tampilan asli saat siswa mengerjakan ujian. Anda dapat mencoba klik opsi PG, centang PG Kompleks, memilih Benar/Salah, maupun menarik garis menjodohkan!</span>
+            <span style="color: #cbd5e1; font-weight: 500; font-size: 0.82rem;">Ini adalah tampilan persis seperti di layar HP / smartphone siswa saat ujian CBT offline.</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <a href="<?php echo htmlspecialchars($ujianInfo['back_url'] ?? base_url('bank_soal')); ?>" style="background: #ffffff; color: #4338ca; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); white-space: nowrap;">
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <!-- View Mode Switcher -->
+            <div style="display: inline-flex; background: rgba(15, 23, 42, 0.8); padding: 3px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);">
+                <button type="button" id="btnModeHp" onclick="switchViewMode('hp')" style="padding: 6px 14px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; border: none; background: #38bdf8; color: #0f172a; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                    <i data-lucide="smartphone" style="width: 13px; height: 13px;"></i> Layar HP Siswa
+                </button>
+                <button type="button" id="btnModeDesktop" onclick="switchViewMode('desktop')" style="padding: 6px 14px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; background: transparent; color: #94a3b8; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                    <i data-lucide="monitor" style="width: 14px; height: 14px;"></i> Layar Penuh (PC)
+                </button>
+            </div>
+
+            <a href="<?php echo htmlspecialchars($ujianInfo['back_url'] ?? base_url('bank_soal')); ?>" style="background: #ffffff; color: #1e1b4b; padding: 7px 16px; border-radius: 10px; text-decoration: none; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
                 <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Kembali ke Bank Soal
             </a>
         </div>
     </div>
+    <?php endif; ?>
+
+    <?php if ($isSimulasi): ?>
+    <div class="simulasi-phone-shell" id="phoneShell">
+        <!-- Phone Status Bar -->
+        <div class="phone-status-bar">
+            <span>08:00 WIB</span>
+            <div style="width: 80px; height: 14px; background: #0f172a; border-radius: 99px;"></div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem;">
+                <i data-lucide="wifi" style="width: 12px; height: 12px;"></i>
+                <span>4G</span>
+                <i data-lucide="battery-charging" style="width: 14px; height: 14px; color: #10b981;"></i>
+            </div>
+        </div>
     <?php endif; ?>
 
     <!-- Header Topbar -->
@@ -1111,6 +1360,10 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             </div>
         </div>
     </div>
+
+    <?php if ($isSimulasi): ?>
+    </div><!-- End simulasi-phone-shell -->
+    <?php endif; ?>
 
     <!-- Modal Auto-Submit Notice (Menggantikan Browser Alert Jadul) -->
     <div id="modalAutoSubmitNotice" class="cbt-modal-backdrop" style="z-index: 999999;">
@@ -2872,6 +3125,42 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         window.addEventListener('load', () => {
             try { if (window.lucide) lucide.createIcons(); } catch(e) {}
         });
+
+        // Switcher Tampilan Simulasi (Layar HP Siswa vs Layar Penuh Desktop)
+        function switchViewMode(mode) {
+            const body = document.body;
+            const btnHp = document.getElementById('btnModeHp');
+            const btnDesk = document.getElementById('btnModeDesktop');
+            if (mode === 'hp') {
+                body.classList.add('view-mode-hp');
+                if (btnHp) {
+                    btnHp.style.background = '#38bdf8';
+                    btnHp.style.color = '#0f172a';
+                }
+                if (btnDesk) {
+                    btnDesk.style.background = 'transparent';
+                    btnDesk.style.color = '#94a3b8';
+                }
+            } else {
+                body.classList.remove('view-mode-hp');
+                if (btnDesk) {
+                    btnDesk.style.background = '#38bdf8';
+                    btnDesk.style.color = '#0f172a';
+                }
+                if (btnHp) {
+                    btnHp.style.background = 'transparent';
+                    btnHp.style.color = '#94a3b8';
+                }
+            }
+            if (window.lucide) {
+                try { lucide.createIcons(); } catch(e) {}
+            }
+            setTimeout(() => {
+                if (soalList && soalList[currentIndex] && soalList[currentIndex].tipe_soal === 'sec_jodoh') {
+                    loadQuestion(currentIndex);
+                }
+            }, 120);
+        }
 
         // Ping developer monitoring every 45s while student is in exam
         setInterval(() => {

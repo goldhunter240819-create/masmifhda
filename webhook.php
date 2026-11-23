@@ -34,12 +34,17 @@ require_once __DIR__ . '/app/Controllers/BankSoalController.php';
 try {
     $db = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
     \App\Controllers\BankSoalController::ensureTables($db);
-    $activeTopikIds = $db->query("SELECT id FROM bs_topik WHERE status = 'Aktif'")->fetchAll(PDO::FETCH_COLUMN);
-    $bsCtrl = new \App\Controllers\BankSoalController();
-    foreach ($activeTopikIds as $actId) {
-        $bsCtrl->syncFromPengampu((int)$actId, true);
+    $countPaket = (int)$db->query("SELECT COUNT(*) FROM bs_paket")->fetchColumn();
+    if ($countPaket === 0) {
+        $activeTopikIds = $db->query("SELECT id FROM bs_topik WHERE status = 'Aktif'")->fetchAll(PDO::FETCH_COLUMN);
+        $bsCtrl = new \App\Controllers\BankSoalController();
+        foreach ($activeTopikIds as $actId) {
+            $bsCtrl->syncFromPengampu((int)$actId, true);
+        }
+        $output .= "\nBank Soal synced to Tingkat successfully.\n";
+    } else {
+        $output .= "\nBank Soal already populated ($countPaket packages), skipping auto-sync.\n";
     }
-    $output .= "\nBank Soal synced to Tingkat successfully.\n";
 } catch (\Exception $e) {
     $output .= "\nBank Soal migration: " . $e->getMessage() . "\n";
 }
