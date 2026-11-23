@@ -210,6 +210,15 @@ try {
         $dbSiakad = \App\Core\Database::connect('siakad');
         \App\Controllers\CbtController::syncJadwalWithUjian($dbCore, $dbSiakad, (int)$tpRow['id']);
     }
+    
+    // Diagnostic inspect bs_topik
+    try {
+        $allTopics = $dbCore->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status FROM bs_topik")->fetchAll(PDO::FETCH_ASSOC);
+        $output .= "\n--- ALL TOPIK IN CORE: ---\n" . json_encode($allTopics, JSON_PRETTY_PRINT) . "\n";
+    } catch (\Throwable $e) {
+        $output .= "\nTopik query error: " . $e->getMessage() . "\n";
+    }
+
     $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";
 } catch (\Throwable $e) {
     $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";
