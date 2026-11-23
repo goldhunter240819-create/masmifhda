@@ -138,6 +138,7 @@ try {
     try { $dbCore->exec("ALTER TABLE cbt_jam_slot ADD COLUMN topik_id INT DEFAULT NULL AFTER id, ADD INDEX (topik_id)"); } catch (\Throwable $e) {}
     try { $dbCore->exec("ALTER TABLE cbt_denah_peserta ADD COLUMN topik_id INT DEFAULT NULL AFTER ruang_id, ADD INDEX (topik_id)"); } catch (\Throwable $e) {}
     try { $dbCore->exec("ALTER TABLE cbt_absensi MODIFY COLUMN siswa_id INT NULL DEFAULT NULL"); } catch (\Throwable $e) {}
+    try { $dbCore->exec("ALTER TABLE cbt_peserta ADD COLUMN jumlah_tidak_jawab INT DEFAULT 0 AFTER jumlah_salah"); } catch (\Throwable $e) {}
 
     // Pastikan tabel cbt_ruang_pengawas sudah dibuat
     $dbCore->exec("

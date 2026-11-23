@@ -193,6 +193,7 @@ $active_menu = 'hasil';
                                 <th>Paket Ujian</th>
                                 <th>Jawaban Benar</th>
                                 <th>Jawaban Salah</th>
+                                <th>Tidak Dijawab</th>
                                 <th>Nilai Akhir</th>
                                 <th>Status Kelulusan</th>
                                 <th style="width: 130px; text-align: right;">Aksi</th>
@@ -201,7 +202,7 @@ $active_menu = 'hasil';
                         <tbody>
                             <?php if (empty($pesertaList)): ?>
                             <tr>
-                                <td colspan="9" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
+                                <td colspan="10" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="folder-search" style="width: 44px; height: 44px; margin-bottom: 10px; color: #cbd5e1;"></i>
                                     <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Tidak ada data hasil ujian yang sesuai dengan filter</div>
                                     <div style="font-size: 0.78rem; margin-bottom: 14px;">Silakan sesuaikan pilihan Topik, Mata Pelajaran, atau Kelas yang dipilih.</div>
@@ -214,6 +215,14 @@ $active_menu = 'hasil';
                                 <?php $no = 1; foreach($pesertaList as $p): 
                                     $isSelesai = ($p['status_pengerjaan'] === 'Selesai');
                                     $isTuntas = ($isSelesai && $p['nilai_akhir'] >= $kkmUjian);
+                                    $benar = (int)($p['jumlah_benar'] ?? 0);
+                                    $salah = (int)($p['jumlah_salah'] ?? 0);
+                                    $tidakJawab = (int)($p['jumlah_tidak_jawab'] ?? 0);
+                                    $totalSoal = (int)($p['total_soal_ujian'] ?? 0);
+                                    if ($totalSoal <= 0) $totalSoal = max(20, $benar + $salah);
+                                    if ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
+                                        $tidakJawab = $totalSoal - ($benar + $salah);
+                                    }
                                 ?>
                                 <tr>
                                     <td style="color: #94a3b8; font-weight: 600;"><?php echo $no++; ?></td>
@@ -236,7 +245,7 @@ $active_menu = 'hasil';
                                     <td>
                                         <?php if ($isSelesai): ?>
                                         <span style="font-weight: 800; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
-                                            <?php echo $p['jumlah_benar']; ?> Benar
+                                            <?php echo $benar; ?> Benar
                                         </span>
                                         <?php else: ?>
                                         <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
@@ -245,7 +254,16 @@ $active_menu = 'hasil';
                                     <td>
                                         <?php if ($isSelesai): ?>
                                         <span style="font-weight: 800; color: #b91c1c; background: #fee2e2; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
-                                            <?php echo $p['jumlah_salah']; ?> Salah
+                                            <?php echo $salah; ?> Salah
+                                        </span>
+                                        <?php else: ?>
+                                        <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($isSelesai): ?>
+                                        <span style="font-weight: 800; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                            <?php echo $tidakJawab; ?> Kosong
                                         </span>
                                         <?php else: ?>
                                         <span style="color: #94a3b8; font-size: 0.8rem;">-</span>

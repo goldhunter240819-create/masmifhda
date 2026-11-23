@@ -96,6 +96,7 @@ class CbtController {
 
             try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN reset_count INT DEFAULT 0 AFTER jawaban_json"); } catch (\Exception $e) {}
             try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN violation_count INT DEFAULT 0 AFTER reset_count"); } catch (\Exception $e) {}
+            try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN jumlah_tidak_jawab INT DEFAULT 0 AFTER jumlah_salah"); } catch (\Exception $e) {}
 
             // 5. Tabel Custom Jam / Slot Waktu Ujian CBT
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_jam_slot (
@@ -2696,7 +2697,8 @@ class CbtController {
         } catch (\Exception $e) {}
 
         // Query Peserta Real
-        $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama 
+        $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama,
+                       (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as total_soal_ujian
                 FROM cbt_peserta p 
                 LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
                 WHERE 1=1";
@@ -2841,7 +2843,8 @@ class CbtController {
             $currentUjian = $stmtFind->fetch(PDO::FETCH_ASSOC);
         }
 
-        $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama, u.kode_ujian, u.durasi_menit 
+        $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama, u.kode_ujian, u.durasi_menit,
+                       (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as total_soal_ujian
                 FROM cbt_peserta p 
                 LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
                 WHERE 1=1";
@@ -3572,18 +3575,28 @@ class CbtController {
             $poinPerolehan = 0;
             $jumlahBenar = 0;
             $jumlahSalah = 0;
+            $jumlahTidakJawab = 0;
 
             foreach ($soals as $s) {
                 $bobot = (float)($s['bobot'] > 0 ? $s['bobot'] : 1.0);
                 $totalBobot += $bobot;
 
                 $userAnsRaw = $answers[$s['id']] ?? '';
+                $hasAnswer = false;
                 if (is_array($userAnsRaw)) {
-                    $uTemp = $userAnsRaw;
-                    sort($uTemp);
-                    $userAns = strtoupper(trim(implode(', ', $uTemp)));
+                    $uTemp = array_filter($userAnsRaw, function($v) { return $v !== '' && $v !== null; });
+                    if (!empty($uTemp)) {
+                        $hasAnswer = true;
+                        sort($uTemp);
+                        $userAns = strtoupper(trim(implode(', ', $uTemp)));
+                    } else {
+                        $userAns = '';
+                    }
                 } else {
                     $userAns = strtoupper(trim((string)$userAnsRaw));
+                    if ($userAns !== '') {
+                        $hasAnswer = true;
+                    }
                 }
 
                 $kunciRaw = (string)$s['kunci_jawaban'];
@@ -3633,8 +3646,10 @@ class CbtController {
                 if ($isMatch) {
                     $poinPerolehan += $bobot;
                     $jumlahBenar++;
-                } else {
+                } elseif ($hasAnswer) {
                     $jumlahSalah++;
+                } else {
+                    $jumlahTidakJawab++;
                 }
             }
 
@@ -3649,9 +3664,9 @@ class CbtController {
                 ];
                 $stmtUp = $db->prepare("UPDATE cbt_peserta 
                                         SET waktu_selesai = NOW(), status_pengerjaan = 'Selesai', 
-                                            jumlah_benar = ?, jumlah_salah = ?, nilai_akhir = ?, jawaban_json = ? 
+                                            jumlah_benar = ?, jumlah_salah = ?, jumlah_tidak_jawab = ?, nilai_akhir = ?, jawaban_json = ? 
                                         WHERE id = ?");
-                $stmtUp->execute([$jumlahBenar, $jumlahSalah, $nilaiAkhir, json_encode($payloadToSave), $peserta_id]);
+                $stmtUp->execute([$jumlahBenar, $jumlahSalah, $jumlahTidakJawab, $nilaiAkhir, json_encode($payloadToSave), $peserta_id]);
             } else {
                 // Untuk sesi trial pengawas/guru, simpan sebagai sesi percobaan
                 $payloadToSave = [
