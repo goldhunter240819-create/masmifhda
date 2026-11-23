@@ -868,8 +868,8 @@ $active_menu = "bank_soal";
                                             </a>
 
                                             <!-- Tombol Tampilan Siswa (Simulasi CBT) -->
-                                            <a href="<?php echo base_url('bank_soal/simulasi?paket_id=' . $pk['id']); ?>" target="_blank" class="btn btn-outline" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; background: #faf5ff; color: #7c3aed; border-color: #e9d5ff; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Lihat Tampilan Pengerjaan Siswa (Simulasi CBT)">
-                                                <i data-lucide="smartphone" style="width: 13px; height: 13px; color: #7c3aed;"></i> Tampilan Siswa
+                                            <a href="<?php echo base_url('bank_soal/simulasi?paket_id=' . $pk['id']); ?>" target="_blank" class="btn btn-outline" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 700; background: #faf5ff; color: #7c3aed; border-color: #e9d5ff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Lihat Tampilan Pengerjaan Siswa (Simulasi CBT)">
+                                                <i data-lucide="smartphone" style="width: 14px; height: 14px; color: #7c3aed;"></i>
                                             </a>
 
                                             <!-- Hapus Paket (hanya jika belum terkunci) -->
