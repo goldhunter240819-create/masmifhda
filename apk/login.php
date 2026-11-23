@@ -1,8 +1,9 @@
 <?php
 require_once 'koneksi.php';
 require_once __DIR__ . '/../app/Services/AuditLogger.php';
-require_once __DIR__ . '/apk_version_guard.php';
-check_apk_version_guard();
+// Force update dinonaktifkan: user bebas login tanpa paksaan update APK
+// require_once __DIR__ . '/apk_version_guard.php';
+// check_apk_version_guard();
 
 // Deteksi environment Standalone CBT Madrasah
 $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');

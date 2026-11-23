@@ -7,5 +7,5 @@
     "elearning_enabled": true,
     "min_apk_version": "26.2.2.6",
     "min_apk_version_code": 26226,
-    "force_update": true
+    "force_update": false
 }

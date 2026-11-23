@@ -5,6 +5,8 @@
  */
 
 function check_apk_version_guard() {
+    // Force update dinonaktifkan: pengguna bebas memakai versi berapa pun tanpa dipaksa update
+    return;
     $settings_file = __DIR__ . '/apk_settings.json';
     if (!file_exists($settings_file)) return;
     
