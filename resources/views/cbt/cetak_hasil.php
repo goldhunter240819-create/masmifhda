@@ -43,6 +43,8 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
     <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/public/assets/js/jspdf.umd.min.js"></script>
+    <script src="/public/assets/js/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         * {
@@ -357,6 +359,9 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
         </span>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" onclick="downloadPdfDirect()" id="btnDirectDownload" class="btn-ctrl" style="background: #059669; color: white; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);">
+            <i class="fa-solid fa-file-pdf"></i> Unduh File PDF
+        </button>
         <a href="?<?= http_build_query(array_merge($_GET, ['export' => 'excel'])) ?>" class="btn-ctrl" style="background: #10b981; color: white; text-decoration: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);">
             <i class="fa-solid fa-file-excel"></i> Unduh Excel (.xls)
         </a>
@@ -543,8 +548,123 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
 </div>
 
 <script>
+function downloadPdfDirect() {
+    const btn = document.getElementById('btnDirectDownload');
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan PDF...';
+
+    if (typeof window.jspdf === 'undefined') {
+        window.print();
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Unduh File PDF';
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        // Header / Kop Dokumen
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('KEMENTERIAN AGAMA REPUBLIK INDONESIA', 105, 14, { align: 'center' });
+        doc.setFontSize(13);
+        doc.text('MADRASAH ALIYAH MIFTAHUL HUDA', 105, 20, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.text('REKAPITULASI HASIL ASESMEN SUMATIF CBT ONLINE', 105, 25, { align: 'center' });
+
+        // Garis Pembatas Kop
+        doc.setLineWidth(0.5);
+        doc.line(14, 28, 196, 28);
+        doc.setLineWidth(0.2);
+        doc.line(14, 29, 196, 29);
+
+        // Metadata Ujian
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Mata Pelajaran', 14, 34);
+        doc.setFont('helvetica', 'normal');
+        doc.text(': <?= addslashes($mapelNama) ?>', 42, 34);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Kelas / Rombel', 14, 39);
+        doc.setFont('helvetica', 'normal');
+        doc.text(': <?= addslashes($kelasLabel) ?>', 42, 39);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Topik Ujian', 115, 34);
+        doc.setFont('helvetica', 'normal');
+        doc.text(': <?= addslashes($topikNama) ?>', 138, 34);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('KKM / Rata-rata', 115, 39);
+        doc.setFont('helvetica', 'normal');
+        doc.text(': <?= $kkmNilai ?> / <?= number_format($rataRata, 1) ?>', 138, 39);
+
+        // Render Tabel secara Otomatis dari elemen .nilai-table
+        doc.autoTable({
+            html: '.nilai-table',
+            startY: 44,
+            theme: 'grid',
+            styles: {
+                font: 'helvetica',
+                fontSize: 8,
+                cellPadding: 2,
+                lineColor: [203, 213, 225],
+                lineWidth: 0.1,
+                valign: 'middle'
+            },
+            headStyles: {
+                fillColor: [5, 150, 105],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                1: { halign: 'center', cellWidth: 26 },
+                2: { cellWidth: 50 },
+                3: { halign: 'center', cellWidth: 24 },
+                4: { halign: 'center', cellWidth: 14 },
+                5: { halign: 'center', cellWidth: 14 },
+                6: { halign: 'center', cellWidth: 14 },
+                7: { halign: 'center', cellWidth: 18, fontStyle: 'bold' },
+                8: { halign: 'center', cellWidth: 22, fontStyle: 'bold' }
+            },
+            didDrawPage: function (data) {
+                const pageCount = doc.internal.getNumberOfPages();
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(148, 163, 184);
+                doc.text('Dicetak dari CBT MAS Miftahul Huda', 14, 290);
+                doc.text('Halaman ' + data.pageNumber + ' dari ' + pageCount, 196, 290, { align: 'right' });
+            }
+        });
+
+        // Trigger Direct Download File PDF
+        const safeTitle = '<?= addslashes(preg_replace('/[^A-Za-z0-9_-]/', '_', "Rekap_Nilai_{$mapelNama}_{$kelasLabel}")) ?>';
+        doc.save(safeTitle + '.pdf');
+
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-check"></i> PDF Terunduh!';
+        setTimeout(() => {
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Unduh File PDF';
+        }, 2500);
+    } catch (e) {
+        console.error('jsPDF error:', e);
+        window.print();
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Unduh File PDF';
+    }
+}
+
 window.addEventListener('load', function() {
-    <?php if (!empty($_GET['download']) || !empty($_GET['autoprint'])): ?>
+    <?php if (!empty($_GET['download'])): ?>
+    setTimeout(() => {
+        downloadPdfDirect();
+    }, 400);
+    <?php elseif (!empty($_GET['autoprint'])): ?>
     setTimeout(() => {
         window.print();
     }, 300);

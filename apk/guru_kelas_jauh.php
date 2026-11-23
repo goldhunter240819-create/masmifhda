@@ -640,13 +640,16 @@ include 'header.php';
             </div>
         </form>
 
-        <!-- Tombol Download File Excel (Langsung Unduh) & Cetak PDF A4 -->
-        <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; margin-bottom: 14px;">
-            <a id="btnDownloadExcelKJ" href="cetak_hasil.php?tab=nilai&export=excel&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($selectedSort) ?>" style="box-sizing: border-box; padding: 12px 14px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">
-                <i class="fa-solid fa-file-excel" style="font-size: 1.05rem;"></i> Unduh Excel (.xls)
+        <!-- Tombol Aksi: Download PDF Langsung, Unduh Excel (.xls), dan Cetak A4 -->
+        <div style="display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 6px; margin-bottom: 14px;">
+            <button type="button" id="btnDownloadPdfKJ" onclick="downloadPdfLangsungKJ()" style="box-sizing: border-box; padding: 12px 10px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(5,150,105,0.25); cursor: pointer;">
+                <i class="fa-solid fa-file-pdf" style="font-size: 1.05rem;"></i> Unduh PDF
+            </button>
+            <a id="btnDownloadExcelKJ" href="cetak_hasil.php?tab=nilai&export=excel&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($selectedSort) ?>" style="box-sizing: border-box; padding: 12px 6px; background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                <i class="fa-solid fa-file-excel"></i> Excel (.xls)
             </a>
-            <button type="button" id="btnPreviewPdfKJ" onclick="triggerPrintPdfKJ()" style="box-sizing: border-box; padding: 12px 12px; background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 12px; font-weight: 800; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
-                <i class="fa-solid fa-print" style="color: #64748b;"></i> Cetak / PDF A4
+            <button type="button" id="btnPreviewPdfKJ" onclick="triggerPrintPdfKJ()" style="box-sizing: border-box; padding: 12px 6px; background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 12px; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer;">
+                <i class="fa-solid fa-print" style="color: #64748b;"></i> Cetak A4
             </button>
         </div>
 
@@ -1035,6 +1038,50 @@ include 'header.php';
         const selL = document.getElementById('selLimitKJ');
         if (selL) selL.value = '30';
         applyFilterKJ(true);
+    }
+
+    function downloadPdfLangsungKJ() {
+        const btn = document.getElementById('btnDownloadPdfKJ');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh...';
+
+        const topikEl = document.getElementById('selTopikKJ');
+        const topikId = topikEl ? topikEl.value : '0';
+        const mapel = document.getElementById('selMapelKJ') ? document.getElementById('selMapelKJ').value : '';
+        const kelas = document.getElementById('selKelasKJ') ? document.getElementById('selKelasKJ').value : '';
+        const sort = document.getElementById('selSortKJ') ? document.getElementById('selSortKJ').value : 'nilai_desc';
+
+        const dlUrl = `cetak_hasil.php?tab=nilai&download=1&topik_id=${encodeURIComponent(topikId)}&mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}&sort=${encodeURIComponent(sort)}`;
+
+        let iframe = document.getElementById('hiddenPdfDlFrameKJ');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'hiddenPdfDlFrameKJ';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
+
+        let isHandled = false;
+        iframe.onload = function() {
+            setTimeout(() => {
+                isHandled = true;
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> File Terunduh!';
+                    setTimeout(() => { btn.innerHTML = origHtml; }, 2500);
+                }
+            }, 800);
+        };
+
+        iframe.src = dlUrl;
+
+        setTimeout(() => {
+            if (!isHandled && btn) btn.innerHTML = origHtml;
+        }, 4000);
     }
 
     function triggerPrintPdfKJ() {
