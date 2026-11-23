@@ -543,33 +543,43 @@ $pass = '';
 $statusMsg = '';
 $isSuccess = false;
 
+$isPhpOk = version_compare(PHP_VERSION, '7.4.0', '>=');
+$curPhp = PHP_VERSION;
+
 @mkdir(__DIR__ . '/storage/sessions', 0777, true);
 @mkdir(__DIR__ . '/storage/cache', 0777, true);
 @mkdir(__DIR__ . '/storage/logs', 0777, true);
 @mkdir(__DIR__ . '/public/uploads/logo', 0777, true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['auto'])) {
-    try {
-        $pdo = new PDO("mysql:host=$host", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS aula_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS aula_siakad_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        
-        $db = new PDO("mysql:host=$host;dbname=aula_db;charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-        $dbSiakad = new PDO("mysql:host=$host;dbname=aula_siakad_db;charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-        require_once __DIR__ . '/vendor/autoload.php';
-        if (class_exists('\App\Controllers\CbtController')) {
-            \App\Controllers\CbtController::ensureTables($db);
-            \App\Controllers\CbtController::ensureTables($dbSiakad);
+    if (!$isPhpOk) {
+        $statusMsg = "Versi PHP di server ini adalah PHP {$curPhp}. Sistem CBT Madrasah modern membutuhkan XAMPP dengan PHP 8.x (minimal PHP 7.4). Silakan install atau gunakan XAMPP PHP 8.1 / 8.2 dari apachefriends.org.";
+    } else {
+        try {
+            $pdo = new PDO("mysql:host=$host", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS aula_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS aula_siakad_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            
+            $db = new PDO("mysql:host=$host;dbname=aula_db;charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            $dbSiakad = new PDO("mysql:host=$host;dbname=aula_siakad_db;charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            
+            if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+                require_once __DIR__ . '/vendor/autoload.php';
+            }
+            if (class_exists('\App\Controllers\CbtController')) {
+                \App\Controllers\CbtController::ensureTables($db);
+                \App\Controllers\CbtController::ensureTables($dbSiakad);
+            }
+            if (class_exists('\App\Controllers\BankSoalController')) {
+                \App\Controllers\BankSoalController::ensureTables($db);
+                \App\Controllers\BankSoalController::ensureTables($dbSiakad);
+            }
+            
+            $isSuccess = true;
+            $statusMsg = "Database aula_db & aula_siakad_db serta seluruh tabel CBT & Bank Soal berhasil disiapkan 100%!";
+        } catch (Exception $e) {
+            $statusMsg = "Gagal setup database: " . $e->getMessage();
         }
-        if (class_exists('\App\Controllers\BankSoalController')) {
-            \App\Controllers\BankSoalController::ensureTables($db);
-            \App\Controllers\BankSoalController::ensureTables($dbSiakad);
-        }
-        
-        $isSuccess = true;
-        $statusMsg = "Database aula_db & aula_siakad_db serta seluruh tabel CBT & Bank Soal berhasil disiapkan 100%!";
-    } catch (Exception $e) {
-        $statusMsg = "Gagal setup database: " . $e->getMessage();
     }
 }
 ?>
@@ -589,6 +599,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['auto'])) {
         </div>
         <h1 class="text-2xl font-black mb-2 text-white">Server CBT Madrasah</h1>
         <p class="text-sm text-slate-400 mb-6">Inisialisasi Database Standalone Server Proktor</p>
+
+        <?php if (!$isPhpOk): ?>
+            <div class="bg-amber-500/20 border border-amber-500/40 text-amber-200 p-5 rounded-2xl text-left mb-6">
+                <div class="font-black text-base text-amber-400 flex items-center gap-2 mb-2">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                    Versi PHP Server Tidak Kompatibel!
+                </div>
+                <div class="text-xs leading-relaxed text-amber-200/90 mb-3">
+                    Terdeteksi versi PHP yang berjalan saat ini adalah <b>PHP <?= htmlspecialchars($curPhp) ?> (XAMPP Lawas)</b>.<br>
+                    Engine CBT Madrasah MAS MIFHDA menggunakan standar modern yang membutuhkan <b>PHP versi 8.x (atau minimal PHP 7.4)</b>.
+                </div>
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 text-xs text-slate-300">
+                    <div class="font-bold text-amber-300 mb-1">💡 Solusi:</div>
+                    1. Pasang <b>XAMPP PHP 8.x (rekomendasi PHP 8.2)</b> dari <a href="https://www.apachefriends.org" target="_blank" class="text-indigo-400 underline font-bold">apachefriends.org</a>.<br>
+                    2. Jalankan Apache & MySQL dari XAMPP PHP 8.x tersebut.
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if ($isSuccess): ?>
             <div class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 p-4 rounded-xl text-sm mb-6 flex items-center gap-3 text-left">
@@ -611,11 +639,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['auto'])) {
                     <div class="text-xs mt-1"><?= htmlspecialchars($statusMsg) ?></div>
                 </div>
             <?php endif; ?>
-            <form method="POST">
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-bolt"></i> Mulai Inisialisasi Database (1-Klik)
-                </button>
-            </form>
+            <?php if ($isPhpOk): ?>
+                <form method="POST">
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> Mulai Inisialisasi Database (1-Klik)
+                    </button>
+                </form>
+            <?php endif; ?>
         <?php endif; ?>
         <div class="mt-6 text-xs text-slate-500">
             Login Admin Default: <b>proktor</b> / <b>proktor123</b>
@@ -628,6 +658,17 @@ PHP;
 
     // 10. Panduan Lengkap Proktor
     $panduanContent = <<<'TXT'
+================================================================================
+   PANDUAN LENGKAP SERVER CBT MADRASAH (SEMI-ONLINE STANDALONE)
+   Madrasah Aliyah Miftahul Huda (MAS MIFHDA)
+================================================================================
+
+PERSYARATAN UTAMA SERVER (PENTING!):
+--------------------------------------------------------------------------------
+Pastikan laptop server proktor menggunakan XAMPP dengan PHP 8.x (PHP 8.0 / 8.1 / 8.2) atau minimal PHP 7.4.
+JANGAN menggunakan XAMPP versi lama (seperti XAMPP dengan PHP 5.6) karena sistem CBT Madrasah modern memerlukan PHP 8.x.
+Jika belum memiliki XAMPP PHP 8.x, unduh resmi di: https://www.apachefriends.org
+--------------------------------------------------------------------------------
 ================================================================================
    PANDUAN LENGKAP SERVER CBT MADRASAH (SEMI-ONLINE STANDALONE)
    Madrasah Aliyah Miftahul Huda (MAS MIFHDA)
