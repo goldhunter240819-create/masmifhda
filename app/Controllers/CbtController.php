@@ -2660,23 +2660,26 @@ class CbtController {
         $mapelList = [];
         try {
             if ($selectedTopikId > 0) {
-                $stmtM = $db->prepare("SELECT DISTINCT mapel_nama FROM cbt_ujian WHERE topik_id = ? AND mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC");
-                $stmtM->execute([$selectedTopikId]);
+                $tpName = $db->query("SELECT nama_topik FROM bs_topik WHERE id = " . (int)$selectedTopikId)->fetchColumn();
+                $stmtM = $db->prepare("SELECT DISTINCT mapel_nama FROM cbt_ujian WHERE (topik_id = ? OR (? != '' AND nama_ujian LIKE ?)) AND mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC");
+                $stmtM->execute([$selectedTopikId, !empty($tpName) ? $tpName : '', !empty($tpName) ? "%{$tpName}%" : "%"]);
                 $mapelList = $stmtM->fetchAll(PDO::FETCH_COLUMN);
-            } else {
+            }
+            if (empty($mapelList)) {
                 $mapelList = $db->query("SELECT DISTINCT mapel_nama FROM cbt_ujian WHERE mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
             }
         } catch (\Exception $e) {}
 
         $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
-        // Daftar kelas real dari database kelas + kelas jauh
+        // Daftar kelas real dari database kelas + kelas jauh + cbt_peserta + cbt_ujian
         $kelasList = [];
         try {
             $k1 = $db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
             $k2 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
             $k3 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-            $merged = array_unique(array_filter(array_merge($k1, $k2, $k3)));
+            $k4 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_ujian WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+            $merged = array_unique(array_filter(array_merge($k1, $k2, $k3, $k4)));
             usort($merged, function($a, $b) {
                 return strnatcasecmp($a, $b);
             });
@@ -2691,14 +2694,28 @@ class CbtController {
         $params = [];
 
         if ($selectedTopikId > 0) {
-            $sql .= " AND (u.topik_id = :topik_id)";
-            $params[':topik_id'] = $selectedTopikId;
+            $tpJudul = '';
+            foreach ($topikList as $tp) {
+                if ((int)$tp['id'] === $selectedTopikId) {
+                    $tpJudul = trim($tp['nama_topik']);
+                    break;
+                }
+            }
+            if (!empty($tpJudul)) {
+                $sql .= " AND (u.topik_id = :topik_id OR u.nama_ujian LIKE :topik_like)";
+                $params[':topik_id'] = $selectedTopikId;
+                $params[':topik_like'] = "%{$tpJudul}%";
+            } else {
+                $sql .= " AND (u.topik_id = :topik_id)";
+                $params[':topik_id'] = $selectedTopikId;
+            }
         }
 
         if (!empty($selectedMapel)) {
-            $sql .= " AND (u.mapel_nama = :mapel OR p.mapel_nama = :mapel2)";
+            $sql .= " AND (u.mapel_nama = :mapel OR u.mapel_nama LIKE :mapel_like OR u.nama_ujian LIKE :mapel_like2)";
             $params[':mapel'] = $selectedMapel;
-            $params[':mapel2'] = $selectedMapel;
+            $params[':mapel_like'] = "%{$selectedMapel}%";
+            $params[':mapel_like2'] = "%{$selectedMapel}%";
         }
 
         if ($selectedUjianId > 0) {
@@ -2707,13 +2724,18 @@ class CbtController {
         }
 
         if (!empty($selectedKelas)) {
-            $sql .= " AND p.kelas_nama = :kelas";
+            $sql .= " AND (p.kelas_nama = :kelas OR p.kelas_nama LIKE :kelas_like OR u.kelas_nama = :kelas2)";
             $params[':kelas'] = $selectedKelas;
+            $params[':kelas_like'] = "%{$selectedKelas}%";
+            $params[':kelas2'] = $selectedKelas;
         }
 
         if (!empty($search)) {
-            $sql .= " AND (p.nama_siswa LIKE :q OR p.nis LIKE :q)";
-            $params[':q'] = "%{$search}%";
+            $sql .= " AND (p.nama_siswa LIKE :q_nama OR p.nis LIKE :q_nis OR p.kelas_nama LIKE :q_kls OR u.nama_ujian LIKE :q_uj)";
+            $params[':q_nama'] = "%{$search}%";
+            $params[':q_nis'] = "%{$search}%";
+            $params[':q_kls'] = "%{$search}%";
+            $params[':q_uj'] = "%{$search}%";
         }
 
         // Custom Sort Siswa
@@ -2731,7 +2753,7 @@ class CbtController {
                 $sql .= " ORDER BY p.nis ASC, p.nama_siswa ASC";
                 break;
             case 'waktu_desc':
-                $sql .= " ORDER BY (p.waktu_selesai IS NOT NULL) DESC, p.waktu_selesai DESC, p.nilai_akhir DESC";
+                $sql .= " ORDER BY COALESCE(p.waktu_selesai, p.waktu_mulai, p.created_at) DESC, p.nilai_akhir DESC";
                 break;
             case 'nilai_desc':
             default:
@@ -2818,14 +2840,22 @@ class CbtController {
         $params = [];
 
         if ($selectedTopikId > 0) {
-            $sql .= " AND (u.topik_id = :topik_id)";
-            $params[':topik_id'] = $selectedTopikId;
+            $tpJudul = $db->query("SELECT nama_topik FROM bs_topik WHERE id = " . (int)$selectedTopikId)->fetchColumn();
+            if (!empty($tpJudul)) {
+                $sql .= " AND (u.topik_id = :topik_id OR u.nama_ujian LIKE :topik_like)";
+                $params[':topik_id'] = $selectedTopikId;
+                $params[':topik_like'] = "%{$tpJudul}%";
+            } else {
+                $sql .= " AND (u.topik_id = :topik_id)";
+                $params[':topik_id'] = $selectedTopikId;
+            }
         }
 
         if (!empty($selectedMapel)) {
-            $sql .= " AND (u.mapel_nama = :mapel OR p.mapel_nama = :mapel2)";
+            $sql .= " AND (u.mapel_nama = :mapel OR u.mapel_nama LIKE :mapel_like OR u.nama_ujian LIKE :mapel_like2)";
             $params[':mapel'] = $selectedMapel;
-            $params[':mapel2'] = $selectedMapel;
+            $params[':mapel_like'] = "%{$selectedMapel}%";
+            $params[':mapel_like2'] = "%{$selectedMapel}%";
         }
 
         if ($selectedUjianId > 0) {
@@ -2834,13 +2864,18 @@ class CbtController {
         }
 
         if (!empty($selectedKelas)) {
-            $sql .= " AND p.kelas_nama = :kelas";
+            $sql .= " AND (p.kelas_nama = :kelas OR p.kelas_nama LIKE :kelas_like OR u.kelas_nama = :kelas2)";
             $params[':kelas'] = $selectedKelas;
+            $params[':kelas_like'] = "%{$selectedKelas}%";
+            $params[':kelas2'] = $selectedKelas;
         }
 
         if (!empty($search)) {
-            $sql .= " AND (p.nama_siswa LIKE :q OR p.nis LIKE :q)";
-            $params[':q'] = "%{$search}%";
+            $sql .= " AND (p.nama_siswa LIKE :q_nama OR p.nis LIKE :q_nis OR p.kelas_nama LIKE :q_kls OR u.nama_ujian LIKE :q_uj)";
+            $params[':q_nama'] = "%{$search}%";
+            $params[':q_nis'] = "%{$search}%";
+            $params[':q_kls'] = "%{$search}%";
+            $params[':q_uj'] = "%{$search}%";
         }
 
         switch ($sort) {
@@ -2857,7 +2892,7 @@ class CbtController {
                 $sql .= " ORDER BY p.nis ASC, p.nama_siswa ASC";
                 break;
             case 'waktu_desc':
-                $sql .= " ORDER BY (p.waktu_selesai IS NOT NULL) DESC, p.waktu_selesai DESC, p.nilai_akhir DESC";
+                $sql .= " ORDER BY COALESCE(p.waktu_selesai, p.waktu_mulai, p.created_at) DESC, p.nilai_akhir DESC";
                 break;
             case 'nilai_desc':
             default:

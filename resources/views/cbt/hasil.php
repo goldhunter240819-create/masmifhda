@@ -46,11 +46,11 @@ $active_menu = 'hasil';
                 <form method="GET" action="<?php echo base_url('cbt/hasil'); ?>" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
                     <div style="flex: 1.6; min-width: 200px;">
                         <label class="label-sm">Topik Ujian</label>
-                        <select name="topik_id" class="input-sm" onchange="this.form.submit()">
+                        <select name="topik_id" class="input-sm" onchange="if(document.getElementById('selMapelHasil')) document.getElementById('selMapelHasil').value=''; this.form.submit()">
                             <option value="0">-- Semua Topik Ujian --</option>
                             <?php foreach($topikList as $tp): ?>
                                 <option value="<?php echo $tp['id']; ?>" <?php echo ($selectedTopikId == $tp['id']) ? 'selected' : ''; ?>>
-                                    [<?php echo htmlspecialchars($tp['jenis_topik'] ?: 'Ujian'); ?>] <?php echo htmlspecialchars($tp['nama_topik']); ?>
+                                    [<?php echo htmlspecialchars($tp['jenis_topik'] ?: ($tp['jenis'] ?? 'Ujian')); ?>] <?php echo htmlspecialchars($tp['nama_topik']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -58,7 +58,7 @@ $active_menu = 'hasil';
 
                     <div style="flex: 1.3; min-width: 170px;">
                         <label class="label-sm">Mata Pelajaran</label>
-                        <select name="mapel" class="input-sm" onchange="this.form.submit()">
+                        <select name="mapel" id="selMapelHasil" class="input-sm" onchange="this.form.submit()">
                             <option value="">-- Semua Mapel --</option>
                             <?php foreach($mapelList as $mp): ?>
                                 <option value="<?php echo htmlspecialchars($mp); ?>" <?php echo ($selectedMapel === $mp) ? 'selected' : ''; ?>>
@@ -96,9 +96,14 @@ $active_menu = 'hasil';
                         <label class="label-sm">Cari Nama / NIS Siswa</label>
                         <div style="display: flex; gap: 6px;">
                             <input type="text" name="q" class="input-sm" placeholder="Ketik nama siswa..." value="<?php echo htmlspecialchars($search ?? ''); ?>">
-                            <button type="submit" class="e-btn e-btn-primary" style="padding: 7px 12px; background: #4f46e5;">
+                            <button type="submit" class="e-btn e-btn-primary" style="padding: 7px 12px; background: #4f46e5;" title="Cari Data">
                                 <i data-lucide="search" style="width: 14px; height: 14px;"></i>
                             </button>
+                            <?php if (!empty($selectedTopikId) || !empty($selectedMapel) || !empty($selectedKelas) || !empty($search) || ($sort !== 'nilai_desc')): ?>
+                                <a href="<?php echo base_url('cbt/hasil'); ?>" class="e-btn" style="padding: 7px 12px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; display: inline-flex; align-items: center; justify-content: center;" title="Reset Semua Filter">
+                                    <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </form>
@@ -178,8 +183,11 @@ $active_menu = 'hasil';
                             <tr>
                                 <td colspan="9" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="folder-search" style="width: 44px; height: 44px; margin-bottom: 10px; color: #cbd5e1;"></i>
-                                    <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Tidak ada data hasil ujian</div>
-                                    <div style="font-size: 0.78rem;">Pilih paket ujian lain atau tunggu siswa menyelesaikan ujian.</div>
+                                    <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Tidak ada data hasil ujian yang sesuai dengan filter</div>
+                                    <div style="font-size: 0.78rem; margin-bottom: 14px;">Silakan sesuaikan pilihan Topik, Mata Pelajaran, atau Kelas yang dipilih.</div>
+                                    <a href="<?php echo base_url('cbt/hasil'); ?>" class="e-btn e-btn-primary" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.8rem; padding: 7px 16px; background: #4f46e5;">
+                                        <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Reset Semua Filter
+                                    </a>
                                 </td>
                             </tr>
                             <?php else: ?>
