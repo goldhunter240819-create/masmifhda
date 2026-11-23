@@ -6489,16 +6489,74 @@ class CbtController {
         $mapelArr = $stmtM->fetchAll(PDO::FETCH_COLUMN);
         $mapelNama = !empty($mapelArr) ? implode(' / ', $mapelArr) : 'Asesmen CBT';
 
-        // Cari jam sesi
-        $jamSesi = '08:00 - 09:00 WIB';
+        // Fallback pencarian mapel dari cbt_absensi jika jadwal grid belum spesifik
+        if ($mapelNama === 'Asesmen CBT') {
+            try {
+                $sesiNumOnly = (int)preg_replace('/[^0-9]/', '', $sesiLabel);
+                $stmtMA = $db->prepare("
+                    SELECT DISTINCT mapel_nama 
+                    FROM cbt_absensi 
+                    WHERE tanggal = ? AND (jam_slot LIKE ? OR ? <= 0 OR jam_slot LIKE ?) 
+                      AND mapel_nama IS NOT NULL AND mapel_nama != '' AND mapel_nama != 'Semua Mapel'
+                    ORDER BY id ASC LIMIT 3
+                ");
+                $stmtMA->execute([$tanggal, '%' . $sesiLabel . '%', $sesiNumOnly, '%' . $sesiNumOnly . '%']);
+                $mAbsArr = $stmtMA->fetchAll(PDO::FETCH_COLUMN);
+                if (!empty($mAbsArr)) {
+                    $mapelNama = implode(' / ', $mAbsArr);
+                }
+            } catch (\Exception $e) {}
+        }
+
+        // Cari jam sesi dinamis dari cbt_jam_slot
+        $jamSesi = '';
+        $sesiNum = (int)preg_replace('/[^0-9]/', '', $sesiLabel);
         try {
-            $stmtS = $db->prepare("SELECT jam_mulai, jam_selesai FROM cbt_jadwal_slot WHERE label_sesi = ? LIMIT 1");
-            $stmtS->execute([$sesiLabel]);
+            $stmtS = $db->prepare("
+                SELECT jam_mulai, jam_selesai 
+                FROM cbt_jam_slot 
+                WHERE label_sesi = ? OR urutan = ? OR label_sesi LIKE ? 
+                ORDER BY id ASC LIMIT 1
+            ");
+            $stmtS->execute([$sesiLabel, $sesiNum, "%{$sesiLabel}%"]);
             $slotData = $stmtS->fetch(PDO::FETCH_ASSOC);
             if ($slotData && !empty($slotData['jam_mulai'])) {
                 $jamSesi = date('H:i', strtotime($slotData['jam_mulai'])) . ' - ' . date('H:i', strtotime($slotData['jam_selesai'])) . ' WIB';
             }
         } catch (\Exception $e) {}
+
+        // Jika belum dapat dari cbt_jam_slot, cek dari cbt_jadwal_grid
+        if (empty($jamSesi)) {
+            try {
+                $stmtGridSlot = $db->prepare("
+                    SELECT g.jam_slot, s.jam_mulai, s.jam_selesai 
+                    FROM cbt_jadwal_grid g
+                    LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
+                    WHERE (? <= 0 OR g.topik_id = ?) 
+                      AND (g.tanggal = ? OR (g.tanggal IS NULL AND g.hari = ?))
+                      AND (g.jam_slot LIKE ? OR s.label_sesi LIKE ?)
+                    LIMIT 1
+                ");
+                $stmtGridSlot->execute([$topikId, $topikId, $tanggal, $dayName, "%{$sesiLabel}%", "%{$sesiLabel}%"]);
+                $gs = $stmtGridSlot->fetch(PDO::FETCH_ASSOC);
+                if ($gs) {
+                    if (!empty($gs['jam_mulai'])) {
+                        $jamSesi = date('H:i', strtotime($gs['jam_mulai'])) . ' - ' . date('H:i', strtotime($gs['jam_selesai'])) . ' WIB';
+                    } elseif (!empty($gs['jam_slot']) && preg_match('/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/', $gs['jam_slot'], $mg)) {
+                        $jamSesi = $mg[0] . ' WIB';
+                    }
+                }
+            } catch (\Exception $e) {}
+        }
+
+        // Fallback cerdas sesuai nomor sesi jika jadwal slot di DB belum dikonfigurasi
+        if (empty($jamSesi)) {
+            if ($sesiNum === 1) $jamSesi = '07:30 - 08:45 WIB';
+            elseif ($sesiNum === 2) $jamSesi = '09:00 - 10:15 WIB';
+            elseif ($sesiNum === 3) $jamSesi = '10:45 - 12:00 WIB';
+            elseif ($sesiNum === 4) $jamSesi = '12:30 - 13:45 WIB';
+            else $jamSesi = '08:00 - 09:00 WIB';
+        }
 
         // Cari pengawas yang bertugas / presensi di ruang dan sesi tersebut
         $pengawasNama = $ruang['pengawas'] ?? 'Bapak / Ibu Pengawas';
@@ -7574,12 +7632,13 @@ class CbtController {
                 $stmtU = $db->prepare("
                     SELECT u.id as ujian_id, u.topik_id, u.nama_ujian, 
                            COALESCE(NULLIF(u.mapel_nama, ''), u.nama_ujian) as mapel_nama_resolved,
-                           u.kelas_id, u.kelas_nama, 'Sesi 1' as label_sesi, '08:00' as jam_mulai, '09:00' as jam_selesai,
+                           0 as kelas_id, u.kelas_nama, 'Sesi 1' as label_sesi, '07:30' as jam_mulai, '08:45' as jam_selesai,
                            'Ruang 01' as ruang
                     FROM cbt_ujian u
-                    WHERE (DATE(u.tanggal_mulai) <= ? AND DATE(u.tanggal_selesai) >= ?)
+                    WHERE (DATE(u.tgl_mulai) <= ? AND DATE(u.tgl_selesai) >= ?)
                        OR u.topik_id = ?
                        OR u.status = 'Aktif'
+                    LIMIT 20
                 ");
                 $stmtU->execute([$tanggal, $tanggal, $topikId]);
                 $jadwalList = $stmtU->fetchAll(PDO::FETCH_ASSOC);
@@ -7591,7 +7650,7 @@ class CbtController {
                 $stmtU2 = $db->prepare("
                     SELECT u.id as ujian_id, u.topik_id, u.nama_ujian, 
                            COALESCE(NULLIF(u.mapel_nama, ''), u.nama_ujian) as mapel_nama_resolved,
-                           u.kelas_id, u.kelas_nama, 'Sesi 1' as label_sesi, '08:00' as jam_mulai, '09:00' as jam_selesai,
+                           0 as kelas_id, u.kelas_nama, 'Sesi 1' as label_sesi, '07:30' as jam_mulai, '08:45' as jam_selesai,
                            'Ruang 01' as ruang
                     FROM cbt_ujian u
                     WHERE u.topik_id = ?
@@ -7602,33 +7661,89 @@ class CbtController {
             } catch (\Exception $e) {}
         }
 
-        // 3. Ambil seluruh siswa (reguler Siakad & khusus/kelas jauh)
+        // 3. Ambil seluruh siswa reguler & khusus
         $siswaList = [];
+        $seenNis = [];
+
+        // 3a. Prioritaskan siswa reguler yang ada di cbt_denah_peserta (sudah punya ruang dan meja)
         try {
-            $dbSiakad = \App\Core\Database::connect('siakad') ?: $db;
-            $sRows = $dbSiakad->query("
-                SELECT s.id, s.nis, s.nama, s.kelas_id, COALESCE(k.nama_kelas, '') as kelas_nama, 'reguler' as tipe
-                FROM siswa s
-                LEFT JOIN kelas k ON s.kelas_id = k.id
-                WHERE s.status = 'Aktif' OR s.status IS NULL
-                ORDER BY s.nama ASC
-            ")->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($sRows as $sr) {
-                $siswaList[] = $sr;
+            $stmtDenah = $db->query("
+                SELECT d.siswa_id as id, d.nis, d.nama_siswa as nama, d.kelas_id, 
+                       COALESCE(NULLIF(d.kelas_nama, ''), 'X E.1') as kelas_nama, 
+                       'reguler' as tipe,
+                       COALESCE(r.nama_ruang, 'Ruang 01') as ruang
+                FROM cbt_denah_peserta d
+                LEFT JOIN cbt_ruang r ON d.ruang_id = r.id
+                WHERE d.siswa_id IS NOT NULL AND d.siswa_id > 0
+                ORDER BY d.ruang_id ASC, d.nomor_meja ASC
+            ");
+            $denahRows = $stmtDenah->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($denahRows as $dr) {
+                $kKey = trim((string)$dr['nis']);
+                if (!empty($kKey) && !isset($seenNis[$kKey])) {
+                    $seenNis[$kKey] = true;
+                    $siswaList[] = $dr;
+                }
             }
         } catch (\Exception $e) {}
 
-        // Siswa khusus / kelas jauh
+        // 3b. Tambahkan siswa dari cbt_peserta jika sudah ada data ujian
+        try {
+            $stmtCp = $db->query("
+                SELECT DISTINCT p.siswa_id as id, p.nis, p.nama_siswa as nama, 
+                       0 as kelas_id, COALESCE(NULLIF(p.kelas_nama, ''), 'X E.1') as kelas_nama, 
+                       'reguler' as tipe, 'Ruang 01' as ruang
+                FROM cbt_peserta p
+                WHERE p.siswa_id IS NOT NULL AND p.siswa_id > 0
+                  AND (p.kelas_nama NOT LIKE '%Jauh%' OR p.kelas_nama IS NULL)
+                ORDER BY p.nama_siswa ASC
+            ");
+            $cpRows = $stmtCp->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($cpRows as $cpr) {
+                $kKey = trim((string)$cpr['nis']);
+                if (!empty($kKey) && !isset($seenNis[$kKey])) {
+                    $seenNis[$kKey] = true;
+                    $siswaList[] = $cpr;
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // 3c. Tambahkan siswa reguler dari tabel siswa di core_db ($db)
+        try {
+            $stmtS = $db->query("
+                SELECT s.id, s.nis, s.nama, s.kelas_id, 
+                       COALESCE(NULLIF(k.nama_kelas, ''), 'X E.1') as kelas_nama, 
+                       'reguler' as tipe, 'Ruang 01' as ruang
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                WHERE s.status = 'Aktif' OR s.status IS NULL OR s.status = ''
+                ORDER BY s.nama ASC
+            ");
+            $sRows = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($sRows as $sr) {
+                $kKey = trim((string)$sr['nis']);
+                if (!empty($kKey) && !isset($seenNis[$kKey])) {
+                    $seenNis[$kKey] = true;
+                    $siswaList[] = $sr;
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // 3d. Siswa khusus / kelas jauh dari cbt_peserta_khusus
         try {
             $kRows = $db->query("
                 SELECT id, COALESCE(NULLIF(no_peserta, ''), nis) as nis, nama_siswa as nama, 
-                       0 as kelas_id, kelas_nama, 'khusus' as tipe
+                       0 as kelas_id, kelas_nama, 'khusus' as tipe, 'Ruang Kelas Jauh' as ruang
                 FROM cbt_peserta_khusus
                 WHERE status = 'Aktif' OR status IS NULL
                 ORDER BY nama_siswa ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($kRows as $kr) {
-                $siswaList[] = $kr;
+                $kKey = trim((string)$kr['nis']);
+                if (!empty($kKey) && !isset($seenNis[$kKey])) {
+                    $seenNis[$kKey] = true;
+                    $siswaList[] = $kr;
+                }
             }
         } catch (\Exception $e) {}
 
@@ -7660,17 +7775,19 @@ class CbtController {
             $jKelasId = (int)($j['kelas_id'] ?? 0);
             $jKelasNama = trim($j['kelas_nama'] ?? '');
 
-            // Tentukan base hour untuk waktu_scan yang realistis
-            $baseHour = '08:00:00';
+            // Tentukan base hour untuk waktu_scan yang realistis sesuai cbt_jam_slot
+            $baseHour = '07:30:00';
             if (!empty($j['jam_mulai']) && preg_match('/^(\d{1,2}):(\d{2})/', $j['jam_mulai'], $m)) {
                 $baseHour = sprintf('%02d:%02d:00', (int)$m[1], (int)$m[2]);
             } else {
                 if (stripos($jSlot, '1') !== false) {
-                    $baseHour = '08:00:00';
+                    $baseHour = '07:30:00';
                 } elseif (stripos($jSlot, '2') !== false) {
                     $baseHour = '09:00:00';
                 } elseif (stripos($jSlot, '3') !== false) {
-                    $baseHour = '10:10:00';
+                    $baseHour = '10:45:00';
+                } elseif (stripos($jSlot, '4') !== false) {
+                    $baseHour = '12:30:00';
                 }
             }
             $baseTimestamp = strtotime("{$tanggal} {$baseHour}");
@@ -7683,18 +7800,20 @@ class CbtController {
                 $swId = ($sw['tipe'] === 'reguler' && !empty($sw['id'])) ? (int)$sw['id'] : null;
                 $swNama = trim($sw['nama']);
                 $swKelas = trim($sw['kelas_nama']);
+                $swRuang = !empty($sw['ruang']) ? trim($sw['ruang']) : $jRuang;
 
                 // Filter kelas jika jadwal spesifik untuk kelas tertentu
-                if ($jKelasId > 0 && !empty($sw['kelas_id']) && (int)$sw['kelas_id'] !== $jKelasId) {
-                    continue;
-                }
                 if (!empty($jKelasNama) && !empty($swKelas) && $jKelasNama !== 'Semua Kelas') {
                     $kMatch = (stripos($swKelas, $jKelasNama) !== false || stripos($jKelasNama, $swKelas) !== false);
                     if (!$kMatch && preg_match('/^(X|XI|XII)/i', $jKelasNama, $mk1) && preg_match('/^(X|XI|XII)/i', $swKelas, $mk2)) {
                         if (strtoupper($mk1[1]) !== strtoupper($mk2[1])) {
                             continue;
                         }
+                    } elseif (!$kMatch) {
+                        continue;
                     }
+                } elseif ($jKelasId > 0 && !empty($sw['kelas_id']) && (int)$sw['kelas_id'] !== $jKelasId) {
+                    continue;
                 }
 
                 // Cek apakah sudah absen
@@ -7721,12 +7840,76 @@ class CbtController {
                         $jMapel,
                         $jSlot,
                         $waktuScan,
-                        $jRuang
+                        $swRuang
                     ]);
                     $insertedCount++;
                 } catch (\Exception $e) {}
             }
         }
+
+        // 4. Tambahan Pasti: Sinkronkan seluruh siswa yang sudah mengerjakan ujian di cbt_peserta hari ini
+        try {
+            $stmtCbtPeserta = $db->prepare("
+                SELECT p.siswa_id, p.nis, p.nama_siswa, p.kelas_nama, p.waktu_mulai, 
+                       u.id as ujian_id, u.topik_id, COALESCE(NULLIF(u.mapel_nama, ''), u.nama_ujian) as mapel_nama,
+                       COALESCE(d.ruang_id, 1) as ruang_id, COALESCE(r.nama_ruang, 'Ruang 01') as ruang_nama
+                FROM cbt_peserta p
+                LEFT JOIN cbt_ujian u ON p.ujian_id = u.id
+                LEFT JOIN cbt_denah_peserta d ON (p.siswa_id = d.siswa_id OR p.nis = d.nis)
+                LEFT JOIN cbt_ruang r ON d.ruang_id = r.id
+                WHERE (DATE(p.waktu_mulai) = ? OR (? <= 0 OR u.topik_id = ?))
+                  AND p.status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Selesai')
+            ");
+            $stmtCbtPeserta->execute([$tanggal, $topikId, $topikId]);
+            $pesertaRows = $stmtCbtPeserta->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($pesertaRows as $pr) {
+                $pNis = trim((string)($pr['nis'] ?? ''));
+                if (empty($pNis)) continue;
+                $pSid = !empty($pr['siswa_id']) ? (int)$pr['siswa_id'] : null;
+                $pMapel = trim($pr['mapel_nama'] ?? 'Asesmen CBT');
+                $pUjianId = (int)($pr['ujian_id'] ?? 0);
+                $pTopikId = (int)($pr['topik_id'] ?? $topikId);
+                $pKelas = trim($pr['kelas_nama'] ?? 'X E.1');
+                $pTipe = (stripos($pKelas, 'jauh') !== false) ? 'khusus' : 'reguler';
+                $pRuang = $pr['ruang_nama'] ?: 'Ruang 01';
+                $pWaktuScan = !empty($pr['waktu_mulai']) ? $pr['waktu_mulai'] : date('Y-m-d H:i:s');
+
+                // Tentukan sesi berdasarkan jam pengerjaan
+                $pHour = (int)date('H', strtotime($pWaktuScan));
+                $pMinute = (int)date('i', strtotime($pWaktuScan));
+                $pTimeVal = $pHour * 60 + $pMinute;
+                if ($pTimeVal < 530) {
+                    $pSlot = 'Sesi 1';
+                } elseif ($pTimeVal < 640) {
+                    $pSlot = 'Sesi 2';
+                } elseif ($pTimeVal < 730) {
+                    $pSlot = 'Sesi 3';
+                } else {
+                    $pSlot = 'Sesi 4';
+                }
+
+                // Cek apakah sudah ada di cbt_absensi
+                $stmtCheck->execute([$tanggal, $pNis, $pSid ?: -1, $pUjianId, $pMapel]);
+                if (!$stmtCheck->fetchColumn()) {
+                    $stmtInsert->execute([
+                        $tanggal,
+                        $pSid,
+                        $pNis,
+                        $pr['nama_siswa'],
+                        $pKelas,
+                        $pTipe,
+                        $pTopikId,
+                        $pUjianId,
+                        $pMapel,
+                        $pSlot,
+                        $pWaktuScan,
+                        $pRuang
+                    ]);
+                    $insertedCount++;
+                }
+            }
+        } catch (\Exception $e) {}
 
         return [
             'success' => true,

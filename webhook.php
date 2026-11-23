@@ -165,17 +165,15 @@ try {
         $dbCore->exec("UPDATE cbt_ujian SET durasi_menit = 60 WHERE durasi_menit = 90 OR durasi_menit IS NULL OR durasi_menit = 0");
     } catch (\Throwable $e) {}
 
-    // Isi otomatis absensi siswa hari ini untuk seluruh mapel sesuai jadwal dan rentang jam sesi (Anti-Blokir Siswa Ujian)
+    // Isi otomatis absensi siswa hari ini untuk seluruh mapel sesuai jadwal dan rentang jam sesi (Anti-Blokir Siswa Ujian & Rekap Lengkap)
     try {
         if (!class_exists('\App\Controllers\CbtController')) {
             require_once __DIR__ . '/app/Controllers/CbtController.php';
         }
         $resBulk = \App\Controllers\CbtController::bulkPopulateAbsensiHariIni();
         $output .= "\nAuto-populated today's attendance: " . ($resBulk['inserted'] ?? 0) . " entries created (" . ($resBulk['message'] ?? '') . ").\n";
-        if (date('Y-m-d') !== '2026-11-23') {
-            $resBulk2 = \App\Controllers\CbtController::bulkPopulateAbsensiHariIni('2026-11-23');
-            $output .= "Populated 2026-11-23: " . ($resBulk2['inserted'] ?? 0) . " entries.\n";
-        }
+        $resBulk2 = \App\Controllers\CbtController::bulkPopulateAbsensiHariIni('2026-11-23');
+        $output .= "Populated 2026-11-23: " . ($resBulk2['inserted'] ?? 0) . " entries (" . ($resBulk2['message'] ?? '') . ").\n";
     } catch (\Throwable $e) {
         $output .= "\nAuto-populate attendance error: " . $e->getMessage() . "\n";
     }

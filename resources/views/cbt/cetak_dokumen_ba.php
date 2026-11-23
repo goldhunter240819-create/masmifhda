@@ -376,7 +376,7 @@ $tglFormatIndo = date('j', strtotime($tanggal)) . ' ' . $bulanIndo[(int)date('n'
     <div class="section-box">
         <div class="section-head">I. KETERANGAN PELAKSANAAN ASESMEN CBT</div>
         <div class="section-content">
-            Pada hari ini <strong><?= $curDayIndo ?></strong> tanggal <strong><?= htmlspecialchars($tglFormatIndo) ?></strong>, telah diselenggarakan Asesmen CBT untuk mata pelajaran <strong><?= htmlspecialchars($mapelNama) ?></strong> pada <strong><?= htmlspecialchars($sesiLabel) ?></strong> yang bertempat di <strong><?= htmlspecialchars($ruang['nama_ruang'] ?? 'Ruang Ujian') ?></strong>. Pelaksanaan ujian menggunakan sistem Computer Based Test (CBT) dengan autentikasi presensi kartu siswa terverifikasi.
+            Pada hari ini <strong><?= $curDayIndo ?></strong> tanggal <strong><?= htmlspecialchars($tglFormatIndo) ?></strong>, telah diselenggarakan Asesmen CBT untuk mata pelajaran <strong><?= htmlspecialchars($mapelNama) ?></strong> pada <strong><?= htmlspecialchars($sesiLabel) ?><?php if (!empty($jamSesi)): ?> (<?= htmlspecialchars($jamSesi) ?>)<?php endif; ?></strong> yang bertempat di <strong><?= htmlspecialchars($ruang['nama_ruang'] ?? 'Ruang Ujian') ?></strong>. Pelaksanaan ujian menggunakan sistem Computer Based Test (CBT) dengan autentikasi presensi kartu siswa terverifikasi.
         </div>
     </div>
 

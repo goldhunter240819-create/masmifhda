@@ -370,7 +370,7 @@ $tglFormatIndo = date('j', strtotime($tanggal)) . ' ' . $bulanIndo[(int)date('n'
         <div class="ba-box-title">I. BERITA ACARA PELAKSANAAN UJIAN</div>
         <div>
             Pada hari ini <strong><?= htmlspecialchars($curDayIndo) ?></strong> tanggal <strong><?= htmlspecialchars($tglFormatIndo) ?></strong>, 
-            telah diselenggarakan Asesmen CBT untuk mata pelajaran <strong><?= htmlspecialchars($mapelNama) ?></strong> pada <strong><?= htmlspecialchars($sesiLabel) ?></strong> 
+            telah diselenggarakan Asesmen CBT untuk mata pelajaran <strong><?= htmlspecialchars($mapelNama) ?></strong> pada <strong><?= htmlspecialchars($sesiLabel) ?><?php if (!empty($jamSesi)): ?> (<?= htmlspecialchars($jamSesi) ?>)<?php endif; ?></strong> 
             yang bertempat di <strong><?= htmlspecialchars($ruang['nama_ruang'] ?? 'Ruang Ujian') ?></strong>. 
             Jumlah peserta yang terdaftar sebanyak <strong><?= $totalTerdaftar ?></strong> orang, hadir <strong><?= $totalHadir ?></strong> orang, 
             dan tidak hadir <strong><?= $totalTidakHadir ?></strong> orang.
