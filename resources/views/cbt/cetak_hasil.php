@@ -2,9 +2,32 @@
 $bulanIndo = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 $tglCetak = date('d') . ' ' . ($bulanIndo[(int)date('n')] ?? date('F')) . ' ' . date('Y');
 
-$namaInstitusi = 'MADRASAH ALIYAH MIFTAHUL HUDA';
-$namaKepala = 'AHMAD RIFA\'I, M.Pd';
-$nipKepala = '-';
+// Identitas Resmi Institusi dari Database
+$dbCore = isset($db) ? $db : (class_exists('\App\Core\Database') ? \App\Core\Database::connect('core') : null);
+$inst = null;
+if ($dbCore) {
+    try {
+        $inst = $dbCore->query("SELECT * FROM institusi LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    } catch (\Throwable $e) {}
+}
+
+$namaYayasan = !empty($inst['nama_yayasan']) ? $inst['nama_yayasan'] : "YAYASAN PONDOK PESANTREN MIFTAHUL HUDA MATHLA'UL ANWAR";
+$namaInstitusi = !empty($inst['nama']) ? $inst['nama'] : 'MADRASAH ALIYAH MIFTAHUL HUDA';
+$nsm = !empty($inst['nsm']) ? $inst['nsm'] : '131218040003';
+$npsn = !empty($inst['npsn']) ? $inst['npsn'] : '69988776';
+$alamatJalan = !empty($inst['alamat']) ? $inst['alamat'] : 'Jl. Tirtomoyo No. 083, Margorahayu';
+$desa = !empty($inst['desa']) ? $inst['desa'] : 'Tambak Jaya';
+$kecamatan = !empty($inst['kecamatan']) ? $inst['kecamatan'] : 'Way Tenong';
+$kabupaten = !empty($inst['kota']) ? $inst['kota'] : 'Lampung Barat';
+$provinsi = !empty($inst['provinsi']) ? $inst['provinsi'] : 'Lampung';
+$kodepos = !empty($inst['kodepos']) ? $inst['kodepos'] : '34884';
+$telepon = !empty($inst['telepon']) ? $inst['telepon'] : '081938240819';
+$email = !empty($inst['email']) ? $inst['email'] : 'masmiftahulhuda@gmail.com';
+$website = !empty($inst['website']) ? $inst['website'] : 'masmifhda.sch.id';
+
+$namaKepala = !empty($inst['nama_kepala']) ? $inst['nama_kepala'] : 'AHMAD RIFA\'I, M.Pd';
+$nipKepala = !empty($inst['nip_kepala']) ? $inst['nip_kepala'] : '-';
+
 $logoUrl = function_exists('base_url') ? base_url('public/uploads/logo/logo.png') : '/public/uploads/logo/logo.png';
 $faviconUrl = $logoUrl;
 if (class_exists('\App\Core\Branding')) {
@@ -13,7 +36,65 @@ if (class_exists('\App\Core\Branding')) {
         $faviconUrl = \App\Core\Branding::getInstitusiFavicon();
     } catch (\Throwable $e) {}
 }
-$kemenagLogo = function_exists('base_url') ? base_url('public/assets/img/kemenag-logo.png') : '/public/assets/img/kemenag-logo.png';
+$kemenagLogo = function_exists('base_url') ? base_url('public/logo_kemenag.png') : '/public/logo_kemenag.png';
+
+// Parameter Filter Aktif
+$selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : (isset($selectedTopikId) ? (int)$selectedTopikId : 0);
+if ($selectedTopikId == 5) $selectedTopikId = 3;
+$selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : (isset($selectedMapel) ? trim($selectedMapel) : '');
+$selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : (isset($selectedKelas) ? trim($selectedKelas) : '');
+$sort = isset($_GET['sort']) ? trim($_GET['sort']) : (isset($sort) ? trim($sort) : 'nilai_desc');
+
+// Default Array & Stats Fallbacks
+$topikList = $topikList ?? [];
+$mapelList = $mapelList ?? [];
+$kelasList = $kelasList ?? [];
+$totalSelesai = $totalSelesai ?? 0;
+$rataRata = $rataRata ?? 0;
+$persenTuntas = $persenTuntas ?? 0;
+$tuntasCount = $tuntasCount ?? 0;
+$maxNilai = $maxNilai ?? 0;
+$minNilai = $minNilai ?? 0;
+
+// Siapkan Data untuk Dropdown Filter di Toolbar
+if (empty($topikList) && $dbCore) {
+    try {
+        $rawT = $dbCore->query("SELECT id, nama_topik FROM bs_topik WHERE status = 'Aktif' ORDER BY (id = 3) DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $seen = [];
+        $topikList = [];
+        foreach ($rawT as $rt) {
+            $n = trim($rt['nama_topik']);
+            if (!isset($seen[$n])) {
+                $seen[$n] = true;
+                $topikList[] = $rt;
+            }
+        }
+    } catch (\Exception $e) {}
+}
+if (empty($mapelList) && $dbCore) {
+    try {
+        if ($selectedTopikId > 0) {
+            $tpJudul = $dbCore->query("SELECT nama_topik FROM bs_topik WHERE id = " . (int)$selectedTopikId)->fetchColumn();
+            $stmtM = $dbCore->prepare("SELECT DISTINCT mapel_nama FROM cbt_ujian WHERE (topik_id = ? OR (? != '' AND nama_ujian LIKE ?)) AND mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC");
+            $stmtM->execute([$selectedTopikId, !empty($tpJudul) ? $tpJudul : '', !empty($tpJudul) ? "%{$tpJudul}%" : "%"]);
+            $mapelList = $stmtM->fetchAll(PDO::FETCH_COLUMN);
+        }
+        if (empty($mapelList)) {
+            $mapelList = $dbCore->query("SELECT DISTINCT mapel_nama FROM cbt_ujian WHERE mapel_nama IS NOT NULL AND mapel_nama != '' ORDER BY mapel_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
+        }
+    } catch (\Exception $e) {}
+}
+if (empty($kelasList) && $dbCore) {
+    try {
+        $k1 = $dbCore->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
+        $k2 = $dbCore->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+        $k3 = $dbCore->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+        $merged = array_unique(array_filter(array_merge($k1, $k2, $k3)));
+        $merged = array_diff($merged, ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas']);
+        usort($merged, function($a, $b) { return strnatcasecmp($a, $b); });
+        $kelasList = array_values($merged);
+    } catch (\Exception $e) {}
+}
 
 $namaUjian = !empty($currentUjian['nama_ujian']) ? $currentUjian['nama_ujian'] : 'Asesmen CBT Siswa';
 $mapelNama = !empty($currentUjian['mapel_nama']) ? $currentUjian['mapel_nama'] : (!empty($paket['mapel_nama']) ? $paket['mapel_nama'] : 'Semua Mapel');
@@ -348,40 +429,104 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
 </head>
 <body>
 
-<!-- Control Bar di Layar -->
-<div class="no-print-bar">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <button type="button" onclick="history.back()" class="btn-ctrl btn-back">
+<!-- Control Bar di Layar dengan Filter Lengkap -->
+<div class="no-print-bar" style="max-width: 950px; margin: 0 auto 15px; background: #ffffff; padding: 14px 18px; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+    <!-- Baris 1: Filter Dropdown (Topik, Mapel, Kelas, Urutan) -->
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        <button type="button" onclick="history.back()" class="btn-ctrl btn-back" style="padding: 8px 14px; font-size: 0.82rem; display: flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-arrow-left"></i> Kembali
         </button>
-        <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">
-            Urutan: <b><?= htmlspecialchars($activeSortLabel) ?></b> • Siswa: <b style="color: #0f172a;"><?= count($pesertaList) ?> Terdata</b>
-        </span>
+
+        <!-- 1. Topik Ujian -->
+        <div style="flex: 1.4; min-width: 170px;">
+            <label style="font-size: 0.68rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 3px; text-transform: uppercase;">
+                <i class="fa-solid fa-layer-group" style="color: #059669;"></i> Topik Ujian
+            </label>
+            <select id="selTopikCetak" onchange="applyCetakFilter(true)" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.82rem; font-weight: 700; color: #0f172a; background: #f8fafc; outline: none; cursor: pointer;">
+                <option value="0">-- Semua Topik Ujian --</option>
+                <?php foreach ($topikList as $tp): ?>
+                    <option value="<?= (int)$tp['id'] ?>" <?= ($selectedTopikId == $tp['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($tp['nama_topik']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- 2. Mata Pelajaran -->
+        <div style="flex: 1.2; min-width: 150px;">
+            <label style="font-size: 0.68rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 3px; text-transform: uppercase;">
+                <i class="fa-solid fa-book-open" style="color: #059669;"></i> Mata Pelajaran
+            </label>
+            <select id="selMapelCetak" onchange="applyCetakFilter(false)" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.82rem; font-weight: 700; color: #0f172a; background: #f8fafc; outline: none; cursor: pointer;">
+                <option value="">-- Semua Mata Pelajaran --</option>
+                <?php foreach ($mapelList as $mp): ?>
+                    <option value="<?= htmlspecialchars($mp) ?>" <?= ($selectedMapel === $mp) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($mp) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- 3. Filter Kelas -->
+        <div style="flex: 1; min-width: 130px;">
+            <label style="font-size: 0.68rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 3px; text-transform: uppercase;">
+                <i class="fa-solid fa-graduation-cap" style="color: #059669;"></i> Filter Kelas
+            </label>
+            <select id="selKelasCetak" onchange="applyCetakFilter(false)" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.82rem; font-weight: 700; color: #0f172a; background: #f8fafc; outline: none; cursor: pointer;">
+                <option value="">-- Semua Kelas --</option>
+                <?php foreach ($kelasList as $kls): ?>
+                    <option value="<?= htmlspecialchars($kls) ?>" <?= ($selectedKelas === $kls) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($kls) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- 4. Urutan Data Siswa -->
+        <div style="flex: 1.2; min-width: 160px;">
+            <label style="font-size: 0.68rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 3px; text-transform: uppercase;">
+                <i class="fa-solid fa-arrow-down-wide-short" style="color: #059669;"></i> Urutan Siswa
+            </label>
+            <select id="selSortCetak" onchange="applyCetakFilter(false)" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.82rem; font-weight: 700; color: #0f172a; background: #f8fafc; outline: none; cursor: pointer;">
+                <option value="nilai_desc" <?= (($sort ?? 'nilai_desc') === 'nilai_desc') ? 'selected' : '' ?>>Nilai Tertinggi (Rank)</option>
+                <option value="nilai_asc" <?= (($sort ?? '') === 'nilai_asc') ? 'selected' : '' ?>>Nilai Terendah</option>
+                <option value="nama_asc" <?= (($sort ?? '') === 'nama_asc') ? 'selected' : '' ?>>Alphabet Nama (A - Z)</option>
+                <option value="nama_desc" <?= (($sort ?? '') === 'nama_desc') ? 'selected' : '' ?>>Alphabet Nama (Z - A)</option>
+            </select>
+        </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 8px;">
-        <button type="button" onclick="downloadPdfDirect()" id="btnDirectDownload" class="btn-ctrl" style="background: #059669; color: white; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);">
-            <i class="fa-solid fa-file-pdf"></i> Unduh File PDF
-        </button>
-        <a href="?<?= http_build_query(array_merge($_GET, ['export' => 'excel'])) ?>" class="btn-ctrl" style="background: #10b981; color: white; text-decoration: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);">
-            <i class="fa-solid fa-file-excel"></i> Unduh Excel (.xls)
-        </a>
-        <button type="button" onclick="window.print()" class="btn-ctrl btn-print">
-            <i class="fa-solid fa-print"></i> Cetak / Simpan PDF (A4)
-        </button>
+
+    <!-- Baris 2: Status Terdata & Tombol Download/Cetak -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
+        <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">
+            Urutan: <b style="color: #0f172a;"><?= htmlspecialchars($activeSortLabel) ?></b> • Siswa: <b style="color: #059669;"><?= count($pesertaList) ?> Terdata</b>
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" onclick="downloadPdfDirect()" id="btnDirectDownload" class="btn-ctrl" style="background: #059669; color: white; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3); font-size: 0.82rem; padding: 8px 14px;">
+                <i class="fa-solid fa-file-pdf"></i> Unduh File PDF
+            </button>
+            <a href="?<?= http_build_query(array_merge($_GET, ['export' => 'excel'])) ?>" class="btn-ctrl" style="background: #10b981; color: white; text-decoration: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3); font-size: 0.82rem; padding: 8px 14px;">
+                <i class="fa-solid fa-file-excel"></i> Unduh Excel (.xls)
+            </a>
+            <button type="button" onclick="window.print()" class="btn-ctrl btn-print" style="font-size: 0.82rem; padding: 8px 14px;">
+                <i class="fa-solid fa-print"></i> Cetak / Simpan PDF (A4)
+            </button>
+        </div>
     </div>
 </div>
 
 <!-- Lembar Cetak Kertas -->
 <div class="paper-sheet">
 
-    <!-- Kop Surat Resmi -->
+    <!-- Kop Surat Resmi Madrasah -->
     <div class="kop-header">
         <img src="<?= $logoUrl ?>" class="kop-logo" onerror="this.src='/public/uploads/logo/logo.png'" alt="Logo Madrasah">
         <div class="kop-title-box">
-            <h4>KEMENTERIAN AGAMA REPUBLIK INDONESIA</h4>
+            <h4><?= htmlspecialchars($namaYayasan) ?></h4>
             <h2><?= htmlspecialchars($namaInstitusi) ?></h2>
-            <p>STATUS TERAKREDITASI • NSM: 131218040003 • NPSN: 69988085</p>
-            <p>Jalan Raya Miftahul Huda, Sindangjaya, Kec. Mangunjaya, Kab. Pangandaran / Lampung Barat</p>
+            <p style="font-weight: 700; color: #0f172a; margin: 2px 0;">STATUS TERAKREDITASI B &bull; NSM: <?= htmlspecialchars($nsm) ?> &bull; NPSN: <?= htmlspecialchars($npsn) ?></p>
+            <p><?= htmlspecialchars($alamatJalan) ?>, <?= htmlspecialchars($desa) ?>, Kec. <?= htmlspecialchars($kecamatan) ?>, Kab. <?= htmlspecialchars($kabupaten) ?>, <?= htmlspecialchars($provinsi) ?> KP. <?= htmlspecialchars($kodepos) ?></p>
+            <p>Website: <?= htmlspecialchars($website) ?> &bull; Email: <?= htmlspecialchars($email) ?> &bull; Telp: <?= htmlspecialchars($telepon) ?></p>
         </div>
         <img src="<?= $kemenagLogo ?>" class="kop-logo" onerror="this.style.visibility='hidden'" alt="Logo Kemenag">
     </div>
@@ -548,6 +693,43 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
 </div>
 
 <script>
+function applyCetakFilter(isTopikChange) {
+    const topik = document.getElementById('selTopikCetak') ? document.getElementById('selTopikCetak').value : '0';
+    const mapel = (isTopikChange || !document.getElementById('selMapelCetak')) ? '' : document.getElementById('selMapelCetak').value;
+    const kelas = document.getElementById('selKelasCetak') ? document.getElementById('selKelasCetak').value : '';
+    const sort = document.getElementById('selSortCetak') ? document.getElementById('selSortCetak').value : 'nilai_desc';
+
+    const url = new URL(window.location.href);
+    if (topik && topik !== '0') {
+        url.searchParams.set('topik_id', topik);
+    } else {
+        url.searchParams.delete('topik_id');
+    }
+
+    if (isTopikChange) {
+        url.searchParams.delete('mapel');
+    } else if (mapel) {
+        url.searchParams.set('mapel', mapel);
+    } else {
+        url.searchParams.delete('mapel');
+    }
+
+    if (kelas) {
+        url.searchParams.set('kelas', kelas);
+    } else {
+        url.searchParams.delete('kelas');
+    }
+
+    url.searchParams.set('sort', sort);
+    url.searchParams.delete('ujian_id');
+    url.searchParams.delete('paket_id');
+    url.searchParams.delete('download');
+    url.searchParams.delete('autoprint');
+    url.searchParams.delete('export');
+
+    window.location.href = url.toString();
+}
+
 function downloadPdfDirect() {
     const btn = document.getElementById('btnDirectDownload');
     if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan PDF...';
@@ -568,13 +750,14 @@ function downloadPdfDirect() {
 
         // Header / Kop Dokumen
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.text('KEMENTERIAN AGAMA REPUBLIK INDONESIA', 105, 14, { align: 'center' });
+        doc.setFontSize(9.5);
+        doc.text('<?= addslashes($namaYayasan) ?>', 105, 12, { align: 'center' });
         doc.setFontSize(13);
-        doc.text('MADRASAH ALIYAH MIFTAHUL HUDA', 105, 20, { align: 'center' });
+        doc.text('<?= addslashes($namaInstitusi) ?>', 105, 17, { align: 'center' });
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.text('REKAPITULASI HASIL ASESMEN SUMATIF CBT ONLINE', 105, 25, { align: 'center' });
+        doc.setFontSize(7.5);
+        doc.text('STATUS TERAKREDITASI B • NSM: <?= addslashes($nsm) ?> • NPSN: <?= addslashes($npsn) ?>', 105, 21.5, { align: 'center' });
+        doc.text('<?= addslashes($alamatJalan) ?>, <?= addslashes($desa) ?>, Kec. <?= addslashes($kecamatan) ?>, Kab. <?= addslashes($kabupaten) ?>, <?= addslashes($provinsi) ?>', 105, 25.5, { align: 'center' });
 
         // Garis Pembatas Kop
         doc.setLineWidth(0.5);
