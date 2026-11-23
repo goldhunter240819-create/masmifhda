@@ -1,27 +1,4 @@
 <?php
-// GHTech Analytics Tracking
-$_ghtech_key = "4a0fef55431a38a8ee6317c512178502";
-$_ghtech_ip = isset($_SERVER["HTTP_CF_CONNECTING_IP"]) ? $_SERVER["HTTP_CF_CONNECTING_IP"] : (isset($_SERVER["HTTP_X_FORWARDED_FOR"]) ? $_SERVER["HTTP_X_FORWARDED_FOR"] : $_SERVER["REMOTE_ADDR"]);
-if ($_ghtech_ip == "127.0.0.1" || $_ghtech_ip == "::1") {
-    if (!isset($_COOKIE["ghtech_vid"])) { $vid = uniqid("loc_"); setcookie("ghtech_vid", $vid, time() + 86400, "/"); $_ghtech_ip = $vid; } else { $_ghtech_ip = $_COOKIE["ghtech_vid"]; }
-}
-// Track IP langsung
-@file_get_contents("http://localhost/ghtech/api/track.php?key=" . $_ghtech_key . "&ip=" . urlencode($_ghtech_ip));
-// Update username setelah session aktif
-register_shutdown_function(function() {
-    global $_ghtech_key, $_ghtech_ip;
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        $_u = "";
-        if (isset($_SESSION["guru_nama"])) { $_u = $_SESSION["guru_nama"]; }
-        elseif (isset($_SESSION["siswa_nama"])) { $_u = $_SESSION["siswa_nama"]; }
-        elseif (isset($_SESSION["nama"])) { $_u = $_SESSION["nama"]; }
-        if (!empty($_u)) {
-            @file_get_contents("http://localhost/ghtech/api/track.php?key=" . $_ghtech_key . "&ip=" . urlencode($_ghtech_ip) . "&user=" . urlencode($_u));
-        }
-    }
-});
-?>
-<?php
 
 date_default_timezone_set('Asia/Jakarta');
 session_name("AULA_SYSTEM_PORTAL");
@@ -86,18 +63,8 @@ if (isset($_SESSION['user_id'])) {
     }
 }
 
-// Global Visitor Tracker (Simple DB logger)
+// Global Visitor Tracker (Lightweight - Zero DDL lock on request)
 try {
-    $db_track = \App\Core\Database::connect('core');
-    $db_track->exec("CREATE TABLE IF NOT EXISTS visitor_logs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        ip_address VARCHAR(45) NOT NULL,
-        visit_date DATE NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY(ip_address, visit_date)
-    )");
-    
-    // Fallback if IP is empty, don't insert to avoid issues
     $visitorIp = 'UNKNOWN';
     if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
         $visitorIp = $_SERVER['HTTP_CF_CONNECTING_IP'];
@@ -111,8 +78,22 @@ try {
     }
 
     if ($visitorIp !== 'UNKNOWN') {
-        $stmt_vis = $db_track->prepare("INSERT IGNORE INTO visitor_logs (ip_address, visit_date) VALUES (?, CURDATE())");
-        $stmt_vis->execute([$visitorIp]);
+        $db_track = \App\Core\Database::connect('core');
+        try {
+            $stmt_vis = $db_track->prepare("INSERT IGNORE INTO visitor_logs (ip_address, visit_date) VALUES (?, CURDATE())");
+            $stmt_vis->execute([$visitorIp]);
+        } catch (\Exception $eTable) {
+            // Lazy create table if not exists, then retry
+            $db_track->exec("CREATE TABLE IF NOT EXISTS visitor_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ip_address VARCHAR(45) NOT NULL,
+                visit_date DATE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY(ip_address, visit_date)
+            )");
+            $stmt_vis = $db_track->prepare("INSERT IGNORE INTO visitor_logs (ip_address, visit_date) VALUES (?, CURDATE())");
+            $stmt_vis->execute([$visitorIp]);
+        }
     }
 } catch (\Exception $e) {}
 

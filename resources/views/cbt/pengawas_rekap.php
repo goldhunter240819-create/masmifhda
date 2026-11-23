@@ -3,9 +3,8 @@ $pageTitle = 'Rekapitulasi Presensi Pengawas Ruang CBT';
 $active_menu = 'pengawas_rekap';
 $totalRuangDiawasi = $totalRuangDiawasi ?? 0;
 ?>
-<!-- SweetAlert2 Modern -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- SweetAlert2 Modern (Local Offline) -->
+<script src="<?php echo base_url('public/assets/js/sweetalert2.all.min.js'); ?>"></script>
 
 <style>
 .stat-card-presensi {

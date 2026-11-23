@@ -7,11 +7,17 @@ use PDO;
 
 class CbtController {
 
+    private static $tablesEnsured = false;
+
     /**
      * Pastikan skema tabel modul CBT Online tersedia di database core.
      * Bersihkan data dummy lama agar 100% menggunakan data real.
      */
     public static function ensureTables($db) {
+        if (self::$tablesEnsured) {
+            return;
+        }
+        self::$tablesEnsured = true;
         try {
             // 1. Tabel Paket Ujian
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_ujian (

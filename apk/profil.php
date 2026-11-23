@@ -60,7 +60,7 @@ if (!empty($siswa['kelas_id'])) {
 $page_title = 'Profil Siswa';
 include 'header.php';
 ?>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/sweetalert2.all.min.js"></script>
 
 <div class="header">
     <div class="header-top">

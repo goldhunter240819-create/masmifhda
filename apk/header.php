@@ -61,8 +61,8 @@ if (isset($core_db)) {
     <meta name="theme-color" content="#0ea5e9">
     <title><?= htmlspecialchars($title) ?> - MAS Mifhda</title>
     <link rel="icon" type="image/png" href="<?= htmlspecialchars($favicon_url) ?>">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/css/plus-jakarta-sans.css">
+    <link rel="stylesheet" href="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/css/all.min.css">
     <style>
         :root {
             --primary: #10b981;
@@ -183,7 +183,7 @@ if (isset($core_db)) {
     </script>
     <?php endif; ?>
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/sweetalert2.all.min.js"></script>
     <script>
         function confirmLogout(e, url, message = 'Keluar Aplikasi?') {
             e.preventDefault();

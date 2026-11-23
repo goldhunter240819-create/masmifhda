@@ -10,8 +10,8 @@ $showScore = isset($showScore) ? (bool)$showScore : true;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle; ?></title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
+    <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
     <style>
         body {
             background: #f8fafc;

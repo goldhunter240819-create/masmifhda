@@ -34,7 +34,7 @@ $bu = function($path = '') {
     return function_exists('base_url') ? base_url($path) : '/' . ltrim($path, '/');
 };
 ?>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="<?php echo base_url('public/assets/css/all.min.css'); ?>">
 <style>
     .ba-hero-header {
         position: relative;

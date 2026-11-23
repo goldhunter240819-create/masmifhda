@@ -17,10 +17,9 @@ $mapelByDayAndSlot = $mapelByDayAndSlot ?? [];
 $topikNama = !empty($topikAktif['nama_topik']) ? $topikAktif['nama_topik'] : 'SIMULASI NEW CBT';
 $topikTA = !empty($topikAktif['tahun_ajaran']) ? $topikAktif['tahun_ajaran'] : '2026/2027';
 ?>
-<!-- Font Awesome 6 & SweetAlert2 Modern -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Font Awesome 6 & SweetAlert2 Modern (Local Offline) -->
+<link rel="stylesheet" href="<?php echo base_url('public/assets/css/all.min.css'); ?>">
+<script src="<?php echo base_url('public/assets/js/sweetalert2.all.min.js'); ?>"></script>
 
 <style>
     .schedule-wrapper {

@@ -63,8 +63,8 @@ $page_title = 'Dashboard Alumni';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Alumni - MA Miftahul Huda</title>
     <link rel="icon" type="image/png" href="/public/uploads/logo/logo_1781854511.png">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/css/plus-jakarta-sans.css">
+    <link rel="stylesheet" href="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/css/all.min.css">
     <style>
         :root {
             --gold: #f59e0b;
@@ -366,7 +366,7 @@ $page_title = 'Dashboard Alumni';
         .tunggakan-banner .lbl { font-size: 0.72rem; color: #991b1b; margin-top: 1px; }
     </style>
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/sweetalert2.all.min.js"></script>
     <script>
         function confirmLogout(e, url, message = 'Keluar Aplikasi?') {
             e.preventDefault();

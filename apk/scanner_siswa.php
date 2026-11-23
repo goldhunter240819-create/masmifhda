@@ -79,10 +79,10 @@ include 'header.php';
     </div>
 </div>
 
-<!-- Feedback Popup (SweetAlert) -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<!-- Feedback Popup (Local Offline) -->
+<script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/sweetalert2.all.min.js"></script>
+<script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/lucide.min.js"></script>
+<script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/html5-qrcode.min.js"></script>
 
 <style>
     /* Styling adjustments for reader */

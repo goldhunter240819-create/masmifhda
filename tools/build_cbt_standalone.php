@@ -589,59 +589,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['auto'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setup Database Server CBT Madrasah</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="public/assets/css/plus-jakarta-sans.css">
+    <link rel="stylesheet" href="public/assets/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: #0f172a; color: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .max-w-md { max-width: 28rem; width: 100%; }
+        .bg-slate-800 { background-color: #1e293b; border: 1px solid #334155; border-radius: 1.5rem; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); text-align: center; }
+        .icon-box { width: 5rem; height: 5rem; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 1rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 1.875rem; }
+        h1 { font-size: 1.5rem; font-weight: 900; color: #ffffff; margin-bottom: 0.5rem; }
+        p.desc { font-size: 0.875rem; color: #94a3b8; margin-bottom: 1.5rem; }
+        .alert-box { padding: 1rem; border-radius: 1rem; font-size: 0.875rem; margin-bottom: 1.5rem; text-align: left; }
+        .alert-amber { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fde68a; }
+        .alert-emerald { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #6ee7b7; display: flex; align-items: center; gap: 0.75rem; }
+        .alert-rose { background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); color: #fda4af; }
+        .btn-indigo { width: 100%; background: #4f46e5; color: white; font-weight: 700; padding: 0.875rem 1.5rem; border-radius: 0.75rem; border: none; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); font-size: 0.95rem; }
+        .btn-indigo:hover { background: #4338ca; }
+        .btn-slate { width: 100%; background: #334155; color: #e2e8f0; font-weight: 700; padding: 0.625rem 1.5rem; border-radius: 0.75rem; text-decoration: none; display: block; font-size: 0.75rem; margin-top: 0.625rem; }
+        .btn-slate:hover { background: #475569; }
+        .text-xs { font-size: 0.75rem; }
+        .text-slate-500 { color: #64748b; margin-top: 1.5rem; }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center">
-        <div class="w-20 h-20 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl">
+        <div class="icon-box">
             <i class="fa-solid fa-server"></i>
         </div>
-        <h1 class="text-2xl font-black mb-2 text-white">Server CBT Madrasah</h1>
-        <p class="text-sm text-slate-400 mb-6">Inisialisasi Database Standalone Server Proktor</p>
+        <h1>Server CBT Madrasah</h1>
+        <p class="desc">Inisialisasi Database Standalone Server Proktor</p>
 
         <?php if (!$isPhpOk): ?>
-            <div class="bg-amber-500/20 border border-amber-500/40 text-amber-200 p-5 rounded-2xl text-left mb-6">
-                <div class="font-black text-base text-amber-400 flex items-center gap-2 mb-2">
-                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+            <div class="alert-box alert-amber">
+                <div style="font-weight: 900; font-size: 1rem; color: #fbbf24; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                     Versi PHP Server Tidak Kompatibel!
                 </div>
-                <div class="text-xs leading-relaxed text-amber-200/90 mb-3">
+                <div style="font-size: 0.75rem; line-height: 1.6; margin-bottom: 0.75rem;">
                     Terdeteksi versi PHP yang berjalan saat ini adalah <b>PHP <?= htmlspecialchars($curPhp) ?> (XAMPP Lawas)</b>.<br>
                     Engine CBT Madrasah MAS MIFHDA menggunakan standar modern yang membutuhkan <b>PHP versi 8.x (atau minimal PHP 7.4)</b>.
                 </div>
-                <div class="bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 text-xs text-slate-300">
-                    <div class="font-bold text-amber-300 mb-1">💡 Solusi:</div>
-                    1. Pasang <b>XAMPP PHP 8.x (rekomendasi PHP 8.2)</b> dari <a href="https://www.apachefriends.org" target="_blank" class="text-indigo-400 underline font-bold">apachefriends.org</a>.<br>
+                <div style="background: rgba(15, 23, 42, 0.8); padding: 0.75rem; border-radius: 0.75rem; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.75rem;">
+                    <div style="font-weight: 700; color: #fde68a; margin-bottom: 0.25rem;">💡 Solusi:</div>
+                    1. Pasang <b>XAMPP PHP 8.x (rekomendasi PHP 8.2)</b> dari <a href="https://www.apachefriends.org" target="_blank" style="color: #818cf8; text-decoration: underline; font-weight: 700;">apachefriends.org</a>.<br>
                     2. Jalankan Apache & MySQL dari XAMPP PHP 8.x tersebut.
                 </div>
             </div>
         <?php endif; ?>
 
         <?php if ($isSuccess): ?>
-            <div class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 p-4 rounded-xl text-sm mb-6 flex items-center gap-3 text-left">
-                <i class="fa-solid fa-circle-check text-xl"></i>
+            <div class="alert-box alert-emerald">
+                <i class="fa-solid fa-circle-check" style="font-size: 1.5rem;"></i>
                 <div>
-                    <div class="font-bold">Setup Berhasil!</div>
+                    <div style="font-weight: 700;">Setup Berhasil!</div>
                     <div class="text-xs"><?= htmlspecialchars($statusMsg) ?></div>
                 </div>
             </div>
-            <a href="sinkron_langsung.php" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-xl block transition mb-2.5 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+            <a href="sinkron_langsung.php" class="btn-indigo" style="margin-bottom: 0.625rem;">
                 <i class="fa-solid fa-bolt"></i> Mulai Sinkronisasi Kilat (Rekomendasi)
             </a>
-            <a href="semi-online" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2.5 px-6 rounded-xl block transition text-xs">
+            <a href="semi-online" class="btn-slate">
                 Buka Menu Semi-Online
             </a>
         <?php else: ?>
             <?php if (!empty($statusMsg)): ?>
-                <div class="bg-rose-500/20 border border-rose-500/40 text-rose-300 p-4 rounded-xl text-sm mb-6 text-left">
-                    <div class="font-bold">Terjadi Kesalahan:</div>
-                    <div class="text-xs mt-1"><?= htmlspecialchars($statusMsg) ?></div>
+                <div class="alert-box alert-rose">
+                    <div style="font-weight: 700;">Terjadi Kesalahan:</div>
+                    <div class="text-xs" style="margin-top: 0.25rem;"><?= htmlspecialchars($statusMsg) ?></div>
                 </div>
             <?php endif; ?>
             <?php if ($isPhpOk): ?>
                 <form method="POST">
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                    <button type="submit" class="btn-indigo">
                         <i class="fa-solid fa-bolt"></i> Mulai Inisialisasi Database (1-Klik)
                     </button>
                 </form>

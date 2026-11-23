@@ -296,7 +296,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
     </div> <!-- .z-main -->
 </div> <!-- .siakad-container -->
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?php echo base_url('public/assets/js/sweetalert2.all.min.js'); ?>"></script>
 <script>
 function executePullData() {
     const serverUrl = document.getElementById('targetServerUrl').value.trim();

@@ -46,8 +46,8 @@ if (!isset($_SESSION['guru_id']) && isset($_SESSION['siswa_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Buku Panduan Penggunaan Aplikasi Mobile - <?= htmlspecialchars($nama_madrasah) ?></title>
     <link rel="shortcut icon" href="<?= htmlspecialchars($favicon_url) ?>" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/css/plus-jakarta-sans.css">
+    <link rel="stylesheet" href="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/css/all.min.css">
     
     <style>
         :root {

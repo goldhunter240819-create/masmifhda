@@ -303,8 +303,8 @@ $page_title = 'Hasil Ujian: ' . ($paket['mapel_nama'] ?? 'CBT');
 include 'header.php';
 ?>
 
-<!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- SweetAlert2 (Local Offline) -->
+<script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/sweetalert2.all.min.js"></script>
 
 <style>
     /* Header Gradient Modern */

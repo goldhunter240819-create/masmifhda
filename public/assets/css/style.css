@@ -1,10 +1,10 @@
 /* Local @font-face - offline ready, no CDN */
-@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:300; font-display:swap; src:url('/public/assets/fonts/plusjakartasans-400.ttf') format('truetype'); }
-@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:400; font-display:swap; src:url('/public/assets/fonts/plusjakartasans-400.ttf') format('truetype'); }
-@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:500; font-display:swap; src:url('/public/assets/fonts/plusjakartasans-500.ttf') format('truetype'); }
-@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:600; font-display:swap; src:url('/public/assets/fonts/plusjakartasans-600.ttf') format('truetype'); }
-@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:700; font-display:swap; src:url('/public/assets/fonts/plusjakartasans-700.ttf') format('truetype'); }
-@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:800; font-display:swap; src:url('/public/assets/fonts/plusjakartasans-800.ttf') format('truetype'); }
+@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:300; font-display:swap; src:url('../fonts/plusjakartasans-400.ttf') format('truetype'); }
+@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:400; font-display:swap; src:url('../fonts/plusjakartasans-400.ttf') format('truetype'); }
+@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:500; font-display:swap; src:url('../fonts/plusjakartasans-500.ttf') format('truetype'); }
+@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:600; font-display:swap; src:url('../fonts/plusjakartasans-600.ttf') format('truetype'); }
+@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:700; font-display:swap; src:url('../fonts/plusjakartasans-700.ttf') format('truetype'); }
+@font-face { font-family:'Plus Jakarta Sans'; font-style:normal; font-weight:800; font-display:swap; src:url('../fonts/plusjakartasans-800.ttf') format('truetype'); }
 
 :root {
     /* ── Zamrud Design Tokens ── */
@@ -38,9 +38,11 @@
 
 * {
     box-sizing: border-box;
-    /* Batasi transition agar tidak mempengaruhi layout properties */
-    transition: color 0.3s, background-color 0.3s, border-color 0.3s,
-                opacity 0.3s, box-shadow 0.3s, filter 0.3s, transform 0.3s;
+}
+
+a, button, .btn, .card, input, select, .z-nav-item, .menu-item {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease,
+                opacity 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 a {
@@ -59,7 +61,7 @@ body {
     scrollbar-gutter: stable; /* Mencegah pergeseran saat scrollbar muncul */
 }
 
-/* Techy Background Animation */
+/* Subtle Static Techy Background */
 body::before {
     content: '';
     position: fixed;
@@ -67,14 +69,9 @@ body::before {
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle, rgba(14, 165, 233, 0.05) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.04) 0%, transparent 70%);
     z-index: -1;
-    animation: pulseBg 15s infinite alternate;
-}
-
-@keyframes pulseBg {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(10%, 10%); }
+    pointer-events: none;
 }
 
 /* Navbar: Ultra Modern Floating over Content */
@@ -465,47 +462,42 @@ body::before {
     transform: rotate(15deg) scale(1.1);
 }
 
-/* Animations */
+/* Animations - Fast & Lightweight for smooth rendering */
 .fade-up {
-    animation: fadeUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+    animation: fadeUp 0.2s ease-out backwards;
 }
 
 @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(30px); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Animasi Khusus Dashboard - Level Pro */
-/* 1. Sidebar, Navbar, & Footer: Tetap Fade-In agar STABIL (Anti-Loncat) */
+/* Animasi Khusus Dashboard - Level Pro & Responsive */
 .container:has(.siakad-container) .sidebar-wrapper,
 .navbar,
 .main-footer {
-    animation: fadeInOnly 1s ease-out backwards;
+    animation: fadeInOnly 0.2s ease-out backwards;
 }
 
-/* 2. Main Content Wrapper: Gunakan slide halus tanpa pergerakan kaku */
 .container:has(.siakad-container) .siakad-main,
 .container:has(.siakad-container) > div:not(.sidebar-wrapper) {
-    animation: fadeInOnly 0.8s ease-out backwards;
+    animation: fadeInOnly 0.2s ease-out backwards;
 }
 
-/* 3. Elemen Internal (Cards & Sections): Efek "Scale & Float Up" yang Pro */
 .siakad-main .card, 
 .siakad-main > div,
 .siakad-main section {
-    animation: scaleFloatUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+    animation: fadeInOnly 0.2s ease-out backwards;
 }
 
 @keyframes scaleFloatUp {
     from { 
         opacity: 0; 
-        transform: translateY(40px) scale(0.96);
-        filter: blur(10px);
+        transform: translateY(10px);
     }
     to { 
         opacity: 1; 
-        transform: translateY(0) scale(1);
-        filter: blur(0);
+        transform: translateY(0);
     }
 }
 

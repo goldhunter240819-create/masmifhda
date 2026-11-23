@@ -2,12 +2,10 @@
 $pageTitle = 'Scan Presensi Pengawas Ruang CBT';
 $active_menu = 'pengawas_scan';
 ?>
-<!-- Font Awesome 6 & SweetAlert2 Modern -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- Html5-QRCode Library -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<!-- Local Offline Assets -->
+<link rel="stylesheet" href="<?php echo base_url('public/assets/css/all.min.css'); ?>">
+<script src="<?php echo base_url('public/assets/js/sweetalert2.all.min.js'); ?>"></script>
+<script src="<?php echo base_url('public/assets/js/html5-qrcode.min.js'); ?>"></script>
 
 <style>
 /* Modern Scanner Layout & Styling */

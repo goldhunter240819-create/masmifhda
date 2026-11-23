@@ -449,7 +449,7 @@ include 'header.php';
     </a>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= ($baseFolder ? $baseFolder : '') ?>/public/assets/js/sweetalert2.all.min.js"></script>
 <script>
 function confirmLogoutPengawas() {
     Swal.fire({
