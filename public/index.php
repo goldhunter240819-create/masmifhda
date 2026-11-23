@@ -2520,6 +2520,7 @@ $router->add('GET', '/cbt/denah/cetak_label', [\App\Controllers\CbtController::c
 // CBT Absensi Scan 1 Pintu & Rekap
 $router->add('GET', '/cbt/scan', [\App\Controllers\CbtController::class, 'absensiScan']);
 $router->add('POST', '/cbt/scan/process', [\App\Controllers\CbtController::class, 'processAbsensiScan']);
+$router->add('POST', '/cbt/scan/bulk-absen', [\App\Controllers\CbtController::class, 'bulkAbsensiToday']);
 $router->add('GET', '/cbt/absensi', [\App\Controllers\CbtController::class, 'absensiRekap']);
 $router->add('POST', '/cbt/absensi/delete', [\App\Controllers\CbtController::class, 'deleteAbsensi']);
 $router->add('POST', '/cbt/absensi/reset-today', [\App\Controllers\CbtController::class, 'resetAbsensiToday']);

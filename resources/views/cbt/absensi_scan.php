@@ -154,8 +154,55 @@ $active_menu = 'absensi_cbt';
                         </div>
                     </div>
 
+                    <!-- Pilihan Sesi / Jadwal Ujian Hari Ini (Bisa Manual / Otomatis) -->
+                    <div style="margin-top: 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label for="selJadwalOverride" style="font-size: 0.8rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="clock" style="width: 14px; height: 14px; color: #2563eb;"></i> Target Sesi & Mapel Ujian:
+                            </label>
+                            <span style="font-size: 0.7rem; font-weight: 800; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px;">
+                                Sesi Terjadwal
+                            </span>
+                        </div>
+                        <select id="selJadwalOverride" class="input-sm" style="width: 100%; font-weight: 800; font-size: 0.85rem; color: #0f172a; border-radius: 8px; border: 1.5px solid #94a3b8; background: white; padding: 7px 10px; cursor: pointer;">
+                            <option value="">⚡ Mode Otomatis (Mengikuti Jam Sesi atau Toleransi Jadwal Molor)</option>
+                            <?php if (!empty($jadwalToday)): ?>
+                                <?php foreach ($jadwalToday as $jt): ?>
+                                    <?php 
+                                        $jMpl = !empty($jt['mapel_nama']) ? $jt['mapel_nama'] : (!empty($jt['nama_ujian']) ? $jt['nama_ujian'] : 'Ujian CBT');
+                                        $jSlot = !empty($jt['label_sesi']) ? $jt['label_sesi'] : (!empty($jt['jam_slot']) ? $jt['jam_slot'] : 'Sesi Ujian');
+                                        $jTime = (!empty($jt['jam_mulai']) && !empty($jt['jam_selesai'])) ? " [{$jt['jam_mulai']} - {$jt['jam_selesai']} WIB]" : "";
+                                        $jKls = !empty($jt['kelas_nama']) ? " (" . $jt['kelas_nama'] . ")" : "";
+                                        $jVal = (int)($jt['id'] ?? ($jt['ujian_id'] ?? 0));
+                                    ?>
+                                    <option value="<?= $jVal ?>"><?= htmlspecialchars("{$jSlot}{$jTime} &bull; {$jMpl}{$jKls}") ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 5px;">
+                            Pilih sesi tertentu jika jadwal molor/terlambat agar scan presensi langsung terkunci ke mapel tersebut tanpa terhalang jam selesai.
+                        </div>
+                    </div>
+
+                    <!-- Aksi Cepat: Tandai Hadir Semua Siswa Hari Ini (1-Klik) -->
+                    <div style="margin-top: 12px; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <div>
+                                <div style="font-weight: 900; font-size: 0.86rem; color: #065f46; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="zap" style="width: 16px; height: 16px; color: #059669;"></i> Presensi Hadir Massal (Hari Ini)
+                                </div>
+                                <div style="font-size: 0.74rem; color: #047857; margin-top: 2px;">
+                                    Jadwal tadi pagi molor / error? Klik tombol ini untuk otomatis mengisi kehadiran seluruh siswa untuk semua mapel hari ini sesuai rentang jam sesi. Siswa langsung bisa ujian!
+                                </div>
+                            </div>
+                            <button type="button" onclick="handleBulkAbsenToday()" class="e-btn" style="background: #059669; color: white; font-weight: 800; font-size: 0.82rem; padding: 8px 16px; border-radius: 10px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);">
+                                <i data-lucide="check-check" style="width: 15px; height: 15px;"></i> Tandai Hadir Semua Siswa
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Manual Input / Barcode Gun -->
-                    <div style="margin-top: 16px;">
+                    <div style="margin-top: 14px;">
                         <label class="label-sm" style="font-weight: 800; color: #334155;">Input Manual / Gun Barcode Scanner:</label>
                         <form id="formManualScan" onsubmit="handleManualSubmit(event)" style="display: flex; gap: 8px;">
                             <input type="text" id="inpScanCode" class="input-sm" placeholder="Scan barcode kartu atau ketik NIS / Token..." autofocus autocomplete="off" style="flex: 1; font-weight: 800; font-family: monospace; font-size: 0.95rem;">
@@ -252,8 +299,8 @@ $active_menu = 'absensi_cbt';
     </div>
 </div>
 
-<!-- Script HTML5 QR Code Library -->
-<script src="https://unpkg.com/html5-qrcode"></script>
+<!-- Script HTML5 QR Code Library (Local Offline Asset) -->
+<script src="<?php echo base_url('public/assets/js/html5-qrcode.min.js'); ?>"></script>
 
 <script>
 let html5QrCode = null;
@@ -462,6 +509,11 @@ function submitAbsenCode(code) {
     const formData = new FormData();
     formData.append('code', code);
 
+    const selOverride = document.getElementById('selJadwalOverride');
+    if (selOverride && selOverride.value) {
+        formData.append('manual_grid_id', selOverride.value);
+    }
+
     // Animasi tombol manual jika diklik
     const btnManual = document.getElementById('btnSubmitManual');
     if (btnManual) {
@@ -637,6 +689,55 @@ function submitAbsenCode(code) {
             btnManual.innerHTML = 'Absen Siswa';
         }
         if (window.lucide) lucide.createIcons();
+    });
+}
+
+function handleBulkAbsenToday() {
+    Swal.fire({
+        title: 'Tandai Hadir Semua Siswa Hari Ini?',
+        text: 'Sistem akan otomatis mencatatkan kehadiran seluruh siswa untuk semua mata pelajaran sesuai jadwal hari ini dengan rentang jam sesi yang rapi. Siswa akan langsung bisa mulai ujian!',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#059669',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Tandai Hadir Semua Siswa!',
+        cancelButtonText: 'Batal',
+        customClass: { popup: 'cbt-swal', title: 'cbt-swal-title' }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Sedang Memproses Kehadiran...',
+                text: 'Mencatat absensi seluruh siswa dan mapel hari ini...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            fetch('<?php echo base_url("cbt/scan/bulk-absen"); ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ tanggal: '<?php echo $todayDate; ?>' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    playSuccessChime();
+                    Swal.fire({
+                        title: 'Presensi Massal Berhasil!',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonColor: '#2563eb',
+                        confirmButtonText: 'OK, Segarkan Halaman'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Gagal', data.message || 'Terjadi kesalahan sistem.', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Kesalahan Koneksi', 'Gagal menghubungi server.', 'error');
+            });
+        }
     });
 }
 </script>

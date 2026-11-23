@@ -24,7 +24,9 @@ $todayDate = date('Y-m-d');
 $jadwalHariIni = [];
 try {
     $stmtJ = $core_db->prepare("
-        SELECT g.*, u.nama_ujian, s.jam_mulai, s.jam_selesai, s.label_sesi
+        SELECT g.*, u.nama_ujian, 
+               COALESCE(NULLIF(u.mapel_nama, ''), g.mapel_nama, u.nama_ujian) as mapel_nama,
+               s.jam_mulai, s.jam_selesai, s.label_sesi
         FROM cbt_jadwal_grid g
         LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
         LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
@@ -67,17 +69,40 @@ include 'header.php';
         </div>
     </div>
 
-    <!-- Pilih Ruang Ujian (Opsional) -->
-    <div style="background: white; border-radius: 14px; padding: 12px 15px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
-        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
-            <i class="fa-solid fa-door-open" style="color: #7c3aed;"></i> Lokasi / Ruang Ujian:
-        </label>
-        <select id="selectRuang" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 700; color: #1e293b; background: #f8fafc; outline: none;">
-            <option value="Gerbang Utama / Pintu Masuk">-- Gerbang Utama / Pintu Masuk 1 Pintu --</option>
-            <?php foreach ($ruangList as $r): ?>
-                <option value="<?= htmlspecialchars($r['nama_ruang']) ?>"><?= htmlspecialchars($r['kode_ruang']) ?> - <?= htmlspecialchars($r['nama_ruang']) ?> (<?= htmlspecialchars($r['lokasi'] ?: 'Madrasah') ?>)</option>
-            <?php endforeach; ?>
-        </select>
+    <!-- Pilih Ruang Ujian & Target Sesi Jadwal -->
+    <div style="background: white; border-radius: 14px; padding: 12px 15px; margin-bottom: 14px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
+        <div>
+            <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
+                <i class="fa-solid fa-door-open" style="color: #7c3aed;"></i> Lokasi / Ruang Ujian:
+            </label>
+            <select id="selectRuang" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 700; color: #1e293b; background: #f8fafc; outline: none;">
+                <option value="Gerbang Utama / Pintu Masuk">-- Gerbang Utama / Pintu Masuk 1 Pintu --</option>
+                <?php foreach ($ruangList as $r): ?>
+                    <option value="<?= htmlspecialchars($r['nama_ruang']) ?>"><?= htmlspecialchars($r['kode_ruang']) ?> - <?= htmlspecialchars($r['nama_ruang']) ?> (<?= htmlspecialchars($r['lokasi'] ?: 'Madrasah') ?>)</option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
+                <i class="fa-solid fa-clock" style="color: #2563eb;"></i> Sesi & Mapel Ujian:
+            </label>
+            <select id="selectSesiOverride" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 700; color: #1e293b; background: #f8fafc; outline: none;">
+                <option value="">⚡ Mode Otomatis (Ikuti Jam / Toleransi Molor)</option>
+                <?php if (!empty($jadwalHariIni)): ?>
+                    <?php foreach ($jadwalHariIni as $jhi): ?>
+                        <?php 
+                            $mplName = !empty($jhi['mapel_nama']) ? $jhi['mapel_nama'] : (!empty($jhi['nama_ujian']) ? $jhi['nama_ujian'] : 'Ujian');
+                            $slotName = !empty($jhi['label_sesi']) ? $jhi['label_sesi'] : (!empty($jhi['jam_slot']) ? $jhi['jam_slot'] : 'Sesi');
+                            $timeStr = (!empty($jhi['jam_mulai']) && !empty($jhi['jam_selesai'])) ? " [{$jhi['jam_mulai']}-{$jhi['jam_selesai']}]" : "";
+                            $klsStr = !empty($jhi['kelas_nama']) ? " (" . $jhi['kelas_nama'] . ")" : "";
+                            $jIdVal = (int)($jhi['id'] ?? ($jhi['ujian_id'] ?? 0));
+                        ?>
+                        <option value="<?= $jIdVal ?>"><?= htmlspecialchars("{$slotName}{$timeStr} - {$mplName}{$klsStr}") ?></option>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </select>
+        </div>
     </div>
 
     <!-- Scanner Box -->
@@ -156,7 +181,8 @@ include 'header.php';
     </div>
 </div>
 
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<!-- Local Offline HTML5 QR Code -->
+<script src="<?= isset($baseFolder) ? $baseFolder : '' ?>/public/assets/js/html5-qrcode.min.js"></script>
 <script>
     let html5QrCode = null;
     let isProcessing = false;
@@ -288,13 +314,15 @@ include 'header.php';
 
     function processCode(code) {
         const ruang = document.getElementById('selectRuang').value;
+        const gridOverride = document.getElementById('selectSesiOverride') ? document.getElementById('selectSesiOverride').value : '';
 
         fetch('/cbt/scan/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 code: code,
-                ruang_nama: ruang
+                ruang_nama: ruang,
+                manual_grid_id: gridOverride
             })
         })
         .then(async res => {
