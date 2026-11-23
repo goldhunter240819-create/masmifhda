@@ -581,7 +581,7 @@ class BankSoalController {
             $topikId = (int)($_POST['topik_id'] ?? 0);
 
             if ($paketId > 0) {
-                $stmt = $this->db->prepare("SELECT is_locked, topik_id FROM bs_paket WHERE id = ?");
+                $stmt = $this->db->prepare("SELECT is_locked, topik_id, mapel_nama FROM bs_paket WHERE id = ?");
                 $stmt->execute([$paketId]);
                 $paket = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -596,12 +596,83 @@ class BankSoalController {
 
                     $tId = $topikId ?: $paket['topik_id'];
                     $msg = ($newStatus === 1) ? 'locked' : 'unlocked';
+
+                    $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                              || isset($_POST['is_ajax'])
+                              || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+                    if ($isAjax) {
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'status' => 'success',
+                            'paket_id' => $paketId,
+                            'mapel_nama' => $paket['mapel_nama'] ?? '',
+                            'is_locked' => $newStatus,
+                            'locked_at' => $now ? date('d/m/Y H:i', strtotime($now)) : '',
+                            'message' => ($newStatus === 1) 
+                                ? "Paket {$paket['mapel_nama']} berhasil dikunci (Final)." 
+                                : "Kunci paket {$paket['mapel_nama']} berhasil dibuka."
+                        ]);
+                        exit;
+                    }
+
                     redirect("/bank_soal?topik_id={$tId}&msg={$msg}");
                     exit;
                 }
             }
         }
+
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') || isset($_POST['is_ajax']);
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Paket tidak ditemukan.']);
+            exit;
+        }
+
         redirect('/bank_soal');
+    }
+
+    /**
+     * Kunci / Buka Kunci Batch Beberapa Paket Sekaligus (AJAX)
+     */
+    public function batchToggleLockPaket() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $paketIds = $_POST['paket_ids'] ?? [];
+            if (is_string($paketIds)) {
+                $paketIds = explode(',', $paketIds);
+            }
+            $targetLock = (int)($_POST['target_lock'] ?? 1); // 1 = kunci, 0 = buka
+            $now = ($targetLock === 1) ? date('Y-m-d H:i:s') : null;
+            $user = ($targetLock === 1) ? ($_SESSION['nama'] ?? 'Kurikulum / Admin') : null;
+
+            $updatedCount = 0;
+            if (!empty($paketIds)) {
+                $cleanIds = array_filter(array_map('intval', (array)$paketIds));
+                if (!empty($cleanIds)) {
+                    $inPlaceholders = implode(',', array_fill(0, count($cleanIds), '?'));
+                    $params = array_merge([$targetLock, $now, $user], $cleanIds);
+                    $stmt = $this->db->prepare("UPDATE bs_paket SET is_locked = ?, locked_at = ?, locked_by = ? WHERE id IN ($inPlaceholders)");
+                    $stmt->execute($params);
+                    $updatedCount = $stmt->rowCount();
+                }
+            }
+
+            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') || isset($_POST['is_ajax']);
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'status' => 'success',
+                    'count' => $updatedCount,
+                    'target_lock' => $targetLock,
+                    'locked_at' => $now ? date('d/m/Y H:i', strtotime($now)) : '',
+                    'message' => ($targetLock === 1) 
+                        ? "Berhasil mengunci {$updatedCount} paket soal!" 
+                        : "Berhasil membuka kunci {$updatedCount} paket soal!"
+                ]);
+                exit;
+            }
+            redirect('/bank_soal');
+        }
     }
 
     /**

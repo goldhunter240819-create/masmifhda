@@ -2271,6 +2271,7 @@ $router->add('GET', '/guru/soal-saya', ['\App\Controllers\BankSoalController', '
 $router->add('POST', '/bank_soal/paket/simpan', ['\App\Controllers\BankSoalController', 'simpanPaket']);
 $router->add('POST', '/bank_soal/paket/hapus', ['\App\Controllers\BankSoalController', 'hapusPaket']);
 $router->add('POST', '/bank_soal/paket/toggle-lock', ['\App\Controllers\BankSoalController', 'toggleLockPaket']);
+$router->add('POST', '/bank_soal/paket/batch-toggle-lock', ['\App\Controllers\BankSoalController', 'batchToggleLockPaket']);
 $router->add('POST', '/bank_soal/paket/sync-jadwal', ['\App\Controllers\BankSoalController', 'syncFromJadwal']);
 $router->add('POST', '/bank_soal/paket/sync-pengampu', ['\App\Controllers\BankSoalController', 'syncFromPengampu']);
 $router->add('GET', '/bank_soal/paket/sync-pengampu', ['\App\Controllers\BankSoalController', 'syncFromPengampu']);

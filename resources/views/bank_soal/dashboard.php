@@ -160,6 +160,10 @@ $active_menu = "bank_soal";
             70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
             100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
         }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
 
         .topik-card-title {
             margin: 0 0 8px 0;
@@ -673,10 +677,20 @@ $active_menu = "bank_soal";
                         <?php endforeach; ?>
                     </div>
 
-                    <!-- Live Search Input -->
-                    <div style="position: relative; min-width: 240px; flex: 1; max-width: 300px;">
-                        <i data-lucide="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: #94a3b8;"></i>
-                        <input type="text" id="searchMapelSoal" onkeyup="filterBankSoalTable()" placeholder="Cari mapel atau nama guru..." style="width: 100%; padding: 6px 12px 6px 32px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.8rem; outline: none; transition: border-color 0.2s;">
+                    <!-- Live Search Input & Batch Lock Buttons -->
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end;">
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="batchLockAjax(1)" class="btn btn-outline" style="padding: 6px 11px; font-size: 0.75rem; font-weight: 800; background: #fffbeb; color: #b45309; border-color: #fde68a; display: inline-flex; align-items: center; gap: 5px; border-radius: 8px;" title="Kunci semua mapel yang sedang tampil pada tabel">
+                                <i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Semua (Tampil)
+                            </button>
+                            <button type="button" onclick="batchLockAjax(0)" class="btn btn-outline" style="padding: 6px 11px; font-size: 0.75rem; font-weight: 800; background: #ffffff; color: #475569; border-color: #cbd5e1; display: inline-flex; align-items: center; gap: 5px; border-radius: 8px;" title="Buka kunci semua mapel yang sedang tampil">
+                                <i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Semua
+                            </button>
+                        </div>
+                        <div style="position: relative; min-width: 220px; max-width: 280px;">
+                            <i data-lucide="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: #94a3b8;"></i>
+                            <input type="text" id="searchMapelSoal" onkeyup="filterBankSoalTable()" placeholder="Cari mapel atau nama guru..." style="width: 100%; padding: 6px 12px 6px 32px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.8rem; outline: none; transition: border-color 0.2s;">
+                        </div>
                     </div>
                 </div>
 
@@ -721,7 +735,7 @@ $active_menu = "bank_soal";
                                         $klsBg = '#fdf4ff'; $klsCol = '#7e22ce'; $klsBorder = '#f5d0fe';
                                     }
                                 ?>
-                                <tr class="row-paket-mapel" data-kelas="<?php echo htmlspecialchars($kls); ?>" data-search="<?php echo htmlspecialchars(strtolower(($pk['mapel_nama'] ?? '') . ' ' . ($pk['guru_nama'] ?? '') . ' ' . $kls . ' ' . ($pk['kelas_sasaran'] ?? ''))); ?>">
+                                <tr class="row-paket-mapel" id="row-paket-<?php echo $pk['id']; ?>" data-paket-id="<?php echo $pk['id']; ?>" data-kelas="<?php echo htmlspecialchars($kls); ?>" data-search="<?php echo htmlspecialchars(strtolower(($pk['mapel_nama'] ?? '') . ' ' . ($pk['guru_nama'] ?? '') . ' ' . $kls . ' ' . ($pk['kelas_sasaran'] ?? ''))); ?>">
                                     <td class="row-number-cell" style="text-align: center; color: #94a3b8; font-weight: 700;"><?php echo $no++; ?></td>
                                     <td>
                                         <div style="font-weight: 900; color: #0f172a; font-size: 0.95rem;">
@@ -794,7 +808,7 @@ $active_menu = "bank_soal";
                                             </div>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="text-align: center;">
+                                    <td style="text-align: center;" id="status-cell-<?php echo $pk['id']; ?>">
                                         <!-- Status Kunci -->
                                         <?php if ($isLocked): ?>
                                             <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 2px;">
@@ -814,43 +828,48 @@ $active_menu = "bank_soal";
                                         <?php endif; ?>
                                     </td>
                                     <td style="text-align: right; white-space: nowrap;">
-                                        <div style="display: inline-flex; gap: 6px; align-items: center;">
-                                            <!-- Tombol Kunci / Buka Kunci -->
-                                            <form method="POST" action="<?php echo base_url('bank_soal/paket/toggle-lock'); ?>" style="display: inline;" onsubmit="return confirm('<?php echo $isLocked ? 'Buka kunci soal ini agar guru dapat mengedit kembali?' : 'Kunci soal ini? Setelah dikunci, guru tidak dapat mengedit lagi butir soal.'; ?>')">
-                                                <input type="hidden" name="paket_id" value="<?php echo $pk['id']; ?>">
-                                                <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
+                                        <div style="display: inline-flex; gap: 6px; align-items: center;" id="action-cell-<?php echo $pk['id']; ?>">
+                                            <!-- Tombol Kunci / Buka Kunci (AJAX) -->
+                                            <button type="button" 
+                                                    id="btn-lock-<?php echo $pk['id']; ?>"
+                                                    onclick="toggleLockAjax(<?php echo $pk['id']; ?>, <?php echo $selectedTopik['id']; ?>, this)" 
+                                                    class="btn btn-outline btn-toggle-lock" 
+                                                    style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; <?php echo $isLocked ? 'color: #475569; border-color: #cbd5e1; background: #ffffff;' : 'background: #fffbeb; color: #b45309; border-color: #fde68a;'; ?>" 
+                                                    data-locked="<?php echo $isLocked ? '1' : '0'; ?>"
+                                                    data-paket-id="<?php echo $pk['id']; ?>"
+                                                    title="<?php echo $isLocked ? 'Buka Kunci Soal' : 'Kunci Soal (Cegah Edit Guru)'; ?>">
                                                 <?php if ($isLocked): ?>
-                                                    <button type="submit" class="btn btn-outline" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; color: #475569; border-color: #cbd5e1;" title="Buka Kunci Soal">
-                                                        <i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Kunci
-                                                    </button>
+                                                    <i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Kunci
                                                 <?php else: ?>
-                                                    <button type="submit" class="btn btn-outline" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; background: #fffbeb; color: #b45309; border-color: #fde68a;" title="Kunci Soal (Cegah Edit Guru)">
-                                                        <i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Soal
-                                                    </button>
+                                                    <i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Soal
                                                 <?php endif; ?>
-                                            </form>
+                                            </button>
 
                                             <!-- Tombol Kelola / Lihat Soal -->
-                                            <?php if ($isLocked): ?>
-                                                <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0;" title="Lihat Butir Soal (Mode Baca Saja)">
-                                                    <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Lihat Soal
-                                                </a>
-                                            <?php else: ?>
-                                                <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none;" title="Kelola / Input Butir Soal & Kunci">
-                                                    <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Kelola Soal
-                                                </a>
-                                            <?php endif; ?>
+                                            <span id="btn-manage-wrap-<?php echo $pk['id']; ?>">
+                                                <?php if ($isLocked): ?>
+                                                    <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0;" title="Lihat Butir Soal (Mode Baca Saja)">
+                                                        <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Lihat Soal
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none;" title="Kelola / Input Butir Soal & Kunci">
+                                                        <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Kelola Soal
+                                                    </a>
+                                                <?php endif; ?>
+                                            </span>
 
                                             <!-- Hapus Paket (hanya jika belum terkunci) -->
-                                            <?php if (!$isLocked): ?>
-                                                <form method="POST" action="<?php echo base_url('bank_soal/paket/hapus'); ?>" style="display: inline;" onsubmit="return confirm('Hapus paket mapel ini beserta seluruh butir soalnya?')">
-                                                    <input type="hidden" name="paket_id" value="<?php echo $pk['id']; ?>">
-                                                    <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
-                                                    <button type="submit" style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px;" title="Hapus Paket">
-                                                        <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
-                                                    </button>
-                                                </form>
-                                            <?php endif; ?>
+                                            <span id="btn-delete-wrap-<?php echo $pk['id']; ?>">
+                                                <?php if (!$isLocked): ?>
+                                                    <form method="POST" action="<?php echo base_url('bank_soal/paket/hapus'); ?>" style="display: inline;" onsubmit="return confirm('Hapus paket mapel ini beserta seluruh butir soalnya?')">
+                                                        <input type="hidden" name="paket_id" value="<?php echo $pk['id']; ?>">
+                                                        <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
+                                                        <button type="submit" style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px;" title="Hapus Paket">
+                                                            <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </span>
                                         </div>
                                     </td>
                                 </tr>
@@ -1063,6 +1082,313 @@ $active_menu = "bank_soal";
         if (emptyRow) {
             emptyRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
         }
+    }
+
+    /**
+     * Kunci / Buka Kunci Paket Soal via AJAX (Tanpa Reload Halaman)
+     */
+    function toggleLockAjax(paketId, topikId, btnElement) {
+        if (!btnElement || btnElement.disabled) return;
+        
+        const origHtml = btnElement.innerHTML;
+        btnElement.disabled = true;
+        btnElement.style.opacity = '0.6';
+        btnElement.innerHTML = '<span style="display: inline-block; width: 12px; height: 12px; border: 2px solid #cbd5e1; border-top-color: #0284c7; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle;"></span>';
+        
+        const formData = new URLSearchParams();
+        formData.append('paket_id', paketId);
+        formData.append('topik_id', topikId);
+        formData.append('is_ajax', '1');
+
+        fetch('<?php echo base_url('bank_soal/paket/toggle-lock'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData.toString()
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        })
+        .then(data => {
+            btnElement.disabled = false;
+            btnElement.style.opacity = '1';
+            
+            if (data.status === 'success') {
+                const isLocked = (parseInt(data.is_locked, 10) === 1);
+                
+                // 1. Update Status Cell
+                const statusCell = document.getElementById('status-cell-' + paketId);
+                if (statusCell) {
+                    if (isLocked) {
+                        statusCell.innerHTML = `
+                            <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 2px;">
+                                <span style="font-size: 0.75rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Terkunci (Final)
+                                </span>
+                                ${data.locked_at ? `<span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">${data.locked_at}</span>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        statusCell.innerHTML = `
+                            <span style="font-size: 0.75rem; font-weight: 800; background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 20px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="unlock" style="width: 12px; height: 12px;"></i> Terbuka
+                            </span>
+                        `;
+                    }
+                }
+                
+                // 2. Update Lock Button
+                btnElement.setAttribute('data-locked', isLocked ? '1' : '0');
+                if (isLocked) {
+                    btnElement.className = 'btn btn-outline btn-toggle-lock';
+                    btnElement.style.background = '#ffffff';
+                    btnElement.style.color = '#475569';
+                    btnElement.style.borderColor = '#cbd5e1';
+                    btnElement.title = 'Buka Kunci Soal';
+                    btnElement.innerHTML = '<i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Kunci';
+                } else {
+                    btnElement.className = 'btn btn-outline btn-toggle-lock';
+                    btnElement.style.background = '#fffbeb';
+                    btnElement.style.color = '#b45309';
+                    btnElement.style.borderColor = '#fde68a';
+                    btnElement.title = 'Kunci Soal (Cegah Edit Guru)';
+                    btnElement.innerHTML = '<i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Soal';
+                }
+                
+                // 3. Update Kelola / Lihat Soal Button
+                const manageWrap = document.getElementById('btn-manage-wrap-' + paketId);
+                if (manageWrap) {
+                    const daftarSoalUrl = '<?php echo base_url('bank_soal/daftar_soal?paket_id='); ?>' + paketId;
+                    if (isLocked) {
+                        manageWrap.innerHTML = `
+                            <a href="${daftarSoalUrl}" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0;" title="Lihat Butir Soal (Mode Baca Saja)">
+                                <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Lihat Soal
+                            </a>
+                        `;
+                    } else {
+                        manageWrap.innerHTML = `
+                            <a href="${daftarSoalUrl}" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none;" title="Kelola / Input Butir Soal & Kunci">
+                                <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Kelola Soal
+                            </a>
+                        `;
+                    }
+                }
+                
+                // 4. Update Delete Button
+                const deleteWrap = document.getElementById('btn-delete-wrap-' + paketId);
+                if (deleteWrap) {
+                    if (isLocked) {
+                        deleteWrap.innerHTML = '';
+                    } else {
+                        deleteWrap.innerHTML = `
+                            <form method="POST" action="<?php echo base_url('bank_soal/paket/hapus'); ?>" style="display: inline;" onsubmit="return confirm('Hapus paket mapel ini beserta seluruh butir soalnya?')">
+                                <input type="hidden" name="paket_id" value="${paketId}">
+                                <input type="hidden" name="topik_id" value="${topikId}">
+                                <button type="submit" style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px;" title="Hapus Paket">
+                                    <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                </button>
+                            </form>
+                        `;
+                    }
+                }
+                
+                // 5. Re-render Lucide icons
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+                
+                // 6. Fast non-blocking toast
+                if (typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: false
+                    });
+                    Toast.fire({
+                        icon: isLocked ? 'info' : 'success',
+                        title: data.message || (isLocked ? 'Paket soal berhasil dikunci.' : 'Kunci paket soal dibuka.')
+                    });
+                }
+            } else {
+                btnElement.innerHTML = origHtml;
+                alert(data.message || 'Gagal mengubah status kunci soal.');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        })
+        .catch(err => {
+            btnElement.disabled = false;
+            btnElement.style.opacity = '1';
+            btnElement.innerHTML = origHtml;
+            alert('Terjadi kesalahan koneksi saat mengunci soal: ' + err.message);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    }
+
+    /**
+     * Kunci / Buka Kunci Batch Semua Paket yang Sedang Tampil
+     */
+    function batchLockAjax(targetLock) {
+        const isLocking = (targetLock === 1);
+        const visibleRows = Array.from(document.querySelectorAll('.row-paket-mapel')).filter(r => r.style.display !== 'none');
+        
+        if (visibleRows.length === 0) {
+            alert('Tidak ada paket mapel yang tampil.');
+            return;
+        }
+        
+        const targetIds = [];
+        visibleRows.forEach(r => {
+            const btn = r.querySelector('.btn-toggle-lock');
+            if (btn) {
+                const currentLock = parseInt(btn.getAttribute('data-locked') || '0', 10);
+                if (currentLock !== targetLock) {
+                    targetIds.push(parseInt(btn.getAttribute('data-paket-id'), 10));
+                }
+            }
+        });
+        
+        if (targetIds.length === 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Sudah Sesuai',
+                    text: isLocking ? 'Semua paket yang tampil sudah dalam kondisi terkunci.' : 'Semua paket yang tampil sudah terbuka.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                alert(isLocking ? 'Semua paket yang tampil sudah terkunci.' : 'Semua paket yang tampil sudah terbuka.');
+            }
+            return;
+        }
+        
+        const confirmMsg = isLocking 
+            ? `Kunci ${targetIds.length} paket soal yang sedang tampil sekaligus? Guru tidak dapat mengedit butir soal lagi.` 
+            : `Buka kunci ${targetIds.length} paket soal yang sedang tampil?`;
+            
+        if (!confirm(confirmMsg)) return;
+        
+        const formData = new URLSearchParams();
+        formData.append('paket_ids', targetIds.join(','));
+        formData.append('target_lock', targetLock);
+        formData.append('is_ajax', '1');
+        
+        fetch('<?php echo base_url('bank_soal/paket/batch-toggle-lock'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData.toString()
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const lockedAt = data.locked_at || '';
+                const topikId = <?php echo (int)($selectedTopik['id'] ?? 0); ?>;
+                
+                targetIds.forEach(id => {
+                    const statusCell = document.getElementById('status-cell-' + id);
+                    if (statusCell) {
+                        if (isLocking) {
+                            statusCell.innerHTML = `
+                                <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 2px;">
+                                    <span style="font-size: 0.75rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Terkunci (Final)
+                                    </span>
+                                    ${lockedAt ? `<span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">${lockedAt}</span>` : ''}
+                                </div>
+                            `;
+                        } else {
+                            statusCell.innerHTML = `
+                                <span style="font-size: 0.75rem; font-weight: 800; background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 20px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="unlock" style="width: 12px; height: 12px;"></i> Terbuka
+                                </span>
+                            `;
+                        }
+                    }
+                    
+                    const btnLock = document.getElementById('btn-lock-' + id);
+                    if (btnLock) {
+                        btnLock.setAttribute('data-locked', isLocking ? '1' : '0');
+                        if (isLocking) {
+                            btnLock.className = 'btn btn-outline btn-toggle-lock';
+                            btnLock.style.background = '#ffffff';
+                            btnLock.style.color = '#475569';
+                            btnLock.style.borderColor = '#cbd5e1';
+                            btnLock.title = 'Buka Kunci Soal';
+                            btnLock.innerHTML = '<i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Kunci';
+                        } else {
+                            btnLock.className = 'btn btn-outline btn-toggle-lock';
+                            btnLock.style.background = '#fffbeb';
+                            btnLock.style.color = '#b45309';
+                            btnLock.style.borderColor = '#fde68a';
+                            btnLock.title = 'Kunci Soal (Cegah Edit Guru)';
+                            btnLock.innerHTML = '<i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Soal';
+                        }
+                    }
+                    
+                    const manageWrap = document.getElementById('btn-manage-wrap-' + id);
+                    if (manageWrap) {
+                        const daftarSoalUrl = '<?php echo base_url('bank_soal/daftar_soal?paket_id='); ?>' + id;
+                        if (isLocking) {
+                            manageWrap.innerHTML = `
+                                <a href="${daftarSoalUrl}" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0;" title="Lihat Butir Soal (Mode Baca Saja)">
+                                    <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Lihat Soal
+                                </a>
+                            `;
+                        } else {
+                            manageWrap.innerHTML = `
+                                <a href="${daftarSoalUrl}" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none;" title="Kelola / Input Butir Soal & Kunci">
+                                    <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Kelola Soal
+                                </a>
+                            `;
+                        }
+                    }
+                    
+                    const deleteWrap = document.getElementById('btn-delete-wrap-' + id);
+                    if (deleteWrap) {
+                        if (isLocking) {
+                            deleteWrap.innerHTML = '';
+                        } else {
+                            deleteWrap.innerHTML = `
+                                <form method="POST" action="<?php echo base_url('bank_soal/paket/hapus'); ?>" style="display: inline;" onsubmit="return confirm('Hapus paket mapel ini beserta seluruh butir soalnya?')">
+                                    <input type="hidden" name="paket_id" value="${id}">
+                                    <input type="hidden" name="topik_id" value="${topikId}">
+                                    <button type="submit" style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px;" title="Hapus Paket">
+                                        <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                    </button>
+                                </form>
+                            `;
+                        }
+                    }
+                });
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: data.message || `Berhasil memperbarui ${targetIds.length} paket soal.`,
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(data.message || 'Berhasil memperbarui paket soal.');
+                }
+            } else {
+                alert(data.message || 'Gagal memproses batch kunci.');
+            }
+        })
+        .catch(err => {
+            alert('Terjadi kesalahan koneksi: ' + err.message);
+        });
     }
 
     function openModalTambahPaket() {
