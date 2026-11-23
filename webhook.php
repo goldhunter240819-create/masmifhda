@@ -211,10 +211,12 @@ try {
         \App\Controllers\CbtController::syncJadwalWithUjian($dbCore, $dbSiakad, (int)$tpRow['id']);
     }
     
-    // Diagnostic inspect bs_topik
+    // Diagnostic inspect bs_topik & cbt_ujian usage
     try {
         $allTopics = $dbCore->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status FROM bs_topik")->fetchAll(PDO::FETCH_ASSOC);
+        $ujCount = $dbCore->query("SELECT topik_id, COUNT(*) as cnt FROM cbt_ujian GROUP BY topik_id")->fetchAll(PDO::FETCH_ASSOC);
         $output .= "\n--- ALL TOPIK IN CORE: ---\n" . json_encode($allTopics, JSON_PRETTY_PRINT) . "\n";
+        $output .= "\n--- UJIAN BY TOPIK: ---\n" . json_encode($ujCount, JSON_PRETTY_PRINT) . "\n";
     } catch (\Throwable $e) {
         $output .= "\nTopik query error: " . $e->getMessage() . "\n";
     }
