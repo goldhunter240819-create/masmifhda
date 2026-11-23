@@ -676,6 +676,142 @@ class BankSoalController {
     }
 
     /**
+     * Cetak Naskah Butir Soal & Kunci Jawaban Lengkap (PDF / A4)
+     */
+    public function cetakSoal() {
+        if (!isset($_SESSION['user_id'])) {
+            redirect('/login');
+            exit;
+        }
+
+        $paketId = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
+        if ($paketId <= 0) {
+            redirect('/bank_soal');
+            exit;
+        }
+
+        // 1. Ambil info paket
+        $stmtP = $this->db->prepare("SELECT * FROM bs_paket WHERE id = ?");
+        $stmtP->execute([$paketId]);
+        $paketInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
+
+        if (!$paketInfo) {
+            redirect('/bank_soal');
+            exit;
+        }
+
+        // 2. Ambil info topik
+        $topikId = (int)$paketInfo['topik_id'];
+        $stmtT = $this->db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+        $stmtT->execute([$topikId]);
+        $topikInfo = $stmtT->fetch(PDO::FETCH_ASSOC) ?: [
+            'id' => $topikId,
+            'nama_topik' => 'Sumatif Akhir Semester (SAS)',
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Ganjil'
+        ];
+
+        // 3. Ambil seluruh butir soal terurut nomor urut
+        $stmtS = $this->db->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+        $stmtS->execute([$paketId]);
+        $soals = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        // 4. Hitung breakdown tipe soal
+        $breakdown = [];
+        foreach ($soals as $s) {
+            $t = $s['tipe_soal'] ?: 'sec_pg';
+            $breakdown[$t] = ($breakdown[$t] ?? 0) + 1;
+        }
+
+        // 5. Data Kop Surat & Institusi
+        $kop = [];
+        try {
+            $stmtKop = $this->db_core->query("SELECT * FROM kop_surat LIMIT 1");
+            if ($stmtKop) $kop = $stmtKop->fetch(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $inst = [
+            'nama_kepala' => 'AHMAD RIFA\'I, M.Pd',
+            'nip_kepala' => '-',
+            'kota' => 'Sekincau, Lampung Barat'
+        ];
+
+        include __DIR__ . '/../../resources/views/bank_soal/cetak_soal.php';
+    }
+
+    /**
+     * Cetak Rekapitulasi Status Bank Soal Topik (PDF / A4)
+     */
+    public function cetakRekap() {
+        if (!isset($_SESSION['user_id'])) {
+            redirect('/login');
+            exit;
+        }
+
+        $topikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : 'Semua';
+
+        $selectedTopik = null;
+        if ($topikId > 0) {
+            $stmtT = $this->db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+            $stmtT->execute([$topikId]);
+            $selectedTopik = $stmtT->fetch(PDO::FETCH_ASSOC);
+        }
+        if (!$selectedTopik) {
+            $stmtT = $this->db->query("SELECT * FROM bs_topik ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC LIMIT 1");
+            $selectedTopik = $stmtT ? $stmtT->fetch(PDO::FETCH_ASSOC) : null;
+        }
+
+        if (!$selectedTopik) {
+            redirect('/bank_soal');
+            exit;
+        }
+        $topikId = (int)$selectedTopik['id'];
+
+        $sql = "SELECT * FROM bs_paket WHERE topik_id = ?";
+        $params = [$topikId];
+        if (!empty($selectedKelas) && $selectedKelas !== 'Semua') {
+            $sql .= " AND kelas_nama = ?";
+            $params[] = $selectedKelas;
+        }
+        $sql .= " ORDER BY kelas_nama ASC, mapel_nama ASC";
+        $stmtP = $this->db->prepare($sql);
+        $stmtP->execute($params);
+        $paketList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($paketList as &$pk) {
+            $pId = (int)$pk['id'];
+            $breakdown = [];
+            $totalButir = 0;
+            try {
+                $stmtB = $this->db->prepare("SELECT tipe_soal, COUNT(*) as jml FROM bs_soal WHERE paket_id = ? GROUP BY tipe_soal");
+                $stmtB->execute([$pId]);
+                foreach ($stmtB->fetchAll(PDO::FETCH_ASSOC) as $bRow) {
+                    $breakdown[$bRow['tipe_soal']] = (int)$bRow['jml'];
+                    $totalButir += (int)$bRow['jml'];
+                }
+            } catch (\Exception $e) {}
+            $pk['breakdown'] = $breakdown;
+            $pk['total_soal'] = $totalButir;
+        }
+        unset($pk);
+
+        $kop = [];
+        try {
+            $stmtKop = $this->db_core->query("SELECT * FROM kop_surat LIMIT 1");
+            if ($stmtKop) $kop = $stmtKop->fetch(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {}
+
+        $inst = [
+            'nama_kepala' => 'AHMAD RIFA\'I, M.Pd',
+            'nip_kepala' => '-',
+            'kota' => 'Sekincau, Lampung Barat'
+        ];
+
+        include __DIR__ . '/../../resources/views/bank_soal/cetak.php';
+    }
+
+    /**
      * Dapatkan kamus nama guru resmi MAS MIFTAHUL HUDA
      */
     public function getGuruDictionary() {

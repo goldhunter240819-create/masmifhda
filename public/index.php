@@ -2266,6 +2266,10 @@ $router->add('POST', '/admin/siakad/kop-surat/update', ['\App\Controllers\KopSur
 
 // Bank Soal Routes
 $router->add('GET', '/bank_soal', ['\App\Controllers\BankSoalController', 'dashboard']);
+$router->add('GET', '/bank_soal/cetak_soal', ['\App\Controllers\BankSoalController', 'cetakSoal']);
+$router->add('GET', '/bank_soal/cetak', ['\App\Controllers\BankSoalController', 'cetakRekap']);
+$router->add('GET', '/cbt/bank_soal/cetak_soal', ['\App\Controllers\BankSoalController', 'cetakSoal']);
+$router->add('GET', '/cbt/bank_soal/cetak', ['\App\Controllers\BankSoalController', 'cetakRekap']);
 $router->add('GET', '/guru/bank-soal', ['\App\Controllers\BankSoalController', 'guruIndex']);
 $router->add('GET', '/guru/soal-saya', ['\App\Controllers\BankSoalController', 'guruIndex']);
 $router->add('POST', '/bank_soal/paket/simpan', ['\App\Controllers\BankSoalController', 'simpanPaket']);

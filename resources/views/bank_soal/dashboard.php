@@ -621,6 +621,10 @@ $active_menu = "bank_soal";
                         </button>
                     </form>
 
+                    <a href="<?php echo base_url('bank_soal/cetak?topik_id=' . $selectedTopik['id']); ?>" target="_blank" class="btn btn-outline" style="border-color: #cbd5e1; color: #0f172a; font-weight: 800; background: #ffffff; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="Cetak Rekapitulasi Bank Soal ke Format PDF">
+                        <i data-lucide="printer" style="width: 15px; height: 15px; color: #0284c7;"></i> Cetak Rekap (PDF)
+                    </a>
+
                     <form method="POST" action="<?php echo base_url('bank_soal/reset-data'); ?>" style="display: inline;" onsubmit="return confirm('Kosongkan semua paket dan butir soal pada topik ini?')">
                         <input type="hidden" name="topik_id" value="<?php echo $selectedTopik['id']; ?>">
                         <button type="submit" class="btn btn-outline" style="background: #fef2f2; border-color: #fecaca; color: #ef4444; font-weight: 700;" title="Kosongkan bank soal topik ini">
@@ -857,6 +861,11 @@ $active_menu = "bank_soal";
                                                     </a>
                                                 <?php endif; ?>
                                             </span>
+
+                                            <!-- Tombol Cetak Naskah Soal & Kunci Jawaban -->
+                                            <a href="<?php echo base_url('bank_soal/cetak_soal?paket_id=' . $pk['id']); ?>" target="_blank" class="btn btn-outline" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; background: #f0f9ff; color: #0284c7; border-color: #bae6fd; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Cetak Naskah Soal & Kunci Jawaban Lengkap (PDF)">
+                                                <i data-lucide="printer" style="width: 13px; height: 13px; color: #0284c7;"></i> Cetak
+                                            </a>
 
                                             <!-- Hapus Paket (hanya jika belum terkunci) -->
                                             <span id="btn-delete-wrap-<?php echo $pk['id']; ?>">

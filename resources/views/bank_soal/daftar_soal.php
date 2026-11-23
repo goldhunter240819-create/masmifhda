@@ -201,6 +201,14 @@ $isLocked = !empty($paketInfo['is_locked']);
                     </form>
                     <?php endif; ?>
 
+                    <!-- Tombol Cetak Naskah & Kunci Jawaban -->
+                    <?php if ($paketInfo): ?>
+                        <a href="<?php echo base_url('bank_soal/cetak_soal?paket_id=' . $paketInfo['id']); ?>" target="_blank" class="btn btn-outline" style="background: #ffffff; border-color: #bae6fd; color: #0284c7; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;" title="Cetak Naskah Butir Soal Lengkap dengan Kunci Jawaban (PDF)">
+                            <i data-lucide="printer" style="width: 15px; height: 15px; color: #0284c7;"></i>
+                            <span>Cetak Soal & Kunci (PDF)</span>
+                        </a>
+                    <?php endif; ?>
+
                     <!-- Tombol Salin Soal -->
                     <?php if (!$isLocked && $paketInfo): ?>
                         <button type="button" onclick="openModalCopySoal()" class="btn btn-outline" style="background: #f0fdf4; border-color: #86efac; color: #166534; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
