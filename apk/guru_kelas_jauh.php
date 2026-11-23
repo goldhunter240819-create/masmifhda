@@ -58,19 +58,31 @@ try {
     $hadirHariIniKJ = count($listAbsenKJ);
 } catch (\Exception $e) {}
 
-// 3. Ambil Data Topik Ujian (Hanya yang berstatus 'Aktif')
+// 3. Ambil Data Topik Ujian (Hanya yang berstatus 'Aktif', deduplikasi nama kembar)
 $topikList = [];
 try {
-    $topikList = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-    if (empty($topikList)) {
-        $topikList = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status != 'Arsip' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $rawTopik = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status = 'Aktif' ORDER BY (id = 3) DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($rawTopik)) {
+        $rawTopik = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status != 'Arsip' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+    $seenNames = [];
+    foreach ($rawTopik as $rt) {
+        $normName = trim($rt['nama_topik']);
+        if (!isset($seenNames[$normName])) {
+            $seenNames[$normName] = true;
+            $topikList[] = $rt;
+        }
     }
 } catch (\Exception $e) {}
 
-// Ambil Filter Parameter: Topik -> Mapel -> Kelas
+// Ambil Filter Parameter: Topik -> Mapel -> Kelas -> Urutan
 $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+if ($selectedTopikId == 5) {
+    $selectedTopikId = 3;
+}
 $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
 $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
+$selectedSort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
 $selectedLimit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
 if ($selectedLimit < 0) $selectedLimit = 30;
 
@@ -169,7 +181,24 @@ try {
         $params[':kelas_like'] = "%{$selectedKelas}%";
     }
 
-    $sql .= " ORDER BY p.nilai_akhir DESC, p.id DESC LIMIT 200";
+    // Custom Sort Siswa (Nilai Tertinggi, Terendah, Alphabet Nama A-Z, Z-A)
+    switch ($selectedSort) {
+        case 'nilai_asc':
+            $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir ASC, p.nama_siswa ASC";
+            break;
+        case 'nama_asc':
+            $sql .= " ORDER BY p.nama_siswa ASC, p.nilai_akhir DESC";
+            break;
+        case 'nama_desc':
+            $sql .= " ORDER BY p.nama_siswa DESC, p.nilai_akhir DESC";
+            break;
+        case 'nilai_desc':
+        default:
+            $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+            break;
+    }
+
+    $sql .= " LIMIT 200";
 
     $stmtHsl = $core_db->prepare($sql);
     $stmtHsl->execute($params);
@@ -325,7 +354,7 @@ if ($isAjaxKJ && ($activeTab === 'nilai' || isset($_GET['topik_id']) || isset($_
         'stat_tertinggi' => $statTertinggi,
         'stat_tuntas' => "{$statTuntasCount}/" . count($hasilListKJ),
         'mapel_list' => array_values(array_unique($mapelList)),
-        'cetak_url' => "cetak_hasil.php?tab=nilai&topik_id={$selectedTopikId}&mapel=" . urlencode($selectedMapel) . "&kelas=" . urlencode($selectedKelas)
+        'cetak_url' => "cetak_hasil.php?tab=nilai&topik_id={$selectedTopikId}&mapel=" . urlencode($selectedMapel) . "&kelas=" . urlencode($selectedKelas) . "&sort=" . urlencode($selectedSort)
     ]);
     exit;
 }
@@ -582,26 +611,44 @@ include 'header.php';
                 <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
                     <i class="fa-solid fa-graduation-cap" style="color: #059669;"></i> 3. Filter Kelas:
                 </label>
+                <select name="kelas" id="selKelasKJ" onchange="applyFilterKJ(false)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
+                    <option value="">-- Semua Kelas Jauh --</option>
+                    <?php foreach ($kelasListKJ as $kls): ?>
+                        <option value="<?= htmlspecialchars($kls) ?>" <?= ($selectedKelas === $kls) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($kls) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <!-- 4. Urutan Data Siswa (Nilai / Alphabet) -->
+            <div>
+                <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
+                    <i class="fa-solid fa-arrow-down-wide-short" style="color: #059669;"></i> 4. Urutan Data Siswa:
+                </label>
                 <div style="display: flex; gap: 8px;">
-                    <select name="kelas" id="selKelasKJ" onchange="applyFilterKJ(false)" style="flex: 1; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
-                        <option value="">-- Semua Kelas Jauh --</option>
-                        <?php foreach ($kelasListKJ as $kls): ?>
-                            <option value="<?= htmlspecialchars($kls) ?>" <?= ($selectedKelas === $kls) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($kls) ?>
-                            </option>
-                        <?php endforeach; ?>
+                    <select name="sort" id="selSortKJ" onchange="applyFilterKJ(false)" style="flex: 1; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
+                        <option value="nilai_desc" <?= ($selectedSort === 'nilai_desc') ? 'selected' : '' ?>>Nilai Tertinggi (Rank 1 ➔ Terendah)</option>
+                        <option value="nilai_asc" <?= ($selectedSort === 'nilai_asc') ? 'selected' : '' ?>>Nilai Terendah ➔ Tertinggi</option>
+                        <option value="nama_asc" <?= ($selectedSort === 'nama_asc') ? 'selected' : '' ?>>Alphabet Nama Siswa (A ➔ Z)</option>
+                        <option value="nama_desc" <?= ($selectedSort === 'nama_desc') ? 'selected' : '' ?>>Alphabet Nama Siswa (Z ➔ A)</option>
                     </select>
-                    <button type="button" id="btnResetFilterKJ" onclick="resetFilterKJ()" style="padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 10px; display: <?= ($selectedTopikId > 0 || !empty($selectedMapel) || !empty($selectedKelas)) ? 'flex' : 'none' ?>; align-items: center; justify-content: center; cursor: pointer;" title="Reset Filter">
+                    <button type="button" id="btnResetFilterKJ" onclick="resetFilterKJ()" style="padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 10px; display: <?= ($selectedTopikId > 0 || !empty($selectedMapel) || !empty($selectedKelas) || $selectedSort !== 'nilai_desc') ? 'flex' : 'none' ?>; align-items: center; justify-content: center; cursor: pointer;" title="Reset Filter">
                         <i class="fa-solid fa-rotate-left"></i>
                     </button>
                 </div>
             </div>
         </form>
 
-        <!-- Tombol Download PDF Resmi Kemenag A4 -->
-        <a id="btnCetakPdfKJ" href="cetak_hasil.php?tab=nilai&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>" target="_blank" style="width: 100%; box-sizing: border-box; padding: 12px 16px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.25); margin-bottom: 14px; transition: 0.2s;">
-            <i class="fa-solid fa-file-pdf" style="font-size: 1.1rem;"></i> Download PDF Rekap Nilai (A4)
-        </a>
+        <!-- Tombol Download PDF & Print (Terisolasi Sesuai Filter) -->
+        <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; margin-bottom: 14px;">
+            <a id="btnCetakPdfKJ" href="cetak_hasil.php?tab=nilai&download=1&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($selectedSort) ?>" target="_blank" style="box-sizing: border-box; padding: 12px 14px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">
+                <i class="fa-solid fa-file-arrow-down" style="font-size: 1.05rem;"></i> Download PDF (A4)
+            </a>
+            <a id="btnPreviewPdfKJ" href="cetak_hasil.php?tab=nilai&autoprint=1&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($selectedSort) ?>" target="_blank" style="box-sizing: border-box; padding: 12px 12px; background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <i class="fa-solid fa-print" style="color: #64748b;"></i> Cetak / Print
+            </a>
+        </div>
 
         <!-- Metric Card Hasil Ujian -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
@@ -813,6 +860,7 @@ include 'header.php';
         const topikId = document.getElementById('selTopikKJ') ? document.getElementById('selTopikKJ').value : '0';
         const mapel = document.getElementById('selMapelKJ') ? document.getElementById('selMapelKJ').value : '';
         const kelas = document.getElementById('selKelasKJ') ? document.getElementById('selKelasKJ').value : '';
+        const sort = document.getElementById('selSortKJ') ? document.getElementById('selSortKJ').value : 'nilai_desc';
         const limit = document.getElementById('selLimitKJ') ? document.getElementById('selLimitKJ').value : '30';
         kjCurrentLimit = (limit === 'all') ? 9999 : parseInt(limit || 30);
 
@@ -824,7 +872,7 @@ include 'header.php';
 
         const btnReset = document.getElementById('btnResetFilterKJ');
         if (btnReset) {
-            btnReset.style.display = (topikId !== '0' || mapel !== '' || kelas !== '') ? 'flex' : 'none';
+            btnReset.style.display = (topikId !== '0' || mapel !== '' || kelas !== '' || sort !== 'nilai_desc') ? 'flex' : 'none';
         }
 
         if (kjAbortController) {
@@ -838,6 +886,7 @@ include 'header.php';
             topik_id: topikId,
             mapel: mapel,
             kelas: kelas,
+            sort: sort,
             limit: limit
         });
 
@@ -869,10 +918,14 @@ include 'header.php';
             const elTitle = document.getElementById('lblTitleNilaiKJ');
             if (elTitle) elTitle.textContent = 'Daftar Nilai Siswa (' + data.total + ')';
 
-            // Update PDF Link
+            // Update PDF Links
             const btnPdf = document.getElementById('btnCetakPdfKJ');
             if (btnPdf && data.cetak_url) {
-                btnPdf.href = data.cetak_url;
+                btnPdf.href = data.cetak_url + '&download=1';
+            }
+            const btnPrev = document.getElementById('btnPreviewPdfKJ');
+            if (btnPrev && data.cetak_url) {
+                btnPrev.href = data.cetak_url + '&autoprint=1';
             }
 
             // Update Mapel options if Topik changed
@@ -927,6 +980,7 @@ include 'header.php';
         const topikId = document.getElementById('selTopikKJ') ? document.getElementById('selTopikKJ').value : '0';
         const mapel = document.getElementById('selMapelKJ') ? document.getElementById('selMapelKJ').value : '';
         const kelas = document.getElementById('selKelasKJ') ? document.getElementById('selKelasKJ').value : '';
+        const sort = document.getElementById('selSortKJ') ? document.getElementById('selSortKJ').value : 'nilai_desc';
 
         const btnMore = document.getElementById('btnLoadMoreNilaiKJ');
         if (btnMore) {
@@ -939,6 +993,7 @@ include 'header.php';
             topik_id: topikId,
             mapel: mapel,
             kelas: kelas,
+            sort: sort,
             limit: kjCurrentLimit
         });
 
@@ -979,6 +1034,8 @@ include 'header.php';
         if (selM) selM.value = '';
         const selK = document.getElementById('selKelasKJ');
         if (selK) selK.value = '';
+        const selS = document.getElementById('selSortKJ');
+        if (selS) selS.value = 'nilai_desc';
         const selL = document.getElementById('selLimitKJ');
         if (selL) selL.value = '30';
         applyFilterKJ(true);

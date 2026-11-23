@@ -211,15 +211,18 @@ try {
         \App\Controllers\CbtController::syncJadwalWithUjian($dbCore, $dbSiakad, (int)$tpRow['id']);
     }
     
-    // Diagnostic inspect bs_topik & cbt_ujian usage
+    // Bersihkan duplikasi topik SAS ID 5 (satukan ke ID 3)
     try {
-        $allTopics = $dbCore->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status FROM bs_topik")->fetchAll(PDO::FETCH_ASSOC);
-        $ujCount = $dbCore->query("SELECT topik_id, COUNT(*) as cnt FROM cbt_ujian GROUP BY topik_id")->fetchAll(PDO::FETCH_ASSOC);
-        $output .= "\n--- ALL TOPIK IN CORE: ---\n" . json_encode($allTopics, JSON_PRETTY_PRINT) . "\n";
-        $output .= "\n--- UJIAN BY TOPIK: ---\n" . json_encode($ujCount, JSON_PRETTY_PRINT) . "\n";
-    } catch (\Throwable $e) {
-        $output .= "\nTopik query error: " . $e->getMessage() . "\n";
-    }
+        $dbCore->exec("UPDATE cbt_ujian SET topik_id = 3 WHERE topik_id = 5");
+        $dbCore->exec("UPDATE bs_paket SET topik_id = 3 WHERE topik_id = 5");
+        $dbCore->exec("UPDATE bs_topik SET status = 'Arsip' WHERE id = 5");
+        $dbSiakad = \App\Core\Database::connect('siakad');
+        if ($dbSiakad) {
+            $dbSiakad->exec("UPDATE bs_topik SET status = 'Arsip' WHERE id = 5");
+            $dbSiakad->exec("UPDATE bs_paket SET topik_id = 3 WHERE topik_id = 5");
+        }
+        $output .= "\nDuplicate topik ID 5 consolidated to ID 3 and archived successfully.\n";
+    } catch (\Throwable $e) {}
 
     $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";
 } catch (\Throwable $e) {

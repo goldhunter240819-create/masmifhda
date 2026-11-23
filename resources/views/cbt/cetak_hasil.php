@@ -43,6 +43,7 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
     <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         * {
@@ -353,12 +354,15 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
             <i class="fa-solid fa-arrow-left"></i> Kembali
         </button>
         <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">
-            Urutan: <b><?= htmlspecialchars($activeSortLabel) ?></b>
+            Urutan: <b><?= htmlspecialchars($activeSortLabel) ?></b> • Siswa: <b style="color: #0f172a;"><?= count($pesertaList) ?> Terdata</b>
         </span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">
+        <button type="button" onclick="downloadPdfDirect()" id="btnDirectDownload" class="btn-ctrl" style="background: #059669; color: white; box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);">
+            <i class="fa-solid fa-download"></i> Download File PDF
+        </button>
         <button type="button" onclick="window.print()" class="btn-ctrl btn-print">
-            <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+            <i class="fa-solid fa-print"></i> Cetak / Print A4
         </button>
     </div>
 </div>
@@ -538,6 +542,48 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
     </div>
 
 </div>
+
+<script>
+function downloadPdfDirect() {
+    const btn = document.getElementById('btnDirectDownload');
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Membuat File PDF...';
+    
+    const element = document.querySelector('.paper-sheet');
+    const safeTitle = '<?= addslashes(preg_replace('/[^A-Za-z0-9_-]/', '_', "Rekap_Nilai_{$mapelNama}_{$kelasLabel}")) ?>';
+    const opt = {
+        margin: [8, 8, 8, 8],
+        filename: safeTitle + '.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    if (typeof html2pdf !== 'undefined') {
+        html2pdf().set(opt).from(element).save().then(() => {
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-check"></i> File Terunduh!';
+            setTimeout(() => {
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-download"></i> Download File PDF';
+            }, 3000);
+        }).catch(err => {
+            console.error(err);
+            window.print();
+        });
+    } else {
+        window.print();
+    }
+}
+
+window.addEventListener('load', function() {
+    <?php if (!empty($_GET['download'])): ?>
+    setTimeout(() => {
+        downloadPdfDirect();
+    }, 500);
+    <?php elseif (!empty($_GET['autoprint'])): ?>
+    setTimeout(() => {
+        window.print();
+    }, 400);
+    <?php endif; ?>
+});
+</script>
 
 </body>
 </html>

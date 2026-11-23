@@ -2646,7 +2646,17 @@ class CbtController {
             }
         }
         unset($tp);
-        return $topikList;
+
+        $dedupTopik = [];
+        $seen = [];
+        foreach ($topikList as $tp) {
+            $norm = trim($tp['nama_topik']);
+            if (!isset($seen[$norm])) {
+                $seen[$norm] = true;
+                $dedupTopik[] = $tp;
+            }
+        }
+        return $dedupTopik;
     }
 
     /**
