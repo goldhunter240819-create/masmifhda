@@ -244,4 +244,56 @@ $persenTuntas = $totalSelesai > 0 ? round(($tuntasCount / $totalSelesai) * 100) 
 $maxNilai = $maxScore;
 $minNilai = $minScore;
 
+if (isset($_GET['export']) && $_GET['export'] === 'excel') {
+    $mapelClean = preg_replace('/[^A-Za-z0-9_-]/', '_', $currentUjian['mapel_nama'] ?? 'Mapel');
+    $kelasClean = preg_replace('/[^A-Za-z0-9_-]/', '_', $currentUjian['kelas_nama'] ?? 'Kelas');
+    $filename = "Rekap_Nilai_{$mapelClean}_{$kelasClean}.xls";
+    
+    header("Content-Type: application/vnd.ms-excel; charset=utf-8");
+    header("Content-Disposition: attachment; filename=\"$filename\"");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+    
+    echo "<!DOCTYPE html><html><head><meta charset='utf-8'>";
+    echo "<style>table{border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:11pt;} th,td{border:1px solid #000;padding:6px;text-align:left;} th{background:#e2e8f0;font-weight:bold;text-align:center;} .center{text-align:center;} .num{mso-number-format:'\@';}</style>";
+    echo "</head><body>";
+    echo "<h3>REKAPITULASI HASIL UJIAN CBT</h3>";
+    echo "<p><b>Mata Pelajaran:</b> " . htmlspecialchars($currentUjian['mapel_nama'] ?? '-') . "<br>";
+    echo "<b>Topik / Ujian:</b> " . htmlspecialchars($currentUjian['nama_ujian'] ?? '-') . "<br>";
+    echo "<b>Kelas:</b> " . htmlspecialchars($currentUjian['kelas_nama'] ?? '-') . "<br>";
+    echo "<b>KKM:</b> " . $kkmUjian . " | <b>Rata-rata:</b> " . number_format($rataRata, 1) . " | <b>Tertinggi:</b> " . number_format($maxNilai, 1) . "</p>";
+    
+    echo "<table>";
+    echo "<thead><tr>";
+    echo "<th>No</th><th>No Peserta / NIS</th><th>Nama Lengkap Siswa</th><th>Kelas</th><th>Benar</th><th>Salah</th><th>Tidak Dijawab</th><th>Nilai Akhir</th><th>Ketuntasan</th>";
+    echo "</tr></thead><tbody>";
+    
+    foreach ($pesertaList as $idx => $p) {
+        $benar = (int)($p['jumlah_benar'] ?? 0);
+        $salah = (int)($p['jumlah_salah'] ?? 0);
+        $tidakJawab = (int)($p['jumlah_tidak_jawab'] ?? 0);
+        $totalSoal = (int)($p['total_soal_ujian'] ?? 0);
+        if ($totalSoal <= 0) $totalSoal = max(20, $benar + $salah);
+        if ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
+            $tidakJawab = $totalSoal - ($benar + $salah);
+        }
+        $nilai = (float)($p['nilai_akhir'] ?? 0);
+        $status = ($p['status_pengerjaan'] === 'Selesai') ? ($nilai >= $kkmUjian ? 'TUNTAS' : 'REMEDIAL') : ($p['status_pengerjaan'] ?? 'Belum Ujian');
+        
+        echo "<tr>";
+        echo "<td class='center'>" . ($idx + 1) . "</td>";
+        echo "<td class='num center'>" . htmlspecialchars($p['nis'] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($p['nama_siswa'] ?? '') . "</td>";
+        echo "<td class='center'>" . htmlspecialchars($p['kelas_nama'] ?? ($p['rombel_kj'] ?? '')) . "</td>";
+        echo "<td class='center'>" . $benar . "</td>";
+        echo "<td class='center'>" . $salah . "</td>";
+        echo "<td class='center'>" . $tidakJawab . "</td>";
+        echo "<td class='center'><b>" . number_format($nilai, 1) . "</b></td>";
+        echo "<td class='center'>" . $status . "</td>";
+        echo "</tr>";
+    }
+    echo "</tbody></table></body></html>";
+    exit;
+}
+
 include __DIR__ . '/../resources/views/cbt/cetak_hasil.php';

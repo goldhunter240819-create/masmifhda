@@ -2666,13 +2666,20 @@ class CbtController {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
         $db_siakad = $ctx['db_siakad'] ?? $db;
-        self::ensureTables($db);
-        self::syncJadwalWithUjian($db, $db_siakad);
+
+        $isAjax = (!empty($_GET['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'));
+        if (!$isAjax) {
+            self::ensureTables($db);
+            self::syncJadwalWithUjian($db, $db_siakad);
+        }
 
         // Ambil daftar Topik Ujian aktif
         $topikList = self::getActiveTopikList($db, $db_siakad);
 
         $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        if ($selectedTopikId == 5) {
+            $selectedTopikId = 3;
+        }
         $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
         $selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
@@ -2695,30 +2702,33 @@ class CbtController {
             }
         } catch (\Exception $e) {}
 
-        $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
-
-        // Daftar kelas resmi madrasah (Reguler) dan Kelas Jauh (Khusus CBT)
+        $ujianList = [];
         $kelasListReguler = [];
         $kelasListJauh = [];
         $kelasList = [];
-        try {
-            $genericTingkat = ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas'];
-            // 1. Kelas Reguler dari tabel kelas (Siakad) & peserta madrasah
-            $k1 = $db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
-            $k3 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != '' AND kelas_nama NOT LIKE '%Jauh%'")->fetchAll(PDO::FETCH_COLUMN);
-            $regMerged = array_diff(array_unique(array_filter(array_merge($k1, $k3))), $genericTingkat);
-            usort($regMerged, function($a, $b) { return strnatcasecmp($a, $b); });
-            $kelasListReguler = array_values($regMerged);
+        if (!$isAjax) {
+            $ujianList = $db->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kkm FROM cbt_ujian ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 
-            // 2. Kelas Jauh dari cbt_peserta_khusus & cbt_peserta
-            $k2 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-            $k3Jauh = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama LIKE '%Jauh%'")->fetchAll(PDO::FETCH_COLUMN);
-            $jauhMerged = array_unique(array_filter(array_merge($k2, $k3Jauh)));
-            usort($jauhMerged, function($a, $b) { return strnatcasecmp($a, $b); });
-            $kelasListJauh = array_values($jauhMerged);
+            // Daftar kelas resmi madrasah (Reguler) dan Kelas Jauh (Khusus CBT)
+            try {
+                $genericTingkat = ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas'];
+                // 1. Kelas Reguler dari tabel kelas (Siakad) & peserta madrasah
+                $k1 = $db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
+                $k3 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != '' AND kelas_nama NOT LIKE '%Jauh%'")->fetchAll(PDO::FETCH_COLUMN);
+                $regMerged = array_diff(array_unique(array_filter(array_merge($k1, $k3))), $genericTingkat);
+                usort($regMerged, function($a, $b) { return strnatcasecmp($a, $b); });
+                $kelasListReguler = array_values($regMerged);
 
-            $kelasList = array_merge($kelasListReguler, $kelasListJauh);
-        } catch (\Exception $e) {}
+                // 2. Kelas Jauh dari cbt_peserta_khusus & cbt_peserta
+                $k2 = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+                $k3Jauh = $db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama LIKE '%Jauh%'")->fetchAll(PDO::FETCH_COLUMN);
+                $jauhMerged = array_unique(array_filter(array_merge($k2, $k3Jauh)));
+                usort($jauhMerged, function($a, $b) { return strnatcasecmp($a, $b); });
+                $kelasListJauh = array_values($jauhMerged);
+
+                $kelasList = array_merge($kelasListReguler, $kelasListJauh);
+            } catch (\Exception $e) {}
+        }
 
         // Query Peserta Real
         $sql = "SELECT p.*, u.nama_ujian, u.kkm, u.mapel_nama,

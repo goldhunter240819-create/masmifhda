@@ -640,14 +640,14 @@ include 'header.php';
             </div>
         </form>
 
-        <!-- Tombol Download PDF & Print (Terisolasi Sesuai Filter) -->
+        <!-- Tombol Download File Excel (Langsung Unduh) & Cetak PDF A4 -->
         <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; margin-bottom: 14px;">
-            <a id="btnCetakPdfKJ" href="cetak_hasil.php?tab=nilai&download=1&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($selectedSort) ?>" target="_blank" style="box-sizing: border-box; padding: 12px 14px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">
-                <i class="fa-solid fa-file-arrow-down" style="font-size: 1.05rem;"></i> Download PDF (A4)
+            <a id="btnDownloadExcelKJ" href="cetak_hasil.php?tab=nilai&export=excel&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($selectedSort) ?>" style="box-sizing: border-box; padding: 12px 14px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">
+                <i class="fa-solid fa-file-excel" style="font-size: 1.05rem;"></i> Unduh Excel (.xls)
             </a>
-            <a id="btnPreviewPdfKJ" href="cetak_hasil.php?tab=nilai&autoprint=1&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>&sort=<?= urlencode($selectedSort) ?>" target="_blank" style="box-sizing: border-box; padding: 12px 12px; background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                <i class="fa-solid fa-print" style="color: #64748b;"></i> Cetak / Print
-            </a>
+            <button type="button" id="btnPreviewPdfKJ" onclick="triggerPrintPdfKJ()" style="box-sizing: border-box; padding: 12px 12px; background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 12px; font-weight: 800; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                <i class="fa-solid fa-print" style="color: #64748b;"></i> Cetak / PDF A4
+            </button>
         </div>
 
         <!-- Metric Card Hasil Ujian -->
@@ -918,14 +918,10 @@ include 'header.php';
             const elTitle = document.getElementById('lblTitleNilaiKJ');
             if (elTitle) elTitle.textContent = 'Daftar Nilai Siswa (' + data.total + ')';
 
-            // Update PDF Links
-            const btnPdf = document.getElementById('btnCetakPdfKJ');
-            if (btnPdf && data.cetak_url) {
-                btnPdf.href = data.cetak_url + '&download=1';
-            }
-            const btnPrev = document.getElementById('btnPreviewPdfKJ');
-            if (btnPrev && data.cetak_url) {
-                btnPrev.href = data.cetak_url + '&autoprint=1';
+            // Update Action Buttons
+            const btnXls = document.getElementById('btnDownloadExcelKJ');
+            if (btnXls && data.cetak_url) {
+                btnXls.href = data.cetak_url + '&export=excel';
             }
 
             // Update Mapel options if Topik changed
@@ -1039,6 +1035,53 @@ include 'header.php';
         const selL = document.getElementById('selLimitKJ');
         if (selL) selL.value = '30';
         applyFilterKJ(true);
+    }
+
+    function triggerPrintPdfKJ() {
+        const btn = document.getElementById('btnPreviewPdfKJ');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan Cetak...';
+
+        const topikId = document.getElementById('selTopikKJ') ? document.getElementById('selTopikKJ').value : '0';
+        const mapel = document.getElementById('selMapelKJ') ? document.getElementById('selMapelKJ').value : '';
+        const kelas = document.getElementById('selKelasKJ') ? document.getElementById('selKelasKJ').value : '';
+        const sort = document.getElementById('selSortKJ') ? document.getElementById('selSortKJ').value : 'nilai_desc';
+
+        const printUrl = `cetak_hasil.php?tab=nilai&autoprint=1&topik_id=${encodeURIComponent(topikId)}&mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(kelas)}&sort=${encodeURIComponent(sort)}`;
+
+        let iframe = document.getElementById('hiddenPrintFrameKJ');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'hiddenPrintFrameKJ';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
+
+        let isHandled = false;
+        iframe.onload = function() {
+            setTimeout(() => {
+                try {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                    isHandled = true;
+                    if (btn) btn.innerHTML = origHtml;
+                } catch (e) {
+                    window.open(printUrl, '_blank');
+                    isHandled = true;
+                    if (btn) btn.innerHTML = origHtml;
+                }
+            }, 300);
+        };
+
+        iframe.src = printUrl;
+        setTimeout(() => {
+            if (!isHandled && btn) btn.innerHTML = origHtml;
+        }, 3000);
     }
 
     function confirmLogoutPengawasKJ(e) {
