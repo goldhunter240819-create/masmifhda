@@ -2613,17 +2613,29 @@ class CbtController {
         $db_siakad = $db_siakad ?: $db;
         $topikList = [];
         try {
-            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status != 'Arsip' ORDER BY (status = 'Aktif') DESC, (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+            $topikList = $db_siakad->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status = 'Aktif' ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+            if (empty($topikList)) {
+                $topikList = $db_siakad->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status != 'Arsip' ORDER BY (status = 'Aktif') DESC, (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+            }
             if (empty($topikList) && $db !== $db_siakad) {
-                $topikList = $db->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status != 'Arsip' ORDER BY (status = 'Aktif') DESC, (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                $topikList = $db->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status = 'Aktif' ORDER BY (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                if (empty($topikList)) {
+                    $topikList = $db->query("SELECT id, nama_topik, jenis, tahun_ajaran, semester, status, tgl_mulai, tgl_selesai FROM bs_topik WHERE status != 'Arsip' ORDER BY (status = 'Aktif') DESC, (tgl_mulai IS NOT NULL) DESC, tgl_mulai ASC, id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                }
             }
         } catch (\Exception $e) {
             try {
-                $topikList = $db_siakad->query("SELECT * FROM bs_topik ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                $topikList = $db_siakad->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                if (empty($topikList)) {
+                    $topikList = $db_siakad->query("SELECT * FROM bs_topik ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                }
             } catch (\Exception $e2) {
                 if ($db !== $db_siakad) {
                     try {
-                        $topikList = $db->query("SELECT * FROM bs_topik ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                        $topikList = $db->query("SELECT * FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                        if (empty($topikList)) {
+                            $topikList = $db->query("SELECT * FROM bs_topik ORDER BY id DESC")->fetchAll(\PDO::FETCH_ASSOC);
+                        }
                     } catch (\Exception $e3) {}
                 }
             }
@@ -2656,6 +2668,8 @@ class CbtController {
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
         $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
+        $limit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
+        if ($limit < 0) $limit = 30;
 
         // Ambil daftar Mapel yang relevan (difilter per topik jika topik dipilih)
         $mapelList = [];
@@ -2810,6 +2824,137 @@ class CbtController {
         $rataRata = $totalSelesai > 0 ? ($totalNilai / $totalSelesai) : 0;
         $persenTuntas = $totalSelesai > 0 ? round(($tuntasCount / $totalSelesai) * 100) : 0;
 
+        $displayPesertaList = ($limit > 0 && count($pesertaList) > $limit) ? array_slice($pesertaList, 0, $limit) : $pesertaList;
+
+        $isAjax = (!empty($_GET['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'));
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            ob_start();
+            $no = 1;
+            if (empty($pesertaList)) {
+                ?>
+                <tr>
+                    <td colspan="10" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
+                        <i data-lucide="folder-search" style="width: 44px; height: 44px; margin-bottom: 10px; color: #cbd5e1;"></i>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Tidak ada data hasil ujian yang sesuai dengan filter</div>
+                        <div style="font-size: 0.78rem; margin-bottom: 14px;">Silakan sesuaikan pilihan Topik, Mata Pelajaran, atau Kelas yang dipilih.</div>
+                        <a href="<?php echo base_url('cbt/hasil'); ?>" class="e-btn e-btn-primary" onclick="resetFilterAjax(event)" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.8rem; padding: 7px 16px; background: #4f46e5;">
+                            <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Reset Semua Filter
+                        </a>
+                    </td>
+                </tr>
+                <?php
+            } else {
+                foreach($displayPesertaList as $p) {
+                    $isSelesai = ($p['status_pengerjaan'] === 'Selesai');
+                    $isTuntas = ($isSelesai && $p['nilai_akhir'] >= $kkmUjian);
+                    $benar = (int)($p['jumlah_benar'] ?? 0);
+                    $salah = (int)($p['jumlah_salah'] ?? 0);
+                    $tidakJawab = (int)($p['jumlah_tidak_jawab'] ?? 0);
+                    $totalSoal = (int)($p['total_soal_ujian'] ?? 0);
+                    if ($totalSoal <= 0) $totalSoal = max(20, $benar + $salah);
+                    if ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
+                        $tidakJawab = $totalSoal - ($benar + $salah);
+                    }
+                    $isKJ = (stripos($p['kelas_nama'] ?? '', 'jauh') !== false);
+                    ?>
+                    <tr>
+                        <td style="color: #94a3b8; font-weight: 600;"><?php echo $no++; ?></td>
+                        <td>
+                            <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;"><?php echo htmlspecialchars($p['nama_siswa']); ?></div>
+                            <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">NIS: <?php echo htmlspecialchars($p['nis'] ?: '-'); ?></div>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; <?php echo $isKJ ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;' : 'background: #e0e7ff; color: #4338ca;'; ?>">
+                                <?php echo htmlspecialchars($p['kelas_nama'] ?: '-'); ?>
+                                <?php if ($isKJ): ?>
+                                    <span style="font-size: 0.65rem; background: #b45309; color: #fff; padding: 1px 4px; border-radius: 3px; margin-left: 2px;">KJ</span>
+                                <?php endif; ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; color: #1e293b; font-size: 0.82rem;"><?php echo htmlspecialchars($p['nama_ujian'] ?? 'Ujian'); ?></div>
+                        </td>
+                        <td>
+                            <?php if ($isSelesai): ?>
+                            <span style="font-weight: 800; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                <?php echo $benar; ?> Benar
+                            </span>
+                            <?php else: ?>
+                            <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($isSelesai): ?>
+                            <span style="font-weight: 800; color: #b91c1c; background: #fee2e2; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                <?php echo $salah; ?> Salah
+                            </span>
+                            <?php else: ?>
+                            <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($isSelesai): ?>
+                            <span style="font-weight: 800; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                <?php echo $tidakJawab; ?> Kosong
+                            </span>
+                            <?php else: ?>
+                            <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($isSelesai): ?>
+                            <div style="font-size: 1.25rem; font-weight: 900; color: <?php echo $isTuntas ? '#15803d' : '#b91c1c'; ?>;">
+                                <?php echo number_format($p['nilai_akhir'], 1); ?>
+                            </div>
+                            <?php else: ?>
+                            <span style="color: #94a3b8; font-size: 0.84rem; font-weight: 700;">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($isSelesai): ?>
+                            <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 6px; <?php echo $isTuntas ? 'background:#dcfce7;color:#15803d;' : 'background:#fee2e2;color:#b91c1c;'; ?>">
+                                <?php echo $isTuntas ? 'Tuntas' : 'Remedial'; ?>
+                            </span>
+                            <?php else: ?>
+                            <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b;">
+                                Belum Mengerjakan
+                            </span>
+                            <?php endif; ?>
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <?php if ($isSelesai || in_array($p['status_pengerjaan'] ?? '', ['Sedang Mengerjakan', 'Mengerjakan', 'Terkunci', 'Pelanggaran'])): ?>
+                                <button type="button" class="e-btn" style="background: #0ea5e9; color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 6px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(14,165,233,0.25); cursor: pointer;" title="Buka Sesi Ujian Kembali" onclick="bukaModalReopen(<?php echo (int)($p['id'] ?? 0); ?>, '<?php echo htmlspecialchars(addslashes($p['nama_siswa'] ?? 'Siswa')); ?>', '<?php echo htmlspecialchars(addslashes($p['nama_ujian'] ?? 'Paket Ujian')); ?>')">
+                                    <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i> Buka Ujian
+                                </button>
+                            <?php else: ?>
+                                <span style="color: #cbd5e1; font-size: 0.8rem; font-weight: 700;">-</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php
+                }
+            }
+            $tableHtml = ob_get_clean();
+
+            echo json_encode([
+                'success' => true,
+                'total_peserta' => count($pesertaList),
+                'display_count' => count($displayPesertaList),
+                'limit' => $limit,
+                'rata_rata' => number_format($rataRata, 1),
+                'persen_tuntas' => $persenTuntas,
+                'kkm' => $kkmUjian,
+                'jumlah_remedial' => $jumlahRemedial,
+                'mapel_list' => array_values(array_unique($mapelList)),
+                'table_html' => $tableHtml,
+                'has_filter' => (!empty($selectedTopikId) || !empty($selectedMapel) || !empty($selectedKelas) || !empty($search) || ($sort !== 'nilai_desc')),
+                'cetak_url' => base_url('cbt/hasil/cetak?topik_id=' . $selectedTopikId . '&mapel=' . urlencode($selectedMapel) . '&kelas=' . urlencode($selectedKelas) . '&sort=' . $sort . '&q=' . urlencode($search)),
+                'analisis_url' => base_url('cbt/analisis?topik_id=' . $selectedTopikId . '&mapel=' . urlencode($selectedMapel) . '&kelas=' . urlencode($selectedKelas)),
+            ]);
+            exit;
+        }
+
         $title = "Hasil Ujian CBT - MAS MIFTAHUL HUDA";
         ob_start();
         include __DIR__ . '/../../resources/views/cbt/hasil.php';
@@ -2831,6 +2976,8 @@ class CbtController {
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
         $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
+        $limit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
+        if ($limit < 0) $limit = 30;
 
         $currentUjian = null;
         if ($selectedUjianId > 0) {

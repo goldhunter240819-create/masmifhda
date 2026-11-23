@@ -31,10 +31,10 @@ $active_menu = 'hasil';
                         <p>Monitoring skor perolehan siswa, analisis ketuntasan terhadap KKM, dan rekapitulasi nilai ujian berbasis komputer.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="<?php echo base_url('cbt/hasil/cetak?topik_id=' . ($selectedTopikId ?? 0) . '&mapel=' . urlencode($selectedMapel ?? '') . '&ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
-                            <i data-lucide="printer"></i> Cetak Rekap Nilai
+                        <a href="<?php echo base_url('cbt/hasil/cetak?topik_id=' . ($selectedTopikId ?? 0) . '&mapel=' . urlencode($selectedMapel ?? '') . '&ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" id="btnCetakRekap" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
+                            <i data-lucide="printer"></i> Download PDF / Cetak (A4)
                         </a>
-                        <a href="<?php echo base_url('cbt/analisis?topik_id=' . ($selectedTopikId ?? 0) . '&ujian_id=' . ($selectedUjianId ?? '')); ?>" class="e-btn e-btn-blue-light">
+                        <a href="<?php echo base_url('cbt/analisis?topik_id=' . ($selectedTopikId ?? 0) . '&ujian_id=' . ($selectedUjianId ?? '')); ?>" id="btnAnalisisButir" class="e-btn e-btn-blue-light">
                             <i data-lucide="bar-chart-2"></i> Analisis Butir Soal
                         </a>
                     </div>
@@ -43,10 +43,10 @@ $active_menu = 'hasil';
 
             <!-- Filter Panel -->
             <div class="card" style="padding: 1.25rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: #ffffff;">
-                <form method="GET" action="<?php echo base_url('cbt/hasil'); ?>" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                <form method="GET" action="<?php echo base_url('cbt/hasil'); ?>" id="formFilterHasil" onsubmit="event.preventDefault(); applyFilterAjax(false);" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
                     <div style="flex: 1.6; min-width: 200px;">
                         <label class="label-sm">Topik Ujian</label>
-                        <select name="topik_id" class="input-sm" onchange="if(document.getElementById('selMapelHasil')) document.getElementById('selMapelHasil').value=''; this.form.submit()">
+                        <select name="topik_id" id="selTopikHasil" class="input-sm" onchange="applyFilterAjax(true)">
                             <option value="0">-- Semua Topik Ujian --</option>
                             <?php foreach($topikList as $tp): ?>
                                 <option value="<?php echo $tp['id']; ?>" <?php echo ($selectedTopikId == $tp['id']) ? 'selected' : ''; ?>>
@@ -58,7 +58,7 @@ $active_menu = 'hasil';
 
                     <div style="flex: 1.3; min-width: 170px;">
                         <label class="label-sm">Mata Pelajaran</label>
-                        <select name="mapel" id="selMapelHasil" class="input-sm" onchange="this.form.submit()">
+                        <select name="mapel" id="selMapelHasil" class="input-sm" onchange="applyFilterAjax(false)">
                             <option value="">-- Semua Mapel --</option>
                             <?php foreach($mapelList as $mp): ?>
                                 <option value="<?php echo htmlspecialchars($mp); ?>" <?php echo ($selectedMapel === $mp) ? 'selected' : ''; ?>>
@@ -70,7 +70,7 @@ $active_menu = 'hasil';
 
                     <div style="flex: 1; min-width: 140px;">
                         <label class="label-sm">Filter Kelas</label>
-                        <select name="kelas" class="input-sm" onchange="this.form.submit()">
+                        <select name="kelas" id="selKelasHasil" class="input-sm" onchange="applyFilterAjax(false)">
                             <option value="">-- Semua Kelas --</option>
                             <?php if (!empty($kelasListReguler)): ?>
                                 <optgroup label="🏛️ Kelas Reguler (Madrasah)">
@@ -102,7 +102,7 @@ $active_menu = 'hasil';
 
                     <div style="flex: 1.2; min-width: 170px;">
                         <label class="label-sm">Urutan Data Siswa</label>
-                        <select name="sort" class="input-sm" onchange="this.form.submit()">
+                        <select name="sort" id="selSortHasil" class="input-sm" onchange="applyFilterAjax(false)">
                             <option value="nilai_desc" <?php echo (($sort ?? 'nilai_desc') === 'nilai_desc') ? 'selected' : ''; ?>>Nilai Tertinggi (Rank)</option>
                             <option value="nilai_asc" <?php echo (($sort ?? '') === 'nilai_asc') ? 'selected' : ''; ?>>Nilai Terendah</option>
                             <option value="nama_asc" <?php echo (($sort ?? '') === 'nama_asc') ? 'selected' : ''; ?>>Nama Siswa (A - Z)</option>
@@ -115,15 +115,13 @@ $active_menu = 'hasil';
                     <div style="flex: 1.5; min-width: 180px;">
                         <label class="label-sm">Cari Nama / NIS Siswa</label>
                         <div style="display: flex; gap: 6px;">
-                            <input type="text" name="q" class="input-sm" placeholder="Ketik nama siswa..." value="<?php echo htmlspecialchars($search ?? ''); ?>">
+                            <input type="text" name="q" id="inpSearchHasil" class="input-sm" placeholder="Ketik nama siswa..." value="<?php echo htmlspecialchars($search ?? ''); ?>" oninput="onSearchInput(this)">
                             <button type="submit" class="e-btn e-btn-primary" style="padding: 7px 12px; background: #4f46e5;" title="Cari Data">
                                 <i data-lucide="search" style="width: 14px; height: 14px;"></i>
                             </button>
-                            <?php if (!empty($selectedTopikId) || !empty($selectedMapel) || !empty($selectedKelas) || !empty($search) || ($sort !== 'nilai_desc')): ?>
-                                <a href="<?php echo base_url('cbt/hasil'); ?>" class="e-btn" style="padding: 7px 12px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; display: inline-flex; align-items: center; justify-content: center;" title="Reset Semua Filter">
-                                    <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
-                                </a>
-                            <?php endif; ?>
+                            <a href="<?php echo base_url('cbt/hasil'); ?>" id="btnResetFilter" onclick="resetFilterAjax(event)" class="e-btn" style="padding: 7px 12px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; display: <?php echo (!empty($selectedTopikId) || !empty($selectedMapel) || !empty($selectedKelas) || !empty($search) || ($sort !== 'nilai_desc')) ? 'inline-flex' : 'none'; ?>; align-items: center; justify-content: center;" title="Reset Semua Filter">
+                                <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+                            </a>
                         </div>
                     </div>
                 </form>
@@ -136,7 +134,7 @@ $active_menu = 'hasil';
                         <i data-lucide="users"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.5rem; font-weight: 900; color: #0f172a; line-height: 1;"><?php echo count($pesertaList); ?></div>
+                        <div id="statTotalPeserta" style="font-size: 1.5rem; font-weight: 900; color: #0f172a; line-height: 1;"><?php echo count($pesertaList); ?></div>
                         <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 4px;">Peserta Terdata</div>
                     </div>
                 </div>
@@ -146,7 +144,7 @@ $active_menu = 'hasil';
                         <i data-lucide="trending-up"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.5rem; font-weight: 900; color: #15803d; line-height: 1;"><?php echo number_format($rataRata, 1); ?></div>
+                        <div id="statRataRata" style="font-size: 1.5rem; font-weight: 900; color: #15803d; line-height: 1;"><?php echo number_format($rataRata, 1); ?></div>
                         <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 4px;">Rata-Rata Nilai</div>
                     </div>
                 </div>
@@ -156,8 +154,8 @@ $active_menu = 'hasil';
                         <i data-lucide="check-check"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.5rem; font-weight: 900; color: #4338ca; line-height: 1;"><?php echo $persenTuntas; ?>%</div>
-                        <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 4px;">Ketuntasan (KKM: <?php echo $kkmUjian; ?>)</div>
+                        <div id="statPersenTuntas" style="font-size: 1.5rem; font-weight: 900; color: #4338ca; line-height: 1;"><?php echo $persenTuntas; ?>%</div>
+                        <div id="statKkmLabel" style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 4px;">Ketuntasan (KKM: <?php echo $kkmUjian; ?>)</div>
                     </div>
                 </div>
 
@@ -166,7 +164,7 @@ $active_menu = 'hasil';
                         <i data-lucide="alert-circle"></i>
                     </div>
                     <div>
-                        <div style="font-size: 1.5rem; font-weight: 900; color: #b91c1c; line-height: 1;"><?php echo $jumlahRemedial; ?></div>
+                        <div id="statRemedial" style="font-size: 1.5rem; font-weight: 900; color: #b91c1c; line-height: 1;"><?php echo $jumlahRemedial; ?></div>
                         <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 4px;">Perlu Remedial</div>
                     </div>
                 </div>
@@ -174,12 +172,21 @@ $active_menu = 'hasil';
 
             <!-- Table Card -->
             <div class="card" style="border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; background: #ffffff;">
-                <div style="padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                <div style="padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div style="font-weight: 800; font-size: 0.95rem; color: #1e293b; display: flex; align-items: center; gap: 8px;">
                         <span>Daftar Nilai Siswa</span>
-                        <span style="font-size: 0.75rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 100px; font-weight: 800;">
+                        <span id="badgeTotalSiswa" style="font-size: 0.75rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 100px; font-weight: 800;">
                             <?php echo count($pesertaList); ?> Siswa
                         </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Tampilkan:</span>
+                        <select id="selLimitHasil" onchange="applyFilterAjax(false)" style="padding: 5px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #ffffff; cursor: pointer;">
+                            <option value="30" <?php echo (($limit ?? 30) == 30) ? 'selected' : ''; ?>>30 Siswa (Default)</option>
+                            <option value="50" <?php echo (($limit ?? 30) == 50) ? 'selected' : ''; ?>>50 Siswa</option>
+                            <option value="100" <?php echo (($limit ?? 30) == 100) ? 'selected' : ''; ?>>100 Siswa</option>
+                            <option value="all" <?php echo (($limit ?? 30) === 0 || ($limit ?? 30) === 'all') ? 'selected' : ''; ?>>Semua Siswa</option>
+                        </select>
                     </div>
                 </div>
 
@@ -199,20 +206,22 @@ $active_menu = 'hasil';
                                 <th style="width: 130px; text-align: right;">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php if (empty($pesertaList)): ?>
+                        <tbody id="hasilTableBody">
+                            <?php
+                            $displayList = $displayPesertaList ?? (($limit > 0 && count($pesertaList) > $limit) ? array_slice($pesertaList, 0, $limit) : $pesertaList);
+                            if (empty($displayList)): ?>
                             <tr>
                                 <td colspan="10" style="padding: 3rem 1.5rem; text-align: center; color: #94a3b8;">
                                     <i data-lucide="folder-search" style="width: 44px; height: 44px; margin-bottom: 10px; color: #cbd5e1;"></i>
                                     <div style="font-size: 0.95rem; font-weight: 700; color: #475569;">Tidak ada data hasil ujian yang sesuai dengan filter</div>
                                     <div style="font-size: 0.78rem; margin-bottom: 14px;">Silakan sesuaikan pilihan Topik, Mata Pelajaran, atau Kelas yang dipilih.</div>
-                                    <a href="<?php echo base_url('cbt/hasil'); ?>" class="e-btn e-btn-primary" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.8rem; padding: 7px 16px; background: #4f46e5;">
+                                    <a href="<?php echo base_url('cbt/hasil'); ?>" class="e-btn e-btn-primary" onclick="resetFilterAjax(event)" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.8rem; padding: 7px 16px; background: #4f46e5;">
                                         <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Reset Semua Filter
                                     </a>
                                 </td>
                             </tr>
                             <?php else: ?>
-                                <?php $no = 1; foreach($pesertaList as $p): 
+                                <?php $no = 1; foreach($displayList as $p): 
                                     $isSelesai = ($p['status_pengerjaan'] === 'Selesai');
                                     $isTuntas = ($isSelesai && $p['nilai_akhir'] >= $kkmUjian);
                                     $benar = (int)($p['jumlah_benar'] ?? 0);
@@ -304,6 +313,22 @@ $active_menu = 'hasil';
                         </tbody>
                     </table>
                 </div>
+                <?php
+                $hasMore = count($pesertaList) > count($displayList);
+                ?>
+                <div id="wrapLoadMoreHasil" style="padding: 12px 1.5rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: <?php echo $hasMore ? 'flex' : 'none'; ?>; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div id="infoRowsCount" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">
+                        Menampilkan <b id="lblDisplayCount"><?php echo count($displayList); ?></b> dari <b id="lblTotalCount"><?php echo count($pesertaList); ?></b> siswa
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" id="btnLoadMoreHasil" onclick="loadMoreHasil()" class="e-btn" style="padding: 6px 14px; font-size: 0.78rem; font-weight: 800; background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i> +30 Tampilkan Lebih Banyak
+                        </button>
+                        <button type="button" onclick="showAllHasil()" class="e-btn" style="padding: 6px 12px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">
+                            Tampilkan Semua
+                        </button>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -386,6 +411,243 @@ function bukaModalReopen(pesertaId, namaSiswa, paketJudul) {
 
 function tutupModalReopen() {
     document.getElementById('modalReopenExam').style.display = 'none';
+}
+
+// ================= AJAX FILTER & PAGINATION SYSTEM =================
+let currentLimitHasil = <?php echo (int)($limit ?? 30); ?>;
+let searchTimer = null;
+let ajaxAbortCtrl = null;
+
+function applyFilterAjax(isTopikChange) {
+    if (isTopikChange) {
+        const selMapel = document.getElementById('selMapelHasil');
+        if (selMapel) selMapel.value = '';
+    }
+
+    const topikId = document.getElementById('selTopikHasil') ? document.getElementById('selTopikHasil').value : 0;
+    const mapel = document.getElementById('selMapelHasil') ? document.getElementById('selMapelHasil').value : '';
+    const kelas = document.getElementById('selKelasHasil') ? document.getElementById('selKelasHasil').value : '';
+    const sort = document.getElementById('selSortHasil') ? document.getElementById('selSortHasil').value : 'nilai_desc';
+    const q = document.getElementById('inpSearchHasil') ? document.getElementById('inpSearchHasil').value.trim() : '';
+    const limit = document.getElementById('selLimitHasil') ? document.getElementById('selLimitHasil').value : '30';
+
+    currentLimitHasil = (limit === 'all') ? 9999 : parseInt(limit || 30);
+
+    const tbody = document.getElementById('hasilTableBody');
+    if (tbody) {
+        tbody.style.opacity = '0.35';
+        tbody.style.transition = 'opacity 0.15s ease';
+    }
+
+    const btnReset = document.getElementById('btnResetFilter');
+    if (btnReset) {
+        const hasFilter = (topikId !== '0' || mapel !== '' || kelas !== '' || q !== '' || sort !== 'nilai_desc');
+        btnReset.style.display = hasFilter ? 'inline-flex' : 'none';
+    }
+
+    if (ajaxAbortCtrl) {
+        ajaxAbortCtrl.abort();
+    }
+    ajaxAbortCtrl = new AbortController();
+
+    const params = new URLSearchParams({
+        topik_id: topikId,
+        mapel: mapel,
+        kelas: kelas,
+        sort: sort,
+        q: q,
+        limit: limit,
+        ajax: '1'
+    });
+
+    // Update browser URL silently without full reload
+    const cleanParams = new URLSearchParams(params);
+    cleanParams.delete('ajax');
+    const newUrl = '<?php echo base_url("cbt/hasil"); ?>' + '?' + cleanParams.toString();
+    window.history.replaceState({}, '', newUrl);
+
+    fetch('<?php echo base_url("cbt/hasil"); ?>?' + params.toString(), {
+        signal: ajaxAbortCtrl.signal,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) return;
+
+        // Update stats
+        const elTotal = document.getElementById('statTotalPeserta');
+        if (elTotal) elTotal.textContent = data.total_peserta;
+
+        const elRata = document.getElementById('statRataRata');
+        if (elRata) elRata.textContent = data.rata_rata;
+
+        const elTuntas = document.getElementById('statPersenTuntas');
+        if (elTuntas) elTuntas.textContent = data.persen_tuntas + '%';
+
+        const elKkm = document.getElementById('statKkmLabel');
+        if (elKkm) elKkm.textContent = 'Ketuntasan (KKM: ' + data.kkm + ')';
+
+        const elRem = document.getElementById('statRemedial');
+        if (elRem) elRem.textContent = data.jumlah_remedial;
+
+        const badgeTotal = document.getElementById('badgeTotalSiswa');
+        if (badgeTotal) badgeTotal.textContent = data.total_peserta + ' Siswa';
+
+        // Update Cetak & Analisis Links
+        const btnCetak = document.getElementById('btnCetakRekap');
+        if (btnCetak && data.cetak_url) btnCetak.href = data.cetak_url;
+
+        const btnAnalisis = document.getElementById('btnAnalisisButir');
+        if (btnAnalisis && data.analisis_url) btnAnalisis.href = data.analisis_url;
+
+        // If Topik changed, re-populate Mapel options
+        if (isTopikChange && data.mapel_list) {
+            const selMapel = document.getElementById('selMapelHasil');
+            if (selMapel) {
+                const prev = selMapel.value;
+                selMapel.innerHTML = '<option value="">-- Semua Mapel --</option>';
+                data.mapel_list.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === prev) opt.selected = true;
+                    selMapel.appendChild(opt);
+                });
+            }
+        }
+
+        // Update Table Rows
+        if (tbody) {
+            tbody.innerHTML = data.table_html;
+            tbody.style.opacity = '1';
+        }
+
+        // Update Load More footer
+        const wrapMore = document.getElementById('wrapLoadMoreHasil');
+        if (wrapMore) {
+            const dispCount = data.display_count || data.total_peserta;
+            const totCount = data.total_peserta;
+            const elDisp = document.getElementById('lblDisplayCount');
+            if (elDisp) elDisp.textContent = dispCount;
+            const elTot = document.getElementById('lblTotalCount');
+            if (elTot) elTot.textContent = totCount;
+
+            if (totCount > dispCount) {
+                wrapMore.style.display = 'flex';
+            } else {
+                wrapMore.style.display = 'none';
+            }
+        }
+
+        // Re-init lucide icons
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    })
+    .catch(err => {
+        if (err.name === 'AbortError') return;
+        if (tbody) tbody.style.opacity = '1';
+    });
+}
+
+function onSearchInput(input) {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        applyFilterAjax(false);
+    }, 300);
+}
+
+function resetFilterAjax(event) {
+    if (event) event.preventDefault();
+    const selTopik = document.getElementById('selTopikHasil');
+    if (selTopik) selTopik.value = '0';
+    const selMapel = document.getElementById('selMapelHasil');
+    if (selMapel) selMapel.value = '';
+    const selKelas = document.getElementById('selKelasHasil');
+    if (selKelas) selKelas.value = '';
+    const selSort = document.getElementById('selSortHasil');
+    if (selSort) selSort.value = 'nilai_desc';
+    const inpSearch = document.getElementById('inpSearchHasil');
+    if (inpSearch) inpSearch.value = '';
+    const selLimit = document.getElementById('selLimitHasil');
+    if (selLimit) selLimit.value = '30';
+    applyFilterAjax(true);
+}
+
+function loadMoreHasil() {
+    currentLimitHasil += 30;
+    const selLimit = document.getElementById('selLimitHasil');
+    if (selLimit) {
+        for (let i = 0; i < selLimit.options.length; i++) {
+            if (selLimit.options[i].value == currentLimitHasil) {
+                selLimit.selectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    const btnMore = document.getElementById('btnLoadMoreHasil');
+    if (btnMore) {
+        btnMore.innerHTML = '<span style="display:inline-block; animation:spin 0.6s linear infinite;">⏳</span> Memuat...';
+    }
+
+    const topikId = document.getElementById('selTopikHasil') ? document.getElementById('selTopikHasil').value : 0;
+    const mapel = document.getElementById('selMapelHasil') ? document.getElementById('selMapelHasil').value : '';
+    const kelas = document.getElementById('selKelasHasil') ? document.getElementById('selKelasHasil').value : '';
+    const sort = document.getElementById('selSortHasil') ? document.getElementById('selSortHasil').value : 'nilai_desc';
+    const q = document.getElementById('inpSearchHasil') ? document.getElementById('inpSearchHasil').value.trim() : '';
+
+    const params = new URLSearchParams({
+        topik_id: topikId,
+        mapel: mapel,
+        kelas: kelas,
+        sort: sort,
+        q: q,
+        limit: currentLimitHasil,
+        ajax: '1'
+    });
+
+    fetch('<?php echo base_url("cbt/hasil"); ?>?' + params.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) return;
+        const tbody = document.getElementById('hasilTableBody');
+        if (tbody) tbody.innerHTML = data.table_html;
+
+        const wrapMore = document.getElementById('wrapLoadMoreHasil');
+        if (wrapMore) {
+            const dispCount = data.display_count || data.total_peserta;
+            const totCount = data.total_peserta;
+            const elDisp = document.getElementById('lblDisplayCount');
+            if (elDisp) elDisp.textContent = dispCount;
+            const elTot = document.getElementById('lblTotalCount');
+            if (elTot) elTot.textContent = totCount;
+            wrapMore.style.display = (totCount > dispCount) ? 'flex' : 'none';
+        }
+
+        if (btnMore) {
+            btnMore.innerHTML = '<i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i> +30 Tampilkan Lebih Banyak';
+        }
+
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    })
+    .catch(() => {
+        if (btnMore) {
+            btnMore.innerHTML = '<i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i> +30 Tampilkan Lebih Banyak';
+        }
+    });
+}
+
+function showAllHasil() {
+    const selLimit = document.getElementById('selLimitHasil');
+    if (selLimit) selLimit.value = 'all';
+    applyFilterAjax(false);
 }
 </script>
 

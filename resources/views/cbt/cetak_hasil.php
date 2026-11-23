@@ -449,18 +449,19 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
             <tr>
                 <th style="width: 4%;">No</th>
                 <th style="width: 14%;">No Peserta / NIS</th>
-                <th style="width: 30%;">Nama Lengkap Siswa</th>
+                <th style="width: 28%;">Nama Lengkap Siswa</th>
                 <th style="width: 12%;">Kelas</th>
-                <th style="width: 8%;">Benar</th>
-                <th style="width: 8%;">Salah</th>
-                <th style="width: 10%;">Nilai Akhir</th>
-                <th style="width: 14%;">Ketuntasan</th>
+                <th style="width: 7%;">Benar</th>
+                <th style="width: 7%;">Salah</th>
+                <th style="width: 7%;">Kosong</th>
+                <th style="width: 9%;">Nilai Akhir</th>
+                <th style="width: 12%;">Ketuntasan</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($pesertaList)): ?>
                 <tr>
-                    <td colspan="8" class="center-col" style="padding: 20px; color: #64748b; font-style: italic;">
+                    <td colspan="9" class="center-col" style="padding: 20px; color: #64748b; font-style: italic;">
                         Tidak ada data hasil ujian yang sesuai dengan kriteria filter.
                     </td>
                 </tr>
@@ -468,10 +469,19 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
                 <?php foreach ($pesertaList as $idx => $p): ?>
                     <?php
                     $isSelesai = ($p['status_pengerjaan'] === 'Selesai');
-                    $isTerkunci = in_array($p['status_pengerjaan'], ['Terkunci', 'Pelanggaran']);
+                    $isTerkunci = in_array($p['status_pengerjaan'] ?? '', ['Terkunci', 'Pelanggaran']);
                     $nilai = (float)($p['nilai_akhir'] ?? 0);
                     $isTuntas = ($nilai >= $kkmNilai);
                     $isKJ = (stripos($p['kelas_nama'] ?? '', 'Jauh') !== false || stripos($p['nama_siswa'] ?? '', 'Kelas Jauh') !== false);
+
+                    $benar = (int)($p['jumlah_benar'] ?? 0);
+                    $salah = (int)($p['jumlah_salah'] ?? 0);
+                    $tidakJawab = (int)($p['jumlah_tidak_jawab'] ?? 0);
+                    $totalSoal = (int)($p['total_soal_ujian'] ?? 0);
+                    if ($totalSoal <= 0) $totalSoal = max(20, $benar + $salah);
+                    if ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
+                        $tidakJawab = $totalSoal - ($benar + $salah);
+                    }
                     ?>
                     <tr>
                         <td class="center-col"><?= $idx + 1 ?></td>
@@ -485,8 +495,9 @@ $activeSortLabel = $sortLabels[$sort ?? 'nilai_desc'] ?? 'Nilai Tertinggi';
                             <?php endif; ?>
                         </td>
                         <td class="center-col"><?= htmlspecialchars($p['kelas_nama'] ?: '-') ?></td>
-                        <td class="center-col"><?= (int)($p['jumlah_benar'] ?? 0) ?></td>
-                        <td class="center-col"><?= (int)($p['jumlah_salah'] ?? 0) ?></td>
+                        <td class="center-col" style="color: #15803d; font-weight: 700;"><?= $isSelesai ? $benar : '-' ?></td>
+                        <td class="center-col" style="color: #b91c1c; font-weight: 700;"><?= $isSelesai ? $salah : '-' ?></td>
+                        <td class="center-col" style="color: #64748b; font-weight: 700;"><?= $isSelesai ? $tidakJawab : '-' ?></td>
                         <td class="center-col" style="font-weight: 900; font-size: 0.88rem; color: <?= $isSelesai ? ($isTuntas ? '#15803d' : '#b91c1c') : '#64748b' ?>;">
                             <?= number_format($nilai, 1) ?>
                         </td>

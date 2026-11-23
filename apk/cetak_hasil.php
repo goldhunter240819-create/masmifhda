@@ -11,14 +11,46 @@ $db = $siakad_db ?: $core_db;
 
 $paket_id = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
 $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+$selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+$selectedMapel = trim($_GET['mapel'] ?? '');
 $selectedKelas = trim($_GET['kelas'] ?? '');
 $search = trim($_GET['q'] ?? '');
 $sort = trim($_GET['sort'] ?? 'nilai_desc');
+$isKJTab = (isset($_GET['tab']) && $_GET['tab'] === 'nilai') || (stripos($selectedKelas, 'jauh') !== false);
 
 $currentUjian = null;
 $paket = null;
 $topik = null;
 $matchedUjianIds = [];
+
+// Jika ada parameter topik_id atau mapel
+if ($selectedTopikId > 0 || !empty($selectedMapel)) {
+    try {
+        if ($selectedTopikId > 0) {
+            $stmtT = $db->prepare("SELECT * FROM bs_topik WHERE id = ?");
+            $stmtT->execute([$selectedTopikId]);
+            $topik = $stmtT->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $sqlFind = "SELECT * FROM cbt_ujian WHERE (topik_id = :topik OR :topik = 0)";
+        $paramsFind = [':topik' => $selectedTopikId];
+        if (!empty($selectedMapel)) {
+            $sqlFind .= " AND (mapel_nama = :mapel OR mapel_nama LIKE CONCAT('%', :mapel2, '%') OR :mapel3 LIKE CONCAT('%', mapel_nama, '%'))";
+            $paramsFind[':mapel'] = $selectedMapel;
+            $paramsFind[':mapel2'] = $selectedMapel;
+            $paramsFind[':mapel3'] = $selectedMapel;
+        }
+        $stmtFind = $core_db->prepare($sqlFind . " ORDER BY id DESC");
+        $stmtFind->execute($paramsFind);
+        $uList = $stmtFind->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($uList as $u) {
+            $matchedUjianIds[] = (int)$u['id'];
+            if (!$currentUjian) {
+                $currentUjian = $u;
+            }
+        }
+    } catch (\Exception $e) {}
+}
 
 // Jika ada paket_id
 if ($paket_id > 0) {
@@ -71,6 +103,26 @@ if ($ujian_id > 0) {
     } catch (\Exception $e) {}
 }
 
+if (empty($matchedUjianIds) && $isKJTab) {
+    try {
+        $uList = $core_db->query("SELECT DISTINCT ujian_id FROM cbt_peserta WHERE kelas_nama LIKE '%Jauh%' OR nis IN (SELECT no_peserta FROM cbt_peserta_khusus)")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($uList as $uid) {
+            $matchedUjianIds[] = (int)$uid;
+        }
+    } catch (\Exception $e) {}
+}
+
+if (!$currentUjian) {
+    $currentUjian = [
+        'nama_ujian' => !empty($topik['nama_topik']) ? $topik['nama_topik'] : 'Rekap Nilai Siswa CBT',
+        'mapel_nama' => !empty($selectedMapel) ? $selectedMapel : 'Semua Mapel',
+        'topik_nama' => !empty($topik['nama_topik']) ? $topik['nama_topik'] : 'Asesmen CBT',
+        'kelas_nama' => !empty($selectedKelas) ? $selectedKelas : ($isKJTab ? 'Semua Kelas Jauh' : 'Semua Kelas'),
+        'kkm' => 75,
+        'durasi_menit' => 90
+    ];
+}
+
 $matchedUjianIds = array_unique(array_filter($matchedUjianIds));
 
 $pesertaList = [];
@@ -80,12 +132,17 @@ if (!empty($matchedUjianIds)) {
     try {
         $inIds = implode(',', $matchedUjianIds);
         $sql = "
-            SELECT p.*, u.nama_ujian, u.kode_ujian, u.mapel_nama as ujian_mapel, u.kkm as kkm_ujian
+            SELECT p.*, u.nama_ujian, u.kode_ujian, u.mapel_nama as ujian_mapel, u.kkm as kkm_ujian,
+                   (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as total_soal_ujian
             FROM cbt_peserta p
             JOIN cbt_ujian u ON p.ujian_id = u.id
             WHERE p.ujian_id IN ($inIds)
         ";
         $params = [];
+
+        if ($isKJTab) {
+            $sql .= " AND (p.kelas_nama LIKE '%Jauh%' OR p.nis IN (SELECT no_peserta FROM cbt_peserta_khusus) OR p.nis IN (SELECT username FROM cbt_peserta_khusus))";
+        }
 
         if (!empty($selectedKelas)) {
             $sql .= " AND p.kelas_nama = :kelas";

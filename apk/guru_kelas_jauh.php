@@ -58,16 +58,21 @@ try {
     $hadirHariIniKJ = count($listAbsenKJ);
 } catch (\Exception $e) {}
 
-// 3. Ambil Data Topik Ujian
+// 3. Ambil Data Topik Ujian (Hanya yang berstatus 'Aktif')
 $topikList = [];
 try {
-    $topikList = $core_db->query("SELECT id, nama_topik FROM bs_topik ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $topikList = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($topikList)) {
+        $topikList = $core_db->query("SELECT id, nama_topik FROM bs_topik WHERE status != 'Arsip' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (\Exception $e) {}
 
 // Ambil Filter Parameter: Topik -> Mapel -> Kelas
 $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
 $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
 $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
+$selectedLimit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
+if ($selectedLimit < 0) $selectedLimit = 30;
 
 // 4. Ambil Daftar Mata Pelajaran berdasarkan Topik (atau semua jika topik belum dipilih)
 $mapelList = [];
@@ -186,6 +191,143 @@ try {
 $activeTab = isset($_GET['tab']) ? trim($_GET['tab']) : 'beranda';
 if (!in_array($activeTab, ['beranda', 'scan', 'nilai'])) {
     $activeTab = 'beranda';
+}
+
+if (!function_exists('renderHasilCardKJ')) {
+    function renderHasilCardKJ($h, $idx) {
+        $nilai = (float)($h['nilai_akhir'] ?? 0);
+        $kkmNilai = (float)($h['kkm'] ?? 75);
+        $isTuntas = ($nilai >= $kkmNilai);
+        $isLocked = (!empty($h['is_locked']) || $h['status_pengerjaan'] === 'Terkunci');
+
+        $benar = (int)($h['jumlah_benar'] ?? 0);
+        $salah = (int)($h['jumlah_salah'] ?? 0);
+        $tidakJawab = (int)($h['jumlah_tidak_jawab'] ?? 0);
+
+        $totalSoal = (int)($h['total_soal_ujian'] ?? 0);
+
+        $ansCount = 0;
+        if (!empty($h['jawaban_json'])) {
+            $rawAns = json_decode($h['jawaban_json'], true);
+            $arrAns = $rawAns['answers'] ?? ($rawAns['answers_by_index'] ?? $rawAns);
+            if (is_array($arrAns)) {
+                foreach ($arrAns as $aVal) {
+                    if ($aVal !== '' && $aVal !== null && $aVal !== []) {
+                        $ansCount++;
+                    }
+                }
+            }
+        }
+
+        if ($totalSoal <= 0) {
+            $totalSoal = max(20, $ansCount > 0 ? $ansCount : ($benar + $salah));
+        }
+
+        if ($ansCount > 0 && $ansCount < $totalSoal) {
+            $tidakJawab = $totalSoal - $ansCount;
+            $salah = max(0, $ansCount - $benar);
+        } elseif ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
+            $tidakJawab = $totalSoal - ($benar + $salah);
+        }
+
+        ob_start();
+        ?>
+        <div class="hasil-card-kj" data-idx="<?= $idx ?>" style="background: white; border-radius: 14px; padding: 14px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="width: 24px; height: 24px; border-radius: 6px; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
+                        <?= $idx + 1 ?>
+                    </span>
+                    <div>
+                        <h4 style="margin: 0; font-size: 0.92rem; font-weight: 800; color: #0f172a;">
+                            <?= htmlspecialchars($h['nama_siswa']) ?>
+                        </h4>
+                        <div style="font-size: 0.72rem; color: #64748b;">
+                            No: <b><?= htmlspecialchars($h['nis']) ?></b> • <?= htmlspecialchars($h['rombel_kj'] ?: 'Kelas Jauh') ?>
+                        </div>
+                        <?php if (!empty($h['nama_ujian'])): ?>
+                            <div style="font-size: 0.68rem; color: #0284c7; font-weight: 700; margin-top: 2px;">
+                                <i class="fa-solid fa-file-lines"></i> <?= htmlspecialchars($h['nama_ujian']) ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 1.25rem; font-weight: 900; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>;">
+                        <?= $nilai ?>
+                    </div>
+                    <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 7px; border-radius: 10px; background: <?= $isTuntas ? '#ecfdf5' : '#fef2f2' ?>; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>;">
+                        <?= $isTuntas ? 'Tuntas' : 'Remedial' ?>
+                    </span>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; border-top: 1px dashed #f1f5f9; padding-top: 8px; margin-top: 8px; font-size: 0.72rem;">
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                    <span style="color: #15803d; font-weight: 800; background: #ecfdf5; padding: 2px 7px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                        <i class="fa-solid fa-check"></i> <?= $benar ?> Benar
+                    </span>
+                    <span style="color: #b91c1c; font-weight: 800; background: #fef2f2; padding: 2px 7px; border-radius: 6px; border: 1px solid #fecaca;">
+                        <i class="fa-solid fa-xmark"></i> <?= $salah ?> Salah
+                    </span>
+                    <span style="color: #64748b; font-weight: 800; background: #f8fafc; padding: 2px 7px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <i class="fa-solid fa-circle-minus"></i> <?= $tidakJawab ?> Kosong
+                    </span>
+                    <?php if ($isLocked): ?>
+                        <span style="color: #dc2626; font-weight: 800; background: #fff1f2; padding: 2px 7px; border-radius: 6px; border: 1px solid #fda4af;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Kena Pelanggaran
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <?php if ($isLocked || in_array($h['status_pengerjaan'], ['Terkunci', 'Mengerjakan'])): ?>
+                    <button type="button" onclick="bukaKunciPeserta(<?= (int)$h['id'] ?>, '<?= htmlspecialchars(addslashes($h['nama_siswa'])) ?>')" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                        <i class="fa-solid fa-unlock"></i> Buka Kunci
+                    </button>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+// Handler AJAX Hasil Nilai Kelas Jauh
+$isAjaxKJ = (!empty($_GET['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'));
+if ($isAjaxKJ && ($activeTab === 'nilai' || isset($_GET['topik_id']) || isset($_GET['mapel']) || isset($_GET['kelas']))) {
+    header('Content-Type: application/json; charset=utf-8');
+    $limitKJ = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
+    if ($limitKJ < 0) $limitKJ = 30;
+
+    $displayListKJ = ($limitKJ > 0 && count($hasilListKJ) > $limitKJ) ? array_slice($hasilListKJ, 0, $limitKJ) : $hasilListKJ;
+
+    ob_start();
+    if (empty($hasilListKJ)) {
+        ?>
+        <div style="text-align: center; padding: 30px 15px; background: white; border-radius: 14px; border: 1px dashed #cbd5e1; color: #94a3b8; font-size: 0.82rem;">
+            <i class="fa-solid fa-folder-open" style="font-size: 2rem; opacity: 0.3; margin-bottom: 8px; display: block;"></i>
+            Tidak ada data nilai siswa yang sesuai dengan filter Topik, Mapel, atau Kelas.<br>Silakan ganti pilihan filter di atas.
+        </div>
+        <?php
+    } else {
+        foreach ($displayListKJ as $idx => $h) {
+            echo renderHasilCardKJ($h, $idx);
+        }
+    }
+    $cardsHtml = ob_get_clean();
+
+    echo json_encode([
+        'success' => true,
+        'total' => count($hasilListKJ),
+        'display_count' => count($displayListKJ),
+        'limit' => $limitKJ,
+        'cards_html' => $cardsHtml,
+        'stat_rata2' => $statRata2,
+        'stat_tertinggi' => $statTertinggi,
+        'stat_tuntas' => "{$statTuntasCount}/" . count($hasilListKJ),
+        'mapel_list' => array_values(array_unique($mapelList)),
+        'cetak_url' => "cetak_hasil.php?tab=nilai&topik_id={$selectedTopikId}&mapel=" . urlencode($selectedMapel) . "&kelas=" . urlencode($selectedKelas)
+    ]);
+    exit;
 }
 
 $page_title = 'Portal Pengawas - Kelas Jauh CBT';
@@ -401,16 +543,16 @@ include 'header.php';
 
     <!-- ================= TAB 3: REKAP HASIL & NILAI KELAS JAUH ================= -->
     <div id="tabContent_nilai" style="display: <?= ($activeTab === 'nilai') ? 'block' : 'none' ?>;">
-        <!-- Filter Bertingkat: 1. Topik Ujian -> 2. Mapel -> 3. Kelas -->
-        <form method="GET" action="guru_kelas_jauh.php" id="formFilterKJ" style="background: white; border-radius: 16px; padding: 14px; margin-bottom: 14px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+        <!-- Filter Bertingkat: 1. Topik Ujian -> 2. Mapel -> 3. Kelas (AJAX Zero Reload) -->
+        <form id="formFilterKJ" onsubmit="event.preventDefault(); applyFilterKJ(false);" style="background: white; border-radius: 16px; padding: 14px; margin-bottom: 14px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
             <input type="hidden" name="tab" value="nilai">
 
             <!-- 1. Topik Ujian -->
             <div>
                 <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                    <i class="fa-solid fa-layer-group" style="color: #059669;"></i> 1. Topik Ujian:
+                    <i class="fa-solid fa-layer-group" style="color: #059669;"></i> 1. Topik Ujian (Aktif):
                 </label>
-                <select name="topik_id" onchange="document.getElementById('selMapelKJ').value=''; this.form.submit()" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc;">
+                <select name="topik_id" id="selTopikKJ" onchange="applyFilterKJ(true)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
                     <option value="0">-- Semua Topik Ujian --</option>
                     <?php foreach ($topikList as $tp): ?>
                         <option value="<?= (int)$tp['id'] ?>" <?= ($selectedTopikId == $tp['id']) ? 'selected' : '' ?>>
@@ -425,7 +567,7 @@ include 'header.php';
                 <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 4px; text-transform: uppercase;">
                     <i class="fa-solid fa-book-open" style="color: #059669;"></i> 2. Mata Pelajaran:
                 </label>
-                <select name="mapel" id="selMapelKJ" onchange="this.form.submit()" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc;">
+                <select name="mapel" id="selMapelKJ" onchange="applyFilterKJ(false)" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
                     <option value="">-- Semua Mata Pelajaran --</option>
                     <?php foreach ($mapelList as $mp): ?>
                         <option value="<?= htmlspecialchars($mp) ?>" <?= ($selectedMapel === $mp) ? 'selected' : '' ?>>
@@ -441,7 +583,7 @@ include 'header.php';
                     <i class="fa-solid fa-graduation-cap" style="color: #059669;"></i> 3. Filter Kelas:
                 </label>
                 <div style="display: flex; gap: 8px;">
-                    <select name="kelas" onchange="this.form.submit()" style="flex: 1; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc;">
+                    <select name="kelas" id="selKelasKJ" onchange="applyFilterKJ(false)" style="flex: 1; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.86rem; font-weight: 700; color: #0f172a; outline: none; background: #f8fafc; cursor: pointer;">
                         <option value="">-- Semua Kelas Jauh --</option>
                         <?php foreach ($kelasListKJ as $kls): ?>
                             <option value="<?= htmlspecialchars($kls) ?>" <?= ($selectedKelas === $kls) ? 'selected' : '' ?>>
@@ -449,144 +591,72 @@ include 'header.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <?php if ($selectedTopikId > 0 || !empty($selectedMapel) || !empty($selectedKelas)): ?>
-                        <a href="guru_kelas_jauh.php?tab=nilai" style="padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.85rem; font-weight: 800;" title="Reset Filter">
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </a>
-                    <?php endif; ?>
+                    <button type="button" id="btnResetFilterKJ" onclick="resetFilterKJ()" style="padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 10px; display: <?= ($selectedTopikId > 0 || !empty($selectedMapel) || !empty($selectedKelas)) ? 'flex' : 'none' ?>; align-items: center; justify-content: center; cursor: pointer;" title="Reset Filter">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
                 </div>
             </div>
         </form>
+
+        <!-- Tombol Download PDF Resmi Kemenag A4 -->
+        <a id="btnCetakPdfKJ" href="cetak_hasil.php?tab=nilai&topik_id=<?= $selectedTopikId ?>&mapel=<?= urlencode($selectedMapel) ?>&kelas=<?= urlencode($selectedKelas) ?>" target="_blank" style="width: 100%; box-sizing: border-box; padding: 12px 16px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.25); margin-bottom: 14px; transition: 0.2s;">
+            <i class="fa-solid fa-file-pdf" style="font-size: 1.1rem;"></i> Download PDF Rekap Nilai (A4)
+        </a>
 
         <!-- Metric Card Hasil Ujian -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
             <div style="background: white; border-radius: 12px; padding: 12px 8px; border: 1px solid #e2e8f0; text-align: center;">
                 <div style="font-size: 0.65rem; color: #64748b; font-weight: 700;">RATA-RATA</div>
-                <div style="font-size: 1.3rem; font-weight: 900; color: #2563eb;"><?= $statRata2 ?></div>
+                <div id="statRata2KJ" style="font-size: 1.3rem; font-weight: 900; color: #2563eb;"><?= $statRata2 ?></div>
             </div>
             <div style="background: white; border-radius: 12px; padding: 12px 8px; border: 1px solid #e2e8f0; text-align: center;">
                 <div style="font-size: 0.65rem; color: #64748b; font-weight: 700;">TERTINGGI</div>
-                <div style="font-size: 1.3rem; font-weight: 900; color: #10b981;"><?= $statTertinggi ?></div>
+                <div id="statTertinggiKJ" style="font-size: 1.3rem; font-weight: 900; color: #10b981;"><?= $statTertinggi ?></div>
             </div>
             <div style="background: white; border-radius: 12px; padding: 12px 8px; border: 1px solid #e2e8f0; text-align: center;">
                 <div style="font-size: 0.65rem; color: #64748b; font-weight: 700;">TUNTAS KKM</div>
-                <div style="font-size: 1.3rem; font-weight: 900; color: #059669;"><?= $statTuntasCount ?>/<?= count($hasilListKJ) ?></div>
+                <div id="statTuntasKJ" style="font-size: 1.3rem; font-weight: 900; color: #059669;"><?= $statTuntasCount ?>/<?= count($hasilListKJ) ?></div>
             </div>
         </div>
 
-        <!-- Daftar Nilai Siswa -->
+        <!-- Header Daftar Nilai Siswa with Limit Selector -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <h3 style="margin: 0; font-size: 0.92rem; font-weight: 900; color: #0f172a;">
-                <i class="fa-solid fa-list-ol" style="color: #059669;"></i> Daftar Nilai Siswa (<?= count($hasilListKJ) ?>)
+                <i class="fa-solid fa-list-ol" style="color: #059669;"></i> <span id="lblTitleNilaiKJ">Daftar Nilai Siswa (<?= count($hasilListKJ) ?>)</span>
             </h3>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: 700;">Tampil:</span>
+                <select id="selLimitKJ" onchange="applyFilterKJ(false)" style="padding: 4px 8px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.75rem; font-weight: 700; color: #0f172a; background: white; cursor: pointer;">
+                    <option value="30" <?= ($selectedLimit == 30) ? 'selected' : '' ?>>30 Siswa</option>
+                    <option value="50" <?= ($selectedLimit == 50) ? 'selected' : '' ?>>50 Siswa</option>
+                    <option value="100" <?= ($selectedLimit == 100) ? 'selected' : '' ?>>100 Siswa</option>
+                    <option value="all" <?= ($selectedLimit === 0 || $selectedLimit === 'all') ? 'selected' : '' ?>>Semua</option>
+                </select>
+            </div>
         </div>
 
-        <?php if (empty($hasilListKJ)): ?>
-            <div style="text-align: center; padding: 30px 15px; background: white; border-radius: 14px; border: 1px dashed #cbd5e1; color: #94a3b8; font-size: 0.82rem;">
-                <i class="fa-solid fa-folder-open" style="font-size: 2rem; opacity: 0.3; margin-bottom: 8px; display: block;"></i>
-                Tidak ada data nilai siswa yang sesuai dengan filter Topik, Mapel, atau Kelas.<br>Silakan ganti pilihan filter di atas.
-            </div>
-        <?php else: ?>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <?php foreach ($hasilListKJ as $idx => $h): ?>
-                    <?php
-                    $nilai = (float)($h['nilai_akhir'] ?? 0);
-                    $kkmNilai = (float)($h['kkm'] ?? 75);
-                    $isTuntas = ($nilai >= $kkmNilai);
-                    $isLocked = (!empty($h['is_locked']) || $h['status_pengerjaan'] === 'Terkunci');
-
-                    // Ambil jumlah benar dan salah real
-                    $benar = (int)($h['jumlah_benar'] ?? 0);
-                    $salah = (int)($h['jumlah_salah'] ?? 0);
-                    $tidakJawab = (int)($h['jumlah_tidak_jawab'] ?? 0);
-
-                    // Ambil total soal ujian
-                    $totalSoal = (int)($h['total_soal_ujian'] ?? 0);
-
-                    // Cek jawaban_json jika ada untuk menghitung soal yang dijawab / tidak dijawab secara akurat
-                    $ansCount = 0;
-                    if (!empty($h['jawaban_json'])) {
-                        $rawAns = json_decode($h['jawaban_json'], true);
-                        $arrAns = $rawAns['answers'] ?? ($rawAns['answers_by_index'] ?? $rawAns);
-                        if (is_array($arrAns)) {
-                            foreach ($arrAns as $aVal) {
-                                if ($aVal !== '' && $aVal !== null && $aVal !== []) {
-                                    $ansCount++;
-                                }
-                            }
-                        }
-                    }
-
-                    if ($totalSoal <= 0) {
-                        $totalSoal = max(20, $ansCount > 0 ? $ansCount : ($benar + $salah));
-                    }
-
-                    if ($ansCount > 0 && $ansCount < $totalSoal) {
-                        // Jika terhenti di tengah jalan karena pelanggaran atau force finish
-                        $tidakJawab = $totalSoal - $ansCount;
-                        $salah = max(0, $ansCount - $benar);
-                    } elseif ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
-                        $tidakJawab = $totalSoal - ($benar + $salah);
-                    }
-                    ?>
-                    <div style="background: white; border-radius: 14px; padding: 14px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="width: 24px; height: 24px; border-radius: 6px; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
-                                    <?= $idx + 1 ?>
-                                </span>
-                                <div>
-                                    <h4 style="margin: 0; font-size: 0.92rem; font-weight: 800; color: #0f172a;">
-                                        <?= htmlspecialchars($h['nama_siswa']) ?>
-                                    </h4>
-                                    <div style="font-size: 0.72rem; color: #64748b;">
-                                        No: <b><?= htmlspecialchars($h['nis']) ?></b> • <?= htmlspecialchars($h['rombel_kj'] ?: 'Kelas Jauh') ?>
-                                    </div>
-                                    <?php if (!empty($h['nama_ujian'])): ?>
-                                        <div style="font-size: 0.68rem; color: #0284c7; font-weight: 700; margin-top: 2px;">
-                                            <i class="fa-solid fa-file-lines"></i> <?= htmlspecialchars($h['nama_ujian']) ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 1.25rem; font-weight: 900; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>;">
-                                    <?= $nilai ?>
-                                </div>
-                                <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 7px; border-radius: 10px; background: <?= $isTuntas ? '#ecfdf5' : '#fef2f2' ?>; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>;">
-                                    <?= $isTuntas ? 'Tuntas' : 'Remedial' ?>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Info Detail Real: Benar, Salah, Tidak Dijawab & Tombol Buka Kunci -->
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; border-top: 1px dashed #f1f5f9; padding-top: 8px; margin-top: 8px; font-size: 0.72rem;">
-                            <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-                                <span style="color: #15803d; font-weight: 800; background: #ecfdf5; padding: 2px 7px; border-radius: 6px; border: 1px solid #bbf7d0;">
-                                    <i class="fa-solid fa-check"></i> <?= $benar ?> Benar
-                                </span>
-                                <span style="color: #b91c1c; font-weight: 800; background: #fef2f2; padding: 2px 7px; border-radius: 6px; border: 1px solid #fecaca;">
-                                    <i class="fa-solid fa-xmark"></i> <?= $salah ?> Salah
-                                </span>
-                                <span style="color: #64748b; font-weight: 800; background: #f8fafc; padding: 2px 7px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                    <i class="fa-solid fa-circle-minus"></i> <?= $tidakJawab ?> Kosong
-                                </span>
-                                <?php if ($isLocked): ?>
-                                    <span style="color: #dc2626; font-weight: 800; background: #fff1f2; padding: 2px 7px; border-radius: 6px; border: 1px solid #fda4af;">
-                                        <i class="fa-solid fa-triangle-exclamation"></i> Kena Pelanggaran
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                            <?php if ($isLocked || in_array($h['status_pengerjaan'], ['Terkunci', 'Mengerjakan'])): ?>
-                                <button type="button" onclick="bukaKunciPeserta(<?= (int)$h['id'] ?>, '<?= htmlspecialchars(addslashes($h['nama_siswa'])) ?>')" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-                                    <i class="fa-solid fa-unlock"></i> Buka Kunci
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+        <?php
+        $displayListKJ = ($selectedLimit > 0 && count($hasilListKJ) > $selectedLimit) ? array_slice($hasilListKJ, 0, $selectedLimit) : $hasilListKJ;
+        ?>
+        <div id="daftarNilaiKJContainer" style="display: flex; flex-direction: column; gap: 10px; transition: opacity 0.15s ease;">
+            <?php if (empty($hasilListKJ)): ?>
+                <div style="text-align: center; padding: 30px 15px; background: white; border-radius: 14px; border: 1px dashed #cbd5e1; color: #94a3b8; font-size: 0.82rem;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 2rem; opacity: 0.3; margin-bottom: 8px; display: block;"></i>
+                    Tidak ada data nilai siswa yang sesuai dengan filter Topik, Mapel, atau Kelas.<br>Silakan ganti pilihan filter di atas.
+                </div>
+            <?php else: ?>
+                <?php foreach ($displayListKJ as $idx => $h): ?>
+                    <?= renderHasilCardKJ($h, $idx) ?>
                 <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
+
+        <div id="wrapLoadMoreNilaiKJ" style="margin-top: 12px; text-align: center; display: <?= (count($hasilListKJ) > count($displayListKJ)) ? 'block' : 'none' ?>;">
+            <button type="button" id="btnLoadMoreNilaiKJ" onclick="loadMoreNilaiKJ()" style="width: 100%; padding: 12px 16px; background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; border-radius: 12px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;">
+                <i class="fa-solid fa-chevron-down"></i>
+                <span id="lblLoadMoreNilaiKJ">Lihat Selengkapnya (+30 Siswa, Sisa <?= count($hasilListKJ) - count($displayListKJ) ?> Lagi)</span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -722,12 +792,196 @@ include 'header.php';
         .then(res => {
             alert(res.message);
             if (res.success) {
-                window.location.reload();
+                applyFilterKJ(false);
             }
         })
         .catch(() => {
             alert('Gagal menghubungi server.');
         });
+    }
+
+    // AJAX Filter & Pagination Rekap Nilai Siswa Kelas Jauh
+    let kjCurrentLimit = <?= (int)($selectedLimit ?: 30) ?>;
+    let kjAbortController = null;
+
+    function applyFilterKJ(isTopikChange) {
+        if (isTopikChange) {
+            const selM = document.getElementById('selMapelKJ');
+            if (selM) selM.value = '';
+        }
+
+        const topikId = document.getElementById('selTopikKJ') ? document.getElementById('selTopikKJ').value : '0';
+        const mapel = document.getElementById('selMapelKJ') ? document.getElementById('selMapelKJ').value : '';
+        const kelas = document.getElementById('selKelasKJ') ? document.getElementById('selKelasKJ').value : '';
+        const limit = document.getElementById('selLimitKJ') ? document.getElementById('selLimitKJ').value : '30';
+        kjCurrentLimit = (limit === 'all') ? 9999 : parseInt(limit || 30);
+
+        const container = document.getElementById('daftarNilaiKJContainer');
+        if (container) {
+            container.style.opacity = '0.35';
+            container.style.pointerEvents = 'none';
+        }
+
+        const btnReset = document.getElementById('btnResetFilterKJ');
+        if (btnReset) {
+            btnReset.style.display = (topikId !== '0' || mapel !== '' || kelas !== '') ? 'flex' : 'none';
+        }
+
+        if (kjAbortController) {
+            kjAbortController.abort();
+        }
+        kjAbortController = new AbortController();
+
+        const queryParams = new URLSearchParams({
+            tab: 'nilai',
+            ajax: '1',
+            topik_id: topikId,
+            mapel: mapel,
+            kelas: kelas,
+            limit: limit
+        });
+
+        // Update URL tanpa reload
+        try {
+            const cleanParams = new URLSearchParams(queryParams);
+            cleanParams.delete('ajax');
+            const newUrl = 'guru_kelas_jauh.php?' + cleanParams.toString();
+            window.history.replaceState({}, '', newUrl);
+        } catch (e) {}
+
+        fetch('guru_kelas_jauh.php?' + queryParams.toString(), {
+            signal: kjAbortController.signal,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) return;
+
+            // Update stats
+            const elRata = document.getElementById('statRata2KJ');
+            if (elRata) elRata.textContent = data.stat_rata2;
+            const elMax = document.getElementById('statTertinggiKJ');
+            if (elMax) elMax.textContent = data.stat_tertinggi;
+            const elTuntas = document.getElementById('statTuntasKJ');
+            if (elTuntas) elTuntas.textContent = data.stat_tuntas;
+
+            // Update Title
+            const elTitle = document.getElementById('lblTitleNilaiKJ');
+            if (elTitle) elTitle.textContent = 'Daftar Nilai Siswa (' + data.total + ')';
+
+            // Update PDF Link
+            const btnPdf = document.getElementById('btnCetakPdfKJ');
+            if (btnPdf && data.cetak_url) {
+                btnPdf.href = data.cetak_url;
+            }
+
+            // Update Mapel options if Topik changed
+            if (isTopikChange && data.mapel_list) {
+                const selMapel = document.getElementById('selMapelKJ');
+                if (selMapel) {
+                    const prevMapel = selMapel.value;
+                    selMapel.innerHTML = '<option value="">-- Semua Mata Pelajaran --</option>';
+                    data.mapel_list.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        if (m === prevMapel) opt.selected = true;
+                        selMapel.appendChild(opt);
+                    });
+                }
+            }
+
+            // Update Cards Container
+            if (container) {
+                container.innerHTML = data.cards_html;
+                container.style.opacity = '1';
+                container.style.pointerEvents = 'auto';
+            }
+
+            // Update Load More button
+            const wrapMore = document.getElementById('wrapLoadMoreNilaiKJ');
+            if (wrapMore) {
+                if (data.total > data.display_count) {
+                    wrapMore.style.display = 'block';
+                    const lblMore = document.getElementById('lblLoadMoreNilaiKJ');
+                    if (lblMore) {
+                        const sisa = data.total - data.display_count;
+                        lblMore.textContent = 'Lihat Selengkapnya (+30 Siswa, Sisa ' + sisa + ' Lagi)';
+                    }
+                } else {
+                    wrapMore.style.display = 'none';
+                }
+            }
+        })
+        .catch(err => {
+            if (err.name === 'AbortError') return;
+            if (container) {
+                container.style.opacity = '1';
+                container.style.pointerEvents = 'auto';
+            }
+        });
+    }
+
+    function loadMoreNilaiKJ() {
+        kjCurrentLimit += 30;
+        const topikId = document.getElementById('selTopikKJ') ? document.getElementById('selTopikKJ').value : '0';
+        const mapel = document.getElementById('selMapelKJ') ? document.getElementById('selMapelKJ').value : '';
+        const kelas = document.getElementById('selKelasKJ') ? document.getElementById('selKelasKJ').value : '';
+
+        const btnMore = document.getElementById('btnLoadMoreNilaiKJ');
+        if (btnMore) {
+            btnMore.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Memuat data...</span>';
+        }
+
+        const queryParams = new URLSearchParams({
+            tab: 'nilai',
+            ajax: '1',
+            topik_id: topikId,
+            mapel: mapel,
+            kelas: kelas,
+            limit: kjCurrentLimit
+        });
+
+        fetch('guru_kelas_jauh.php?' + queryParams.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) return;
+            const container = document.getElementById('daftarNilaiKJContainer');
+            if (container) {
+                container.innerHTML = data.cards_html;
+            }
+            const wrapMore = document.getElementById('wrapLoadMoreNilaiKJ');
+            if (wrapMore) {
+                if (data.total > data.display_count) {
+                    wrapMore.style.display = 'block';
+                    if (btnMore) {
+                        const sisa = data.total - data.display_count;
+                        btnMore.innerHTML = '<i class="fa-solid fa-chevron-down"></i> <span>Lihat Selengkapnya (+30 Siswa, Sisa ' + sisa + ' Lagi)</span>';
+                    }
+                } else {
+                    wrapMore.style.display = 'none';
+                }
+            }
+        })
+        .catch(() => {
+            if (btnMore) {
+                btnMore.innerHTML = '<i class="fa-solid fa-chevron-down"></i> <span>Lihat Selengkapnya (+30 Siswa Lagi)</span>';
+            }
+        });
+    }
+
+    function resetFilterKJ() {
+        const selT = document.getElementById('selTopikKJ');
+        if (selT) selT.value = '0';
+        const selM = document.getElementById('selMapelKJ');
+        if (selM) selM.value = '';
+        const selK = document.getElementById('selKelasKJ');
+        if (selK) selK.value = '';
+        const selL = document.getElementById('selLimitKJ');
+        if (selL) selL.value = '30';
+        applyFilterKJ(true);
     }
 
     function confirmLogoutPengawasKJ(e) {
