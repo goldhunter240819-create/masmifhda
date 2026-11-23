@@ -1976,6 +1976,17 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 } catch(e) {}
                 if (typeof curAns !== 'object' || curAns === null) curAns = {};
 
+                // Pastikan tidak ada duplikasi jawaban (1-to-1) dari cache lokal lama
+                const seenAnswers = new Set();
+                Object.keys(curAns).forEach(k => {
+                    const ansVal = curAns[k];
+                    if (seenAnswers.has(ansVal)) {
+                        delete curAns[k];
+                    } else {
+                        seenAnswers.add(ansVal);
+                    }
+                });
+
                 const allRespon = Array.from(new Set(pasangan.map(p => p.respon)));
                 let selectedLeftIdx = null;
 
@@ -2070,6 +2081,30 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
                     rc.onclick = () => {
                         if (selectedLeftIdx !== null) {
+                            // 1. Jika diklik pada jawaban yang sama persis dengan pasangan aktif, lepaskan garis (toggle lepas)
+                            if (curAns[selectedLeftIdx] === r) {
+                                delete curAns[selectedLeftIdx];
+                                userAnswers[idx] = { ...curAns };
+                                leftCol.querySelectorAll('.matching-card').forEach(c => c.classList.remove('selected-source'));
+                                selectedLeftIdx = null;
+                                drawLines();
+                                renderPalette();
+                                saveCurrentAnswers(true);
+                                updateHint('Pasangan garis dilepas. Silakan klik pernyataan di kiri untuk memasangkan kembali.');
+                                return;
+                            }
+
+                            // 2. ATURAN 1-TO-1 STRICT: 1 garis hanya boleh ke 1 pilihan jawaban di sisi kanan!
+                            // Jika jawaban di kolom kanan ini sebelumnya sudah dipasangkan dengan pernyataan lain di kiri,
+                            // lepaskan pasangan lama tersebut agar tidak ada 2 atau 3 garis menumpuk ke 1 kotak jawaban.
+                            let reallocatedFrom = null;
+                            Object.keys(curAns).forEach(k => {
+                                if (curAns[k] === r && parseInt(k) !== selectedLeftIdx) {
+                                    reallocatedFrom = parseInt(k) + 1;
+                                    delete curAns[k];
+                                }
+                            });
+
                             curAns[selectedLeftIdx] = r;
                             userAnswers[idx] = { ...curAns };
 
@@ -2080,11 +2115,22 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                             drawLines();
                             renderPalette();
                             saveCurrentAnswers(true);
-                            updateHint(`Garis lengkung berwarna ${connectedCol.name} berhasil terhubung!`);
+                            if (reallocatedFrom !== null) {
+                                updateHint(`Garis lengkung ${connectedCol.name} terhubung! (Jawaban dialihkan dari Pernyataan [${reallocatedFrom}] karena 1 jawaban hanya boleh untuk 1 pernyataan).`);
+                            } else {
+                                updateHint(`Garis lengkung berwarna ${connectedCol.name} berhasil terhubung!`);
+                            }
                         } else {
                             const connectedLeft = Object.keys(curAns).filter(k => curAns[k] === r);
                             if (connectedLeft.length > 0) {
-                                updateHint(`Jawaban '${r}' terhubung dengan Pernyataan ${connectedLeft.map(n => parseInt(n) + 1).join(', ')}.`);
+                                const pNo = parseInt(connectedLeft[0]);
+                                selectedLeftIdx = pNo;
+                                leftCol.querySelectorAll('.matching-card').forEach((c, cIdx) => {
+                                    if (cIdx === pNo) c.classList.add('selected-source');
+                                    else c.classList.remove('selected-source');
+                                });
+                                const connectedCol = MATCH_COLORS[pNo % MATCH_COLORS.length];
+                                updateHint(`Pernyataan [${pNo + 1}] (${connectedCol.name}) aktif. Klik pilihan lain di kanan jika ingin memindahkan, atau klik lagi untuk melepas garis.`);
                             } else {
                                 updateHint('Silakan klik salah satu pernyataan di sebelah kiri terlebih dahulu.');
                             }
