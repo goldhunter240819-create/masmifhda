@@ -812,6 +812,99 @@ class BankSoalController {
     }
 
     /**
+     * Pratinjau / Simulasi Tampilan Siswa CBT untuk Paket Bank Soal
+     */
+    public function simulasiSiswa() {
+        if (!isset($_SESSION['user_id'])) {
+            redirect('/login');
+            exit;
+        }
+
+        $paketId = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
+        if ($paketId <= 0) {
+            redirect('/bank_soal');
+            exit;
+        }
+
+        // 1. Ambil info paket
+        $stmtP = $this->db->prepare("SELECT p.*, t.nama_topik, t.tahun_ajaran, t.semester 
+                                     FROM bs_paket p 
+                                     LEFT JOIN bs_topik t ON p.topik_id = t.id 
+                                     WHERE p.id = ? LIMIT 1");
+        $stmtP->execute([$paketId]);
+        $paket = $stmtP->fetch(PDO::FETCH_ASSOC);
+
+        if (!$paket) {
+            redirect('/bank_soal');
+            exit;
+        }
+
+        // 2. Ambil seluruh butir soal
+        $stmtS = $this->db->prepare("SELECT id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, 
+                                            skor_maksimal as bobot, tipe_soal, konten_tambahan, kunci_jawaban 
+                                     FROM bs_soal 
+                                     WHERE paket_id = ? 
+                                     ORDER BY nomor_urut ASC, id ASC");
+        $stmtS->execute([$paketId]);
+        $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($soalList)) {
+            echo "<script>alert('Paket mata pelajaran ini belum memiliki butir soal di Bank Soal! Silakan input butir soal terlebih dahulu sebelum mencoba tampilan siswa.'); window.location.href='" . base_url('bank_soal/daftar_soal?paket_id=' . $paketId) . "';</script>";
+            exit;
+        }
+
+        // 3. Setup Virtual Ujian Info
+        $durasiMenit = (int)($paket['durasi_menit'] ?: 90);
+        $topikJudul = !empty($paket['nama_topik']) ? $paket['nama_topik'] : 'Sumatif Akhir Semester (SAS)';
+        $ujianInfo = [
+            'id' => 999000 + $paketId,
+            'topik_id' => (int)$paket['topik_id'],
+            'nama_ujian' => $paket['mapel_nama'] . ' (' . ($paket['kelas_nama'] ?: 'Semua Kelas') . ') - ' . $topikJudul,
+            'mapel_nama' => $paket['mapel_nama'],
+            'durasi_menit' => $durasiMenit,
+            'kelas_nama' => $paket['kelas_nama'] ?: 'Semua Kelas',
+            'kkm' => (int)($paket['kkm'] ?: 75),
+            'is_simulasi' => true,
+            'paket_id' => $paketId,
+            'back_url' => base_url('bank_soal?topik_id=' . $paket['topik_id'])
+        ];
+
+        // 4. Setup Virtual Peserta Info (ID = 0 menandakan mode simulasi)
+        $namaUser = $_SESSION['nama'] ?? 'Guru Pengampu';
+        $pesertaInfo = [
+            'id' => 0,
+            'ujian_id' => $ujianInfo['id'],
+            'siswa_id' => null,
+            'nis' => 'SIMULASI-' . $paketId,
+            'nama_siswa' => $namaUser . ' (Pratinjau Siswa)',
+            'kelas_nama' => $paket['kelas_nama'] ?: 'Semua Kelas',
+            'waktu_mulai' => date('Y-m-d H:i:s'),
+            'status_pengerjaan' => 'Mengerjakan',
+            'jawaban_json' => null,
+            'reset_count' => 0
+        ];
+
+        // 5. Durasi & Settings
+        $durasiDetik = $durasiMenit * 60;
+        $savedData = [];
+        $cbtSettings = [
+            'anti_cheat_mode' => '0',
+            'force_fullscreen' => '0',
+            'block_tab_switch' => '0',
+            'max_tab_violations' => 999,
+            'disable_right_click' => '0',
+            'disable_copy_paste' => '0',
+            'sound_alarm_on_violation' => '0',
+            'block_back_button' => '0',
+            'watermark_student_nis' => '0',
+            'require_all_answered_no_doubt' => '0'
+        ];
+
+        include __DIR__ . '/../../resources/views/cbt/kerjakan.php';
+        exit;
+    }
+
+    /**
      * Dapatkan kamus nama guru resmi MAS MIFTAHUL HUDA
      */
     public function getGuruDictionary() {

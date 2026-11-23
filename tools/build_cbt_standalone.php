@@ -224,6 +224,12 @@ $router->add('GET', '/soal', [\App\Controllers\CbtController::class, 'soal']);
 
 // Bank Soal Suite (Sama persis seperti di Server Pusat)
 $router->add('GET', '/bank_soal', [\App\Controllers\BankSoalController::class, 'dashboard']);
+$router->add('GET', '/bank_soal/simulasi', [\App\Controllers\BankSoalController::class, 'simulasiSiswa']);
+$router->add('GET', '/cbt/bank_soal/simulasi', [\App\Controllers\BankSoalController::class, 'simulasiSiswa']);
+$router->add('GET', '/bank_soal/cetak_soal', [\App\Controllers\BankSoalController::class, 'cetakSoal']);
+$router->add('GET', '/bank_soal/cetak', [\App\Controllers\BankSoalController::class, 'cetakRekap']);
+$router->add('GET', '/cbt/bank_soal/cetak_soal', [\App\Controllers\BankSoalController::class, 'cetakSoal']);
+$router->add('GET', '/cbt/bank_soal/cetak', [\App\Controllers\BankSoalController::class, 'cetakRekap']);
 $router->add('GET', '/cbt/bank_soal', function() { redirect('/bank_soal'); exit; });
 $router->add('POST', '/bank_soal/generate-dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);
 $router->add('GET', '/bank_soal/generate-dummy', [\App\Controllers\BankSoalController::class, 'generateDummy']);

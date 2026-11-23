@@ -1,19 +1,20 @@
 <?php
-$pageTitle = 'Ruang Ujian CBT: ' . htmlspecialchars($ujianInfo['nama_ujian']);
+$isSimulasi = !empty($ujianInfo['is_simulasi']);
+$pageTitle = ($isSimulasi ? '[SIMULASI SISWA] ' : 'Ruang Ujian CBT: ') . htmlspecialchars($ujianInfo['nama_ujian']);
 $durasiDetik = isset($durasiDetik) ? (int)$durasiDetik : (($ujianInfo['durasi_menit'] ?? 90) * 60);
 $logoUrl = \App\Core\Branding::getInstitusiLogo();
 
 $cbtSettings = $cbtSettings ?? [];
-$isAntiCheat = ($cbtSettings['anti_cheat_mode'] ?? '1') === '1';
-$forceFullscreen = ($cbtSettings['force_fullscreen'] ?? '1') === '1';
-$blockTab = ($cbtSettings['block_tab_switch'] ?? '1') === '1';
+$isAntiCheat = $isSimulasi ? false : (($cbtSettings['anti_cheat_mode'] ?? '1') === '1');
+$forceFullscreen = $isSimulasi ? false : (($cbtSettings['force_fullscreen'] ?? '1') === '1');
+$blockTab = $isSimulasi ? false : (($cbtSettings['block_tab_switch'] ?? '1') === '1');
 $maxViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
 $actionViolation = $cbtSettings['action_on_violation'] ?? 'submit';
-$disableRightClick = ($cbtSettings['disable_right_click'] ?? '1') === '1';
-$disableCopyPaste = ($cbtSettings['disable_copy_paste'] ?? '1') === '1';
-$soundAlarm = ($cbtSettings['sound_alarm_on_violation'] ?? '1') === '1';
-$blockBackButton = ($cbtSettings['block_back_button'] ?? '1') === '1';
-$watermark = ($cbtSettings['watermark_student_nis'] ?? '1') === '1';
+$disableRightClick = $isSimulasi ? false : (($cbtSettings['disable_right_click'] ?? '1') === '1');
+$disableCopyPaste = $isSimulasi ? false : (($cbtSettings['disable_copy_paste'] ?? '1') === '1');
+$soundAlarm = $isSimulasi ? false : (($cbtSettings['sound_alarm_on_violation'] ?? '1') === '1');
+$blockBackButton = $isSimulasi ? false : (($cbtSettings['block_back_button'] ?? '1') === '1');
+$watermark = $isSimulasi ? false : (($cbtSettings['watermark_student_nis'] ?? '1') === '1');
 $requireAllAnswered = ($cbtSettings['require_all_answered_no_doubt'] ?? '1') === '1';
 $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 ?>
@@ -25,6 +26,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
     <title><?php echo $pageTitle; ?></title>
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
+    <script src="<?php echo base_url('public/assets/js/sweetalert2.all.min.js'); ?>"></script>
     <style>
         :root {
             --primary: #4f46e5;
@@ -918,6 +920,23 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
     <!-- Audio Element Danger Alarm Meme -->
     <audio id="cbtAlarmAudio" src="<?php echo $alarmSoundUrl; ?>" preload="none" loop></audio>
 
+    <?php if ($isSimulasi): ?>
+    <!-- Topbar Banner Mode Simulasi / Pratinjau Siswa -->
+    <div style="background: linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #0284c7 100%); color: #ffffff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25); z-index: 100; position: sticky; top: 0; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span style="background: rgba(255,255,255,0.22); padding: 4px 12px; border-radius: 99px; font-size: 0.72rem; letter-spacing: 0.5px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="smartphone" style="width: 13px; height: 13px;"></i> PRATINJAU TAMPILAN SISWA
+            </span>
+            <span style="color: #f1f5f9; font-weight: 600;">Ini adalah tampilan asli saat siswa mengerjakan ujian. Anda dapat mencoba klik opsi PG, centang PG Kompleks, memilih Benar/Salah, maupun menarik garis menjodohkan!</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <a href="<?php echo htmlspecialchars($ujianInfo['back_url'] ?? base_url('bank_soal')); ?>" style="background: #ffffff; color: #4338ca; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); white-space: nowrap;">
+                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Kembali ke Bank Soal
+            </a>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Header Topbar -->
     <header class="cbt-topbar">
         <div class="cbt-brand">
@@ -1231,6 +1250,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
     </div>
 
     <script>
+        const isSimulasi = <?php echo $isSimulasi ? 'true' : 'false'; ?>;
         const soalList = <?php echo json_encode($soalList); ?>;
         const totalSoal = soalList.length;
         const ujianId = <?php echo (int)$ujianInfo['id']; ?>;
@@ -1417,6 +1437,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         showSaveIndicator('Tersimpan Lokal', false);
                     });
                 }, 400);
+            } else if (syncCloud && isSimulasi) {
+                showSaveIndicator('Tersimpan di Pratinjau ✓', false);
             }
         }
 
@@ -2347,7 +2369,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         }
 
         // Hapus cache lokal setelah ujian resmi dikirim
-        document.getElementById('formSubmitUjian').onsubmit = function() {
+        document.getElementById('formSubmitUjian').onsubmit = function(e) {
             stopDangerAlarm();
             isExamSubmitted = true;
             try {
@@ -2357,6 +2379,48 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 localStorage.removeItem(storageKeyViol);
                 localStorage.removeItem(storageKeyDeadline);
             } catch(e) {}
+
+            if (isSimulasi) {
+                if (e) e.preventDefault();
+                let terisi = 0;
+                let ragu = 0;
+                for (let i = 0; i < totalSoal; i++) {
+                    const ans = userAnswers[i];
+                    if (ans !== undefined && ans !== null && ans !== '' && (!Array.isArray(ans) || ans.length > 0) && (typeof ans !== 'object' || Object.keys(ans).length > 0)) {
+                        terisi++;
+                    }
+                    if (raguState[i]) ragu++;
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Simulasi Siswa Berhasil!',
+                        html: `Tampilan pengerjaan siswa sudah <b>SIP & Berjalan Normal</b>!<br><br>
+                               <div style="text-align:left; background:#f8fafc; padding:14px; border-radius:12px; font-size:0.88rem; border:1px solid #e2e8f0; line-height:1.7;">
+                                 📋 <b>Ringkasan Pengerjaan:</b><br>
+                                 • Total Soal: <b>${totalSoal} Butir</b><br>
+                                 • Butir Terjawab / Dicoba: <b style="color:#2563eb;">${terisi} / ${totalSoal} Butir</b><br>
+                                 • Ditandai Ragu-Ragu: <b>${ragu} Butir</b><br>
+                                 • Interaksi Soal: <span style="color:#16a34a; font-weight:800;">Lancar Tanpa Hambatan ✓</span>
+                               </div>`,
+                        confirmButtonText: 'Kembali ke Bank Soal',
+                        showCancelButton: true,
+                        cancelButtonText: 'Tetap di Pratinjau',
+                        confirmButtonColor: '#4f46e5',
+                        cancelButtonColor: '#64748b'
+                    }).then((res) => {
+                        if (res.isConfirmed) {
+                            window.location.href = '<?php echo htmlspecialchars($ujianInfo["back_url"] ?? base_url("bank_soal")); ?>';
+                        }
+                    });
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    alert(`Simulasi Selesai!\nTotal Soal: ${totalSoal}\nTerjawab: ${terisi}\nTampilan pengerjaan siswa sudah SIP!`);
+                    window.location.href = '<?php echo htmlspecialchars($ujianInfo["back_url"] ?? base_url("bank_soal")); ?>';
+                }
+                return false;
+            }
         };
 
         function autoSubmit(reason = 'Waktu ujian telah habis!') {
@@ -2393,21 +2457,29 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
             } catch(e) {}
 
-            setTimeout(() => {
-                document.getElementById('formSubmitUjian').submit();
-            }, 1200);
+            if (isSimulasi) {
+                setTimeout(() => {
+                    document.getElementById('formSubmitUjian').dispatchEvent(new Event('submit', { cancelable: true }));
+                }, 1000);
+            } else {
+                setTimeout(() => {
+                    document.getElementById('formSubmitUjian').submit();
+                }, 1200);
+            }
         }
 
         // Auto-lock Android Screen Pinning / Kiosk Mode via Native Bridge & Kunci Volume Penuh
-        try {
-            if (typeof AndroidOneSignal !== "undefined") {
-                if (typeof AndroidOneSignal.startExamLock === "function") AndroidOneSignal.startExamLock();
-                if (typeof AndroidOneSignal.forceMaxVolume === "function") AndroidOneSignal.forceMaxVolume();
-            } else if (typeof Android !== "undefined") {
-                if (typeof Android.startExamLock === "function") Android.startExamLock();
-                if (typeof Android.forceMaxVolume === "function") Android.forceMaxVolume();
-            }
-        } catch(e) {}
+        if (!isSimulasi) {
+            try {
+                if (typeof AndroidOneSignal !== "undefined") {
+                    if (typeof AndroidOneSignal.startExamLock === "function") AndroidOneSignal.startExamLock();
+                    if (typeof AndroidOneSignal.forceMaxVolume === "function") AndroidOneSignal.forceMaxVolume();
+                } else if (typeof Android !== "undefined") {
+                    if (typeof Android.startExamLock === "function") Android.startExamLock();
+                    if (typeof Android.forceMaxVolume === "function") Android.forceMaxVolume();
+                }
+            } catch(e) {}
+        }
 
         // ─── ANTI-CHEAT & DANGER ALARM SYSTEM (MEME AUDIO) ───────────────────
         const isAntiCheat = <?php echo $isAntiCheat ? 'true' : 'false'; ?>;

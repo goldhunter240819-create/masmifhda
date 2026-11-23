@@ -207,6 +207,12 @@ $isLocked = !empty($paketInfo['is_locked']);
                             <i data-lucide="printer" style="width: 15px; height: 15px; color: #0284c7;"></i>
                             <span>Cetak Soal & Kunci (PDF)</span>
                         </a>
+
+                        <!-- Tombol Tampilan Siswa (Simulasi CBT) -->
+                        <a href="<?php echo base_url('bank_soal/simulasi?paket_id=' . $paketInfo['id']); ?>" target="_blank" class="btn btn-outline" style="background: #faf5ff; border-color: #e9d5ff; color: #7c3aed; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;" title="Lihat Tampilan Pengerjaan Siswa (Simulasi CBT)">
+                            <i data-lucide="smartphone" style="width: 15px; height: 15px; color: #7c3aed;"></i>
+                            <span>Tampilan Siswa</span>
+                        </a>
                     <?php endif; ?>
 
                     <!-- Tombol Salin Soal -->

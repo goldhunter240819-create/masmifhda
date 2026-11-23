@@ -3277,6 +3277,15 @@ class CbtController {
         $db = $ctx['db_core'];
 
         $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+        $paket_id = isset($_GET['paket_id']) ? (int)$_GET['paket_id'] : 0;
+
+        // Jika dipanggil dari Bank Soal untuk pratinjau / simulasi pengerjaan siswa
+        if ($ujian_id <= 0 && $paket_id > 0) {
+            $bsCtrl = new \App\Controllers\BankSoalController();
+            $bsCtrl->simulasiSiswa();
+            exit;
+        }
+
         if ($ujian_id <= 0) {
             redirect('/cbt/ujian');
             exit;
