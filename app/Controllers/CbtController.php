@@ -8572,6 +8572,7 @@ class CbtController {
             'ruang' => $db->query("SELECT * FROM cbt_ruang ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC),
             'pengaturan' => $db->query("SELECT * FROM cbt_pengaturan")->fetchAll(PDO::FETCH_ASSOC),
             'pengawas_kj' => $db->query("SELECT * FROM cbt_pengawas_kj WHERE status = 'Aktif'")->fetchAll(PDO::FETCH_ASSOC),
+            'hasil_peserta' => $db->query("SELECT * FROM cbt_peserta WHERE status_pengerjaan = 'Selesai' OR nilai_akhir > 0 OR jumlah_benar > 0 OR jawaban_json IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC),
         ];
 
         // Export data mata pelajaran
@@ -9570,6 +9571,81 @@ class CbtController {
                 } catch (\Exception $e) {}
             }
         }
+
+        // 14. Data Hasil Ujian / Nilai Peserta (cbt_peserta) dari Server Pusat
+        if (!empty($data['hasil_peserta'])) {
+            $stmtChkP = $db->prepare("SELECT id FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
+            $stmtUpdP = $db->prepare("
+                UPDATE cbt_peserta SET 
+                    status_pengerjaan = ?,
+                    jumlah_benar = ?,
+                    jumlah_salah = ?,
+                    jumlah_tidak_jawab = ?,
+                    nilai_akhir = ?,
+                    jawaban_json = ?,
+                    waktu_mulai = COALESCE(waktu_mulai, ?),
+                    waktu_selesai = COALESCE(?, waktu_selesai)
+                WHERE id = ?
+            ");
+            $stmtInsP = $db->prepare("
+                INSERT INTO cbt_peserta 
+                (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, jumlah_tidak_jawab, nilai_akhir, jawaban_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            foreach ($data['hasil_peserta'] as $hp) {
+                try {
+                    $uId = (int)$hp['ujian_id'];
+                    $nis = trim((string)($hp['nis'] ?? ''));
+                    $sId = !empty($hp['siswa_id']) ? (int)$hp['siswa_id'] : null;
+
+                    $stmtChkP->execute([$uId, $nis, $sId ?: -1]);
+                    $existPId = $stmtChkP->fetchColumn();
+
+                    if ($existPId) {
+                        $stmtUpdP->execute([
+                            $hp['status_pengerjaan'] ?? 'Selesai',
+                            $hp['jumlah_benar'] ?? 0,
+                            $hp['jumlah_salah'] ?? 0,
+                            $hp['jumlah_tidak_jawab'] ?? 0,
+                            $hp['nilai_akhir'] ?? 0,
+                            $hp['jawaban_json'] ?? null,
+                            $hp['waktu_mulai'] ?? null,
+                            $hp['waktu_selesai'] ?? null,
+                            $existPId
+                        ]);
+                    } else {
+                        $stmtInsP->execute([
+                            $uId,
+                            $sId,
+                            $nis,
+                            $hp['nama_siswa'] ?? '',
+                            $hp['kelas_nama'] ?? '',
+                            $hp['waktu_mulai'] ?? null,
+                            $hp['waktu_selesai'] ?? null,
+                            $hp['status_pengerjaan'] ?? 'Selesai',
+                            $hp['jumlah_benar'] ?? 0,
+                            $hp['jumlah_salah'] ?? 0,
+                            $hp['jumlah_tidak_jawab'] ?? 0,
+                            $hp['nilai_akhir'] ?? 0,
+                            $hp['jawaban_json'] ?? null
+                        ]);
+                    }
+                    $details['hasil'] = ($details['hasil'] ?? 0) + 1;
+                } catch (\Throwable $e) {}
+            }
+        }
+
+        // 15. Otomatis pulihkan status siswa di database lokal yang sudah memiliki skor agar berstatus 'Selesai'
+        try {
+            $db->exec("
+                UPDATE cbt_peserta 
+                SET status_pengerjaan = 'Selesai', 
+                    waktu_selesai = COALESCE(waktu_selesai, waktu_mulai, NOW()) 
+                WHERE status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan') 
+                  AND (jawaban_json IS NOT NULL OR nilai_akhir > 0 OR jumlah_benar > 0)
+            ");
+        } catch (\Throwable $e) {}
 
         try {
             self::syncJadwalWithUjian($db, $dbSiakad);
