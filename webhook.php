@@ -227,25 +227,87 @@ try {
         $dbCore = \App\Core\Database::connect('core');
         $dbSiakad = \App\Core\Database::connect('siakad') ?: $dbCore;
         
-        $output .= "\n=== DIAGNOSTIK SOAL FIKIH ===\n";
-        
-        // 1. Cek bs_paket untuk Fikih
-        $pkts = $dbSiakad->query("SELECT id, topik_id, mapel_nama, kelas_nama, (SELECT COUNT(*) FROM bs_soal WHERE paket_id = bs_paket.id) as jml_soal FROM bs_paket WHERE mapel_nama LIKE '%Fikih%' OR mapel_nama LIKE '%Fiqih%'")->fetchAll(PDO::FETCH_ASSOC);
-        $output .= "bs_paket Fikih: " . json_encode($pkts) . "\n";
+        $output .= "\n=== PERBAIKAN SOAL FIKIH DENGAN PAKET ASLI 40 BUTIR ===\n";
 
-        // 2. Cek cbt_ujian untuk Fikih
-        $ujs = $dbCore->query("SELECT id, topik_id, nama_ujian, mapel_nama, kelas_nama, (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = cbt_ujian.id) as jml_soal FROM cbt_ujian WHERE mapel_nama LIKE '%Fikih%' OR mapel_nama LIKE '%Fiqih%'")->fetchAll(PDO::FETCH_ASSOC);
-        $output .= "cbt_ujian Fikih: " . json_encode($ujs) . "\n";
+        // Samakan nama mapel Fikih / Fiqih di bs_paket dan cbt_ujian
+        $dbSiakad->exec("UPDATE bs_paket SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
+        $dbCore->exec("UPDATE bs_paket SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
+        $dbCore->exec("UPDATE cbt_ujian SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
+        $dbCore->exec("UPDATE cbt_jadwal_grid SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
 
-        // 3. Cek sampel pertanyaan di cbt_soal Fikih
-        if (!empty($ujs)) {
-            foreach ($ujs as $uj) {
-                $sampel = $dbCore->query("SELECT nomor_urut, SUBSTRING(pertanyaan, 1, 60) as ringkasan FROM cbt_soal WHERE ujian_id = {$uj['id']} ORDER BY nomor_urut ASC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
-                $output .= "Sampel cbt_soal (Ujian ID {$uj['id']} - {$uj['nama_ujian']}): " . json_encode($sampel) . "\n";
+        // Petakan paket Fikih SAS (Topik 3):
+        // Paket 169 -> Kelas X (40 butir)
+        // Paket 170 -> Kelas XI (40 butir)
+        // Paket 171 -> Kelas XII (40 butir)
+        $paketMapping = [
+            10 => 169, // Kelas X
+            11 => 170, // Kelas XI
+            12 => 171  // Kelas XII
+        ];
+
+        $getLevel = function($str) {
+            $s = strtoupper((string)$str);
+            if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
+            if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
+            if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
+            return 0;
+        };
+
+        // Ambil semua ujian Fikih di Topik 3 (SAS Ganjil)
+        $fikihUjians = $dbCore->query("SELECT id, nama_ujian, kelas_nama FROM cbt_ujian WHERE topik_id = 3 AND (mapel_nama = 'Fikih' OR mapel_nama = 'Fiqih')")->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($fikihUjians as $fu) {
+            $uId = (int)$fu['id'];
+            $lvl = $getLevel($fu['kelas_nama']);
+            $sourcePktId = $paketMapping[$lvl] ?? 0;
+
+            if ($sourcePktId > 0) {
+                // Ambil 40 butir soal asli dari bs_soal
+                $stSoal = $dbSiakad->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                $stSoal->execute([$sourcePktId]);
+                $asliSoal = $stSoal->fetchAll(PDO::FETCH_ASSOC);
+
+                if (!empty($asliSoal)) {
+                    // Bersihkan 50 butir soal campur aduk lama di cbt_soal
+                    $dbCore->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$uId]);
+
+                    // Masukkan 40 butir soal asli Fikih lengkap dengan tipe_soal & konten_tambahan
+                    $stIns = $dbCore->prepare("
+                        INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+
+                    $no = 1;
+                    foreach ($asliSoal as $as) {
+                        $stIns->execute([
+                            $uId,
+                            $no++,
+                            $as['pertanyaan'],
+                            $as['opsi_a'] ?? '',
+                            $as['opsi_b'] ?? '',
+                            $as['opsi_c'] ?? '',
+                            $as['opsi_d'] ?? '',
+                            $as['opsi_e'] ?? '',
+                            $as['kunci_jawaban'] ?? 'A',
+                            $as['skor_maksimal'] ?? 2.50,
+                            $as['tipe_soal'] ?? 'sec_pg',
+                            $as['konten_tambahan'] ?? null
+                        ]);
+                    }
+
+                    $output .= "Sukses perbaiki Ujian ID {$uId} ({$fu['nama_ujian']}): dimasukkan " . count($asliSoal) . " butir soal asli Fikih dari Paket {$sourcePktId}!\n";
+                }
             }
         }
+
+        // Verifikasi hasil perbaikan
+        $verifUjs = $dbCore->query("SELECT id, nama_ujian, (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = cbt_ujian.id) as cnt FROM cbt_ujian WHERE topik_id = 3 AND (mapel_nama = 'Fikih' OR mapel_nama = 'Fiqih')")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($verifUjs as $vu) {
+            $sampel = $dbCore->query("SELECT nomor_urut, tipe_soal, SUBSTRING(pertanyaan, 1, 50) as ringkasan FROM cbt_soal WHERE ujian_id = {$vu['id']} ORDER BY nomor_urut ASC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+            $output .= "HASIL Ujian ID {$vu['id']} ({$vu['nama_ujian']}): {$vu['cnt']} butir soal. Sampel: " . json_encode($sampel) . "\n";
+        }
     } catch (\Throwable $e) {
-        $output .= "\nDiagnostik Fikih error: " . $e->getMessage() . "\n";
+        $output .= "\nPerbaikan Fikih error: " . $e->getMessage() . "\n";
     }
 
     $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";

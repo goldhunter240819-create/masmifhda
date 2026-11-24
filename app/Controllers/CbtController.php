@@ -1620,10 +1620,10 @@ class CbtController {
                         $stmtAllPaket = $targetDb->prepare("
                             SELECT id, kelas_nama, kelas_sasaran FROM bs_paket 
                             WHERE (topik_id = ? OR ? = 0)
-                              AND (mapel_nama = ? OR mapel_nama LIKE ?)
+                              AND (mapel_nama = ? OR mapel_nama LIKE ? OR (mapel_nama IN ('Fikih', 'Fiqih') AND ? IN ('Fikih', 'Fiqih')))
                             ORDER BY id ASC
                         ");
-                        $stmtAllPaket->execute([$tId, $tId, $mapel, '%' . $mapel . '%']);
+                        $stmtAllPaket->execute([$tId, $tId, $mapel, '%' . $mapel . '%', $mapel]);
                         $allPkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
                         foreach ($allPkts as $pkt) {
                             $pLvl = $getLevel($pkt['kelas_nama'] . ' ' . ($pkt['kelas_sasaran'] ?? ''));
@@ -1647,10 +1647,10 @@ class CbtController {
                             $stmtAllSoal = $targetDb->prepare("
                                 SELECT * FROM bs_soal 
                                 WHERE (topik_id = ? OR ? = 0)
-                                  AND (mapel_nama = ? OR mapel_nama LIKE ?)
+                                  AND (mapel_nama = ? OR mapel_nama LIKE ? OR (mapel_nama IN ('Fikih', 'Fiqih') AND ? IN ('Fikih', 'Fiqih')))
                                 ORDER BY nomor_urut ASC, id ASC
                             ");
-                            $stmtAllSoal->execute([$tId, $tId, $mapel, '%' . $mapel . '%']);
+                            $stmtAllSoal->execute([$tId, $tId, $mapel, '%' . $mapel . '%', $mapel]);
                             $allSoals = $stmtAllSoal->fetchAll(PDO::FETCH_ASSOC);
                             $matched = [];
                             foreach ($allSoals as $sRow) {
