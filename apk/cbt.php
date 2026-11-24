@@ -1018,10 +1018,10 @@ if (!$activeOngoingUjian) {
     }
 }
 
-// Prioritas 2: Yang aktif hari ini dan siap dikerjakan
+// Prioritas 2: Yang aktif hari ini dan siap dikerjakan (dan sudah memiliki butir soal)
 if (!$activeOngoingUjian) {
     foreach ($ujianHariIni as $uItem) {
-        if ($uItem['status_pengerjaan'] !== 'Selesai' && $uItem['can_take']) {
+        if ($uItem['status_pengerjaan'] !== 'Selesai' && $uItem['can_take'] && (int)($uItem['total_soal'] ?? 0) > 0) {
             $activeOngoingUjian = $uItem;
             break;
         }
@@ -1829,7 +1829,11 @@ include 'header.php';
                             <?= htmlspecialchars($u['nama_ujian']) ?>
                         </h4>
                     </div>
-                    <?php if ($isMengerjakan): ?>
+                    <?php if ($totalSoal <= 0): ?>
+                        <span style="background: #fef2f2; color: #dc2626; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #fecaca; white-space: nowrap;">
+                            ⚠️ Soal Kosong
+                        </span>
+                    <?php elseif ($isMengerjakan): ?>
                         <span style="background: #fffbeb; color: #d97706; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #fde68a; white-space: nowrap;">
                             ⏳ Mengerjakan
                         </span>
@@ -1860,7 +1864,7 @@ include 'header.php';
                     </div>
                     <div>
                         <div style="font-size: 0.65rem; color: #64748b; font-weight: 600;">Jumlah Soal</div>
-                        <div style="font-size: 0.78rem; font-weight: 800; color: #1e293b;"><?= $totalSoal > 0 ? $totalSoal . ' Butir' : 'Tersusun' ?></div>
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #1e293b;"><?= $totalSoal > 0 ? $totalSoal . ' Butir' : '<span style="color:#dc2626;">0 Butir</span>' ?></div>
                     </div>
                 </div>
 
@@ -1885,7 +1889,14 @@ include 'header.php';
                 <?php
                 $cbtKerjakanBase = (isset($_SERVER['SCRIPT_NAME']) && strpos($_SERVER['SCRIPT_NAME'], '/masmifhda/') !== false) ? '/masmifhda/cbt/kerjakan' : '/cbt/kerjakan';
                 ?>
-                <?php if ($isMengerjakan): ?>
+                <?php if ($totalSoal <= 0): ?>
+                    <div style="font-size: 0.72rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #fef2f2; padding: 6px 10px; border-radius: 8px; border: 1px solid #fecaca;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Butir soal belum diinput di Bank Soal (0 Butir).
+                    </div>
+                    <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #e2e8f0; color: #64748b; cursor: not-allowed; border: 1px solid #cbd5e1; box-shadow: none;" disabled>
+                        <i class="fa-solid fa-ban"></i> Soal Belum Tersedia (0 Butir)
+                    </button>
+                <?php elseif ($isMengerjakan): ?>
                     <a href="<?= $cbtKerjakanBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
