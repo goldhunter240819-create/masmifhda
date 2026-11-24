@@ -8914,26 +8914,27 @@ class CbtController {
         $importedPeserta = 0;
         $importedAbsensi = 0;
 
-        // 1. Simpan Peserta Ujian Lokal (Aman, hanya update/insert siswa lokal madrasah, kelas jauh online tidak disentuh)
+        // 1. Simpan Peserta Ujian Lokal (Aman, tidak pernah menimpa nilai/jawaban yang sudah ada dengan data kosong/0)
         if (!empty($payload['peserta'])) {
-            $stmtChkP = $db->prepare("SELECT id FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) LIMIT 1");
+            $stmtChkP = $db->prepare("SELECT id, status_pengerjaan, nilai_akhir, jawaban_json FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?)) ORDER BY (status_pengerjaan = 'Selesai') DESC, (nilai_akhir > 0) DESC, id DESC LIMIT 1");
             $stmtUpdP = $db->prepare("
                 UPDATE cbt_peserta SET 
                     waktu_mulai = COALESCE(waktu_mulai, ?),
-                    waktu_selesai = ?,
+                    waktu_selesai = COALESCE(?, waktu_selesai),
                     status_pengerjaan = ?,
                     jumlah_benar = ?,
                     jumlah_salah = ?,
+                    jumlah_tidak_jawab = ?,
                     nilai_akhir = ?,
-                    jawaban_json = ?,
+                    jawaban_json = COALESCE(NULLIF(?, ''), jawaban_json),
                     reset_count = ?,
                     violation_count = ?
                 WHERE id = ?
             ");
             $stmtInsP = $db->prepare("
                 INSERT INTO cbt_peserta 
-                (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json, reset_count, violation_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, jumlah_tidak_jawab, nilai_akhir, jawaban_json, reset_count, violation_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             foreach ($payload['peserta'] as $p) {
@@ -8943,30 +8944,51 @@ class CbtController {
                     $sId = !empty($p['siswa_id']) ? (int)$p['siswa_id'] : null;
 
                     $stmtChkP->execute([$uId, $nis, $sId ?: -1]);
-                    $existPid = $stmtChkP->fetchColumn();
+                    $existRow = $stmtChkP->fetch(PDO::FETCH_ASSOC);
 
-                    if ($existPid) {
+                    $inNilai = (float)($p['nilai_akhir'] ?? 0);
+                    $inStatus = $p['status_pengerjaan'] ?? 'Selesai';
+                    $inJson = (string)($p['jawaban_json'] ?? '');
+                    $inBenar = (int)($p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0));
+                    $inSalah = (int)($p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0));
+                    $inKosong = (int)($p['jumlah_tidak_jawab'] ?? 0);
+
+                    if ($existRow) {
+                        $exNilai = (float)($existRow['nilai_akhir'] ?? 0);
+                        $exStatus = $existRow['status_pengerjaan'] ?? '';
+                        $exHasJson = !empty($existRow['jawaban_json']);
+
+                        // Lindungi data online yang sudah selesai / bernilai agar tidak tertimpa data kosong dari lokal
+                        if (($exStatus === 'Selesai' || $exNilai > 0 || $exHasJson) && ($inNilai <= 0 && empty($inJson))) {
+                            continue;
+                        }
+                        if ($exNilai > $inNilai && $exStatus === 'Selesai') {
+                            continue;
+                        }
+
                         $stmtUpdP->execute([
                             $p['waktu_mulai'] ?? null,
                             $p['waktu_selesai'] ?? null,
-                            $p['status_pengerjaan'] ?? 'Selesai',
-                            $p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0),
-                            $p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0),
-                            $p['nilai_akhir'] ?? 0,
-                            $p['jawaban_json'] ?? null,
+                            $inStatus,
+                            $inBenar,
+                            $inSalah,
+                            $inKosong,
+                            $inNilai,
+                            $inJson,
                             $p['reset_count'] ?? 0,
                             $p['violation_count'] ?? 0,
-                            $existPid
+                            $existRow['id']
                         ]);
                     } else {
                         $stmtInsP->execute([
                             $uId, $sId, $nis, $p['nama_siswa'], $p['kelas_nama'] ?? null,
                             $p['waktu_mulai'] ?? null, $p['waktu_selesai'] ?? null,
-                            $p['status_pengerjaan'] ?? 'Selesai',
-                            $p['jumlah_benar'] ?? ($p['jml_benar'] ?? 0),
-                            $p['jumlah_salah'] ?? ($p['jml_salah'] ?? 0),
-                            $p['nilai_akhir'] ?? 0,
-                            $p['jawaban_json'] ?? null,
+                            $inStatus,
+                            $inBenar,
+                            $inSalah,
+                            $inKosong,
+                            $inNilai,
+                            $inJson !== '' ? $inJson : null,
                             $p['reset_count'] ?? 0,
                             $p['violation_count'] ?? 0
                         ]);
