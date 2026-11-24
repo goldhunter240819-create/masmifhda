@@ -308,6 +308,18 @@ try {
         // 3.11b Pemulihan Nilai & Skor Siswa dari jawaban_json (Al-Qur'an Hadits, Fikih, SKI, dll)
         $output .= "\n=== PEMULIHAN & PERHITUNGAN ULANG NILAI DARI JAWABAN SISWA ===\n";
         try {
+            // INSPEKSI UJIAN 686 (Fisika XI F.1) vs BS_PAKET FISIKA
+            $u686 = $dbCore->query("SELECT id, topik_id, nama_ujian, mapel_nama, kelas_nama FROM cbt_ujian WHERE id = 686")->fetch(PDO::FETCH_ASSOC);
+            $output .= "UJIAN 686: " . json_encode($u686) . "\n";
+            $s686 = $dbCore->query("SELECT nomor_urut, SUBSTRING(pertanyaan, 1, 80) as q FROM cbt_soal WHERE ujian_id = 686 ORDER BY nomor_urut ASC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+            $output .= "CBT_SOAL 686 (top 5): " . json_encode($s686) . "\n";
+
+            $fisPkts = $dbSiakad->query("SELECT id, topik_id, mapel_nama, kelas_nama, kelas_sasaran, (SELECT COUNT(*) FROM bs_soal WHERE paket_id = bs_paket.id) as cnt FROM bs_paket WHERE mapel_nama LIKE '%Fisika%'")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($fisPkts as $fp) {
+                $top5 = $dbSiakad->query("SELECT nomor_urut, SUBSTRING(pertanyaan, 1, 80) as q FROM bs_soal WHERE paket_id = {$fp['id']} ORDER BY nomor_urut ASC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+                $output .= "BS_PAKET {$fp['id']} (topik {$fp['topik_id']}, {$fp['kelas_nama']} / {$fp['kelas_sasaran']}, cnt={$fp['cnt']}): " . json_encode($top5) . "\n";
+            }
+
             // INSPEKSI UJIAN 95 (Al-Qur'an Hadits XI F.1)
             $u95Rows = $dbCore->query("
                 SELECT id, nis, nama_siswa, status_pengerjaan, nilai_akhir, jumlah_benar, jumlah_salah, jumlah_tidak_jawab, LENGTH(jawaban_json) as jlen, jawaban_json
