@@ -49,7 +49,7 @@ if (isset($_SESSION['siswa_id'])) {
     }
     header("Location: guru_dashboard.php");
     exit;
-} elseif (isset($_SESSION['user_id']) && isset($_SESSION['role_id']) && ($_SESSION['role_id'] == 1 || $_SESSION['role_id'] == 99)) {
+} elseif (empty($_SESSION['siswa_id']) && isset($_SESSION['user_id']) && isset($_SESSION['role_id']) && ($_SESSION['role_id'] == 1 || $_SESSION['role_id'] == 99)) {
     if ($is_standalone) {
         header("Location: " . $semiOnlineUrl);
         exit;

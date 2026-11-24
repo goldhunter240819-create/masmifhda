@@ -872,7 +872,7 @@ $currentView = $_GET['view'] ?? 'grid';
             <div id="detailKode" style="font-size: 0.72rem; color: #64748b; font-family: monospace; margin-top: 2px;">-</div>
         </div>
 
-        <div style="font-size: 0.85rem; color: #475569; display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem;">
+        <div style="font-size: 0.85rem; color: #475569; display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.1rem;">
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
                 <span style="color:#94a3b8;">Kelas:</span>
                 <strong id="detailKelas" style="color:#0f172a;">-</strong>
@@ -882,6 +882,47 @@ $currentView = $_GET['view'] ?? 'grid';
                 <strong id="detailWaktu" style="color:#0ea5e9;">-</strong>
             </div>
         </div>
+
+        <?php
+        $detailPaketOpts = [];
+        try {
+            $dbDet = \App\Core\Database::connect('siakad') ?: \App\Core\Database::connect('core');
+            if ($dbDet) {
+                $stmtPkDet = $dbDet->prepare("
+                    SELECT p.id, p.mapel_nama, p.kelas_nama, p.kelas_sasaran, p.guru_nama, p.is_locked,
+                           (SELECT COUNT(*) FROM bs_soal s WHERE s.paket_id = p.id) as soal_cnt
+                    FROM bs_paket p
+                    WHERE (p.topik_id = ? OR ? = 0)
+                    ORDER BY p.mapel_nama ASC, p.kelas_nama ASC, soal_cnt DESC
+                ");
+                $stmtPkDet->execute([(int)$selectedTopikId, (int)$selectedTopikId]);
+                $detailPaketOpts = $stmtPkDet->fetchAll(\PDO::FETCH_ASSOC);
+            }
+        } catch (\Throwable $e) {}
+        ?>
+        <form method="POST" action="<?php echo base_url('cbt/jadwal/set-paket'); ?>" id="formSetPaketUjian" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 1.25rem;">
+            <input type="hidden" name="topik_id" value="<?php echo $selectedTopikId; ?>">
+            <input type="hidden" name="ujian_id" id="detailSetPaketUjianId" value="">
+            <label style="display: block; font-size: 0.72rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 6px;">
+                Paket Bank Soal (Guru Pengampu):
+            </label>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <select name="paket_id" id="detailSelectPaketId" class="input-sm" style="flex: 1; font-size: 0.78rem; padding: 6px 8px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                    <option value="0">-- Otomatis (Prioritas Terkunci &amp; Terisi) --</option>
+                    <?php foreach ($detailPaketOpts as $dpo): ?>
+                        <option value="<?php echo (int)$dpo['id']; ?>">
+                            <?php echo htmlspecialchars($dpo['mapel_nama'] . ' (' . ($dpo['kelas_sasaran'] ?: $dpo['kelas_nama']) . ') — ' . ($dpo['guru_nama'] ?: 'Tanpa Pengampu') . ' [' . (int)$dpo['soal_cnt'] . ' Soal' . (!empty($dpo['is_locked']) ? ' • Terkunci' : '') . ']'); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="e-btn e-btn-primary" style="padding: 7px 12px; font-size: 0.75rem; background: #2563eb; white-space: nowrap;">
+                    Simpan
+                </button>
+            </div>
+            <div style="font-size: 0.68rem; color: #64748b; margin-top: 5px;">
+                Jika mapel sama diampu guru berbeda, pilih paket guru yang sesuai lalu klik Simpan.
+            </div>
+        </form>
 
         <div style="display: flex; justify-content: space-between; gap: 8px;">
             <form method="POST" action="<?php echo base_url('cbt/jadwal/grid/delete'); ?>" onsubmit="return confirm('Hapus sesi ujian ini dari jadwal kelas?')">
@@ -1391,6 +1432,14 @@ $currentView = $_GET['view'] ?? 'grid';
         if (document.getElementById('detailPengawas')) document.getElementById('detailPengawas').innerText = data.pengawas || 'Pengawas Ruang';
         if (document.getElementById('detailRuang')) document.getElementById('detailRuang').innerText = data.ruang || '-';
         document.getElementById('detailDeleteId').value = data.id || '';
+        const setUjianInp = document.getElementById('detailSetPaketUjianId');
+        const selPaket = document.getElementById('detailSelectPaketId');
+        const formSetPaket = document.getElementById('formSetPaketUjian');
+        if (setUjianInp && selPaket && formSetPaket) {
+            setUjianInp.value = data.ujian_id || '';
+            selPaket.value = data.ujian_paket_id ? String(data.ujian_paket_id) : '0';
+            formSetPaket.style.display = (parseInt(data.ujian_id || 0, 10) > 0) ? 'block' : 'none';
+        }
 
         document.getElementById('modalDetailSlot').classList.add('open');
         if (typeof lucide !== 'undefined') lucide.createIcons();

@@ -2478,6 +2478,7 @@ $router->add('POST', '/cbt/jadwal/toggle-status', [\App\Controllers\CbtControlle
 $router->add('POST', '/cbt/jadwal/delete', [\App\Controllers\CbtController::class, 'deleteJadwal']);
 $router->add('POST', '/cbt/jadwal/grid/save', [\App\Controllers\CbtController::class, 'saveGridJadwal']);
 $router->add('POST', '/cbt/jadwal/grid/delete', [\App\Controllers\CbtController::class, 'deleteGridJadwal']);
+$router->add('POST', '/cbt/jadwal/set-paket', [\App\Controllers\CbtController::class, 'setPaketUjian']);
 $router->add('POST', '/cbt/jadwal/kelas/save-bulk', [\App\Controllers\CbtController::class, 'saveBulkKelasJadwal']);
 $router->add('POST', '/cbt/jadwal/global/save', [\App\Controllers\CbtController::class, 'saveGlobalJadwal']);
 $router->add('POST', '/cbt/jadwal/slot/save', [\App\Controllers\CbtController::class, 'saveJamSlot']);

@@ -97,6 +97,7 @@ class CbtController {
             try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN reset_count INT DEFAULT 0 AFTER jawaban_json"); } catch (\Exception $e) {}
             try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN violation_count INT DEFAULT 0 AFTER reset_count"); } catch (\Exception $e) {}
             try { $db->exec("ALTER TABLE cbt_peserta ADD COLUMN jumlah_tidak_jawab INT DEFAULT 0 AFTER jumlah_salah"); } catch (\Exception $e) {}
+            try { $db->exec("ALTER TABLE cbt_ujian ADD COLUMN paket_id INT DEFAULT NULL AFTER topik_id, ADD INDEX (paket_id)"); } catch (\Exception $e) {}
 
             // 5. Tabel Custom Jam / Slot Waktu Ujian CBT
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_jam_slot (
@@ -886,9 +887,9 @@ class CbtController {
                 exit;
             }
 
-            $isCbtPeserta = !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta']);
-            // Siswa (role_id = 3 / role_id = 7 / akun CBT siswa) DILARANG masuk ke portal manajemen proktor/admin
-            if (!$isAdminOrKamad && ($roleId === 3 || $roleId === 7 || $isCbtPeserta)) {
+            $isCbtPeserta = !empty($_SESSION['cbt_student_id']) || !empty($_SESSION['no_peserta']) || !empty($_SESSION['siswa_id']) || !empty($_SESSION['is_cbt_only']);
+            // Siswa (role_id = 3 / 6 / 7 / memiliki siswa_id) DILARANG masuk ke portal manajemen proktor/admin
+            if (!$isAdminOrKamad && ($roleId === 3 || $roleId === 6 || $roleId === 7 || $isCbtPeserta)) {
                 $cbtApkUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
                 header("Location: {$cbtApkUrl}");
                 exit;
@@ -1157,7 +1158,8 @@ class CbtController {
                        COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
                        COALESCE(u.kode_ujian, '-') AS kode_ujian,
                        COALESCE(u.durasi_menit, {$defDurasi}) AS durasi_menit,
-                       COALESCE(u.status, 'Aktif') as ujian_status 
+                       COALESCE(u.status, 'Aktif') as ujian_status,
+                       u.paket_id as ujian_paket_id
                 FROM cbt_jadwal_grid g
                 LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
                 WHERE g.topik_id = ?
@@ -1191,7 +1193,8 @@ class CbtController {
                        COALESCE(u.nama_ujian, g.mapel_nama) AS nama_ujian,
                        COALESCE(u.kode_ujian, '-') AS kode_ujian,
                        COALESCE(u.durasi_menit, {$defDurasi}) AS durasi_menit,
-                       COALESCE(u.status, 'Aktif') as ujian_status 
+                       COALESCE(u.status, 'Aktif') as ujian_status,
+                       u.paket_id as ujian_paket_id
                 FROM cbt_jadwal_grid g
                 LEFT JOIN cbt_ujian u ON g.ujian_id = u.id
                 ORDER BY g.id ASC
@@ -1384,6 +1387,35 @@ class CbtController {
                 $db->prepare("DELETE FROM cbt_jadwal_grid WHERE id = ?")->execute([$id]);
             }
             redirect('/cbt/jadwal?topik_id=' . $topik_id . '&msg=deleted');
+            exit;
+        }
+        redirect('/cbt/jadwal');
+    }
+
+    /**
+     * Tautkan Paket Bank Soal (Guru Pengampu) secara eksplisit ke cbt_ujian & sinkronkan soalnya
+     */
+    public static function setPaketUjian() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $dbSiakad = $ctx['db_siakad'] ?? $db;
+        self::ensureTables($db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ujian_id = (int)($_POST['ujian_id'] ?? 0);
+            $paket_id = (int)($_POST['paket_id'] ?? 0);
+            $topik_id = !empty($_POST['topik_id']) ? (int)$_POST['topik_id'] : '';
+
+            if ($ujian_id > 0) {
+                $db->prepare("UPDATE cbt_ujian SET paket_id = ? WHERE id = ?")->execute([$paket_id > 0 ? $paket_id : null, $ujian_id]);
+                $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ? LIMIT 1");
+                $stmtU->execute([$ujian_id]);
+                $uRow = $stmtU->fetch(PDO::FETCH_ASSOC);
+                if ($uRow) {
+                    self::syncExamSoalFromBankSoal($db, $dbSiakad, $uRow);
+                }
+            }
+            redirect('/cbt/jadwal?topik_id=' . $topik_id . '&msg=paket_updated');
             exit;
         }
         redirect('/cbt/jadwal');
@@ -3329,46 +3361,118 @@ class CbtController {
 
     /**
      * Sinkronkan cbt_soal dari Bank Soal (bs_soal) secara aman untuk satu cbt_ujian
+     * Mendukung penautan eksplisit paket_id (jika mapel sama diampu >1 guru di tingkat sama)
+     * serta strict matching & prioritas paket Terkunci + terbanyak soalnya.
      */
     public static function syncExamSoalFromBankSoal($db, $dbSiakad, $ujianInfo) {
         try {
             $ujianId = (int)($ujianInfo['id'] ?? 0);
             if ($ujianId <= 0) return false;
 
+            $explicitPaketId = !empty($ujianInfo['paket_id']) ? (int)$ujianInfo['paket_id'] : 0;
             $topikIdExam = !empty($ujianInfo['topik_id']) ? (int)$ujianInfo['topik_id'] : 0;
             $mapelNama = trim((string)($ujianInfo['mapel_nama'] ?? ''));
-            if ($mapelNama === '') return false;
-
-            $getLevel = function($str) {
-                $s = strtoupper((string)$str);
-                if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
-                if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
-                if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
-                return 0;
-            };
-            $uLvl = $getLevel($ujianInfo['kelas_nama'] ?? '');
+            $kelasNama = trim((string)($ujianInfo['kelas_nama'] ?? ''));
 
             $dbsToCheck = (!empty($dbSiakad) && $dbSiakad !== $db) ? [$dbSiakad, $db] : [$db];
             $bsItems = [];
-            foreach ($dbsToCheck as $targetDb) {
-                $stmtAllPaket = $targetDb->prepare("
-                    SELECT id, mapel_nama, kelas_nama, kelas_sasaran FROM bs_paket 
-                    WHERE (topik_id = ? OR ? = 0)
-                      AND (LOWER(TRIM(mapel_nama)) = LOWER(?) OR mapel_nama LIKE ? OR ? LIKE CONCAT('%', mapel_nama, '%'))
-                    ORDER BY (LOWER(TRIM(mapel_nama)) = LOWER(?)) DESC, id ASC
-                ");
-                $stmtAllPaket->execute([$topikIdExam, $topikIdExam, $mapelNama, '%' . $mapelNama . '%', $mapelNama, $mapelNama]);
-                $pkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
-                foreach ($pkts as $pkt) {
-                    $pLvl = $getLevel(($pkt['kelas_nama'] ?? '') . ' ' . ($pkt['kelas_sasaran'] ?? ''));
-                    if ($pLvl === $uLvl || $uLvl === 0) {
-                        $stmtBS = $targetDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
-                        $stmtBS->execute([$pkt['id']]);
-                        $rows = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
-                        if (!empty($rows)) {
-                            $bsItems = $rows;
-                            break 2;
-                        }
+            $matchedPaketId = 0;
+
+            // 1. Jika paket_id sudah ditautkan eksplisit ke cbt_ujian, langsung ambil dari paket tersebut!
+            if ($explicitPaketId > 0) {
+                foreach ($dbsToCheck as $targetDb) {
+                    $stmtBS = $targetDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stmtBS->execute([$explicitPaketId]);
+                    $rows = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                    if (!empty($rows)) {
+                        $bsItems = $rows;
+                        $matchedPaketId = $explicitPaketId;
+                        break;
+                    }
+                }
+            }
+
+            // 2. Jika belum ditautkan eksplisit, cari paket terbaik dengan pencocokan mapel ketat + prioritas guru/kunci
+            if (empty($bsItems) && $mapelNama !== '') {
+                $getLevel = function($str) {
+                    $s = strtoupper((string)$str);
+                    if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
+                    if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
+                    if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
+                    return 0;
+                };
+                $normMapel = function($m) {
+                    $s = strtolower(trim(preg_replace('/\s+/', ' ', (string)$m)));
+                    $aliases = [
+                        'fiqih' => 'fikih',
+                        "al-quran hadits" => "al-qur'an hadits",
+                        "al-qur'an hadis" => "al-qur'an hadits",
+                        "quran hadits" => "al-qur'an hadits",
+                        "qur'an hadits" => "al-qur'an hadits",
+                        'ski' => 'sejarah kebudayaan islam',
+                        'sejarah kebudayaan islam (ski)' => 'sejarah kebudayaan islam',
+                        'pjok' => 'pendidikan jasmani, olahraga dan kesehatan',
+                        'pendidikan jasmani, olahraga & kesehatan (pjok)' => 'pendidikan jasmani, olahraga dan kesehatan',
+                        'ppkn' => 'pendidikan pancasila dan kewarganegaraan',
+                        'pendidikan pancasila & kewarganegaraan (ppkn)' => 'pendidikan pancasila dan kewarganegaraan',
+                        'pkwu' => 'prakarya dan kewirausahaan',
+                        'prakarya & kewirausahaan' => 'prakarya dan kewirausahaan',
+                    ];
+                    return $aliases[$s] ?? $s;
+                };
+
+                $uLvl = $getLevel($kelasNama);
+                $uNorm = $normMapel($mapelNama);
+
+                $candidates = [];
+                foreach ($dbsToCheck as $dbIdx => $targetDb) {
+                    $stmtAllPaket = $targetDb->prepare("
+                        SELECT p.id, p.mapel_nama, p.kelas_nama, p.kelas_sasaran, p.is_locked,
+                               (SELECT COUNT(*) FROM bs_soal s WHERE s.paket_id = p.id) as soal_cnt
+                        FROM bs_paket p
+                        WHERE (p.topik_id = ? OR ? = 0)
+                    ");
+                    $stmtAllPaket->execute([$topikIdExam, $topikIdExam]);
+                    $pkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($pkts as $pkt) {
+                        if ((int)$pkt['soal_cnt'] <= 0) continue;
+                        if ($normMapel($pkt['mapel_nama']) !== $uNorm) continue;
+
+                        $pLvl = $getLevel(($pkt['kelas_nama'] ?? '') . ' ' . ($pkt['kelas_sasaran'] ?? ''));
+                        if ($pLvl !== $uLvl && $uLvl !== 0 && $pLvl !== 0) continue;
+
+                        $sasaranMatch = ($kelasNama !== '' && stripos((string)($pkt['kelas_sasaran'] ?? ''), $kelasNama) !== false) ? 1 : 0;
+                        $lockedScore = !empty($pkt['is_locked']) ? 1 : 0;
+                        $candidates[] = [
+                            'db' => $targetDb,
+                            'paket_id' => (int)$pkt['id'],
+                            'sasaran' => $sasaranMatch,
+                            'locked' => $lockedScore,
+                            'cnt' => (int)$pkt['soal_cnt'],
+                        ];
+                    }
+                    if (!empty($candidates)) break;
+                }
+
+                if (!empty($candidates)) {
+                    usort($candidates, function($a, $b) {
+                        if ($a['sasaran'] !== $b['sasaran']) return $b['sasaran'] <=> $a['sasaran'];
+                        if ($a['locked'] !== $b['locked']) return $b['locked'] <=> $a['locked'];
+                        if ($a['cnt'] !== $b['cnt']) return $b['cnt'] <=> $a['cnt'];
+                        return $a['paket_id'] <=> $b['paket_id'];
+                    });
+                    $best = $candidates[0];
+                    $stmtBS = $best['db']->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stmtBS->execute([$best['paket_id']]);
+                    $bsItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                    $matchedPaketId = $best['paket_id'];
+
+                    // Simpan paket_id terpilih agar konsisten ke depannya
+                    if ($explicitPaketId <= 0 && $matchedPaketId > 0) {
+                        try {
+                            $db->prepare("UPDATE cbt_ujian SET paket_id = ? WHERE id = ? AND (paket_id IS NULL OR paket_id = 0)")->execute([$matchedPaketId, $ujianId]);
+                        } catch (\Throwable $e) {}
                     }
                 }
             }
@@ -8535,7 +8639,7 @@ class CbtController {
 
         // Auto-sinkron cbt_soal dari bs_soal jika belum ada atau ada pembaruan di Bank Soal
         try {
-            $ujians = $db->query("SELECT id, mapel_nama, kelas_nama, topik_id FROM cbt_ujian")->fetchAll(PDO::FETCH_ASSOC);
+            $ujians = $db->query("SELECT id, paket_id, mapel_nama, kelas_nama, topik_id FROM cbt_ujian")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($ujians as $uExp) {
                 self::syncExamSoalFromBankSoal($db, $dbSiakad, $uExp);
             }
@@ -9400,10 +9504,10 @@ class CbtController {
                     $db->exec("DELETE FROM cbt_ujian WHERE id NOT IN ($inClauseU) AND id NOT IN (SELECT DISTINCT ujian_id FROM cbt_peserta)");
                 } catch (\Exception $e) {}
             }
-            $stmtU = $db->prepare("INSERT INTO cbt_ujian (id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_ujian = VALUES(nama_ujian), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), status = VALUES(status), durasi_menit = VALUES(durasi_menit), kkm = VALUES(kkm)");
+            $stmtU = $db->prepare("INSERT INTO cbt_ujian (id, topik_id, paket_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, durasi_menit, kkm, acak_soal, acak_opsi, token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE paket_id = VALUES(paket_id), nama_ujian = VALUES(nama_ujian), mapel_nama = VALUES(mapel_nama), kelas_nama = VALUES(kelas_nama), status = VALUES(status), durasi_menit = VALUES(durasi_menit), kkm = VALUES(kkm)");
             foreach ($data['ujian'] as $u) {
                 try {
-                    $stmtU->execute([$u['id'], $u['topik_id'] ?? null, $u['kode_ujian'], $u['nama_ujian'], $u['mapel_nama'], $u['kelas_nama'], $u['durasi_menit'] ?? 60, $u['kkm'] ?? 75, $u['acak_soal'] ?? 1, $u['acak_opsi'] ?? 1, $u['token'] ?? '', $u['status'] ?? 'Aktif']);
+                    $stmtU->execute([$u['id'], $u['topik_id'] ?? null, $u['paket_id'] ?? null, $u['kode_ujian'], $u['nama_ujian'], $u['mapel_nama'], $u['kelas_nama'], $u['durasi_menit'] ?? 60, $u['kkm'] ?? 75, $u['acak_soal'] ?? 1, $u['acak_opsi'] ?? 1, $u['token'] ?? '', $u['status'] ?? 'Aktif']);
                     $details['ujian']++;
                 } catch (\Exception $e) {}
             }
@@ -9737,7 +9841,7 @@ class CbtController {
 
         // Auto-sinkron cbt_soal dari bs_soal jika belum ada atau ada pembaruan di Bank Soal
         try {
-            $ujians = $db->query("SELECT id, mapel_nama, kelas_nama, topik_id FROM cbt_ujian")->fetchAll(PDO::FETCH_ASSOC);
+            $ujians = $db->query("SELECT id, paket_id, mapel_nama, kelas_nama, topik_id FROM cbt_ujian")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($ujians as $uExp) {
                 self::syncExamSoalFromBankSoal($db, $dbSiakad, $uExp);
             }
