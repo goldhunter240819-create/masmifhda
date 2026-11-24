@@ -30,85 +30,33 @@ $active_menu = 'hasil';
                         <h1><i data-lucide="award"></i> Rekap Hasil Ujian Siswa</h1>
                         <p>Monitoring skor perolehan siswa, analisis ketuntasan terhadap KKM, dan rekapitulasi nilai ujian berbasis komputer.</p>
                     </div>
-                    <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="<?php echo base_url('cbt/hasil/cetak?scope=' . urlencode($scope ?? 'sesi_ini') . '&topik_id=' . ($selectedTopikId ?? 0) . '&mapel=' . urlencode($selectedMapel ?? '') . '&ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" id="btnCetakRekap" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
+                    <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <!-- Realtime Status Indicator -->
+                        <div style="display: flex; align-items: center; gap: 6px; background: rgba(240, 253, 244, 0.95); border: 1.5px solid #86efac; padding: 6px 14px; border-radius: 99px; font-size: 0.75rem; font-weight: 800; color: #166534; backdrop-filter: blur(4px);">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulseDot 1.2s infinite;"></span>
+                            <span id="lblLiveStatus">LIVE REALTIME</span>
+                            <span style="color: #15803d; font-weight: 600; margin-left: 2px;">• <span id="lblServerTime"><?php echo date('H:i:s'); ?></span></span>
+                        </div>
+
+                        <!-- Auto Refresh 5s Toggle Button -->
+                        <button type="button" onclick="toggleAutoRefresh()" id="btnAutoRefresh" class="e-btn" style="padding: 7px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #334155; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.04);" title="Nyalakan / Jeda Pembaruan Otomatis">
+                            <i data-lucide="pause-circle" id="iconAutoRefresh" style="width: 14px; height: 14px; color: #0284c7;"></i>
+                            <span id="lblBtnAutoRefresh">Auto 5s: AKTIF</span>
+                        </button>
+
+                        <!-- Segarkan Button -->
+                        <button type="button" onclick="applyFilterAjax(false)" class="e-btn" style="padding: 7px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #0284c7; background: #e0f2fe; color: #0369a1; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; box-shadow: 0 2px 6px rgba(2,132,199,0.15);" title="Segarkan Data Sekarang">
+                            <i data-lucide="refresh-cw" id="iconManualRefresh" style="width: 14px; height: 14px;"></i>
+                            <span>Segarkan</span>
+                        </button>
+
+                        <a href="<?php echo base_url('cbt/hasil/cetak?topik_id=' . ($selectedTopikId ?? 0) . '&mapel=' . urlencode($selectedMapel ?? '') . '&ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" id="btnCetakRekap" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
                             <i data-lucide="printer"></i> Download PDF / Cetak (A4)
                         </a>
                         <a href="<?php echo base_url('cbt/analisis?topik_id=' . ($selectedTopikId ?? 0) . '&ujian_id=' . ($selectedUjianId ?? '')); ?>" id="btnAnalisisButir" class="e-btn e-btn-blue-light">
                             <i data-lucide="bar-chart-2"></i> Analisis Butir Soal
                         </a>
                     </div>
-                </div>
-            </div>
-
-            <!-- Live Realtime & Scope Switcher Bar -->
-            <div style="background: #ffffff; border-radius: 18px; border: 1px solid #e2e8f0; padding: 1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 4px 14px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                    <!-- Scope Buttons -->
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="scopeBtnGroup">
-                        <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">Fokus Data:</span>
-                        
-                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'semua') ? 'active' : ''; ?>" onclick="switchScope('semua')" id="scopePill-semua" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'semua') ? '#6366f1' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'semua') ? '#eef2ff' : '#ffffff'; ?>; color: <?php echo ($scope === 'semua') ? '#4338ca' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
-                            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
-                            🌐 Semua Riwayat
-                        </button>
-
-                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'hari_ini') ? 'active' : ''; ?>" onclick="switchScope('hari_ini')" id="scopePill-hari_ini" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'hari_ini') ? '#059669' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'hari_ini') ? '#ecfdf5' : '#ffffff'; ?>; color: <?php echo ($scope === 'hari_ini') ? '#065f46' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
-                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
-                            📅 Seluruh Hari Ini
-                        </button>
-
-                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'sesi_ini') ? 'active' : ''; ?>" onclick="switchScope('sesi_ini')" id="scopePill-sesi_ini" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'sesi_ini') ? '#0284c7' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'sesi_ini') ? '#e0f2fe' : '#ffffff'; ?>; color: <?php echo ($scope === 'sesi_ini') ? '#0369a1' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #0284c7; animation: pulseDot 1.5s infinite;"></span>
-                            🎯 Sesi Berjalan (Realtime)
-                        </button>
-
-                        <?php if (!empty($allSlots)): ?>
-                            <span style="color: #cbd5e1; font-weight: 300;">|</span>
-                            <?php foreach ($allSlots as $sl): 
-                                $sLabel = $sl['label_sesi'];
-                                $isThisSesiActive = ($scope === $sLabel);
-                            ?>
-                            <button type="button" class="cbt-scope-pill <?php echo $isThisSesiActive ? 'active' : ''; ?>" onclick="switchScope('<?php echo htmlspecialchars($sLabel); ?>')" id="scopePill-<?php echo preg_replace('/[^a-zA-Z0-9]/', '', $sLabel); ?>" style="padding: 6px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; border: 1.5px solid <?php echo $isThisSesiActive ? '#0284c7' : '#e2e8f0'; ?>; background: <?php echo $isThisSesiActive ? '#e0f2fe' : '#ffffff'; ?>; color: <?php echo $isThisSesiActive ? '#0369a1' : '#64748b'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                                ⏱️ <?php echo htmlspecialchars($sLabel); ?>
-                            </button>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- Realtime Indicator & Refresh Controls -->
-                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1.5px solid #86efac; padding: 5px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800; color: #166534;">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulseDot 1.2s infinite;"></span>
-                            <span id="lblLiveStatus">LIVE REALTIME</span>
-                            <span style="color: #15803d; font-weight: 500; margin-left: 2px;">• <span id="lblServerTime"><?php echo date('H:i:s'); ?></span></span>
-                        </div>
-
-                        <button type="button" onclick="toggleAutoRefresh()" id="btnAutoRefresh" class="e-btn" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #334155; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Nyalakan / Jeda Pembaruan Otomatis">
-                            <i data-lucide="pause-circle" id="iconAutoRefresh" style="width: 14px; height: 14px; color: #0284c7;"></i>
-                            <span id="lblBtnAutoRefresh">Auto 5s: AKTIF</span>
-                        </button>
-
-                        <button type="button" onclick="applyFilterAjax(false)" class="e-btn" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #0284c7; background: #e0f2fe; color: #0369a1; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Segarkan Data Sekarang">
-                            <i data-lucide="refresh-cw" id="iconManualRefresh" style="width: 14px; height: 14px;"></i>
-                            <span>Segarkan</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Active Sesi Description Alert Banner -->
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #334155;">
-                        <i data-lucide="info" style="width: 16px; height: 16px; color: #0284c7; flex-shrink: 0;"></i>
-                        <span id="lblSesiInfoBanner">
-                            <b>Fokus Aktif:</b> <?php echo htmlspecialchars($sesiInfo ?: 'Sesi Berjalan Hari Ini'); ?>
-                        </span>
-                    </div>
-                    <?php if ($scope === 'sesi_ini'): ?>
-                    <span style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 3px 10px; border-radius: 99px; font-weight: 800;">
-                        Otomatis menyesuaikan jam & mapel ujian saat ini
-                    </span>
-                    <?php endif; ?>
                 </div>
             </div>
 
@@ -537,15 +485,14 @@ $active_menu = 'hasil';
     50% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(0.95); opacity: 0.7; }
 }
-.cbt-scope-pill:hover {
-    filter: brightness(0.97);
-}
 </style>
 
 <script>
-let currentScope = '<?php echo htmlspecialchars($scope ?? "sesi_ini"); ?>';
 let autoRefreshActive = true;
 let autoRefreshTimer = null;
+let currentLimitHasil = <?php echo (int)($limit ?? 30); ?>;
+let searchTimer = null;
+let ajaxAbortCtrl = null;
 
 function bukaModalReopen(pesertaId, namaSiswa, paketJudul) {
     document.getElementById('reopenPesertaId').value = pesertaId;
@@ -583,31 +530,6 @@ function toggleAutoRefresh() {
     if (window.lucide) lucide.createIcons();
 }
 
-function switchScope(newScope) {
-    currentScope = newScope;
-    // Update active pill styling
-    document.querySelectorAll('.cbt-scope-pill').forEach(btn => {
-        btn.classList.remove('active');
-        btn.style.background = '#ffffff';
-        btn.style.borderColor = '#cbd5e1';
-        btn.style.color = '#475569';
-    });
-    const key = newScope.replace(/[^a-zA-Z0-9]/g, '');
-    const activePill = document.getElementById('scopePill-' + key);
-    if (activePill) {
-        activePill.classList.add('active');
-        activePill.style.background = '#e0f2fe';
-        activePill.style.borderColor = '#0284c7';
-        activePill.style.color = '#0369a1';
-    }
-    applyFilterAjax(false);
-}
-
-// ================= AJAX FILTER & REALTIME SYSTEM =================
-let currentLimitHasil = <?php echo (int)($limit ?? 30); ?>;
-let searchTimer = null;
-let ajaxAbortCtrl = null;
-
 function applyFilterAjax(isTopikChange, isSilent = false) {
     if (isTopikChange) {
         const selMapel = document.getElementById('selMapelHasil');
@@ -631,7 +553,7 @@ function applyFilterAjax(isTopikChange, isSilent = false) {
 
     const btnReset = document.getElementById('btnResetFilter');
     if (btnReset) {
-        const hasFilter = (currentScope !== 'sesi_ini' || topikId !== '0' || mapel !== '' || kelas !== '' || q !== '' || sort !== 'nilai_desc');
+        const hasFilter = (topikId !== '0' || mapel !== '' || kelas !== '' || q !== '' || sort !== 'nilai_desc');
         btnReset.style.display = hasFilter ? 'inline-flex' : 'none';
     }
 
@@ -641,7 +563,6 @@ function applyFilterAjax(isTopikChange, isSilent = false) {
     ajaxAbortCtrl = new AbortController();
 
     const params = new URLSearchParams({
-        scope: currentScope,
         topik_id: topikId,
         mapel: mapel,
         kelas: kelas,
@@ -686,14 +607,9 @@ function applyFilterAjax(isTopikChange, isSilent = false) {
         const badgeTotal = document.getElementById('badgeTotalSiswa');
         if (badgeTotal) badgeTotal.textContent = data.total_peserta + ' Siswa';
 
-        // Update server time & info banner
+        // Update server time
         const elTime = document.getElementById('lblServerTime');
         if (elTime && data.server_time) elTime.textContent = data.server_time;
-
-        const elBanner = document.getElementById('lblSesiInfoBanner');
-        if (elBanner && data.sesi_info) {
-            elBanner.innerHTML = '<b>Fokus Aktif:</b> ' + data.sesi_info;
-        }
 
         // Update Cetak & Analisis Links
         const btnCetak = document.getElementById('btnCetakRekap');
@@ -758,80 +674,6 @@ autoRefreshTimer = setInterval(() => {
         applyFilterAjax(false, true);
     }
 }, 5000);
-        const elTotal = document.getElementById('statTotalPeserta');
-        if (elTotal) elTotal.textContent = data.total_peserta;
-
-        const elRata = document.getElementById('statRataRata');
-        if (elRata) elRata.textContent = data.rata_rata;
-
-        const elTuntas = document.getElementById('statPersenTuntas');
-        if (elTuntas) elTuntas.textContent = data.persen_tuntas + '%';
-
-        const elKkm = document.getElementById('statKkmLabel');
-        if (elKkm) elKkm.textContent = 'Ketuntasan (KKM: ' + data.kkm + ')';
-
-        const elRem = document.getElementById('statRemedial');
-        if (elRem) elRem.textContent = data.jumlah_remedial;
-
-        const badgeTotal = document.getElementById('badgeTotalSiswa');
-        if (badgeTotal) badgeTotal.textContent = data.total_peserta + ' Siswa';
-
-        // Update Cetak & Analisis Links
-        const btnCetak = document.getElementById('btnCetakRekap');
-        if (btnCetak && data.cetak_url) btnCetak.href = data.cetak_url;
-
-        const btnAnalisis = document.getElementById('btnAnalisisButir');
-        if (btnAnalisis && data.analisis_url) btnAnalisis.href = data.analisis_url;
-
-        // If Topik changed, re-populate Mapel options
-        if (isTopikChange && data.mapel_list) {
-            const selMapel = document.getElementById('selMapelHasil');
-            if (selMapel) {
-                const prev = selMapel.value;
-                selMapel.innerHTML = '<option value="">-- Semua Mapel --</option>';
-                data.mapel_list.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m;
-                    opt.textContent = m;
-                    if (m === prev) opt.selected = true;
-                    selMapel.appendChild(opt);
-                });
-            }
-        }
-
-        // Update Table Rows
-        if (tbody) {
-            tbody.innerHTML = data.table_html;
-            tbody.style.opacity = '1';
-        }
-
-        // Update Load More footer
-        const wrapMore = document.getElementById('wrapLoadMoreHasil');
-        if (wrapMore) {
-            const dispCount = data.display_count || data.total_peserta;
-            const totCount = data.total_peserta;
-            const elDisp = document.getElementById('lblDisplayCount');
-            if (elDisp) elDisp.textContent = dispCount;
-            const elTot = document.getElementById('lblTotalCount');
-            if (elTot) elTot.textContent = totCount;
-
-            if (totCount > dispCount) {
-                wrapMore.style.display = 'flex';
-            } else {
-                wrapMore.style.display = 'none';
-            }
-        }
-
-        // Re-init lucide icons
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            lucide.createIcons();
-        }
-    })
-    .catch(err => {
-        if (err.name === 'AbortError') return;
-        if (tbody) tbody.style.opacity = '1';
-    });
-}
 
 function onSearchInput(input) {
     clearTimeout(searchTimer);

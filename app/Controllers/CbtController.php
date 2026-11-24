@@ -2688,131 +2688,6 @@ class CbtController {
         $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
         $limit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
         if ($limit < 0) $limit = 30;
-        $scope = isset($_GET['scope']) ? trim($_GET['scope']) : 'semua';
-        if (empty($scope)) $scope = 'semua';
-
-        // ─── FOKUS SESI & TANGGAL HARI INI ─────────────────────────────
-        $todayDate = date('Y-m-d');
-        $todayDayName = self::getIndoDayName(date('w', strtotime($todayDate)));
-        $currentTime = date('H:i');
-
-        // Ambil seluruh slot sesi resmi
-        $allSlots = [];
-        try {
-            $rawSlots = $db->query("SELECT * FROM cbt_jam_slot WHERE is_istirahat = 0 ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
-            $seenSlots = [];
-            foreach ($rawSlots as $sl) {
-                $lbl = trim($sl['label_sesi'] ?? '');
-                if (!empty($lbl) && !isset($seenSlots[$lbl])) {
-                    $seenSlots[$lbl] = true;
-                    $allSlots[] = $sl;
-                }
-            }
-        } catch (\Throwable $e) {}
-
-        // Tentukan sesi berjalan saat ini berdasarkan jam server sekarang
-        $activeSlotNow = null;
-        foreach ($allSlots as $sl) {
-            if ($currentTime >= $sl['jam_mulai'] && $currentTime <= $sl['jam_selesai']) {
-                $activeSlotNow = $sl;
-                break;
-            }
-        }
-        if (!$activeSlotNow && !empty($allSlots)) {
-            if ($currentTime < $allSlots[0]['jam_mulai']) {
-                $activeSlotNow = $allSlots[0];
-            } else {
-                $activeSlotNow = end($allSlots);
-                foreach ($allSlots as $sl) {
-                    if ($currentTime <= $sl['jam_selesai']) {
-                        $activeSlotNow = $sl;
-                        break;
-                    }
-                }
-            }
-        }
-        $activeSesiLabel = $activeSlotNow['label_sesi'] ?? 'Sesi 1';
-        $activeJamMulai = $activeSlotNow['jam_mulai'] ?? '07:30';
-        $activeJamSelesai = $activeSlotNow['jam_selesai'] ?? '08:45';
-
-        // Tentukan target sesi yang ingin difilter
-        $targetSesi = null;
-        if ($scope === 'sesi_ini') {
-            $targetSesi = $activeSesiLabel;
-        } elseif (stripos($scope, 'Sesi') !== false) {
-            $targetSesi = $scope;
-        }
-
-        // Cari ujian_id & mapel yang terjadwal di cbt_jadwal_grid untuk hari ini dan sesi target
-        $sesiUjianIds = [];
-        $sesiMapelNames = [];
-        $todayUjianIds = [];
-        $todayMapelNames = [];
-
-        try {
-            $stmtAllToday = $db->prepare("
-                SELECT g.ujian_id, g.mapel_nama, g.jam_slot, s.label_sesi, s.urutan
-                FROM cbt_jadwal_grid g
-                LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
-                WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND (g.hari = ? OR g.hari LIKE ?)))
-            ");
-            $stmtAllToday->execute([$todayDate, $todayDayName, $todayDayName . '%']);
-            $allTodayRows = $stmtAllToday->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($allTodayRows as $atr) {
-                if (!empty($atr['ujian_id'])) $todayUjianIds[] = (int)$atr['ujian_id'];
-                if (!empty($atr['mapel_nama'])) $todayMapelNames[] = trim($atr['mapel_nama']);
-
-                if ($targetSesi) {
-                    $slotMatch = false;
-                    $rawSlot = trim((string)($atr['jam_slot'] ?? ''));
-                    $labelSlot = trim((string)($atr['label_sesi'] ?? ''));
-                    $sesiDigits = preg_replace('/[^0-9]/', '', $targetSesi);
-
-                    if (strcasecmp($rawSlot, $targetSesi) === 0 || strcasecmp($labelSlot, $targetSesi) === 0) {
-                        $slotMatch = true;
-                    } elseif ($sesiDigits && (preg_replace('/[^0-9]/', '', $rawSlot) === $sesiDigits || preg_replace('/[^0-9]/', '', $labelSlot) === $sesiDigits)) {
-                        $slotMatch = true;
-                    }
-
-                    if ($slotMatch) {
-                        if (!empty($atr['ujian_id'])) $sesiUjianIds[] = (int)$atr['ujian_id'];
-                        if (!empty($atr['mapel_nama'])) $sesiMapelNames[] = trim($atr['mapel_nama']);
-                    }
-                }
-            }
-        } catch (\Throwable $e) {}
-
-        $sesiUjianIds = array_values(array_unique(array_filter($sesiUjianIds)));
-        $sesiMapelNames = array_values(array_unique(array_filter($sesiMapelNames)));
-        $todayUjianIds = array_values(array_unique(array_filter($todayUjianIds)));
-        $todayMapelNames = array_values(array_unique(array_filter($todayMapelNames)));
-
-        // Teks info sesi human-readable
-        $indoMonths = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-        $dNum = (int)date('d', strtotime($todayDate));
-        $mNum = (int)date('m', strtotime($todayDate));
-        $yNum = date('Y', strtotime($todayDate));
-        $formattedDate = "{$todayDayName}, {$dNum} " . ($indoMonths[$mNum] ?? '') . " {$yNum}";
-        
-        $sesiInfo = '';
-        if ($targetSesi) {
-            $slotFound = null;
-            foreach ($allSlots as $sl) {
-                if (strcasecmp($sl['label_sesi'], $targetSesi) === 0 || preg_replace('/[^0-9]/', '', $sl['label_sesi']) === preg_replace('/[^0-9]/', '', $targetSesi)) {
-                    $slotFound = $sl;
-                    break;
-                }
-            }
-            $jamRange = $slotFound ? " ({$slotFound['jam_mulai']} - {$slotFound['jam_selesai']})" : "";
-            $cntMapel = count($sesiMapelNames);
-            $sesiInfo = "{$formattedDate} • {$targetSesi}{$jamRange}" . ($cntMapel > 0 ? " — {$cntMapel} Mapel Terjadwal" : "");
-        } elseif ($scope === 'hari_ini') {
-            $cntMapel = count($todayMapelNames);
-            $sesiInfo = "{$formattedDate} • Seluruh Sesi Hari Ini" . ($cntMapel > 0 ? " — {$cntMapel} Mapel Terjadwal" : "");
-        } else {
-            $sesiInfo = "Seluruh Riwayat Nilai CBT (Tanpa Filter Tanggal/Sesi)";
-        }
 
         // Ambil daftar Mapel yang relevan (difilter per topik jika topik dipilih)
         $mapelList = [];
@@ -2863,30 +2738,6 @@ class CbtController {
                 LEFT JOIN cbt_ujian u ON u.id = p.ujian_id 
                 WHERE 1=1";
         $params = [];
-
-        // TERAPKAN FILTER SESI & TANGGAL (JIKA BUKAN SCOPE SEMUA)
-        if ($targetSesi) {
-            if (!empty($sesiUjianIds)) {
-                $inSesiIds = implode(',', $sesiUjianIds);
-                $sql .= " AND (p.ujian_id IN ({$inSesiIds})) AND (DATE(COALESCE(p.waktu_selesai, p.waktu_mulai, p.created_at)) = :today_date OR p.status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Terkunci'))";
-                $params[':today_date'] = $todayDate;
-            } elseif (!empty($sesiMapelNames)) {
-                $quotedMapel = implode("','", array_map('addslashes', $sesiMapelNames));
-                $sql .= " AND (u.mapel_nama IN ('{$quotedMapel}') AND (DATE(COALESCE(p.waktu_selesai, p.waktu_mulai, p.created_at)) = :today_date OR p.status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Terkunci')))";
-                $params[':today_date'] = $todayDate;
-            } else {
-                $sql .= " AND (DATE(COALESCE(p.waktu_selesai, p.waktu_mulai, p.created_at)) = :today_date OR p.status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Terkunci'))";
-                $params[':today_date'] = $todayDate;
-            }
-        } elseif ($scope === 'hari_ini') {
-            if (!empty($todayUjianIds)) {
-                $inTodayIds = implode(',', $todayUjianIds);
-                $sql .= " AND (p.ujian_id IN ({$inTodayIds}) OR DATE(COALESCE(p.waktu_selesai, p.waktu_mulai, p.created_at)) = :today_date)";
-            } else {
-                $sql .= " AND (DATE(COALESCE(p.waktu_selesai, p.waktu_mulai, p.created_at)) = :today_date OR p.status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Terkunci'))";
-            }
-            $params[':today_date'] = $todayDate;
-        }
 
         if ($selectedTopikId > 0) {
             $tpJudul = '';
@@ -3137,12 +2988,9 @@ class CbtController {
                 'jumlah_remedial' => $jumlahRemedial,
                 'mapel_list' => array_values(array_unique($mapelList)),
                 'table_html' => $tableHtml,
-                'scope' => $scope,
-                'active_sesi' => $activeSesiLabel,
-                'sesi_info' => $sesiInfo,
                 'server_time' => date('H:i:s'),
-                'has_filter' => ($scope !== 'sesi_ini' || !empty($selectedTopikId) || !empty($selectedMapel) || !empty($selectedKelas) || !empty($search) || ($sort !== 'nilai_desc')),
-                'cetak_url' => base_url('cbt/hasil/cetak?scope=' . urlencode($scope) . '&topik_id=' . $selectedTopikId . '&mapel=' . urlencode($selectedMapel) . '&kelas=' . urlencode($selectedKelas) . '&sort=' . $sort . '&q=' . urlencode($search)),
+                'has_filter' => (!empty($selectedTopikId) || !empty($selectedMapel) || !empty($selectedKelas) || !empty($search) || ($sort !== 'nilai_desc')),
+                'cetak_url' => base_url('cbt/hasil/cetak?topik_id=' . $selectedTopikId . '&mapel=' . urlencode($selectedMapel) . '&kelas=' . urlencode($selectedKelas) . '&sort=' . $sort . '&q=' . urlencode($search)),
                 'analisis_url' => base_url('cbt/analisis?topik_id=' . $selectedTopikId . '&mapel=' . urlencode($selectedMapel) . '&kelas=' . urlencode($selectedKelas)),
             ]);
             exit;
@@ -3164,138 +3012,16 @@ class CbtController {
         self::ensureTables($db);
 
         $selectedTopikId = isset($_GET['topik_id']) ? (int)$_GET['topik_id'] : 0;
+        if ($selectedTopikId == 5) {
+            $selectedTopikId = 3;
+        }
         $selectedMapel = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
         $selectedUjianId = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
         $selectedKelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
         $search = isset($_GET['q']) ? trim($_GET['q']) : '';
         $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
-        $limit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
-        if ($limit < 0) $limit = 30;
-        $scope = isset($_GET['scope']) ? trim($_GET['scope']) : 'semua';
-        if (empty($scope)) $scope = 'semua';
-
-        // ─── FOKUS SESI & TANGGAL HARI INI ─────────────────────────────
-        $todayDate = date('Y-m-d');
-        $todayDayName = self::getIndoDayName(date('w', strtotime($todayDate)));
-        $currentTime = date('H:i');
-
-        // Ambil seluruh slot sesi resmi
-        $allSlots = [];
-        try {
-            $rawSlots = $db->query("SELECT * FROM cbt_jam_slot WHERE is_istirahat = 0 ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
-            $seenSlots = [];
-            foreach ($rawSlots as $sl) {
-                $lbl = trim($sl['label_sesi'] ?? '');
-                if (!empty($lbl) && !isset($seenSlots[$lbl])) {
-                    $seenSlots[$lbl] = true;
-                    $allSlots[] = $sl;
-                }
-            }
-        } catch (\Throwable $e) {}
-
-        // Tentukan sesi berjalan saat ini berdasarkan jam server sekarang
-        $activeSlotNow = null;
-        foreach ($allSlots as $sl) {
-            if ($currentTime >= $sl['jam_mulai'] && $currentTime <= $sl['jam_selesai']) {
-                $activeSlotNow = $sl;
-                break;
-            }
-        }
-        if (!$activeSlotNow && !empty($allSlots)) {
-            if ($currentTime < $allSlots[0]['jam_mulai']) {
-                $activeSlotNow = $allSlots[0];
-            } else {
-                $activeSlotNow = end($allSlots);
-                foreach ($allSlots as $sl) {
-                    if ($currentTime <= $sl['jam_selesai']) {
-                        $activeSlotNow = $sl;
-                        break;
-                    }
-                }
-            }
-        }
-        $activeSesiLabel = $activeSlotNow['label_sesi'] ?? 'Sesi 1';
-        $activeJamMulai = $activeSlotNow['jam_mulai'] ?? '07:30';
-        $activeJamSelesai = $activeSlotNow['jam_selesai'] ?? '08:45';
-
-        // Tentukan target sesi yang ingin difilter
-        $targetSesi = null;
-        if ($scope === 'sesi_ini') {
-            $targetSesi = $activeSesiLabel;
-        } elseif (stripos($scope, 'Sesi') !== false) {
-            $targetSesi = $scope;
-        }
-
-        // Cari ujian_id & mapel yang terjadwal di cbt_jadwal_grid untuk hari ini dan sesi target
-        $sesiUjianIds = [];
-        $sesiMapelNames = [];
-        $todayUjianIds = [];
-        $todayMapelNames = [];
-
-        try {
-            $stmtAllToday = $db->prepare("
-                SELECT g.ujian_id, g.mapel_nama, g.jam_slot, s.label_sesi, s.urutan
-                FROM cbt_jadwal_grid g
-                LEFT JOIN cbt_jam_slot s ON (g.jam_slot = s.label_sesi OR g.jam_slot = s.urutan)
-                WHERE (g.tanggal = ? OR (g.tanggal IS NULL AND (g.hari = ? OR g.hari LIKE ?)))
-            ");
-            $stmtAllToday->execute([$todayDate, $todayDayName, $todayDayName . '%']);
-            $allTodayRows = $stmtAllToday->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($allTodayRows as $atr) {
-                if (!empty($atr['ujian_id'])) $todayUjianIds[] = (int)$atr['ujian_id'];
-                if (!empty($atr['mapel_nama'])) $todayMapelNames[] = trim($atr['mapel_nama']);
-
-                if ($targetSesi) {
-                    $slotMatch = false;
-                    $rawSlot = trim((string)($atr['jam_slot'] ?? ''));
-                    $labelSlot = trim((string)($atr['label_sesi'] ?? ''));
-                    $sesiDigits = preg_replace('/[^0-9]/', '', $targetSesi);
-
-                    if (strcasecmp($rawSlot, $targetSesi) === 0 || strcasecmp($labelSlot, $targetSesi) === 0) {
-                        $slotMatch = true;
-                    } elseif ($sesiDigits && (preg_replace('/[^0-9]/', '', $rawSlot) === $sesiDigits || preg_replace('/[^0-9]/', '', $labelSlot) === $sesiDigits)) {
-                        $slotMatch = true;
-                    }
-
-                    if ($slotMatch) {
-                        if (!empty($atr['ujian_id'])) $sesiUjianIds[] = (int)$atr['ujian_id'];
-                        if (!empty($atr['mapel_nama'])) $sesiMapelNames[] = trim($atr['mapel_nama']);
-                    }
-                }
-            }
-        } catch (\Throwable $e) {}
-
-        $sesiUjianIds = array_values(array_unique(array_filter($sesiUjianIds)));
-        $sesiMapelNames = array_values(array_unique(array_filter($sesiMapelNames)));
-        $todayUjianIds = array_values(array_unique(array_filter($todayUjianIds)));
-        $todayMapelNames = array_values(array_unique(array_filter($todayMapelNames)));
-
-        // Teks info sesi human-readable
-        $indoMonths = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-        $dNum = (int)date('d', strtotime($todayDate));
-        $mNum = (int)date('m', strtotime($todayDate));
-        $yNum = date('Y', strtotime($todayDate));
-        $formattedDate = "{$todayDayName}, {$dNum} " . ($indoMonths[$mNum] ?? '') . " {$yNum}";
-        
-        $sesiInfo = '';
-        if ($targetSesi) {
-            $slotFound = null;
-            foreach ($allSlots as $sl) {
-                if (strcasecmp($sl['label_sesi'], $targetSesi) === 0 || preg_replace('/[^0-9]/', '', $sl['label_sesi']) === preg_replace('/[^0-9]/', '', $targetSesi)) {
-                    $slotFound = $sl;
-                    break;
-                }
-            }
-            $jamRange = $slotFound ? " ({$slotFound['jam_mulai']} - {$slotFound['jam_selesai']})" : "";
-            $cntMapel = count($sesiMapelNames);
-            $sesiInfo = "{$formattedDate} • {$targetSesi}{$jamRange}" . ($cntMapel > 0 ? " — {$cntMapel} Mapel Terjadwal" : "");
-        } elseif ($scope === 'hari_ini') {
-            $cntMapel = count($todayMapelNames);
-            $sesiInfo = "{$formattedDate} • Seluruh Sesi Hari Ini" . ($cntMapel > 0 ? " — {$cntMapel} Mapel Terjadwal" : "");
-        } else {
-            $sesiInfo = "Seluruh Riwayat Nilai CBT (Tanpa Filter Tanggal/Sesi)";
-        }
+        $limit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 0;
+        if ($limit < 0) $limit = 0;
 
         $currentUjian = null;
         if ($selectedUjianId > 0) {
