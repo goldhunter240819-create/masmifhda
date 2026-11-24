@@ -3570,36 +3570,62 @@ class CbtController {
         $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($soalList)) {
-            // Coba auto-import dari bs_soal jika topik_id atau mapel_nama cocok di Bank Soal
+            // Coba auto-import dari bs_soal jika mapel_nama dan kelas cocok di Bank Soal
             try {
                 $db_siakad = $ctx['db_siakad'] ?? $db;
                 $topikIdExam = !empty($ujianInfo['topik_id']) ? (int)$ujianInfo['topik_id'] : 0;
-                $stmtBS = $db_siakad->prepare("SELECT * FROM bs_soal WHERE (topik_id = ? AND ? > 0) OR mapel_nama = ? ORDER BY nomor_urut ASC LIMIT 50");
-                $stmtBS->execute([$topikIdExam, $topikIdExam, $ujianInfo['mapel_nama']]);
-                $bsItems = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
-                if (empty($bsItems) && $db !== $db_siakad) {
-                    $stmtBSCore = $db->prepare("SELECT * FROM bs_soal WHERE (topik_id = ? AND ? > 0) OR mapel_nama = ? ORDER BY nomor_urut ASC LIMIT 50");
-                    $stmtBSCore->execute([$topikIdExam, $topikIdExam, $ujianInfo['mapel_nama']]);
-                    $bsItems = $stmtBSCore->fetchAll(PDO::FETCH_ASSOC);
+                $getLevel = function($str) {
+                    $s = strtoupper((string)$str);
+                    if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
+                    if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
+                    if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
+                    return 0;
+                };
+                $uLvl = $getLevel($ujianInfo['kelas_nama'] ?? '');
+
+                $dbsToCheck = (!empty($db_siakad) && $db_siakad !== $db) ? [$db_siakad, $db] : [$db];
+                $bsItems = [];
+                foreach ($dbsToCheck as $targetDb) {
+                    $stmtAllPaket = $targetDb->prepare("
+                        SELECT id, kelas_nama, kelas_sasaran FROM bs_paket 
+                        WHERE (topik_id = ? OR ? = 0)
+                          AND (mapel_nama = ? OR mapel_nama LIKE ? OR ? LIKE CONCAT('%', mapel_nama, '%'))
+                        ORDER BY id ASC
+                    ");
+                    $stmtAllPaket->execute([$topikIdExam, $topikIdExam, $ujianInfo['mapel_nama'], '%' . $ujianInfo['mapel_nama'] . '%', $ujianInfo['mapel_nama']]);
+                    $pkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($pkts as $pkt) {
+                        $pLvl = $getLevel($pkt['kelas_nama'] . ' ' . ($pkt['kelas_sasaran'] ?? ''));
+                        if ($pLvl === $uLvl || $uLvl === 0) {
+                            $stmtBS = $targetDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                            $stmtBS->execute([$pkt['id']]);
+                            $rows = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
+                            if (!empty($rows)) {
+                                $bsItems = $rows;
+                                break 2;
+                            }
+                        }
+                    }
                 }
 
                 if (!empty($bsItems)) {
-                    $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $no = 1;
                     foreach ($bsItems as $bItem) {
-                        $kunci = 'A'; $opA = ''; $opB = ''; $opC = ''; $opD = ''; $opE = '';
-                        $kData = !empty($bItem['konten_tambahan']) ? json_decode($bItem['konten_tambahan'], true) : [];
-                        if (is_array($kData)) {
-                            $kunci = strtoupper($kData['kunci'] ?? 'A');
-                            if (isset($kData['opsi']) && is_array($kData['opsi'])) {
-                                $opA = $kData['opsi']['A'] ?? '';
-                                $opB = $kData['opsi']['B'] ?? '';
-                                $opC = $kData['opsi']['C'] ?? '';
-                                $opD = $kData['opsi']['D'] ?? '';
-                                $opE = $kData['opsi']['E'] ?? '';
-                            }
-                        }
-                        $stmtInsS->execute([$ujian_id, $no++, $bItem['pertanyaan'], $opA, $opB, $opC, $opD, $opE, $kunci, 1.0]);
+                        $stmtInsS->execute([
+                            $ujian_id, 
+                            $no++, 
+                            $bItem['pertanyaan'], 
+                            $bItem['opsi_a'] ?? '', 
+                            $bItem['opsi_b'] ?? '', 
+                            $bItem['opsi_c'] ?? '', 
+                            $bItem['opsi_d'] ?? '', 
+                            $bItem['opsi_e'] ?? '', 
+                            $bItem['kunci_jawaban'] ?? 'A', 
+                            $bItem['skor_maksimal'] ?? 1.0, 
+                            $bItem['tipe_soal'] ?? 'sec_pg', 
+                            $bItem['konten_tambahan'] ?? null
+                        ]);
                     }
                     $stmtS->execute([$ujian_id]);
                     $soalList = $stmtS->fetchAll(PDO::FETCH_ASSOC);

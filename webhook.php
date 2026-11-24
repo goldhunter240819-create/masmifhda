@@ -222,6 +222,32 @@ try {
         $output .= "\nDuplicate topik ID 5 consolidated to ID 3 and archived successfully.\n";
     } catch (\Throwable $e) {}
 
+    // DIAGNOSTIK & PERBAIKAN SOAL FIKIH
+    try {
+        $dbCore = \App\Core\Database::connect('core');
+        $dbSiakad = \App\Core\Database::connect('siakad') ?: $dbCore;
+        
+        $output .= "\n=== DIAGNOSTIK SOAL FIKIH ===\n";
+        
+        // 1. Cek bs_paket untuk Fikih
+        $pkts = $dbSiakad->query("SELECT id, topik_id, mapel_nama, kelas_nama, (SELECT COUNT(*) FROM bs_soal WHERE paket_id = bs_paket.id) as jml_soal FROM bs_paket WHERE mapel_nama LIKE '%Fikih%' OR mapel_nama LIKE '%Fiqih%'")->fetchAll(PDO::FETCH_ASSOC);
+        $output .= "bs_paket Fikih: " . json_encode($pkts) . "\n";
+
+        // 2. Cek cbt_ujian untuk Fikih
+        $ujs = $dbCore->query("SELECT id, topik_id, nama_ujian, mapel_nama, kelas_nama, (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = cbt_ujian.id) as jml_soal FROM cbt_ujian WHERE mapel_nama LIKE '%Fikih%' OR mapel_nama LIKE '%Fiqih%'")->fetchAll(PDO::FETCH_ASSOC);
+        $output .= "cbt_ujian Fikih: " . json_encode($ujs) . "\n";
+
+        // 3. Cek sampel pertanyaan di cbt_soal Fikih
+        if (!empty($ujs)) {
+            foreach ($ujs as $uj) {
+                $sampel = $dbCore->query("SELECT nomor_urut, SUBSTRING(pertanyaan, 1, 60) as ringkasan FROM cbt_soal WHERE ujian_id = {$uj['id']} ORDER BY nomor_urut ASC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+                $output .= "Sampel cbt_soal (Ujian ID {$uj['id']} - {$uj['nama_ujian']}): " . json_encode($sampel) . "\n";
+            }
+        }
+    } catch (\Throwable $e) {
+        $output .= "\nDiagnostik Fikih error: " . $e->getMessage() . "\n";
+    }
+
     $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";
 } catch (\Throwable $e) {
     $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";
