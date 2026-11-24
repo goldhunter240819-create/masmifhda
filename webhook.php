@@ -344,11 +344,35 @@ try {
 
 // 3.13 Diagnostic Check for CBT Jadwal & SKI Peserta
 try {
-    $output .= "\n=== DIAGNOSTIK JADWAL GRID HARI INI & SKI ===\n";
-    $jg = $dbCore->query("SELECT id, topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_nama, tanggal FROM cbt_jadwal_grid WHERE hari LIKE '%Selasa%' OR tanggal = '2026-11-24' ORDER BY jam_slot ASC, kelas_nama ASC")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "Total cbt_jadwal_grid rows for SELASA: " . count($jg) . "\n";
-    foreach ($jg as $rowG) {
-        $output .= "SELASA GRID: [{$rowG['id']}] {$rowG['mapel_nama']} | {$rowG['hari']} | {$rowG['tanggal']} | {$rowG['jam_slot']} | {$rowG['kelas_nama']} | UjianID: {$rowG['ujian_id']}\n";
+    $output .= "\n=== DIAGNOSTIK KOLOM & DATA SESI ===\n";
+    $sesiCols = $dbCore->query("
+        SELECT TABLE_NAME, COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+          AND COLUMN_NAME LIKE '%sesi%'
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($sesiCols as $sc) {
+        $output .= "TABEL: {$sc['TABLE_NAME']} -> KOLOM: {$sc['COLUMN_NAME']}\n";
+    }
+
+    // Cek juga cbt_jam_slot
+    $slots = $dbCore->query("SELECT * FROM cbt_jam_slot ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nCBT JAM SLOTS:\n";
+    foreach ($slots as $sl) {
+        $output .= "SLOT [{$sl['id']}]: Urutan {$sl['urutan']} | Label: {$sl['label_sesi']} | {$sl['jam_mulai']} - {$sl['jam_selesai']} | Topik: {$sl['topik_id']}\n";
+    }
+
+    // Cek apakah siswa punya kolom sesi atau di kelas
+    $sampleSiswa = $dbCore->query("SELECT id, nis, nama, kelas_id, nama_kelas FROM siswa LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nSAMPEL SISWA REGULER:\n" . json_encode($sampleSiswa) . "\n";
+
+    // Cek apakah ada peserta yang mengerjakan SKI di database core (apakah ada jawaban tersimpan di tabel lain seperti cbt_jawaban?)
+    $cbtJawabanCount = 0;
+    try {
+        $cbtJawabanCount = (int)$dbCore->query("SELECT COUNT(*) FROM cbt_jawaban")->fetchColumn();
+        $output .= "Total rows in cbt_jawaban: {$cbtJawabanCount}\n";
+    } catch (\Throwable $e) {
+        $output .= "cbt_jawaban table: " . $e->getMessage() . "\n";
     }
 
     $allUjSki = $dbCore->query("SELECT id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, status FROM cbt_ujian WHERE mapel_nama LIKE '%Kebudayaan%' OR mapel_nama LIKE '%SKI%'")->fetchAll(PDO::FETCH_ASSOC);
