@@ -345,10 +345,17 @@ try {
 // 3.13 Diagnostic Check for CBT Jadwal & SKI Peserta
 try {
     $output .= "\n=== DIAGNOSTIK JADWAL GRID HARI INI & SKI ===\n";
-    $jg = $dbCore->query("SELECT id, topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_nama, tanggal FROM cbt_jadwal_grid ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
-    $output .= "Total cbt_jadwal_grid rows: " . count($jg) . "\n";
-    foreach (array_slice($jg, 0, 15) as $rowG) {
-        $output .= "GRID: [{$rowG['id']}] {$rowG['mapel_nama']} | {$rowG['hari']} | {$rowG['tanggal']} | {$rowG['jam_slot']} | {$rowG['kelas_nama']} | UjianID: {$rowG['ujian_id']}\n";
+    $jg = $dbCore->query("SELECT id, topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_nama, tanggal FROM cbt_jadwal_grid WHERE hari LIKE '%Selasa%' OR tanggal = '2026-11-24' ORDER BY jam_slot ASC, kelas_nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "Total cbt_jadwal_grid rows for SELASA: " . count($jg) . "\n";
+    foreach ($jg as $rowG) {
+        $output .= "SELASA GRID: [{$rowG['id']}] {$rowG['mapel_nama']} | {$rowG['hari']} | {$rowG['tanggal']} | {$rowG['jam_slot']} | {$rowG['kelas_nama']} | UjianID: {$rowG['ujian_id']}\n";
+    }
+
+    $allUjSki = $dbCore->query("SELECT id, topik_id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, status FROM cbt_ujian WHERE mapel_nama LIKE '%Kebudayaan%' OR mapel_nama LIKE '%SKI%'")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nALL UJIAN SKI IN CBT_UJIAN:\n";
+    foreach ($allUjSki as $aus) {
+        $pCnt = $dbCore->query("SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = {$aus['id']}")->fetchColumn();
+        $output .= "SKI UJIAN: ID {$aus['id']} | Topik {$aus['topik_id']} | {$aus['nama_ujian']} | Mapel: {$aus['mapel_nama']} | Kelas: {$aus['kelas_nama']} | Status: {$aus['status']} | Peserta: {$pCnt}\n";
     }
 
     $ujSki = $dbCore->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, status, durasi_menit FROM cbt_ujian WHERE mapel_nama LIKE '%Kebudayaan%' OR mapel_nama LIKE '%SKI%' OR mapel_nama LIKE '%Fikih%' OR mapel_nama LIKE '%Bahasa%'")->fetchAll(PDO::FETCH_ASSOC);
