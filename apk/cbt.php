@@ -279,10 +279,10 @@ try {
         $noPesertaKj = (string)($cbtStudent['no_peserta'] ?? '');
         $nisKj = (string)($cbtStudent['nis'] ?? '');
         $namaKj = (string)($cbtStudent['nama_siswa'] ?? '');
-        $joinPesertaSql = "(p.siswa_id IS NULL AND (p.nis = ? OR (p.nis = ? AND ? != '') OR p.nama_siswa = ?))";
+        $joinPesertaSql = "(p2.siswa_id IS NULL AND (p2.nis = ? OR (p2.nis = ? AND ? != '') OR p2.nama_siswa = ?))";
         $joinPesertaParams = [$noPesertaKj, $nisKj, $nisKj, $namaKj];
     } else {
-        $joinPesertaSql = "(p.siswa_id = ? OR (p.nis = ? AND ? != ''))";
+        $joinPesertaSql = "(p2.siswa_id = ? OR (p2.nis = ? AND ? != ''))";
         $joinPesertaParams = [$siswa_id, (string)($siswa['nis'] ?? ''), (string)($siswa['nis'] ?? '')];
     }
 
@@ -296,7 +296,12 @@ try {
                p.waktu_mulai,
                p.waktu_selesai
         FROM cbt_ujian u
-        LEFT JOIN cbt_peserta p ON p.ujian_id = u.id AND {$joinPesertaSql}
+        LEFT JOIN cbt_peserta p ON p.id = (
+            SELECT p2.id FROM cbt_peserta p2
+            WHERE p2.ujian_id = u.id AND {$joinPesertaSql}
+            ORDER BY (p2.status_pengerjaan = 'Selesai') DESC, (p2.nilai_akhir > 0) DESC, p2.id DESC
+            LIMIT 1
+        )
         LEFT JOIN bs_topik t ON u.topik_id = t.id
         WHERE u.status = 'Aktif'
           AND (u.topik_id IS NULL OR u.topik_id = 0 OR (t.id IS NOT NULL AND t.status = 'Aktif'))

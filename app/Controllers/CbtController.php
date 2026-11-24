@@ -3799,6 +3799,34 @@ class CbtController {
             $answersMap = $answersRaw;
         }
 
+        // Cek apakah ada kecocokan kunci soal dengan ID soal
+        $hasKeyMatch = false;
+        foreach ($soals as $s) {
+            $sId = $s['id'];
+            if (isset($answersMap[$sId]) || isset($answersMap[(string)$sId])) {
+                $hasKeyMatch = true;
+                break;
+            }
+        }
+
+        // Jika tidak ada ID soal yang cocok di answersMap (misalnya ID butir soal di-recreate atau beda server),
+        // gunakan pemetaan berdasar urutan sekuensial (sequential order fallback)
+        $orderedAnswers = [];
+        if (!$hasKeyMatch && !empty($answersMap)) {
+            $keys = array_keys($answersMap);
+            $allNumeric = true;
+            foreach ($keys as $k) {
+                if (!is_numeric($k)) {
+                    $allNumeric = false;
+                    break;
+                }
+            }
+            if ($allNumeric) {
+                ksort($answersMap, SORT_NUMERIC);
+            }
+            $orderedAnswers = array_values($answersMap);
+        }
+
         $totalBobot = 0;
         $poinPerolehan = 0;
         $jumlahBenar = 0;
@@ -3831,6 +3859,8 @@ class CbtController {
                 $userAnsRaw = $answersByIndex[$sNo];
             } elseif (isset($answersMap[$sNo])) {
                 $userAnsRaw = $answersMap[$sNo];
+            } elseif (!$hasKeyMatch && isset($orderedAnswers[$sIdx])) {
+                $userAnsRaw = $orderedAnswers[$sIdx];
             }
 
             $flatAnswers[$sId] = ($userAnsRaw !== null) ? $userAnsRaw : '';

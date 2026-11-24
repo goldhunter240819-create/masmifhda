@@ -365,7 +365,7 @@ try {
                     $curNilai = (float)($cp['nilai_akhir'] ?? 0);
                     $newNilai = (float)$eval['nilaiAkhir'];
                     
-                    if ($newNilai > $curNilai || $curNilai <= 0 || $cp['status_pengerjaan'] !== 'Selesai') {
+                    if ($newNilai > $curNilai || $curNilai <= 0 || $cp['status_pengerjaan'] !== 'Selesai' || $eval['jumlahBenar'] > (int)($cp['jumlah_benar'] ?? 0) || ((int)($cp['jumlah_tidak_jawab'] ?? 0) > 0 && $eval['jumlahTidakJawab'] < (int)($cp['jumlah_tidak_jawab'] ?? 0))) {
                         $stFix = $dbCore->prepare("
                             UPDATE cbt_peserta 
                             SET status_pengerjaan = 'Selesai',
@@ -378,7 +378,7 @@ try {
                         ");
                         $stFix->execute([$eval['jumlahBenar'], $eval['jumlahSalah'], $eval['jumlahTidakJawab'], $newNilai, $cp['id']]);
                         $recalculatedCount++;
-                        $output .= sprintf("Pulihkan Nilai ID %d: %s (%s) - Nilai: %.1f (Benar: %d/%d)\n", $cp['id'], $cp['nama_siswa'], $cp['kelas_nama'], $newNilai, $eval['jumlahBenar'], count($soals));
+                        $output .= sprintf("Pulihkan Nilai ID %d: %s (%s) - Nilai: %.1f (Benar: %d/%d, Salah: %d, Kosong: %d)\n", $cp['id'], $cp['nama_siswa'], $cp['kelas_nama'], $newNilai, $eval['jumlahBenar'], count($soals), $eval['jumlahSalah'], $eval['jumlahTidakJawab']);
                     }
                 }
             }
