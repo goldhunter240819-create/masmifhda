@@ -262,6 +262,40 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             color: #1e293b;
             line-height: 1.5;
             margin-top: 3px;
+            flex: 1;
+        }
+        .opt-text-rtl {
+            direction: rtl;
+            text-align: right !important;
+            unicode-bidi: isolate;
+            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Times New Roman', serif;
+            font-size: 1.18rem !important;
+            line-height: 1.95 !important;
+            width: 100%;
+        }
+        .arabic-block-rtl {
+            display: block;
+            direction: rtl;
+            text-align: right;
+            unicode-bidi: isolate;
+            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Times New Roman', serif;
+            font-size: 1.22em;
+            line-height: 2;
+            background: #f8fafc;
+            border-right: 3px solid #0ea5e9;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin: 8px 0;
+            color: #0f172a;
+        }
+        .arabic-inline-rtl {
+            direction: rtl;
+            unicode-bidi: isolate;
+            display: inline-block;
+            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Times New Roman', serif;
+            font-size: 1.15em;
+            line-height: 1.8;
+            padding: 0 3px;
         }
 
         /* Nav Footer */
@@ -2376,6 +2410,87 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
 
             updatePaletteCurrent();
+            try { applyArabicTypographyAndBidi(); } catch(e) {}
+        }
+
+        // Format otomatis teks Arab (rata kanan RTL untuk full Arab, baris baru / isolasi BiDi untuk Arab di tengah teks Latin)
+        function applyArabicTypographyAndBidi() {
+            const arCharRe = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+            const arGlobalRe = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+            const latinGlobalRe = /[A-Za-z]/g;
+            const arRunRe = /([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF][\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u064B-\u065F\u0670\u06D6-\u06ED\s،؛؟۝۞«»()\-]*[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u064B-\u065F\u0670\u06D6-\u06ED])/g;
+
+            function processMixedNodes(el) {
+                const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+                const nodes = [];
+                let n;
+                while ((n = walker.nextNode())) {
+                    if (!n.parentElement) continue;
+                    const tag = n.parentElement.tagName;
+                    if (['SCRIPT', 'STYLE', 'SVG', 'TEXTAREA', 'INPUT'].includes(tag)) continue;
+                    if (n.parentElement.closest('.arabic-block-rtl, .arabic-inline-rtl, .opt-text-rtl')) continue;
+                    if (arCharRe.test(n.nodeValue)) nodes.push(n);
+                }
+
+                nodes.forEach(textNode => {
+                    const text = textNode.nodeValue;
+                    const parts = text.split(arRunRe);
+                    if (parts.length <= 1) return;
+
+                    const frag = document.createDocumentFragment();
+                    parts.forEach(part => {
+                        if (!part) return;
+                        if (arCharRe.test(part)) {
+                            const trimmed = part.trim();
+                            const arCount = (trimmed.match(arGlobalRe) || []).length;
+                            const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+                            if (arCount >= 18 || wordCount >= 3) {
+                                const blk = document.createElement('div');
+                                blk.className = 'arabic-block-rtl';
+                                blk.setAttribute('dir', 'rtl');
+                                blk.textContent = trimmed;
+                                frag.appendChild(blk);
+                            } else {
+                                const sp = document.createElement('span');
+                                sp.className = 'arabic-inline-rtl';
+                                sp.setAttribute('dir', 'rtl');
+                                sp.textContent = trimmed;
+                                frag.appendChild(sp);
+                            }
+                        } else {
+                            frag.appendChild(document.createTextNode(part));
+                        }
+                    });
+                    textNode.parentNode.replaceChild(frag, textNode);
+                });
+            }
+
+            const qEl = document.getElementById('questionText');
+            if (qEl) {
+                qEl.removeAttribute('dir');
+                qEl.style.textAlign = '';
+                const txt = qEl.textContent || '';
+                const arLen = (txt.match(arGlobalRe) || []).length;
+                const latLen = (txt.match(latinGlobalRe) || []).length;
+                if (arLen >= 5 && latLen === 0) {
+                    qEl.setAttribute('dir', 'rtl');
+                    qEl.style.textAlign = 'right';
+                } else if (arLen > 0) {
+                    processMixedNodes(qEl);
+                }
+            }
+
+            document.querySelectorAll('#optionsContainer .opt-text').forEach(optEl => {
+                const txt = optEl.textContent || '';
+                const arLen = (txt.match(arGlobalRe) || []).length;
+                const latLen = (txt.match(latinGlobalRe) || []).length;
+                if (arLen >= 3 && arLen > latLen) {
+                    optEl.classList.add('opt-text-rtl');
+                    optEl.setAttribute('dir', 'rtl');
+                } else if (arLen > 0) {
+                    processMixedNodes(optEl);
+                }
+            });
         }
 
         // Helper Ekstraksi & Pengacakan Opsi PG Berdasarkan Aturan acak_opsi
