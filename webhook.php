@@ -229,9 +229,11 @@ try {
         
         $output .= "\n=== PERBAIKAN SOAL FIKIH DENGAN PAKET ASLI 40 BUTIR ===\n";
 
-        // Samakan nama mapel Fikih / Fiqih di bs_paket dan cbt_ujian
+        // Samakan nama mapel Fikih / Fiqih di bs_paket, bs_soal, cbt_ujian, dan cbt_jadwal_grid
         $dbSiakad->exec("UPDATE bs_paket SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
         $dbCore->exec("UPDATE bs_paket SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
+        $dbSiakad->exec("UPDATE bs_soal SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
+        $dbCore->exec("UPDATE bs_soal SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
         $dbCore->exec("UPDATE cbt_ujian SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
         $dbCore->exec("UPDATE cbt_jadwal_grid SET mapel_nama = 'Fikih' WHERE mapel_nama = 'Fiqih'");
 

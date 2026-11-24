@@ -1667,7 +1667,8 @@ class CbtController {
                     }
                 }
 
-                $shouldSyncSoal = ($soalCount === 0) || (!empty($bsItems) && $soalCount !== count($bsItems));
+                // Hanya populate dari Bank Soal jika cbt_soal belum memiliki butir soal sama sekali (cegah timpa soal valid)
+                $shouldSyncSoal = ($soalCount === 0);
                 if ($shouldSyncSoal && !empty($bsItems)) {
                     try { $db->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$targetUjianId]); } catch (\Exception $e) {}
                     $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -4362,6 +4363,11 @@ class CbtController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
             $mode = $_POST['mode'] ?? 'lanjutkan'; // 'lanjutkan' (simpan jawaban lama) atau 'ulang' (reset dari 0)
+
+            // Dukung Bulk Unlock Serentak jika dipanggil dari modal Buka Semua Ujian
+            if ($peserta_id <= 0 || !empty($_POST['buka_semua'])) {
+                return self::bukaSemuaUjianKembali();
+            }
 
             if ($peserta_id > 0) {
                 if ($mode === 'ulang') {
@@ -8507,7 +8513,7 @@ class CbtController {
                     return $mMatch && $tMatch && $kMatch;
                 });
                 
-                if (!empty($matchedBs) && ($soalCnt === 0 || $soalCnt !== count($matchedBs))) {
+                if (!empty($matchedBs) && ($soalCnt === 0)) {
                     $db->exec("DELETE FROM cbt_soal WHERE ujian_id = {$uIdExp}");
                     $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $noS = 1;
@@ -9120,7 +9126,7 @@ class CbtController {
         header('Content-Type: application/json');
         
         $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
-        $downloadUrl = $serverUrl . '/apk/download_standalone.php?token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+        $downloadUrl = $serverUrl . '/apk/download_standalone.php?force=1&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
         $baseDir = realpath(__DIR__ . '/../..');
         $tempZip = $baseDir . '/temp_cbt_update_' . time() . '.zip';
@@ -9617,7 +9623,7 @@ class CbtController {
                     return $mMatch && $tMatch && $kMatch;
                 });
                 
-                if (!empty($matchedBs) && ($soalCnt === 0 || $soalCnt !== count($matchedBs))) {
+                if (!empty($matchedBs) && ($soalCnt === 0)) {
                     $db->exec("DELETE FROM cbt_soal WHERE ujian_id = {$uIdExp}");
                     $stmtInsS = $db->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $noS = 1;

@@ -1071,7 +1071,9 @@ function tutupModalReopenSemuaPengaturan() {
 <!-- Modal Buka SEMUA Ujian Siswa Serentak -->
 <div id="modalReopenSemuaPengaturan" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 18px;">
     <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden; animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
-        <form method="POST" action="<?php echo base_url('cbt/pengaturan/buka-semua'); ?>" style="margin: 0;">
+        <form method="POST" action="<?php echo base_url('cbt/hasil/buka-ujian'); ?>" style="margin: 0;">
+            <input type="hidden" name="buka_semua" value="1">
+            <input type="hidden" name="peserta_id" value="0">
             <input type="hidden" name="tanggal" value="all">
             
             <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 22px 24px; color: #ffffff; display: flex; align-items: center; gap: 14px;">
