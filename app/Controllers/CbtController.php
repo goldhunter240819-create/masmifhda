@@ -2815,6 +2815,35 @@ class CbtController {
         $stmtP->execute($params);
         $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
+        // Auto-pulihkan peserta yang memiliki jawaban_json tapi nilainya masih 0 atau statusnya masih Mengerjakan
+        $soalCacheHasil = [];
+        foreach ($pesertaList as &$pItem) {
+            if (!empty($pItem['jawaban_json']) && ((float)($pItem['nilai_akhir'] ?? 0) <= 0 || $pItem['status_pengerjaan'] !== 'Selesai' || (int)($pItem['jumlah_tidak_jawab'] ?? 0) >= 30)) {
+                $uId = (int)$pItem['ujian_id'];
+                if (!isset($soalCacheHasil[$uId])) {
+                    $stS = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stS->execute([$uId]);
+                    $soalCacheHasil[$uId] = $stS->fetchAll(PDO::FETCH_ASSOC);
+                }
+                $soals = $soalCacheHasil[$uId] ?? [];
+                if (!empty($soals)) {
+                    $eval = self::evaluatePesertaAnswers($soals, $pItem['jawaban_json']);
+                    if ($eval['nilaiAkhir'] > (float)($pItem['nilai_akhir'] ?? 0) || $eval['jumlahBenar'] > (int)($pItem['jumlah_benar'] ?? 0) || $pItem['status_pengerjaan'] !== 'Selesai') {
+                        $pItem['jumlah_benar'] = $eval['jumlahBenar'];
+                        $pItem['jumlah_salah'] = $eval['jumlahSalah'];
+                        $pItem['jumlah_tidak_jawab'] = $eval['jumlahTidakJawab'];
+                        $pItem['nilai_akhir'] = $eval['nilaiAkhir'];
+                        $pItem['status_pengerjaan'] = 'Selesai';
+                        try {
+                            $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Selesai', jumlah_benar = ?, jumlah_salah = ?, jumlah_tidak_jawab = ?, nilai_akhir = ?, waktu_selesai = COALESCE(waktu_selesai, NOW()) WHERE id = ?")
+                               ->execute([$eval['jumlahBenar'], $eval['jumlahSalah'], $eval['jumlahTidakJawab'], $eval['nilaiAkhir'], $pItem['id']]);
+                        } catch (\Throwable $e) {}
+                    }
+                }
+            }
+        }
+        unset($pItem);
+
         // KKM patokan & current ujian
         $kkmUjian = 75;
         $currentUjian = null;
@@ -9084,6 +9113,42 @@ class CbtController {
         try {
             $db = \App\Core\Database::connect('core');
             self::ensureTables($db);
+
+            // 4. Hitung ulang & pulihkan nilai siswa lokal yang jawaban_json-nya sudah ada
+            $candidatePeserta = $db->query("
+                SELECT p.id, p.ujian_id, p.jawaban_json, p.nilai_akhir, p.status_pengerjaan, p.jumlah_benar, p.jumlah_tidak_jawab
+                FROM cbt_peserta p
+                WHERE p.jawaban_json IS NOT NULL AND p.jawaban_json != ''
+            ")->fetchAll(\PDO::FETCH_ASSOC);
+
+            $soalCache = [];
+            foreach ($candidatePeserta as $cp) {
+                $uId = (int)$cp['ujian_id'];
+                if (!isset($soalCache[$uId])) {
+                    $stS = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stS->execute([$uId]);
+                    $soalCache[$uId] = $stS->fetchAll(\PDO::FETCH_ASSOC);
+                }
+                $soals = $soalCache[$uId] ?? [];
+                if (!empty($soals)) {
+                    $eval = self::evaluatePesertaAnswers($soals, $cp['jawaban_json']);
+                    $curNilai = (float)($cp['nilai_akhir'] ?? 0);
+                    $newNilai = (float)$eval['nilaiAkhir'];
+                    if ($newNilai > $curNilai || $curNilai <= 0 || $cp['status_pengerjaan'] !== 'Selesai' || $eval['jumlahBenar'] > (int)($cp['jumlah_benar'] ?? 0)) {
+                        $stFix = $db->prepare("
+                            UPDATE cbt_peserta 
+                            SET status_pengerjaan = 'Selesai',
+                                jumlah_benar = ?,
+                                jumlah_salah = ?,
+                                jumlah_tidak_jawab = ?,
+                                nilai_akhir = ?,
+                                waktu_selesai = COALESCE(waktu_selesai, NOW())
+                            WHERE id = ?
+                        ");
+                        $stFix->execute([$eval['jumlahBenar'], $eval['jumlahSalah'], $eval['jumlahTidakJawab'], $newNilai, $cp['id']]);
+                    }
+                }
+            }
         } catch (\Exception $e) {}
 
         echo json_encode([
