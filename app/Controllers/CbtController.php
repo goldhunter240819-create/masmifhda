@@ -3784,10 +3784,20 @@ class CbtController {
                 if (is_array($kDec)) {
                     if (is_array($userAnsRaw) && !empty($userAnsRaw)) {
                         if (isset($kDec[0]['respon'])) {
-                            // Menjodohkan
-                            $expected = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_column($kDec, 'respon'));
-                            $actual = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_values($userAnsRaw));
-                            if ($expected == $actual) $isMatch = true;
+                            // Menjodohkan (Periksa kesesuaian setiap premis indeks ke-i dengan responnya)
+                            ksort($userAnsRaw);
+                            $allMatched = true;
+                            foreach ($kDec as $pIdx => $pItem) {
+                                $expVal = strtoupper(trim((string)($pItem['respon'] ?? '')));
+                                $usrVal = strtoupper(trim((string)($userAnsRaw[$pIdx] ?? '')));
+                                if ($usrVal === '' || $usrVal !== $expVal) {
+                                    $allMatched = false;
+                                    break;
+                                }
+                            }
+                            if ($allMatched && count($userAnsRaw) === count($kDec)) {
+                                $isMatch = true;
+                            }
                         } else {
                             // Benar / Salah
                             $expected = array_map(function($v) { return strtoupper(trim((string)$v)); }, $kDec);

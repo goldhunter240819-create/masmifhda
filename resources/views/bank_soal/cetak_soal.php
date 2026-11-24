@@ -582,6 +582,75 @@ function renderKontenTeks($str) {
                                     </div>
                                 <?php endforeach; ?>
                             </div>
+                        <?php elseif ($tipe === 'sec_jodoh'): ?>
+                            <?php 
+                            $kData = json_decode($s['konten_tambahan'] ?? '{}', true) ?: [];
+                            $pasangan = $kData['pasangan'] ?? [];
+                            $allRespon = array_values(array_unique(array_column($pasangan, 'respon')));
+                            if (count($allRespon) > 1) {
+                                // Acak urutan pilihan respon agar tidak segaris lurus
+                                $seedC = ((int)($s['id'] ?? 1) * 31) + 17;
+                                srand($seedC);
+                                shuffle($allRespon);
+                                srand(); // reset seed
+                            }
+                            ?>
+                            <?php if (!empty($pasangan)): ?>
+                                <table style="width: 100%; border-collapse: collapse; margin: 8px 0 12px 0; font-size: 9pt;">
+                                    <thead>
+                                        <tr style="background: #f1f5f9;">
+                                            <th style="border: 1px solid #cbd5e1; padding: 6px 10px; width: 48%; text-align: left;">Kolom Pernyataan</th>
+                                            <th style="border: 1px solid #cbd5e1; padding: 6px 10px; width: 48%; text-align: left;">Pilihan Jawaban (Acak)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php 
+                                        $maxRow = max(count($pasangan), count($allRespon));
+                                        for ($r = 0; $r < $maxRow; $r++):
+                                            $pItem = $pasangan[$r] ?? null;
+                                            $respItem = $allRespon[$r] ?? null;
+                                        ?>
+                                            <tr>
+                                                <td style="border: 1px solid #e2e8f0; padding: 6px 10px; vertical-align: top;">
+                                                    <?php if ($pItem): ?>
+                                                        <b style="color: #1e293b;">[<?= $r + 1 ?>]</b> <?= renderKontenTeks($pItem['premis']) ?>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td style="border: 1px solid #e2e8f0; padding: 6px 10px; vertical-align: top;">
+                                                    <?php if ($respItem): ?>
+                                                        <b style="color: #0369a1;">[<?= chr(65 + $r) ?>]</b> <?= renderKontenTeks($respItem) ?>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endfor; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                        <?php elseif ($tipe === 'sec_bs'): ?>
+                            <?php 
+                            $kData = json_decode($s['konten_tambahan'] ?? '{}', true) ?: [];
+                            $butir = $kData['butir'] ?? [];
+                            ?>
+                            <?php if (!empty($butir)): ?>
+                                <table style="width: 100%; border-collapse: collapse; margin: 8px 0 12px 0; font-size: 9pt;">
+                                    <thead>
+                                        <tr style="background: #f1f5f9;">
+                                            <th style="border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left;">Pernyataan</th>
+                                            <th style="border: 1px solid #cbd5e1; padding: 6px 10px; width: 70px; text-align: center;">Benar</th>
+                                            <th style="border: 1px solid #cbd5e1; padding: 6px 10px; width: 70px; text-align: center;">Salah</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($butir as $bIdx => $b): ?>
+                                            <tr>
+                                                <td style="border: 1px solid #e2e8f0; padding: 6px 10px;"><?= ($bIdx + 1) ?>. <?= renderKontenTeks($b['pernyataan'] ?? '') ?></td>
+                                                <td style="border: 1px solid #e2e8f0; text-align: center; color: #64748b;">[ &nbsp; ]</td>
+                                                <td style="border: 1px solid #e2e8f0; text-align: center; color: #64748b;">[ &nbsp; ]</td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <!-- Box Kunci Jawaban Lengkap -->

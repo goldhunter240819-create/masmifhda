@@ -1987,7 +1987,54 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     }
                 });
 
-                const allRespon = Array.from(new Set(pasangan.map(p => p.respon)));
+                // Pilihan respon sisi kanan HARUS DIACAK (shuffled) agar tidak sejajar lurus dengan premis sisi kiri!
+                // Gunakan seeded shuffle berbasis (q.id + pesertaId + idx) agar urutan acak tetap konsisten selama ujian siswa.
+                function getShuffledResponses(questionObj, pairList, questionIdx) {
+                    if (questionObj._shuffledResponses && Array.isArray(questionObj._shuffledResponses)) {
+                        return questionObj._shuffledResponses;
+                    }
+                    const rawList = Array.from(new Set(pairList.map(p => p.respon)));
+                    if (rawList.length <= 1) {
+                        questionObj._shuffledResponses = rawList;
+                        return rawList;
+                    }
+
+                    // PRNG Seeded: menghasilkan acakan unik per siswa & per butir soal, stabil saat navigasi / refresh
+                    const qIdNum = parseInt(questionObj.id) || ((questionIdx + 1) * 31);
+                    const pIdNum = parseInt(typeof pesertaId !== 'undefined' ? pesertaId : 0) || 73;
+                    let seed = (qIdNum * 47) + (pIdNum * 23) + (questionIdx * 17) + 11;
+                    function nextRnd() {
+                        seed = (seed * 9301 + 49297) % 233280;
+                        return seed / 233280;
+                    }
+
+                    const shuffled = [...rawList];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(nextRnd() * (i + 1));
+                        const tmp = shuffled[i];
+                        shuffled[i] = shuffled[j];
+                        shuffled[j] = tmp;
+                    }
+
+                    // Cek apakah hasil acakan kebetulan persis sama dengan urutan asli
+                    let sameOrder = true;
+                    for (let i = 0; i < shuffled.length; i++) {
+                        if (shuffled[i] !== rawList[i]) {
+                            sameOrder = false;
+                            break;
+                        }
+                    }
+                    // Jika kebetulan sama persis (misal 2 atau 3 opsi), rotasikan 1 langkah agar pasti teracak!
+                    if (sameOrder && shuffled.length > 1) {
+                        const firstItem = shuffled.shift();
+                        shuffled.push(firstItem);
+                    }
+
+                    questionObj._shuffledResponses = shuffled;
+                    return shuffled;
+                }
+
+                const allRespon = getShuffledResponses(q, pasangan, idx);
                 let selectedLeftIdx = null;
 
                 const wrapper = document.createElement('div');
@@ -2066,15 +2113,19 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 });
 
                 // Render Kartu Kolom Kanan (Pilihan Jawaban)
-                allRespon.forEach(r => {
+                allRespon.forEach((r, rIdx) => {
                     const rc = document.createElement('div');
                     rc.className = 'matching-card';
                     rc.setAttribute('data-val', r);
+                    const letterBadge = String.fromCharCode(65 + (rIdx % 26));
 
                     rc.innerHTML = `
                         <div class="connector-dot"></div>
                         <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;">
-                            <span style="font-size:0.92rem; font-weight:700; color:#1e293b;">${r}</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:800; flex-shrink:0; border:1px solid #cbd5e1;">${letterBadge}</span>
+                                <span style="font-size:0.92rem; font-weight:700; color:#1e293b;">${r}</span>
+                            </div>
                             <div class="match-badge-wrap" style="display:flex; gap:4px; flex-wrap:wrap;"></div>
                         </div>
                     `;
