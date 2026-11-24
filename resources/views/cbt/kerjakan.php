@@ -273,6 +273,14 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             line-height: 2.05 !important;
             width: 100%;
         }
+        .matching-text-rtl {
+            direction: rtl;
+            text-align: right;
+            unicode-bidi: isolate;
+            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif;
+            font-size: 1.35rem !important;
+            line-height: 1.95 !important;
+        }
         .question-text-rtl {
             direction: rtl;
             text-align: right;
@@ -2428,7 +2436,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             const latinGlobalRe = /[A-Za-z]/g;
             const arRunRe = /([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF][\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u064B-\u065F\u0670\u06D6-\u06ED\s،؛؟۝۞«»()\-]*[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u064B-\u065F\u0670\u06D6-\u06ED])/g;
 
-            function processMixedNodes(el) {
+            function processMixedNodes(el, allowBlock = true) {
                 const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
                 const nodes = [];
                 let n;
@@ -2436,7 +2444,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     if (!n.parentElement) continue;
                     const tag = n.parentElement.tagName;
                     if (['SCRIPT', 'STYLE', 'SVG', 'TEXTAREA', 'INPUT'].includes(tag)) continue;
-                    if (n.parentElement.closest('.arabic-block-rtl, .arabic-inline-rtl, .opt-text-rtl')) continue;
+                    if (n.parentElement.closest('.arabic-block-rtl, .arabic-inline-rtl, .opt-text-rtl, .matching-text-rtl')) continue;
                     if (arCharRe.test(n.nodeValue)) nodes.push(n);
                 }
 
@@ -2452,7 +2460,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                             const trimmed = part.trim();
                             const arCount = (trimmed.match(arGlobalRe) || []).length;
                             const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
-                            if (arCount >= 18 || wordCount >= 3) {
+                            if (allowBlock && (arCount >= 18 || wordCount >= 3)) {
                                 const blk = document.createElement('div');
                                 blk.className = 'arabic-block-rtl';
                                 blk.setAttribute('dir', 'rtl');
@@ -2486,7 +2494,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     qEl.setAttribute('dir', 'rtl');
                     qEl.style.textAlign = 'right';
                 } else if (arLen > 0) {
-                    processMixedNodes(qEl);
+                    processMixedNodes(qEl, true);
                 }
             }
 
@@ -2501,8 +2509,43 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     optEl.classList.remove('opt-text-rtl');
                     optEl.setAttribute('dir', 'ltr');
                     optEl.style.textAlign = 'left';
-                    processMixedNodes(optEl);
+                    processMixedNodes(optEl, true);
                 }
+            });
+
+            // Benar / Salah (tabel pernyataan)
+            document.querySelectorAll('#optionsContainer tbody td:first-child').forEach(tdEl => {
+                const txt = tdEl.textContent || '';
+                const arLen = (txt.match(arGlobalRe) || []).length;
+                const latLen = (txt.match(latinGlobalRe) || []).length;
+                if (arLen >= 3 && latLen <= 3) {
+                    tdEl.classList.add('matching-text-rtl');
+                    tdEl.setAttribute('dir', 'rtl');
+                } else if (arLen > 0) {
+                    tdEl.setAttribute('dir', 'ltr');
+                    tdEl.style.textAlign = 'left';
+                    processMixedNodes(tdEl, false);
+                }
+            });
+
+            // Menjodohkan (kartu kiri premis & kartu kanan respon)
+            document.querySelectorAll('#optionsContainer .matching-card').forEach(cardEl => {
+                const txt = cardEl.textContent || '';
+                const arLen = (txt.match(arGlobalRe) || []).length;
+                if (arLen <= 0) return;
+                // Target span teks (bukan badge nomor/huruf)
+                cardEl.querySelectorAll('span').forEach(sp => {
+                    const sTxt = sp.textContent || '';
+                    const sAr = (sTxt.match(arGlobalRe) || []).length;
+                    const sLat = (sTxt.match(latinGlobalRe) || []).length;
+                    if (sAr >= 2 && sLat <= 3) {
+                        sp.classList.add('matching-text-rtl');
+                        sp.setAttribute('dir', 'rtl');
+                    } else if (sAr > 0) {
+                        sp.setAttribute('dir', 'ltr');
+                        processMixedNodes(sp, false);
+                    }
+                });
             });
         }
 
