@@ -269,9 +269,17 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             text-align: right !important;
             unicode-bidi: isolate;
             font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif;
-            font-size: 1.2rem !important;
-            line-height: 1.95 !important;
+            font-size: 1.45rem !important;
+            line-height: 2.05 !important;
             width: 100%;
+        }
+        .question-text-rtl {
+            direction: rtl;
+            text-align: right;
+            unicode-bidi: isolate;
+            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif;
+            font-size: 1.5rem !important;
+            line-height: 2.15 !important;
         }
         .arabic-block-rtl {
             display: block;
@@ -279,11 +287,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             text-align: right;
             unicode-bidi: isolate;
             font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif;
-            font-size: 1.25em;
-            line-height: 1.95;
+            font-size: 1.48em;
+            line-height: 2.1;
             background: #f8fafc;
             border-right: 3px solid #0ea5e9;
-            padding: 10px 14px;
+            padding: 12px 16px;
             border-radius: 10px;
             margin: 8px 0;
             color: #0f172a;
@@ -293,9 +301,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             unicode-bidi: isolate;
             display: inline-block;
             font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif;
-            font-size: 1.18em;
-            line-height: 1.75;
-            padding: 0 3px;
+            font-size: 1.38em;
+            line-height: 1.85;
+            padding: 0 4px;
         }
 
         /* Nav Footer */
@@ -2467,12 +2475,14 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
             const qEl = document.getElementById('questionText');
             if (qEl) {
+                qEl.classList.remove('question-text-rtl');
                 qEl.removeAttribute('dir');
                 qEl.style.textAlign = '';
                 const txt = qEl.textContent || '';
                 const arLen = (txt.match(arGlobalRe) || []).length;
                 const latLen = (txt.match(latinGlobalRe) || []).length;
                 if (arLen >= 5 && latLen === 0) {
+                    qEl.classList.add('question-text-rtl');
                     qEl.setAttribute('dir', 'rtl');
                     qEl.style.textAlign = 'right';
                 } else if (arLen > 0) {
