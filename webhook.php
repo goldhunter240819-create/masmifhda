@@ -342,6 +342,56 @@ try {
     $output .= "\nStandalone CBT Package build error: " . $e->getMessage() . "\n";
 }
 
+// 3.13 Diagnostic Check for CBT Jadwal & SKI Peserta
+try {
+    $output .= "\n=== DIAGNOSTIK JADWAL GRID HARI INI & SKI ===\n";
+    $jg = $dbCore->query("SELECT id, topik_id, ujian_id, mapel_nama, hari, jam_slot, kelas_nama, tanggal FROM cbt_jadwal_grid ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "Total cbt_jadwal_grid rows: " . count($jg) . "\n";
+    foreach (array_slice($jg, 0, 15) as $rowG) {
+        $output .= "GRID: [{$rowG['id']}] {$rowG['mapel_nama']} | {$rowG['hari']} | {$rowG['tanggal']} | {$rowG['jam_slot']} | {$rowG['kelas_nama']} | UjianID: {$rowG['ujian_id']}\n";
+    }
+
+    $ujSki = $dbCore->query("SELECT id, kode_ujian, nama_ujian, mapel_nama, kelas_nama, status, durasi_menit FROM cbt_ujian WHERE mapel_nama LIKE '%Kebudayaan%' OR mapel_nama LIKE '%SKI%' OR mapel_nama LIKE '%Fikih%' OR mapel_nama LIKE '%Bahasa%'")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nDAFTAR UJIAN SKI/FIKIH/BAHASA:\n";
+    foreach ($ujSki as $uj) {
+        $soalCnt = $dbCore->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$uj['id']}")->fetchColumn();
+        $pesertaCnt = $dbCore->query("SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = {$uj['id']}")->fetchColumn();
+        $selesaiCnt = $dbCore->query("SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = {$uj['id']} AND status_pengerjaan = 'Selesai'")->fetchColumn();
+        $output .= "UJIAN [{$uj['id']}]: {$uj['nama_ujian']} | {$uj['mapel_nama']} | {$uj['kelas_nama']} | Soal: {$soalCnt} | TotalPeserta: {$pesertaCnt} | Selesai: {$selesaiCnt}\n";
+    }
+
+    $pesertaRegulerSki = $dbCore->query("
+        SELECT p.id, p.ujian_id, p.nama_siswa, p.kelas_nama, p.status_pengerjaan, p.nilai_akhir, p.waktu_mulai, p.waktu_selesai, u.nama_ujian
+        FROM cbt_peserta p
+        JOIN cbt_ujian u ON p.ujian_id = u.id
+        WHERE (u.mapel_nama LIKE '%Kebudayaan%' OR u.mapel_nama LIKE '%SKI%')
+          AND p.kelas_nama NOT LIKE '%Jauh%'
+        ORDER BY p.id DESC
+        LIMIT 20
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nPESERTA REGULER (NON-KELAS JAUH) SKI di cbt_peserta (Online):\n";
+    $output .= "Jumlah ditemukan: " . count($pesertaRegulerSki) . "\n";
+    foreach ($pesertaRegulerSki as $pr) {
+        $output .= "PESERTA: {$pr['nama_siswa']} ({$pr['kelas_nama']}) | Status: {$pr['status_pengerjaan']} | Skor: {$pr['nilai_akhir']} | Mulai: {$pr['waktu_mulai']} | Selesai: {$pr['waktu_selesai']} | {$pr['nama_ujian']}\n";
+    }
+
+    $totalAllSki = $dbCore->query("
+        SELECT p.kelas_nama, COUNT(*) as cnt,
+               SUM(CASE WHEN p.status_pengerjaan = 'Selesai' THEN 1 ELSE 0 END) as selesai,
+               SUM(CASE WHEN p.jawaban_json IS NOT NULL OR p.nilai_akhir > 0 THEN 1 ELSE 0 END) as berskor
+        FROM cbt_peserta p
+        JOIN cbt_ujian u ON p.ujian_id = u.id
+        WHERE u.mapel_nama LIKE '%Kebudayaan%' OR u.mapel_nama LIKE '%SKI%'
+        GROUP BY p.kelas_nama
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    $output .= "\nBREAKDOWN SELURUH PESERTA SKI:\n";
+    foreach ($totalAllSki as $tk) {
+        $output .= "Kelas: {$tk['kelas_nama']} | Total: {$tk['cnt']} | Selesai: {$tk['selesai']} | Berskor: {$tk['berskor']}\n";
+    }
+} catch (\Throwable $e) {
+    $output .= "\nDiagnostic error: " . $e->getMessage() . "\n";
+}
+
 // 4. Catat riwayat ke log
 $logData = date('Y-m-d H:i:s') . "\nResult:\n" . $output . "\n-------------------------\n";
 @file_put_contents(__DIR__ . '/webhook.log', $logData, FILE_APPEND);
