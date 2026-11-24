@@ -3522,13 +3522,7 @@ class CbtController {
                 }
             }
 
-            if (!empty($jSelesai)) {
-                $endTs = strtotime($todayDate . ' ' . $jSelesai);
-                if ($nowTs > $endTs) {
-                    echo "<script>alert('Waktu pelaksanaan sesi ujian ini telah berakhir pada pukul " . substr($jSelesai, 0, 5) . " WIB! Anda tidak dapat mengerjakan di luar jam sesi resmi. Hubungi proktor jika Anda membutuhkan ujian susulan.'); window.location.href='{$apkCbtRedirectUrl}';</script>";
-                    exit;
-                }
-            }
+            // Sesi ujian hari ini tetap dapat diakses sepanjang hari ujian untuk fleksibilitas proktor dan siswa
         }
 
         // Security Guard: Wajib Absensi Per-Mata Pelajaran (Anti-Kerjakan dari Kantin/Luar)
@@ -3620,8 +3614,8 @@ class CbtController {
 
             if ($kSiswa) {
                 $noPeserta = $kSiswa['no_peserta'] ?: ($kSiswa['nis'] ?: ('KJ-' . $kSiswa['id']));
-                $stmtP = $db->prepare("SELECT * FROM cbt_peserta WHERE ujian_id = ? AND nis = ? LIMIT 1");
-                $stmtP->execute([$ujian_id, $noPeserta]);
+                $stmtP = $db->prepare("SELECT * FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (nis = ? AND ? != '')) ORDER BY (status_pengerjaan = 'Selesai') DESC, (nilai_akhir > 0) DESC, id DESC LIMIT 1");
+                $stmtP->execute([$ujian_id, $noPeserta, $kSiswa['nis'] ?? '', $kSiswa['nis'] ?? '']);
                 $pesertaInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
 
                 if (!$pesertaInfo) {
@@ -3640,7 +3634,7 @@ class CbtController {
                         'status_pengerjaan' => 'Mengerjakan',
                         'jawaban_json' => null
                     ];
-                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai') {
+                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai' || (float)($pesertaInfo['nilai_akhir'] ?? 0) > 0) {
                     redirect("/cbt/kerjakan/selesai?peserta_id={$pesertaInfo['id']}&ujian_id={$ujian_id}");
                     exit;
                 }
@@ -3655,9 +3649,9 @@ class CbtController {
             $realSiswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
 
             if ($realSiswa) {
-                // Cari atau buat record di cbt_peserta
-                $stmtP = $db->prepare("SELECT * FROM cbt_peserta WHERE ujian_id = ? AND siswa_id = ? LIMIT 1");
-                $stmtP->execute([$ujian_id, $realSiswa['id']]);
+                // Cari atau buat record di cbt_peserta (Prioritaskan yang sudah selesai / memiliki nilai jika ada)
+                $stmtP = $db->prepare("SELECT * FROM cbt_peserta WHERE ujian_id = ? AND ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != '')) ORDER BY (status_pengerjaan = 'Selesai') DESC, (nilai_akhir > 0) DESC, id DESC LIMIT 1");
+                $stmtP->execute([$ujian_id, $realSiswa['id'], $realSiswa['nis'], $realSiswa['nis']]);
                 $pesertaInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
 
                 if (!$pesertaInfo) {
@@ -3676,7 +3670,7 @@ class CbtController {
                         'status_pengerjaan' => 'Mengerjakan',
                         'jawaban_json' => null
                     ];
-                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai') {
+                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai' || (float)($pesertaInfo['nilai_akhir'] ?? 0) > 0) {
                     redirect("/cbt/kerjakan/selesai?peserta_id={$pesertaInfo['id']}&ujian_id={$ujian_id}");
                     exit;
                 }
@@ -3770,13 +3764,168 @@ class CbtController {
         }
 
         try {
-            $stmt = $db->prepare("UPDATE cbt_peserta SET jawaban_json = ?, status_pengerjaan = 'Mengerjakan' WHERE id = ? AND ujian_id = ?");
+            // Jangan pernah menimpa status 'Selesai' menjadi 'Mengerjakan' jika siswa sudah selesai!
+            $stmt = $db->prepare("UPDATE cbt_peserta 
+                                   SET jawaban_json = ?, 
+                                       status_pengerjaan = IF(status_pengerjaan = 'Selesai', 'Selesai', 'Mengerjakan') 
+                                   WHERE id = ? AND ujian_id = ? AND status_pengerjaan != 'Selesai'");
             $stmt->execute([$payloadRaw, $peserta_id, $ujian_id]);
             echo json_encode(['status' => 'success', 'saved_at' => date('H:i:s')]);
         } catch (\Exception $e) {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
         exit;
+    }
+
+    /**
+     * Evaluasi Nilai Siswa Secara Cerdas & Tangguh (Mendukung ID Soal, Index, dan Array Campuran)
+     */
+    public static function evaluatePesertaAnswers($soals, $answersRaw) {
+        if (is_string($answersRaw)) {
+            $answersRaw = json_decode($answersRaw, true) ?: [];
+        }
+        if (!is_array($answersRaw)) $answersRaw = [];
+
+        // Ekstraksi jawaban baik berbentuk langsung atau dalam wrapper answers / answers_by_index
+        $answersMap = [];
+        $answersByIndex = [];
+        if (isset($answersRaw['answers']) && is_array($answersRaw['answers'])) {
+            $answersMap = $answersRaw['answers'];
+        }
+        if (isset($answersRaw['answers_by_index']) && is_array($answersRaw['answers_by_index'])) {
+            $answersByIndex = $answersRaw['answers_by_index'];
+        }
+        if (empty($answersMap) && empty($answersByIndex)) {
+            $answersMap = $answersRaw;
+        }
+
+        $totalBobot = 0;
+        $poinPerolehan = 0;
+        $jumlahBenar = 0;
+        $jumlahSalah = 0;
+        $jumlahTidakJawab = 0;
+        $flatAnswers = [];
+
+        foreach ($soals as $sIdx => $s) {
+            $bobot = (float)($s['bobot'] > 0 ? $s['bobot'] : 1.0);
+            $totalBobot += $bobot;
+
+            $sId = $s['id'];
+            $sNo = (int)($s['nomor_urut'] ?? ($sIdx + 1));
+
+            // Cari jawaban user dari berbagai kemungkinan format
+            $userAnsRaw = null;
+            if (isset($answersMap[$sId])) {
+                $userAnsRaw = $answersMap[$sId];
+            } elseif (isset($answersMap[(string)$sId])) {
+                $userAnsRaw = $answersMap[(string)$sId];
+            } elseif (isset($answersByIndex[$sIdx])) {
+                $userAnsRaw = $answersByIndex[$sIdx];
+            } elseif (isset($answersByIndex[(string)$sIdx])) {
+                $userAnsRaw = $answersByIndex[(string)$sIdx];
+            } elseif (isset($answersMap[$sIdx])) {
+                $userAnsRaw = $answersMap[$sIdx];
+            } elseif (isset($answersMap[(string)$sIdx])) {
+                $userAnsRaw = $answersMap[(string)$sIdx];
+            } elseif (isset($answersByIndex[$sNo])) {
+                $userAnsRaw = $answersByIndex[$sNo];
+            } elseif (isset($answersMap[$sNo])) {
+                $userAnsRaw = $answersMap[$sNo];
+            }
+
+            $flatAnswers[$sId] = ($userAnsRaw !== null) ? $userAnsRaw : '';
+
+            $hasAnswer = false;
+            $userAns = '';
+            if (is_array($userAnsRaw)) {
+                $uTemp = array_filter($userAnsRaw, function($v) { return $v !== '' && $v !== null; });
+                if (!empty($uTemp)) {
+                    $hasAnswer = true;
+                    sort($uTemp);
+                    $userAns = strtoupper(trim(implode(', ', $uTemp)));
+                }
+            } elseif ($userAnsRaw !== null && $userAnsRaw !== '') {
+                $userAns = strtoupper(trim((string)$userAnsRaw));
+                if ($userAns !== '') {
+                    $hasAnswer = true;
+                }
+            }
+
+            $kunciRaw = (string)$s['kunci_jawaban'];
+            $kunci = strtoupper(trim($kunciRaw));
+            $isMatch = false;
+
+            // 1. Evaluasi Tipe JSON (Tabel Benar/Salah & Menjodohkan)
+            $kDec = json_decode($kunciRaw, true);
+            if (is_array($kDec)) {
+                if (is_array($userAnsRaw) && !empty($userAnsRaw)) {
+                    if (isset($kDec[0]['respon'])) {
+                        // Menjodohkan
+                        ksort($userAnsRaw);
+                        $allMatched = true;
+                        foreach ($kDec as $pIdx => $pItem) {
+                            $expVal = strtoupper(trim((string)($pItem['respon'] ?? '')));
+                            $usrVal = strtoupper(trim((string)($userAnsRaw[$pIdx] ?? '')));
+                            if ($usrVal === '' || $usrVal !== $expVal) {
+                                $allMatched = false;
+                                break;
+                            }
+                        }
+                        if ($allMatched && count($userAnsRaw) === count($kDec)) {
+                            $isMatch = true;
+                        }
+                    } else {
+                        // Benar / Salah
+                        $expected = array_map(function($v) { return strtoupper(trim((string)$v)); }, $kDec);
+                        $actual = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_values($userAnsRaw));
+                        if ($expected == $actual) $isMatch = true;
+                    }
+                }
+            } elseif (!empty($userAns)) {
+                // 2. Evaluasi PG Single Choice
+                if ($userAns === $kunci) {
+                    $isMatch = true;
+                } 
+                // 3. Evaluasi PG Kompleks (A, B, C)
+                elseif (strpos($kunci, ',') !== false) {
+                    $uParts = array_map('trim', explode(',', $userAns));
+                    $kParts = array_map('trim', explode(',', $kunci));
+                    sort($uParts);
+                    sort($kParts);
+                    if ($uParts === $kParts) {
+                        $isMatch = true;
+                    }
+                } 
+                // 4. Evaluasi Isian Singkat (Numeric & Text tolerance)
+                elseif (is_numeric($kunci)) {
+                    $numUser = preg_replace('/[^0-9]/', '', $userAns);
+                    if ($numUser === $kunci) {
+                        $isMatch = true;
+                    }
+                }
+            }
+
+            if ($isMatch) {
+                $poinPerolehan += $bobot;
+                $jumlahBenar++;
+            } elseif ($hasAnswer) {
+                $jumlahSalah++;
+            } else {
+                $jumlahTidakJawab++;
+            }
+        }
+
+        $nilaiAkhir = ($totalBobot > 0) ? round(($poinPerolehan / $totalBobot) * 100, 1) : 0;
+
+        return [
+            'totalBobot' => $totalBobot,
+            'poinPerolehan' => $poinPerolehan,
+            'jumlahBenar' => $jumlahBenar,
+            'jumlahSalah' => $jumlahSalah,
+            'jumlahTidakJawab' => $jumlahTidakJawab,
+            'nilaiAkhir' => $nilaiAkhir,
+            'answers' => $flatAnswers
+        ];
     }
 
     /**
@@ -3793,111 +3942,61 @@ class CbtController {
             $answers = json_decode($rawPayload, true) ?: [];
 
             // Ambil seluruh butir soal dengan tipe dan kuncinya
-            $stmtSoal = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ?");
+            $stmtSoal = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
             $stmtSoal->execute([$ujian_id]);
             $soals = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
 
-            $totalBobot = 0;
-            $poinPerolehan = 0;
-            $jumlahBenar = 0;
-            $jumlahSalah = 0;
-            $jumlahTidakJawab = 0;
+            // Jika peserta_id tidak terkirim atau 0, cari dari session siswa
+            if ($peserta_id <= 0) {
+                $roleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+                $isCbtOnly = !empty($_SESSION['is_cbt_only']);
+                $siswaSessionId = isset($_SESSION['siswa_id']) ? (int)$_SESSION['siswa_id'] : 0;
+                $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 
-            foreach ($soals as $s) {
-                $bobot = (float)($s['bobot'] > 0 ? $s['bobot'] : 1.0);
-                $totalBobot += $bobot;
-
-                $userAnsRaw = $answers[$s['id']] ?? '';
-                $hasAnswer = false;
-                if (is_array($userAnsRaw)) {
-                    $uTemp = array_filter($userAnsRaw, function($v) { return $v !== '' && $v !== null; });
-                    if (!empty($uTemp)) {
-                        $hasAnswer = true;
-                        sort($uTemp);
-                        $userAns = strtoupper(trim(implode(', ', $uTemp)));
-                    } else {
-                        $userAns = '';
+                if ($isCbtOnly || $roleId === 7) {
+                    $stK = $db->prepare("SELECT no_peserta, nis FROM cbt_peserta_khusus WHERE id = ? LIMIT 1");
+                    $stK->execute([$siswaSessionId]);
+                    $rK = $stK->fetch(PDO::FETCH_ASSOC);
+                    $noPes = $rK['no_peserta'] ?? ($rK['nis'] ?? '');
+                    if ($noPes) {
+                        $peserta_id = (int)$db->query("SELECT id FROM cbt_peserta WHERE ujian_id = {$ujian_id} AND nis = " . $db->quote($noPes) . " ORDER BY id DESC LIMIT 1")->fetchColumn();
                     }
-                } else {
-                    $userAns = strtoupper(trim((string)$userAnsRaw));
-                    if ($userAns !== '') {
-                        $hasAnswer = true;
+                } elseif ($roleId === 3 || $siswaSessionId > 0) {
+                    $stS = $db->prepare("SELECT id, nis FROM siswa WHERE (user_id = ? AND ? > 0) OR (id = ? AND ? > 0) LIMIT 1");
+                    $stS->execute([$userId, $userId, $siswaSessionId, $siswaSessionId]);
+                    $rS = $stS->fetch(PDO::FETCH_ASSOC);
+                    if ($rS) {
+                        $stFindP = $db->prepare("SELECT id FROM cbt_peserta WHERE ujian_id = ? AND ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
+                        $stFindP->execute([$ujian_id, $rS['id'], $rS['nis'], $rS['nis']]);
+                        $peserta_id = (int)$stFindP->fetchColumn();
                     }
-                }
-
-                $kunciRaw = (string)$s['kunci_jawaban'];
-                $kunci = strtoupper(trim($kunciRaw));
-                $isMatch = false;
-
-                // 1. Evaluasi Tipe JSON (Tabel Benar/Salah & Menjodohkan)
-                $kDec = json_decode($kunciRaw, true);
-                if (is_array($kDec)) {
-                    if (is_array($userAnsRaw) && !empty($userAnsRaw)) {
-                        if (isset($kDec[0]['respon'])) {
-                            // Menjodohkan (Periksa kesesuaian setiap premis indeks ke-i dengan responnya)
-                            ksort($userAnsRaw);
-                            $allMatched = true;
-                            foreach ($kDec as $pIdx => $pItem) {
-                                $expVal = strtoupper(trim((string)($pItem['respon'] ?? '')));
-                                $usrVal = strtoupper(trim((string)($userAnsRaw[$pIdx] ?? '')));
-                                if ($usrVal === '' || $usrVal !== $expVal) {
-                                    $allMatched = false;
-                                    break;
-                                }
-                            }
-                            if ($allMatched && count($userAnsRaw) === count($kDec)) {
-                                $isMatch = true;
-                            }
-                        } else {
-                            // Benar / Salah
-                            $expected = array_map(function($v) { return strtoupper(trim((string)$v)); }, $kDec);
-                            $actual = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_values($userAnsRaw));
-                            if ($expected == $actual) $isMatch = true;
-                        }
-                    }
-                } elseif (!empty($userAns)) {
-                    // 2. Evaluasi PG Single Choice
-                    if ($userAns === $kunci) {
-                        $isMatch = true;
-                    } 
-                    // 3. Evaluasi PG Kompleks (A, B, C)
-                    elseif (strpos($kunci, ',') !== false) {
-                        $uParts = array_map('trim', explode(',', $userAns));
-                        $kParts = array_map('trim', explode(',', $kunci));
-                        sort($uParts);
-                        sort($kParts);
-                        if ($uParts === $kParts) {
-                            $isMatch = true;
-                        }
-                    } 
-                    // 4. Evaluasi Isian Singkat (Numeric & Text tolerance)
-                    elseif (is_numeric($kunci)) {
-                        $numUser = preg_replace('/[^0-9]/', '', $userAns);
-                        if ($numUser === $kunci) {
-                            $isMatch = true;
-                        }
-                    }
-                }
-
-                if ($isMatch) {
-                    $poinPerolehan += $bobot;
-                    $jumlahBenar++;
-                } elseif ($hasAnswer) {
-                    $jumlahSalah++;
-                } else {
-                    $jumlahTidakJawab++;
                 }
             }
 
-            $nilaiAkhir = ($totalBobot > 0) ? round(($poinPerolehan / $totalBobot) * 100, 1) : 0;
+            // Jika payload kosong tapi peserta_id ada, coba pulihkan dari jawaban_json yang sudah tersimpan di database
+            if ((empty($answers) || (isset($answers['answers']) && empty($answers['answers']))) && $peserta_id > 0) {
+                $existingJson = $db->query("SELECT jawaban_json FROM cbt_peserta WHERE id = " . (int)$peserta_id)->fetchColumn();
+                if (!empty($existingJson)) {
+                    $answers = json_decode($existingJson, true) ?: [];
+                }
+            }
+
+            // Evaluasi jawaban secara lengkap & tahan ragam format
+            $eval = self::evaluatePesertaAnswers($soals, $answers);
+
+            $jumlahBenar = $eval['jumlahBenar'];
+            $jumlahSalah = $eval['jumlahSalah'];
+            $jumlahTidakJawab = $eval['jumlahTidakJawab'];
+            $nilaiAkhir = $eval['nilaiAkhir'];
+
+            $payloadToSave = [
+                'answers' => $eval['answers'],
+                'answers_by_index' => $eval['answers'],
+                'submitted_at' => date('Y-m-d H:i:s')
+            ];
 
             // Simpan ke database jika peserta terdaftar
             if ($peserta_id > 0) {
-                $payloadToSave = [
-                    'answers' => $answers,
-                    'answers_by_index' => $answers,
-                    'submitted_at' => date('Y-m-d H:i:s')
-                ];
                 $stmtUp = $db->prepare("UPDATE cbt_peserta 
                                         SET waktu_selesai = NOW(), status_pengerjaan = 'Selesai', 
                                             jumlah_benar = ?, jumlah_salah = ?, jumlah_tidak_jawab = ?, nilai_akhir = ?, jawaban_json = ? 
@@ -3905,11 +4004,6 @@ class CbtController {
                 $stmtUp->execute([$jumlahBenar, $jumlahSalah, $jumlahTidakJawab, $nilaiAkhir, json_encode($payloadToSave), $peserta_id]);
             } else {
                 // Untuk sesi trial pengawas/guru, simpan sebagai sesi percobaan
-                $payloadToSave = [
-                    'answers' => $answers,
-                    'answers_by_index' => $answers,
-                    'submitted_at' => date('Y-m-d H:i:s')
-                ];
                 $namaPengawas = $_SESSION['nama'] ?? 'Guru (Trial)';
                 $stmtIns = $db->prepare("INSERT INTO cbt_peserta (ujian_id, siswa_id, nis, nama_siswa, kelas_nama, waktu_mulai, waktu_selesai, status_pengerjaan, jumlah_benar, jumlah_salah, nilai_akhir, jawaban_json) 
                                          VALUES (?, NULL, 'TRIAL', ?, 'Simulasi', NOW() - INTERVAL 15 MINUTE, NOW(), 'Selesai', ?, ?, ?, ?)");

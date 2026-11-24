@@ -302,15 +302,63 @@ try {
             }
         }
 
-        // 3.11b Pulihkan status_pengerjaan = 'Selesai' untuk seluruh siswa yang sudah memiliki jawaban / nilai akhir
-        $restoredCount = $dbCore->exec("
-            UPDATE cbt_peserta 
-            SET status_pengerjaan = 'Selesai', 
-                waktu_selesai = COALESCE(waktu_selesai, waktu_mulai, NOW()) 
-            WHERE status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan') 
-              AND (jawaban_json IS NOT NULL OR nilai_akhir > 0 OR jumlah_benar > 0)
-        ");
-        $output .= "\nSukses memulihkan {$restoredCount} siswa yang sudah memiliki skor ke status Selesai!\n";
+        // 3.11b Pemulihan Nilai & Skor Siswa dari jawaban_json (Al-Qur'an Hadits, Fikih, SKI, dll)
+        $output .= "\n=== PEMULIHAN & PERHITUNGAN ULANG NILAI DARI JAWABAN SISWA ===\n";
+        try {
+            $candidatePeserta = $dbCore->query("
+                SELECT p.id, p.ujian_id, p.siswa_id, p.nis, p.nama_siswa, p.kelas_nama, p.status_pengerjaan, p.nilai_akhir, p.jumlah_benar, p.jawaban_json
+                FROM cbt_peserta p
+                WHERE p.jawaban_json IS NOT NULL AND p.jawaban_json != ''
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            $soalCache = [];
+            $recalculatedCount = 0;
+
+            foreach ($candidatePeserta as $cp) {
+                $uId = (int)$cp['ujian_id'];
+                if (!isset($soalCache[$uId])) {
+                    $stS = $dbCore->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stS->execute([$uId]);
+                    $soalCache[$uId] = $stS->fetchAll(PDO::FETCH_ASSOC);
+                }
+
+                $soals = $soalCache[$uId] ?? [];
+                if (!empty($soals)) {
+                    $eval = \App\Controllers\CbtController::evaluatePesertaAnswers($soals, $cp['jawaban_json']);
+                    
+                    $curNilai = (float)($cp['nilai_akhir'] ?? 0);
+                    $newNilai = (float)$eval['nilaiAkhir'];
+                    
+                    if ($newNilai > $curNilai || $curNilai <= 0 || $cp['status_pengerjaan'] !== 'Selesai') {
+                        $stFix = $dbCore->prepare("
+                            UPDATE cbt_peserta 
+                            SET status_pengerjaan = 'Selesai',
+                                jumlah_benar = ?,
+                                jumlah_salah = ?,
+                                jumlah_tidak_jawab = ?,
+                                nilai_akhir = ?,
+                                waktu_selesai = COALESCE(waktu_selesai, NOW())
+                            WHERE id = ?
+                        ");
+                        $stFix->execute([$eval['jumlahBenar'], $eval['jumlahSalah'], $eval['jumlahTidakJawab'], $newNilai, $cp['id']]);
+                        $recalculatedCount++;
+                        $output .= sprintf("Pulihkan Nilai ID %d: %s (%s) - Nilai: %.1f (Benar: %d/%d)\n", $cp['id'], $cp['nama_siswa'], $cp['kelas_nama'], $newNilai, $eval['jumlahBenar'], count($soals));
+                    }
+                }
+            }
+            $output .= "Sukses hitung ulang & pulihkan {$recalculatedCount} nilai pengerjaan siswa!\n";
+
+            // Bersihkan duplikasi cbt_peserta yang kosong (pertahankan yang ada nilai/jawaban)
+            $dbCore->exec("
+                DELETE p1 FROM cbt_peserta p1
+                INNER JOIN cbt_peserta p2 ON p1.ujian_id = p2.ujian_id AND p1.nis = p2.nis AND p1.id != p2.id
+                WHERE (p1.nilai_akhir = 0 OR p1.nilai_akhir IS NULL) 
+                  AND (p1.jawaban_json IS NULL OR p1.jawaban_json = '')
+                  AND (p2.nilai_akhir > 0 OR (p2.jawaban_json IS NOT NULL AND p2.jawaban_json != ''))
+            ");
+        } catch (\Throwable $e) {
+            $output .= "Gagal hitung ulang nilai: " . $e->getMessage() . "\n";
+        }
 
         // 3.11c Rapikan cbt_jam_slot agar tidak ada duplikasi Sesi 1, 2, 3, dan buang slot dummy 4, 5, 6, 7
         try {

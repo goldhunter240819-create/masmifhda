@@ -2786,6 +2786,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
         // Hapus cache lokal setelah ujian resmi dikirim
         document.getElementById('formSubmitUjian').onsubmit = function(e) {
+            clearTimeout(autoSaveTimer);
             stopDangerAlarm();
             isExamSubmitted = true;
             try {
@@ -2840,6 +2841,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         };
 
         function autoSubmit(reason = 'Waktu ujian telah habis!') {
+            clearTimeout(autoSaveTimer);
             stopDangerAlarm();
             isExamSubmitted = true;
 

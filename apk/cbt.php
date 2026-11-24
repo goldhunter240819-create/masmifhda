@@ -909,7 +909,7 @@ $ujianTerlewatHariIni = [];
 $ujianLainnya = [];
 
 foreach ($allEvaluatedUjian as $u) {
-    if ($u['status_pengerjaan'] === 'Selesai') {
+    if ($u['status_pengerjaan'] === 'Selesai' || (float)($u['nilai_akhir'] ?? 0) > 0 || !empty($u['waktu_selesai'])) {
         continue;
     }
     if (!empty($u['is_hari_ini'])) {
@@ -1724,7 +1724,7 @@ include 'header.php';
     <?php else: ?>
         <?php foreach ($ujianHariIni as $u): ?>
             <?php
-            $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']);
+            $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']) && ($u['status_pengerjaan'] !== 'Selesai') && ((float)($u['nilai_akhir'] ?? 0) <= 0) && empty($u['waktu_selesai']);
             $durasi = (int)($u['durasi_menit'] ?? 90);
             $totalSoal = (int)($u['total_soal'] ?? 0);
             $kkm = (int)($u['kkm'] ?? 75);
