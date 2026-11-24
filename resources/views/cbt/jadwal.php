@@ -26,10 +26,20 @@ $currentView = $_GET['view'] ?? 'grid';
     .schedule-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid #f8fafc; }
     
     .master-schedule-table {
-        width: max-content;
+        width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        min-width: 100%;
+    }
+    .day-schedule-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
+    }
+    .day-schedule-card:last-child {
+        margin-bottom: 0;
     }
     .master-schedule-table th, .master-schedule-table td {
         border-right: 1px solid #e2e8f0;
@@ -348,91 +358,99 @@ $currentView = $_GET['view'] ?? 'grid';
 
                 <?php if($currentView === 'grid'): ?>
                 <!-- ═══════════════════════════════════════════════════════════════ -->
-                <!-- TAMPILAN MATRIKS JADWAL (PERSIS MODEL JADWAL PELAJARAN)          -->
+                <!-- TAMPILAN MATRIKS JADWAL (MODEL VERTIKAL KE BAWAH PER HARI)       -->
                 <!-- ═══════════════════════════════════════════════════════════════ -->
-                <div class="schedule-wrapper" style="border: none; border-radius: 0; box-shadow: none; margin-bottom: 0;">
-                <table class="master-schedule-table">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" class="sticky-col-1" style="width:45px;">NO</th>
-                            <th rowspan="2" class="sticky-col-2" style="width:130px;">WAKTU</th>
-                            <?php foreach($displayDays as $h): 
-                                $tglLabel = !empty($hari_tanggal_map[$h]['label_short']) ? ' <span style="font-size:0.75rem; font-weight:700; opacity:0.95; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:6px; margin-left:4px;">(' . $hari_tanggal_map[$h]['label_short'] . ')</span>' : '';
-                            ?>
-                                <th colspan="<?php echo count($kelasList); ?>" class="hari-header"><?php echo strtoupper($h) . $tglLabel; ?></th>
-                            <?php endforeach; ?>
-                        </tr>
-                        <tr>
-                            <?php foreach($displayDays as $h): ?>
-                                <?php foreach($kelasList as $k): ?>
-                                    <th class="kelas-header">
-                                        <div class="kelas-name"><?php echo htmlspecialchars($k['nama_kelas']); ?></div>
-                                        <button type="button" onclick="openAturKelasModal('<?php echo htmlspecialchars($k['nama_kelas']); ?>', <?php echo $k['id']; ?>)" class="btn-atur" title="Edit Jadwal Kelas Ini">[ATUR]</button>
-                                    </th>
-                                <?php endforeach; ?>
-                            <?php endforeach; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if(empty($slotList)): ?>
-                            <tr>
-                                <td colspan="<?php echo 2 + (count($displayDays) * count($kelasList)); ?>" style="text-align:center; padding:3rem; color:#94a3b8;">
-                                    Belum ada slot waktu ujian yang ditentukan. Klik <strong>"Atur Jam / Slot Waktu"</strong> di atas untuk mengatur jam ujian.
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php $no = 1; foreach($slotList as $slot): 
-                                $jamStr = substr($slot['jam_mulai'], 0, 5) . ' - ' . substr($slot['jam_selesai'], 0, 5);
-                                $isBreak = !empty($slot['is_istirahat']);
-                            ?>
-                            <tr style="<?php echo $isBreak ? 'background:#f8fafc;' : ''; ?>">
-                                <!-- Col 1: NO -->
-                                <td class="sticky-col-1 text-center" style="font-size:0.8rem; font-weight:800; color:#475569; text-align:center;">
-                                    <?php echo $no++; ?>
-                                </td>
-                                <!-- Col 2: WAKTU -->
-                                <td class="sticky-col-2 text-center" style="font-size:0.75rem; font-weight:800; font-family:'JetBrains Mono', monospace; color:#0ea5e9; text-align:center; white-space:nowrap;">
-                                    <div><?php echo htmlspecialchars($jamStr); ?></div>
-                                    <div style="font-size:0.65rem; color:#94a3b8; font-family:sans-serif;"><?php echo htmlspecialchars($slot['label_sesi']); ?></div>
-                                </td>
-
-                                <?php if($isBreak): ?>
-                                    <!-- Jam Istirahat spans across all class columns -->
-                                    <td colspan="<?php echo count($displayDays) * count($kelasList); ?>" style="text-align:center; color:#94a3b8; font-weight:800; font-size:0.78rem; letter-spacing:2px; background:#f8fafc;">
-                                        ☕ <?php echo strtoupper($slot['label_sesi']); ?>
-                                    </td>
-                                <?php else: ?>
-                                    <!-- Normal Exam Slots for each Day and each Class -->
-                                    <?php foreach($displayDays as $h): ?>
-                                        <?php foreach($kelasList as $k): ?>
-                                            <?php 
-                                            // Look up matching exam in this day, slot, and class
-                                            $cell = $jadwal_master[$h][$jamStr][$k['id']] ?? ($jadwal_master[$h][$jamStr][$k['nama_kelas']] ?? null);
-                                            ?>
-                                            <?php if($cell): ?>
-                                            <td class="cell-filled" onclick="openDetailModal(<?php echo htmlspecialchars(json_encode($cell), ENT_QUOTES, 'UTF-8'); ?>)" title="Klik untuk lihat detail / hapus">
-                                                <span class="mapel-name"><?php echo htmlspecialchars($cell['mapel_nama']); ?></span>
-                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                                                    <span style="font-size:0.62rem; color:#059669; font-weight:700;"><?php echo $cell['durasi_menit']; ?> mnt</span>
-                                                    <span style="font-size:0.6rem; background:#dcfce7; color:#166534; padding:1px 4px; border-radius:4px; font-weight:800;">
-                                                        <?php echo htmlspecialchars($cell['ujian_status'] ?? 'Aktif'); ?>
-                                                    </span>
+                <div style="padding: 1.25rem; background: #f8fafc;">
+                    <?php foreach($displayDays as $h): 
+                        $tglLabel = !empty($hari_tanggal_map[$h]['label_short']) ? ' <span style="font-size:0.78rem; font-weight:700; opacity:0.95; background:rgba(255,255,255,0.22); padding:3px 10px; border-radius:8px; margin-left:6px;">' . htmlspecialchars($hari_tanggal_map[$h]['label_short']) . '</span>' : '';
+                    ?>
+                    <div class="day-schedule-card">
+                        <div class="schedule-wrapper" style="border: none; border-radius: 0; box-shadow: none; margin-bottom: 0;">
+                            <table class="master-schedule-table">
+                                <thead>
+                                    <tr>
+                                        <th colspan="<?php echo 2 + count($kelasList); ?>" class="hari-header" style="text-align:left; padding: 11px 16px !important; position: static;">
+                                            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                                <div style="display:flex; align-items:center; gap:6px;">
+                                                    <i data-lucide="calendar" style="width:16px; height:16px;"></i>
+                                                    <span><?php echo strtoupper($h); ?></span>
+                                                    <?php echo $tglLabel; ?>
                                                 </div>
-                                            </td>
-                                            <?php else: ?>
-                                            <td class="cell-empty" onclick="quickSchedule('<?php echo $h; ?>', '<?php echo $jamStr; ?>', '<?php echo htmlspecialchars($k['nama_kelas']); ?>', <?php echo $k['id']; ?>)" title="Pasang jadwal untuk Kelas <?php echo htmlspecialchars($k['nama_kelas']); ?> pada <?php echo $h; ?>, <?php echo $jamStr; ?>">
-                                                -
-                                            </td>
-                                            <?php endif; ?>
+                                                <span style="font-size:0.72rem; font-weight:600; opacity:0.9; text-transform:none; letter-spacing:0;">
+                                                    Klik sel kosong (-) untuk pasang jadwal • Klik mapel untuk detail/hapus
+                                                </span>
+                                            </div>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width:45px; position:static;">NO</th>
+                                        <th style="width:130px; position:static;">WAKTU</th>
+                                        <?php foreach($kelasList as $k): ?>
+                                            <th class="kelas-header" style="position:static;">
+                                                <div class="kelas-name"><?php echo htmlspecialchars($k['nama_kelas']); ?></div>
+                                                <button type="button" onclick="openAturKelasModal('<?php echo htmlspecialchars($k['nama_kelas']); ?>', <?php echo $k['id']; ?>)" class="btn-atur" title="Edit Jadwal Kelas Ini">[ATUR]</button>
+                                            </th>
                                         <?php endforeach; ?>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if(empty($slotList)): ?>
+                                        <tr>
+                                            <td colspan="<?php echo 2 + count($kelasList); ?>" style="text-align:center; padding:2.5rem; color:#94a3b8;">
+                                                Belum ada slot waktu ujian yang ditentukan. Klik <strong>"Atur Jam / Slot Waktu"</strong> di atas untuk mengatur jam ujian.
+                                            </td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php $no = 1; foreach($slotList as $slot): 
+                                            $jamStr = substr($slot['jam_mulai'], 0, 5) . ' - ' . substr($slot['jam_selesai'], 0, 5);
+                                            $isBreak = !empty($slot['is_istirahat']);
+                                        ?>
+                                        <tr style="<?php echo $isBreak ? 'background:#f8fafc;' : ''; ?>">
+                                            <!-- Col 1: NO -->
+                                            <td class="text-center" style="font-size:0.8rem; font-weight:800; color:#475569; text-align:center; background:#f8fafc;">
+                                                <?php echo $no++; ?>
+                                            </td>
+                                            <!-- Col 2: WAKTU -->
+                                            <td class="text-center" style="font-size:0.75rem; font-weight:800; font-family:'JetBrains Mono', monospace; color:#0ea5e9; text-align:center; white-space:nowrap; background:#f8fafc; border-right: 2px solid #cbd5e1 !important;">
+                                                <div><?php echo htmlspecialchars($jamStr); ?></div>
+                                                <div style="font-size:0.65rem; color:#94a3b8; font-family:sans-serif;"><?php echo htmlspecialchars($slot['label_sesi']); ?></div>
+                                            </td>
+
+                                            <?php if($isBreak): ?>
+                                                <td colspan="<?php echo count($kelasList); ?>" style="text-align:center; color:#94a3b8; font-weight:800; font-size:0.78rem; letter-spacing:2px; background:#f8fafc;">
+                                                    ☕ <?php echo strtoupper($slot['label_sesi']); ?>
+                                                </td>
+                                            <?php else: ?>
+                                                <?php foreach($kelasList as $k): ?>
+                                                    <?php 
+                                                    $cell = $jadwal_master[$h][$jamStr][$k['id']] ?? ($jadwal_master[$h][$jamStr][$k['nama_kelas']] ?? null);
+                                                    ?>
+                                                    <?php if($cell): ?>
+                                                    <td class="cell-filled" onclick="openDetailModal(<?php echo htmlspecialchars(json_encode($cell), ENT_QUOTES, 'UTF-8'); ?>)" title="Klik untuk lihat detail / hapus">
+                                                        <span class="mapel-name"><?php echo htmlspecialchars($cell['mapel_nama']); ?></span>
+                                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                                                            <span style="font-size:0.62rem; color:#059669; font-weight:700;"><?php echo $cell['durasi_menit']; ?> mnt</span>
+                                                            <span style="font-size:0.6rem; background:#dcfce7; color:#166534; padding:1px 4px; border-radius:4px; font-weight:800;">
+                                                                <?php echo htmlspecialchars($cell['ujian_status'] ?? 'Aktif'); ?>
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <?php else: ?>
+                                                    <td class="cell-empty" onclick="quickSchedule('<?php echo $h; ?>', '<?php echo $jamStr; ?>', '<?php echo htmlspecialchars($k['nama_kelas']); ?>', <?php echo $k['id']; ?>)" title="Pasang jadwal untuk Kelas <?php echo htmlspecialchars($k['nama_kelas']); ?> pada <?php echo $h; ?>, <?php echo $jamStr; ?>">
+                                                        -
+                                                    </td>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
 
             <?php else: ?>
             <!-- ═══════════════════════════════════════════════════════════════ -->
