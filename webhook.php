@@ -270,34 +270,37 @@ try {
                 $asliSoal = $stSoal->fetchAll(PDO::FETCH_ASSOC);
 
                 if (!empty($asliSoal)) {
-                    // Bersihkan 50 butir soal campur aduk lama di cbt_soal
-                    $dbCore->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$uId]);
+                    $curCnt = (int)$dbCore->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$uId}")->fetchColumn();
+                    if ($curCnt !== count($asliSoal)) {
+                        // Bersihkan 50 butir soal campur aduk lama di cbt_soal
+                        $dbCore->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$uId]);
 
-                    // Masukkan 40 butir soal asli Fikih lengkap dengan tipe_soal & konten_tambahan
-                    $stIns = $dbCore->prepare("
-                        INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ");
+                        // Masukkan 40 butir soal asli Fikih lengkap dengan tipe_soal & konten_tambahan
+                        $stIns = $dbCore->prepare("
+                            INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ");
 
-                    $no = 1;
-                    foreach ($asliSoal as $as) {
-                        $stIns->execute([
-                            $uId,
-                            $no++,
-                            $as['pertanyaan'],
-                            $as['opsi_a'] ?? '',
-                            $as['opsi_b'] ?? '',
-                            $as['opsi_c'] ?? '',
-                            $as['opsi_d'] ?? '',
-                            $as['opsi_e'] ?? '',
-                            $as['kunci_jawaban'] ?? 'A',
-                            $as['skor_maksimal'] ?? 2.50,
-                            $as['tipe_soal'] ?? 'sec_pg',
-                            $as['konten_tambahan'] ?? null
-                        ]);
+                        $no = 1;
+                        foreach ($asliSoal as $as) {
+                            $stIns->execute([
+                                $uId,
+                                $no++,
+                                $as['pertanyaan'],
+                                $as['opsi_a'] ?? '',
+                                $as['opsi_b'] ?? '',
+                                $as['opsi_c'] ?? '',
+                                $as['opsi_d'] ?? '',
+                                $as['opsi_e'] ?? '',
+                                $as['kunci_jawaban'] ?? 'A',
+                                $as['skor_maksimal'] ?? 2.50,
+                                $as['tipe_soal'] ?? 'sec_pg',
+                                $as['konten_tambahan'] ?? null
+                            ]);
+                        }
+
+                        $output .= "Sukses perbaiki Ujian ID {$uId} ({$fu['nama_ujian']}): dimasukkan " . count($asliSoal) . " butir soal asli Fikih dari Paket {$sourcePktId}!\n";
                     }
-
-                    $output .= "Sukses perbaiki Ujian ID {$uId} ({$fu['nama_ujian']}): dimasukkan " . count($asliSoal) . " butir soal asli Fikih dari Paket {$sourcePktId}!\n";
                 }
             }
         }
@@ -305,6 +308,43 @@ try {
         // 3.11b Pemulihan Nilai & Skor Siswa dari jawaban_json (Al-Qur'an Hadits, Fikih, SKI, dll)
         $output .= "\n=== PEMULIHAN & PERHITUNGAN ULANG NILAI DARI JAWABAN SISWA ===\n";
         try {
+            // DIAGNOSTIK KHOIRUL ANWAR & IJAL & AL-QUR'AN HADITS
+            $diagRows = $dbCore->query("
+                SELECT p.id, p.ujian_id, u.nama_ujian, u.mapel_nama, p.nama_siswa, p.kelas_nama, p.status_pengerjaan, p.nilai_akhir, p.jumlah_benar, p.jumlah_salah, p.jumlah_tidak_jawab, p.jawaban_json
+                FROM cbt_peserta p
+                LEFT JOIN cbt_ujian u ON p.ujian_id = u.id
+                WHERE p.id IN (491, 512, 514) 
+                   OR u.nama_ujian LIKE '%Qur%' 
+                   OR u.mapel_nama LIKE '%Qur%'
+                   OR p.nama_siswa LIKE '%Khoirul Anwar%'
+                   OR p.nama_siswa LIKE '%Bukhori%'
+                ORDER BY p.id DESC LIMIT 15
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($diagRows as $dr) {
+                $rawJ = (string)$dr['jawaban_json'];
+                $snippet = strlen($rawJ) > 150 ? substr($rawJ, 0, 150) . '...' : $rawJ;
+                $output .= sprintf("DIAG ID %d [%s]: %s (%s) | Ujian %d: %s | Nilai: %s, B:%d, S:%d, K:%d | JSON len=%d: %s\n",
+                    $dr['id'], $dr['status_pengerjaan'], $dr['nama_siswa'], $dr['kelas_nama'], $dr['ujian_id'], $dr['nama_ujian'],
+                    $dr['nilai_akhir'] ?? 'NULL', (int)$dr['jumlah_benar'], (int)$dr['jumlah_salah'], (int)$dr['jumlah_tidak_jawab'],
+                    strlen($rawJ), $snippet
+                );
+            }
+
+            // Cek juga daftar Ujian Al-Qur'an Hadits dan jumlah soalnya
+            $qhUjians = $dbCore->query("
+                SELECT u.id, u.nama_ujian, u.kelas_nama, (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as cnt_soal,
+                       (SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = u.id) as cnt_peserta,
+                       (SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = u.id AND (nilai_akhir > 0 OR status_pengerjaan = 'Selesai')) as cnt_selesai
+                FROM cbt_ujian u
+                WHERE u.nama_ujian LIKE '%Qur%' OR u.mapel_nama LIKE '%Qur%'
+            ")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($qhUjians as $qhu) {
+                $output .= sprintf("QH UJIAN ID %d: %s (%s) | Soal: %d | Peserta: %d (Selesai: %d)\n",
+                    $qhu['id'], $qhu['nama_ujian'], $qhu['kelas_nama'], $qhu['cnt_soal'], $qhu['cnt_peserta'], $qhu['cnt_selesai']
+                );
+            }
+
             $candidatePeserta = $dbCore->query("
                 SELECT p.id, p.ujian_id, p.siswa_id, p.nis, p.nama_siswa, p.kelas_nama, p.status_pengerjaan, p.nilai_akhir, p.jumlah_benar, p.jawaban_json
                 FROM cbt_peserta p
