@@ -27,6 +27,7 @@ $currentView = $_GET['view'] ?? 'grid';
     
     .master-schedule-table {
         width: 100%;
+        table-layout: fixed;
         border-collapse: separate;
         border-spacing: 0;
     }
@@ -134,8 +135,10 @@ $currentView = $_GET['view'] ?? 'grid';
         font-weight: 800;
         color: #0f172a;
         font-size: 0.76rem;
-        line-height: 1.2;
+        line-height: 1.25;
         margin-bottom: 2px;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
     .guru-name {
         display: flex;
@@ -362,11 +365,19 @@ $currentView = $_GET['view'] ?? 'grid';
                 <!-- ═══════════════════════════════════════════════════════════════ -->
                 <div style="padding: 1.25rem; background: #f8fafc;">
                     <?php foreach($displayDays as $h): 
-                        $tglLabel = !empty($hari_tanggal_map[$h]['label_short']) ? ' <span style="font-size:0.78rem; font-weight:700; opacity:0.95; background:rgba(255,255,255,0.22); padding:3px 10px; border-radius:8px; margin-left:6px;">' . htmlspecialchars($hari_tanggal_map[$h]['label_short']) . '</span>' : '';
+                        $hasParenDate = (strpos($h, '(') !== false);
+                        $tglLabel = (!$hasParenDate && !empty($hari_tanggal_map[$h]['label_short'])) ? ' <span style="font-size:0.78rem; font-weight:700; opacity:0.95; background:rgba(255,255,255,0.22); padding:3px 10px; border-radius:8px; margin-left:6px;">' . htmlspecialchars($hari_tanggal_map[$h]['label_short']) . '</span>' : '';
                     ?>
                     <div class="day-schedule-card">
                         <div class="schedule-wrapper" style="border: none; border-radius: 0; box-shadow: none; margin-bottom: 0;">
                             <table class="master-schedule-table">
+                                <colgroup>
+                                    <col style="width: 48px;">
+                                    <col style="width: 125px;">
+                                    <?php foreach($kelasList as $k): ?>
+                                        <col>
+                                    <?php endforeach; ?>
+                                </colgroup>
                                 <thead>
                                     <tr>
                                         <th colspan="<?php echo 2 + count($kelasList); ?>" class="hari-header" style="text-align:left; padding: 11px 16px !important; position: static;">
@@ -383,10 +394,10 @@ $currentView = $_GET['view'] ?? 'grid';
                                         </th>
                                     </tr>
                                     <tr>
-                                        <th style="width:45px; position:static;">NO</th>
-                                        <th style="width:130px; position:static;">WAKTU</th>
+                                        <th style="width:48px; position:static;">NO</th>
+                                        <th style="width:125px; position:static;">WAKTU</th>
                                         <?php foreach($kelasList as $k): ?>
-                                            <th class="kelas-header" style="position:static;">
+                                            <th class="kelas-header" style="min-width:0; position:static;">
                                                 <div class="kelas-name"><?php echo htmlspecialchars($k['nama_kelas']); ?></div>
                                                 <button type="button" onclick="openAturKelasModal('<?php echo htmlspecialchars($k['nama_kelas']); ?>', <?php echo $k['id']; ?>)" class="btn-atur" title="Edit Jadwal Kelas Ini">[ATUR]</button>
                                             </th>
