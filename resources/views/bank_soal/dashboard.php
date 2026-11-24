@@ -838,33 +838,33 @@ $active_menu = "bank_soal";
                                                     id="btn-lock-<?php echo $pk['id']; ?>"
                                                     onclick="toggleLockAjax(<?php echo $pk['id']; ?>, <?php echo $selectedTopik['id']; ?>, this)" 
                                                     class="btn btn-outline btn-toggle-lock" 
-                                                    style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; <?php echo $isLocked ? 'color: #475569; border-color: #cbd5e1; background: #ffffff;' : 'background: #fffbeb; color: #b45309; border-color: #fde68a;'; ?>" 
+                                                    style="padding: 6px 9px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; <?php echo $isLocked ? 'color: #475569; border-color: #cbd5e1; background: #ffffff;' : 'background: #fffbeb; color: #b45309; border-color: #fde68a;'; ?>" 
                                                     data-locked="<?php echo $isLocked ? '1' : '0'; ?>"
                                                     data-paket-id="<?php echo $pk['id']; ?>"
                                                     title="<?php echo $isLocked ? 'Buka Kunci Soal' : 'Kunci Soal (Cegah Edit Guru)'; ?>">
                                                 <?php if ($isLocked): ?>
-                                                    <i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Kunci
+                                                    <i data-lucide="unlock" style="width: 14px; height: 14px; color: #22c55e;"></i>
                                                 <?php else: ?>
-                                                    <i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Soal
+                                                    <i data-lucide="lock" style="width: 14px; height: 14px; color: #d97706;"></i>
                                                 <?php endif; ?>
                                             </button>
 
                                             <!-- Tombol Kelola / Lihat Soal -->
                                             <span id="btn-manage-wrap-<?php echo $pk['id']; ?>">
                                                 <?php if ($isLocked): ?>
-                                                    <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0;" title="Lihat Butir Soal (Mode Baca Saja)">
-                                                        <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Lihat Soal
+                                                    <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-outline" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Lihat Butir Soal (Mode Baca Saja)">
+                                                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
                                                     </a>
                                                 <?php else: ?>
-                                                    <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none;" title="Kelola / Input Butir Soal & Kunci">
-                                                        <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Kelola Soal
+                                                    <a href="<?php echo base_url('bank_soal/daftar_soal?paket_id=' . $pk['id']); ?>" class="btn btn-primary" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Kelola / Input Butir Soal & Kunci">
+                                                        <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
                                                     </a>
                                                 <?php endif; ?>
                                             </span>
 
                                             <!-- Tombol Cetak Naskah Soal & Kunci Jawaban -->
-                                            <a href="<?php echo base_url('bank_soal/cetak_soal?paket_id=' . $pk['id']); ?>" target="_blank" class="btn btn-outline" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; background: #f0f9ff; color: #0284c7; border-color: #bae6fd; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Cetak Naskah Soal & Kunci Jawaban Lengkap (PDF)">
-                                                <i data-lucide="printer" style="width: 13px; height: 13px; color: #0284c7;"></i> Cetak
+                                            <a href="<?php echo base_url('bank_soal/cetak_soal?paket_id=' . $pk['id']); ?>" target="_blank" class="btn btn-outline" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 700; background: #f0f9ff; color: #0284c7; border-color: #bae6fd; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Cetak Naskah Soal & Kunci Jawaban Lengkap (PDF)">
+                                                <i data-lucide="printer" style="width: 14px; height: 14px; color: #0284c7;"></i>
                                             </a>
 
                                             <!-- Tombol Tampilan Siswa (Simulasi CBT) -->
@@ -1162,14 +1162,24 @@ $active_menu = "bank_soal";
                     btnElement.style.color = '#475569';
                     btnElement.style.borderColor = '#cbd5e1';
                     btnElement.title = 'Buka Kunci Soal';
-                    btnElement.innerHTML = '<i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Kunci';
+                    btnElement.style.padding = '6px 9px';
+                    btnElement.style.display = 'inline-flex';
+                    btnElement.style.alignItems = 'center';
+                    btnElement.style.justifyContent = 'center';
+                    btnElement.style.borderRadius = '8px';
+                    btnElement.innerHTML = '<i data-lucide="unlock" style="width: 14px; height: 14px; color: #22c55e;"></i>';
                 } else {
                     btnElement.className = 'btn btn-outline btn-toggle-lock';
                     btnElement.style.background = '#fffbeb';
                     btnElement.style.color = '#b45309';
                     btnElement.style.borderColor = '#fde68a';
                     btnElement.title = 'Kunci Soal (Cegah Edit Guru)';
-                    btnElement.innerHTML = '<i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Soal';
+                    btnElement.style.padding = '6px 9px';
+                    btnElement.style.display = 'inline-flex';
+                    btnElement.style.alignItems = 'center';
+                    btnElement.style.justifyContent = 'center';
+                    btnElement.style.borderRadius = '8px';
+                    btnElement.innerHTML = '<i data-lucide="lock" style="width: 14px; height: 14px; color: #d97706;"></i>';
                 }
                 
                 // 3. Update Kelola / Lihat Soal Button
@@ -1178,14 +1188,14 @@ $active_menu = "bank_soal";
                     const daftarSoalUrl = '<?php echo base_url('bank_soal/daftar_soal?paket_id='); ?>' + paketId;
                     if (isLocked) {
                         manageWrap.innerHTML = `
-                            <a href="${daftarSoalUrl}" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0;" title="Lihat Butir Soal (Mode Baca Saja)">
-                                <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Lihat Soal
+                            <a href="${daftarSoalUrl}" class="btn btn-outline" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Lihat Butir Soal (Mode Baca Saja)">
+                                <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
                             </a>
                         `;
                     } else {
                         manageWrap.innerHTML = `
-                            <a href="${daftarSoalUrl}" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none;" title="Kelola / Input Butir Soal & Kunci">
-                                <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Kelola Soal
+                            <a href="${daftarSoalUrl}" class="btn btn-primary" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Kelola / Input Butir Soal & Kunci">
+                                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
                             </a>
                         `;
                     }
@@ -1336,14 +1346,24 @@ $active_menu = "bank_soal";
                             btnLock.style.color = '#475569';
                             btnLock.style.borderColor = '#cbd5e1';
                             btnLock.title = 'Buka Kunci Soal';
-                            btnLock.innerHTML = '<i data-lucide="unlock" style="width: 13px; height: 13px; color: #22c55e;"></i> Buka Kunci';
+                            btnLock.style.padding = '6px 9px';
+                            btnLock.style.display = 'inline-flex';
+                            btnLock.style.alignItems = 'center';
+                            btnLock.style.justifyContent = 'center';
+                            btnLock.style.borderRadius = '8px';
+                            btnLock.innerHTML = '<i data-lucide="unlock" style="width: 14px; height: 14px; color: #22c55e;"></i>';
                         } else {
                             btnLock.className = 'btn btn-outline btn-toggle-lock';
                             btnLock.style.background = '#fffbeb';
                             btnLock.style.color = '#b45309';
                             btnLock.style.borderColor = '#fde68a';
                             btnLock.title = 'Kunci Soal (Cegah Edit Guru)';
-                            btnLock.innerHTML = '<i data-lucide="lock" style="width: 13px; height: 13px; color: #d97706;"></i> Kunci Soal';
+                            btnLock.style.padding = '6px 9px';
+                            btnLock.style.display = 'inline-flex';
+                            btnLock.style.alignItems = 'center';
+                            btnLock.style.justifyContent = 'center';
+                            btnLock.style.borderRadius = '8px';
+                            btnLock.innerHTML = '<i data-lucide="lock" style="width: 14px; height: 14px; color: #d97706;"></i>';
                         }
                     }
                     
@@ -1352,14 +1372,14 @@ $active_menu = "bank_soal";
                         const daftarSoalUrl = '<?php echo base_url('bank_soal/daftar_soal?paket_id='); ?>' + id;
                         if (isLocking) {
                             manageWrap.innerHTML = `
-                                <a href="${daftarSoalUrl}" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0;" title="Lihat Butir Soal (Mode Baca Saja)">
-                                    <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Lihat Soal
+                                <a href="${daftarSoalUrl}" class="btn btn-outline" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 800; background: #f0fdf4; color: #166534; border-color: #bbf7d0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Lihat Butir Soal (Mode Baca Saja)">
+                                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
                                 </a>
                             `;
                         } else {
                             manageWrap.innerHTML = `
-                                <a href="${daftarSoalUrl}" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none;" title="Kelola / Input Butir Soal & Kunci">
-                                    <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Kelola Soal
+                                <a href="${daftarSoalUrl}" class="btn btn-primary" style="padding: 6px 9px; font-size: 0.75rem; font-weight: 800; background: #0ea5e9; border: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="Kelola / Input Butir Soal & Kunci">
+                                    <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
                                 </a>
                             `;
                         }
