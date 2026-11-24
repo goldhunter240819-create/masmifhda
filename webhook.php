@@ -308,22 +308,21 @@ try {
         // 3.11b Pemulihan Nilai & Skor Siswa dari jawaban_json (Al-Qur'an Hadits, Fikih, SKI, dll)
         $output .= "\n=== PEMULIHAN & PERHITUNGAN ULANG NILAI DARI JAWABAN SISWA ===\n";
         try {
-            // DIAGNOSTIK ID 491-523 & Khoirul Anwar
-            $pRows = $dbCore->query("
-                SELECT p.id, p.ujian_id, u.nama_ujian, u.mapel_nama, p.nama_siswa, p.kelas_nama, p.status_pengerjaan, p.nilai_akhir, p.jumlah_benar, p.jumlah_salah, p.jumlah_tidak_jawab, p.jawaban_json
-                FROM cbt_peserta p
-                LEFT JOIN cbt_ujian u ON p.ujian_id = u.id
-                WHERE p.nama_siswa IN ('Khoirul Anwar', 'M Ijal Bukhori') OR p.id = 491
-                ORDER BY p.id ASC
+            // INSPEKSI UJIAN 95 (Al-Qur'an Hadits XI F.1)
+            $u95Rows = $dbCore->query("
+                SELECT id, nis, nama_siswa, status_pengerjaan, nilai_akhir, jumlah_benar, jumlah_salah, jumlah_tidak_jawab, LENGTH(jawaban_json) as jlen, jawaban_json
+                FROM cbt_peserta
+                WHERE ujian_id = 95
+                ORDER BY id ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($pRows as $dr) {
-                $rawJ = (string)$dr['jawaban_json'];
-                $snippet = strlen($rawJ) > 120 ? substr($rawJ, 0, 120) . '...' : $rawJ;
-                $output .= sprintf("P_ROW ID %d: %s | Ujian %d: %s | Status: %s | Nilai: %s (B:%d, S:%d, K:%d) | JSON len=%d: %s\n",
-                    $dr['id'], $dr['nama_siswa'], $dr['ujian_id'], $dr['nama_ujian'], $dr['status_pengerjaan'],
-                    $dr['nilai_akhir'] ?? 'NULL', (int)$dr['jumlah_benar'], (int)$dr['jumlah_salah'], (int)$dr['jumlah_tidak_jawab'],
-                    strlen($rawJ), $snippet
+            foreach ($u95Rows as $r) {
+                $rawJ = (string)$r['jawaban_json'];
+                $snippet = strlen($rawJ) > 80 ? substr($rawJ, 0, 80) . '...' : $rawJ;
+                $output .= sprintf("U95 ID %d [%s]: %s (NIS: %s) | Nilai: %s, B:%d, S:%d, K:%d | JSON len=%d: %s\n",
+                    $r['id'], $r['status_pengerjaan'], $r['nama_siswa'], $r['nis'],
+                    $r['nilai_akhir'] ?? '0', (int)$r['jumlah_benar'], (int)$r['jumlah_salah'], (int)$r['jumlah_tidak_jawab'],
+                    (int)$r['jlen'], $snippet
                 );
             }
 
