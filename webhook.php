@@ -302,6 +302,16 @@ try {
             }
         }
 
+        // 3.11b Pulihkan status_pengerjaan = 'Selesai' untuk seluruh siswa yang sudah memiliki jawaban / nilai akhir
+        $restoredCount = $dbCore->exec("
+            UPDATE cbt_peserta 
+            SET status_pengerjaan = 'Selesai', 
+                waktu_selesai = COALESCE(waktu_selesai, waktu_mulai, NOW()) 
+            WHERE status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan') 
+              AND (jawaban_json IS NOT NULL OR nilai_akhir > 0 OR jumlah_benar > 0)
+        ");
+        $output .= "\nSukses memulihkan {$restoredCount} siswa yang sudah memiliki skor ke status Selesai!\n";
+
         // Verifikasi hasil perbaikan
         $verifUjs = $dbCore->query("SELECT id, nama_ujian, (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = cbt_ujian.id) as cnt FROM cbt_ujian WHERE topik_id = 3 AND (mapel_nama = 'Fikih' OR mapel_nama = 'Fiqih')")->fetchAll(PDO::FETCH_ASSOC);
         foreach ($verifUjs as $vu) {

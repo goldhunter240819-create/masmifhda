@@ -48,9 +48,9 @@ $active_menu = 'hasil';
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="scopeBtnGroup">
                         <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">Fokus Data:</span>
                         
-                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'sesi_ini') ? 'active' : ''; ?>" onclick="switchScope('sesi_ini')" id="scopePill-sesi_ini" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'sesi_ini') ? '#0284c7' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'sesi_ini') ? '#e0f2fe' : '#ffffff'; ?>; color: <?php echo ($scope === 'sesi_ini') ? '#0369a1' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #0284c7; animation: pulseDot 1.5s infinite;"></span>
-                            🎯 Sesi Berjalan (Realtime)
+                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'semua') ? 'active' : ''; ?>" onclick="switchScope('semua')" id="scopePill-semua" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'semua') ? '#6366f1' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'semua') ? '#eef2ff' : '#ffffff'; ?>; color: <?php echo ($scope === 'semua') ? '#4338ca' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
+                            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+                            🌐 Semua Riwayat
                         </button>
 
                         <button type="button" class="cbt-scope-pill <?php echo ($scope === 'hari_ini') ? 'active' : ''; ?>" onclick="switchScope('hari_ini')" id="scopePill-hari_ini" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'hari_ini') ? '#059669' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'hari_ini') ? '#ecfdf5' : '#ffffff'; ?>; color: <?php echo ($scope === 'hari_ini') ? '#065f46' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
@@ -58,9 +58,9 @@ $active_menu = 'hasil';
                             📅 Seluruh Hari Ini
                         </button>
 
-                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'semua') ? 'active' : ''; ?>" onclick="switchScope('semua')" id="scopePill-semua" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'semua') ? '#6366f1' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'semua') ? '#eef2ff' : '#ffffff'; ?>; color: <?php echo ($scope === 'semua') ? '#4338ca' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
-                            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
-                            🌐 Semua Riwayat
+                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'sesi_ini') ? 'active' : ''; ?>" onclick="switchScope('sesi_ini')" id="scopePill-sesi_ini" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'sesi_ini') ? '#0284c7' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'sesi_ini') ? '#e0f2fe' : '#ffffff'; ?>; color: <?php echo ($scope === 'sesi_ini') ? '#0369a1' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #0284c7; animation: pulseDot 1.5s infinite;"></span>
+                            🎯 Sesi Berjalan (Realtime)
                         </button>
 
                         <?php if (!empty($allSlots)): ?>

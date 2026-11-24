@@ -2688,8 +2688,8 @@ class CbtController {
         $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
         $limit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
         if ($limit < 0) $limit = 30;
-        $scope = isset($_GET['scope']) ? trim($_GET['scope']) : 'sesi_ini';
-        if (empty($scope)) $scope = 'sesi_ini';
+        $scope = isset($_GET['scope']) ? trim($_GET['scope']) : 'semua';
+        if (empty($scope)) $scope = 'semua';
 
         // ─── FOKUS SESI & TANGGAL HARI INI ─────────────────────────────
         $todayDate = date('Y-m-d');
@@ -2943,7 +2943,7 @@ class CbtController {
                 break;
             case 'nilai_desc':
             default:
-                $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai') DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
+                $sql .= " ORDER BY (p.status_pengerjaan = 'Selesai' OR p.nilai_akhir > 0) DESC, p.nilai_akhir DESC, p.nama_siswa ASC";
                 break;
         }
 
@@ -2964,14 +2964,15 @@ class CbtController {
             }
         }
 
-        // Hitung statistik nilai dari peserta yang sudah menyelesaikan ujian
+        // Hitung statistik nilai dari peserta yang sudah menyelesaikan ujian / memiliki perolehan nilai
         $totalSelesai = 0;
         $totalNilai = 0;
         $tuntasCount = 0;
         $jumlahRemedial = 0;
 
         foreach ($pesertaList as $p) {
-            if ($p['status_pengerjaan'] === 'Selesai') {
+            $hasScore = ($p['status_pengerjaan'] === 'Selesai' || (float)($p['nilai_akhir'] ?? 0) > 0 || !empty($p['jawaban_json']));
+            if ($hasScore) {
                 $totalSelesai++;
                 $nilai = (float)$p['nilai_akhir'];
                 $totalNilai += $nilai;
@@ -3008,8 +3009,11 @@ class CbtController {
                 <?php
             } else {
                 foreach($displayPesertaList as $p) {
-                    $isSelesai = ($p['status_pengerjaan'] === 'Selesai');
-                    $isTuntas = ($isSelesai && $p['nilai_akhir'] >= $kkmUjian);
+                    $stPengerjaan = $p['status_pengerjaan'] ?? 'Belum Mengerjakan';
+                    $isSelesai = ($stPengerjaan === 'Selesai');
+                    $isSedangUjian = in_array($stPengerjaan, ['Mengerjakan', 'Sedang Mengerjakan']);
+                    $isTerkunci = in_array($stPengerjaan, ['Terkunci', 'Pelanggaran']);
+                    
                     $benar = (int)($p['jumlah_benar'] ?? 0);
                     $salah = (int)($p['jumlah_salah'] ?? 0);
                     $tidakJawab = (int)($p['jumlah_tidak_jawab'] ?? 0);
@@ -3018,6 +3022,10 @@ class CbtController {
                     if ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
                         $tidakJawab = $totalSoal - ($benar + $salah);
                     }
+                    
+                    $hasScores = (!empty($p['jawaban_json']) || (float)($p['nilai_akhir'] ?? 0) > 0 || $benar > 0 || $salah > 0);
+                    $canShowScore = ($isSelesai || ($isSedangUjian && $hasScores));
+                    $isTuntas = ($canShowScore && (float)$p['nilai_akhir'] >= $kkmUjian);
                     $isKJ = (stripos($p['kelas_nama'] ?? '', 'jauh') !== false);
                     ?>
                     <tr>
@@ -3038,7 +3046,7 @@ class CbtController {
                             <div style="font-weight: 700; color: #1e293b; font-size: 0.82rem;"><?php echo htmlspecialchars($p['nama_ujian'] ?? 'Ujian'); ?></div>
                         </td>
                         <td>
-                            <?php if ($isSelesai): ?>
+                            <?php if ($canShowScore): ?>
                             <span style="font-weight: 800; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
                                 <?php echo $benar; ?> Benar
                             </span>
@@ -3047,7 +3055,7 @@ class CbtController {
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php if ($isSelesai): ?>
+                            <?php if ($canShowScore): ?>
                             <span style="font-weight: 800; color: #b91c1c; background: #fee2e2; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
                                 <?php echo $salah; ?> Salah
                             </span>
@@ -3056,7 +3064,7 @@ class CbtController {
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php if ($isSelesai): ?>
+                            <?php if ($canShowScore): ?>
                             <span style="font-weight: 800; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
                                 <?php echo $tidakJawab; ?> Kosong
                             </span>
@@ -3065,10 +3073,13 @@ class CbtController {
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php if ($isSelesai): ?>
+                            <?php if ($canShowScore): ?>
                             <div style="font-size: 1.25rem; font-weight: 900; color: <?php echo $isTuntas ? '#15803d' : '#b91c1c'; ?>;">
                                 <?php echo number_format($p['nilai_akhir'], 1); ?>
                             </div>
+                            <?php if ($isSedangUjian): ?>
+                                <span style="font-size: 0.65rem; color: #0284c7; font-weight: 700;">(Sementara)</span>
+                            <?php endif; ?>
                             <?php else: ?>
                             <span style="color: #94a3b8; font-size: 0.84rem; font-weight: 700;">-</span>
                             <?php endif; ?>
@@ -3077,6 +3088,14 @@ class CbtController {
                             <?php if ($isSelesai): ?>
                             <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 6px; <?php echo $isTuntas ? 'background:#dcfce7;color:#15803d;' : 'background:#fee2e2;color:#b91c1c;'; ?>">
                                 <?php echo $isTuntas ? 'Tuntas' : 'Remedial'; ?>
+                            </span>
+                            <?php elseif ($isSedangUjian): ?>
+                            <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+                                <?php echo $hasScores ? 'Sedang Ujian' : 'Mengerjakan'; ?>
+                            </span>
+                            <?php elseif ($isTerkunci): ?>
+                            <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;">
+                                Terkunci
                             </span>
                             <?php else: ?>
                             <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b;">
@@ -3144,8 +3163,8 @@ class CbtController {
         $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'nilai_desc';
         $limit = isset($_GET['limit']) ? ($_GET['limit'] === 'all' ? 0 : (int)$_GET['limit']) : 30;
         if ($limit < 0) $limit = 30;
-        $scope = isset($_GET['scope']) ? trim($_GET['scope']) : 'sesi_ini';
-        if (empty($scope)) $scope = 'sesi_ini';
+        $scope = isset($_GET['scope']) ? trim($_GET['scope']) : 'semua';
+        if (empty($scope)) $scope = 'semua';
 
         // ─── FOKUS SESI & TANGGAL HARI INI ─────────────────────────────
         $todayDate = date('Y-m-d');
