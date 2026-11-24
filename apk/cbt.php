@@ -739,15 +739,16 @@ foreach ($ujianListRaw as $u) {
 
                 if ($lockSchedule) {
                     if ($startTs && $nowTs < $startTs) {
-                        // Jam mulai belum tiba
+                        // Jam mulai belum tiba (misal belum jam 09:00 untuk Sesi 2)
                         $scheduleState = 'early';
                         $canTake = false;
                         $scheduleNotice = 'Sesi dibuka pukul ' . $jMulaiStr . ' WIB';
                     } elseif ($endTs && $nowTs > $endTs) {
-                        // Jam selesai sudah terlewat!
-                        $scheduleState = 'expired';
-                        $canTake = false;
-                        $scheduleNotice = 'Sesi telah berakhir pada pukul ' . $jSelesaiStr . ' WIB';
+                        // Jam sesi resmi telah lewat, namun HARI INI masih berlangsung!
+                        // Tetap izinkan siswa mengerjakan asesmen hari ini agar siswa yang tertinggal atau berurutan tidak terkunci mati.
+                        $scheduleState = 'open';
+                        $canTake = true;
+                        $scheduleNotice = 'Sesi Terjadwal: ' . ($timeRange ?: 'Hari Ini') . ' (Siap Dikerjakan)';
                     } else {
                         // Jam sedang berlangsung
                         $scheduleState = 'open';
@@ -912,14 +913,8 @@ foreach ($allEvaluatedUjian as $u) {
         continue;
     }
     if (!empty($u['is_hari_ini'])) {
-        // Jika pembatasan jadwal aktif ($lockSchedule) dan sesi telah berakhir/terlewat,
-        // sembunyikan dari Beranda dan pindahkan ke tab Riwayat.
-        // Jika mode susulan diaktifkan ($lockSchedule == false), ujian tetap muncul di Beranda dan dapat dikerjakan.
-        if ($lockSchedule && ($u['schedule_state'] ?? '') === 'expired') {
-            $ujianTerlewatHariIni[] = $u;
-        } else {
-            $ujianHariIni[] = $u;
-        }
+        // Seluruh paket ujian yang dijadwalkan HARI INI dan belum selesai TETAP TAMPIL di "Paket Ujian Hari Ini"
+        $ujianHariIni[] = $u;
     } else {
         $ujianLainnya[] = $u;
     }

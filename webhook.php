@@ -312,6 +312,26 @@ try {
         ");
         $output .= "\nSukses memulihkan {$restoredCount} siswa yang sudah memiliki skor ke status Selesai!\n";
 
+        // 3.11c Rapikan cbt_jam_slot agar tidak ada duplikasi Sesi 1, 2, 3, dan buang slot dummy 4, 5, 6, 7
+        try {
+            $dbCore->exec("DELETE FROM cbt_jam_slot WHERE label_sesi IN ('4','5','6','7') OR topik_id = 10 OR (topik_id IS NULL AND id NOT IN (1, 2, 3, 4))");
+            $activeTid3 = (int)($dbCore->query("SELECT id FROM bs_topik WHERE status = 'Aktif' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 3);
+            $stdSlots = [
+                ['urutan' => 1, 'label' => 'Sesi 1', 'mulai' => '08:00:00', 'selesai' => '09:00:00', 'is_ist' => 0],
+                ['urutan' => 2, 'label' => 'Sesi 2', 'mulai' => '09:00:00', 'selesai' => '10:00:00', 'is_ist' => 0],
+                ['urutan' => 3, 'label' => 'Istirahat', 'mulai' => '10:00:00', 'selesai' => '10:10:00', 'is_ist' => 1],
+                ['urutan' => 4, 'label' => 'Sesi 3', 'mulai' => '10:10:00', 'selesai' => '11:10:00', 'is_ist' => 0],
+            ];
+            $dbCore->exec("DELETE FROM cbt_jam_slot WHERE topik_id = {$activeTid3}");
+            $stInsSlot = $dbCore->prepare("INSERT INTO cbt_jam_slot (topik_id, urutan, label_sesi, jam_mulai, jam_selesai, is_istirahat) VALUES (?, ?, ?, ?, ?, ?)");
+            foreach ($stdSlots as $ssl) {
+                $stInsSlot->execute([$activeTid3, $ssl['urutan'], $ssl['label'], $ssl['mulai'], $ssl['selesai'], $ssl['is_ist']]);
+            }
+            $output .= "\nSukses standarisasi cbt_jam_slot untuk Topik {$activeTid3} (Sesi 1: 08-09, Sesi 2: 09-10, Sesi 3: 10:10-11:10)!\n";
+        } catch (\Throwable $e) {
+            $output .= "\nClean cbt_jam_slot error: " . $e->getMessage() . "\n";
+        }
+
         // Verifikasi hasil perbaikan
         $verifUjs = $dbCore->query("SELECT id, nama_ujian, (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = cbt_ujian.id) as cnt FROM cbt_ujian WHERE topik_id = 3 AND (mapel_nama = 'Fikih' OR mapel_nama = 'Fiqih')")->fetchAll(PDO::FETCH_ASSOC);
         foreach ($verifUjs as $vu) {

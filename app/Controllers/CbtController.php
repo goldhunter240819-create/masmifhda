@@ -2699,7 +2699,15 @@ class CbtController {
         // Ambil seluruh slot sesi resmi
         $allSlots = [];
         try {
-            $allSlots = $db->query("SELECT * FROM cbt_jam_slot WHERE is_istirahat = 0 ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $rawSlots = $db->query("SELECT * FROM cbt_jam_slot WHERE is_istirahat = 0 ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $seenSlots = [];
+            foreach ($rawSlots as $sl) {
+                $lbl = trim($sl['label_sesi'] ?? '');
+                if (!empty($lbl) && !isset($seenSlots[$lbl])) {
+                    $seenSlots[$lbl] = true;
+                    $allSlots[] = $sl;
+                }
+            }
         } catch (\Throwable $e) {}
 
         // Tentukan sesi berjalan saat ini berdasarkan jam server sekarang
@@ -3174,7 +3182,15 @@ class CbtController {
         // Ambil seluruh slot sesi resmi
         $allSlots = [];
         try {
-            $allSlots = $db->query("SELECT * FROM cbt_jam_slot WHERE is_istirahat = 0 ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $rawSlots = $db->query("SELECT * FROM cbt_jam_slot WHERE is_istirahat = 0 ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $seenSlots = [];
+            foreach ($rawSlots as $sl) {
+                $lbl = trim($sl['label_sesi'] ?? '');
+                if (!empty($lbl) && !isset($seenSlots[$lbl])) {
+                    $seenSlots[$lbl] = true;
+                    $allSlots[] = $sl;
+                }
+            }
         } catch (\Throwable $e) {}
 
         // Tentukan sesi berjalan saat ini berdasarkan jam server sekarang
