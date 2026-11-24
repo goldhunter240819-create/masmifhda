@@ -175,6 +175,11 @@ class CbtController {
                 }
             } catch (\Exception $e) {}
 
+            // Bersihkan slot dummy jika ada sisa slot lama
+            try {
+                $db->exec("DELETE FROM cbt_jam_slot WHERE label_sesi IN ('4','5','6','7')");
+            } catch (\Exception $e) {}
+
             // Seed default slots jika masih kosong
             $cntSlot = (int)$db->query("SELECT COUNT(*) FROM cbt_jam_slot")->fetchColumn();
             if ($cntSlot === 0) {
