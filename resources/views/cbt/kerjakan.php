@@ -268,8 +268,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             direction: rtl;
             text-align: right !important;
             unicode-bidi: isolate;
-            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Times New Roman', serif;
-            font-size: 1.18rem !important;
+            font-family: 'Traditional Arabic', 'Arabic Typesetting', 'Segoe UI', 'Tahoma', sans-serif;
+            font-size: 1.2rem !important;
             line-height: 1.95 !important;
             width: 100%;
         }
@@ -278,9 +278,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             direction: rtl;
             text-align: right;
             unicode-bidi: isolate;
-            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Times New Roman', serif;
-            font-size: 1.22em;
-            line-height: 2;
+            font-family: 'Traditional Arabic', 'Arabic Typesetting', 'Segoe UI', 'Tahoma', sans-serif;
+            font-size: 1.25em;
+            line-height: 1.95;
             background: #f8fafc;
             border-right: 3px solid #0ea5e9;
             padding: 10px 14px;
@@ -292,9 +292,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             direction: rtl;
             unicode-bidi: isolate;
             display: inline-block;
-            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Times New Roman', serif;
-            font-size: 1.15em;
-            line-height: 1.8;
+            font-family: 'Traditional Arabic', 'Arabic Typesetting', 'Segoe UI', 'Tahoma', sans-serif;
+            font-size: 1.18em;
+            line-height: 1.75;
             padding: 0 3px;
         }
 
@@ -2484,10 +2484,13 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 const txt = optEl.textContent || '';
                 const arLen = (txt.match(arGlobalRe) || []).length;
                 const latLen = (txt.match(latinGlobalRe) || []).length;
-                if (arLen >= 3 && arLen > latLen) {
+                if (arLen >= 3 && latLen <= 3) {
                     optEl.classList.add('opt-text-rtl');
                     optEl.setAttribute('dir', 'rtl');
                 } else if (arLen > 0) {
+                    optEl.classList.remove('opt-text-rtl');
+                    optEl.setAttribute('dir', 'ltr');
+                    optEl.style.textAlign = 'left';
                     processMixedNodes(optEl);
                 }
             });
