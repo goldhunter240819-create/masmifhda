@@ -20,8 +20,8 @@ $active_menu = 'absensi_rekap';
                         <p>Monitoring data kehadiran siswa pada setiap sesi ujian, riwayat pemindaian barcode 1 pintu, dan kontrol data absensi.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" onclick="konfirmasiResetHariIni('<?php echo htmlspecialchars($selectedTanggal); ?>')" class="e-btn e-btn-glass" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
-                            <i data-lucide="rotate-ccw"></i> Reset Absensi Hari Ini
+                        <button type="button" onclick="konfirmasiResetHariIni('<?php echo htmlspecialchars($selectedTanggal); ?>')" class="e-btn" style="background: #ef4444; color: #ffffff; border: 1px solid #dc2626; font-weight: 700; box-shadow: 0 2px 8px rgba(239,68,68,0.3); display: inline-flex; align-items: center; gap: 6px;">
+                            <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i> Reset Absensi Hari Ini
                         </button>
                         <a href="<?php echo base_url('cbt/scan'); ?>" class="e-btn e-btn-primary" style="background: #2563eb;">
                             <i data-lucide="qr-code"></i> Buka Scanner 1 Pintu
