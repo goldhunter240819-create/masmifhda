@@ -13,7 +13,15 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once __DIR__ . '/../vendor/autoload.php';
 }
 
-if (!isset($_SESSION['siswa_id'])) {
+$isAdminPreview = false;
+if (!empty($_GET['admin_preview']) && $_GET['admin_preview'] == '1' && !empty($_SESSION['user_id'])) {
+    $admRoleId = (int)($_SESSION['role_id'] ?? 0);
+    if (in_array($admRoleId, [1, 2, 4, 99], true) || !empty($_SESSION['username'])) {
+        $isAdminPreview = true;
+    }
+}
+
+if (!$isAdminPreview && !isset($_SESSION['siswa_id'])) {
     header("Location: login.php");
     exit;
 }
@@ -22,6 +30,41 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
+if ($isAdminPreview) {
+    $previewKelas = trim($_GET['preview_kelas'] ?? 'X E.1');
+    $previewDate = (isset($_GET['preview_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['preview_date'])) ? $_GET['preview_date'] : date('Y-m-d');
+    $siswa_id = 0;
+    $is_cbt_only = (stripos($previewKelas, 'jauh') !== false);
+
+    $tingkat_kelas = 'Kelas X';
+    $short_tingkat = 'X';
+    if (stripos($previewKelas, 'XII') !== false || stripos($previewKelas, '12') !== false) {
+        $tingkat_kelas = 'Kelas XII';
+        $short_tingkat = 'XII';
+    } elseif (stripos($previewKelas, 'XI') !== false || stripos($previewKelas, '11') !== false) {
+        $tingkat_kelas = 'Kelas XI';
+        $short_tingkat = 'XI';
+    }
+
+    $cbtStudent = [
+        'id' => 0,
+        'no_peserta' => 'PREVIEW-' . $short_tingkat,
+        'nis' => 'PREVIEW-' . $short_tingkat,
+        'nama_siswa' => ($_SESSION['nama'] ?? 'Admin / Proktor') . ' (Mode Cek)',
+        'kelas_nama' => $previewKelas,
+        'tingkat' => $tingkat_kelas,
+    ];
+    $siswa = [
+        'id' => 0,
+        'nama' => ($_SESSION['nama'] ?? 'Admin / Proktor') . ' (Mode Cek)',
+        'nis' => 'PREVIEW-' . $short_tingkat,
+        'nik' => '',
+        'nama_kelas' => $previewKelas,
+        'tingkat' => $tingkat_kelas,
+        'status' => $is_cbt_only ? 'Kelas Jauh' : 'Pratinjau Admin',
+        'foto' => ''
+    ];
+} else {
 $siswa_id = (int)$_SESSION['siswa_id'];
 $is_cbt_only = !empty($_SESSION['is_cbt_only']);
 
@@ -84,6 +127,7 @@ if ($is_cbt_only) {
         $short_tingkat = 'XI';
     }
 }
+}
 
 $host = $_SERVER['HTTP_HOST'] ?? '';
 $is_online_server = (strpos($host, 'apk.masmifhda.sch.id') !== false);
@@ -97,7 +141,7 @@ $activeTab = $_GET['tab'] ?? 'beranda';
 
 // Proteksi: Siswa reguler hanya diizinkan ujian offline di Laboratorium Komputer Madrasah
 $is_kelas_jauh = $is_cbt_only || (isset($siswa['nama_kelas']) && stripos($siswa['nama_kelas'], 'jauh') !== false);
-if ($is_online_server && !$is_kelas_jauh) {
+if (!$isAdminPreview && $is_online_server && !$is_kelas_jauh) {
     header("Location: aplikasi_siswa.php?msg=offline_only");
     exit;
 }
@@ -362,8 +406,8 @@ try {
 $ujianTersedia = [];
 $allEvaluatedUjian = []; // Menyimpan semua ujian untuk evaluasi status asesmen hari ini
 $hariIndo = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'];
-$curHari = $hariIndo[date('l')] ?? '';
-$todayDate = date('Y-m-d');
+$todayDate = $isAdminPreview ? $previewDate : date('Y-m-d');
+$curHari = $hariIndo[date('l', strtotime($todayDate))] ?? '';
 $nowTs = time();
 $dayOrder = ['Senin' => 1, 'Selasa' => 2, 'Rabu' => 3, 'Kamis' => 4, 'Jumat' => 5, 'Sabtu' => 6, 'Minggu' => 7];
 
@@ -467,7 +511,7 @@ try {
 // Ambil Data Absensi Siswa Hari Ini jika Wajib Absensi Aktif (Disimpan Per-Mata Pelajaran & Sesi)
 $absenHariIniMap = [];
 $absenHariIniList = [];
-if ($requireAttendance) {
+if ($requireAttendance && !$isAdminPreview) {
     try {
         if ($is_cbt_only) {
             $stmtAbs = $core_db->prepare("
@@ -742,7 +786,11 @@ foreach ($ujianListRaw as $u) {
                 $startTs = !empty($jMulaiStr) ? strtotime($todayDate . ' ' . $jMulaiStr) : 0;
                 $endTs = !empty($jSelesaiStr) ? strtotime($todayDate . ' ' . $jSelesaiStr) : 0;
 
-                if ($lockSchedule) {
+                if ($isAdminPreview) {
+                    $scheduleState = 'open';
+                    $canTake = true;
+                    $scheduleNotice = 'Mode Pratinjau Admin • Terjadwal: ' . ($timeRange ?: 'Hari Ini') . ' (Bypass Jam & Absen)';
+                } elseif ($lockSchedule) {
                     if ($startTs && $nowTs < $startTs) {
                         // Jam mulai belum tiba (misal belum jam 09:00 untuk Sesi 2)
                         $scheduleState = 'early';
@@ -853,7 +901,11 @@ foreach ($ujianListRaw as $u) {
                     $isHariIni = false;
                     $scheduleState = 'unscheduled';
                     $jadwalSlotLabel = 'Belum Dijadwalkan';
-                    if ($lockSchedule) {
+                    if ($isAdminPreview) {
+                    $scheduleState = 'open';
+                    $canTake = true;
+                    $scheduleNotice = 'Mode Pratinjau Admin • Terjadwal: ' . ($timeRange ?: 'Hari Ini') . ' (Bypass Jam & Absen)';
+                } elseif ($lockSchedule) {
                         $canTake = false;
                         $scheduleNotice = 'Tidak Ada Jadwal Hari Ini';
                     } else {
@@ -867,7 +919,7 @@ foreach ($ujianListRaw as $u) {
     // Evaluasi Verifikasi Absensi 1 Pintu (Per-Mata Pelajaran & Sesi)
     $hasAbsen = true;
     $absenInfo = null;
-    if ($requireAttendance) {
+    if ($requireAttendance && !$isAdminPreview) {
         $hasAbsen = false;
         $uId = !empty($u['id']) ? (int)$u['id'] : 0;
         $uMapelClean = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $u['mapel_nama'] ?? '')));
@@ -1410,6 +1462,38 @@ include 'header.php';
 
 <div class="main-content" style="padding: 0 0 90px 0;">
 
+    <?php if ($isAdminPreview): 
+        $prevKelasOpts = [];
+        try {
+            $prevKelasOpts = $core_db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != '' ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {}
+        if (empty($prevKelasOpts)) $prevKelasOpts = ['X E.1', 'XI F.1', 'XII F.1', 'XII F.2'];
+        try {
+            $prevKjOpts = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != '' ORDER BY kelas_nama ASC")->fetchAll(PDO::FETCH_COLUMN);
+            $prevKelasOpts = array_values(array_unique(array_merge($prevKelasOpts, $prevKjOpts)));
+        } catch (\Throwable $e) {}
+    ?>
+    <div style="margin: 0 12px 12px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2); border: 1px solid #334155;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+            <div style="font-size: 0.78rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-eye"></i> MODE PRATINJAU ADMIN (BYPASS JADWAL & ABSEN)
+            </div>
+            <a href="<?= $is_standalone_env ? '/cbt/dashboard' : ((strpos($_SERVER['SCRIPT_NAME'] ?? '', '/masmifhda/') !== false) ? '/masmifhda/cbt/dashboard' : '/cbt/dashboard') ?>" style="font-size: 0.72rem; font-weight: 700; color: #cbd5e1; text-decoration: none; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px;">
+                ← Kembali ke Admin
+            </a>
+        </div>
+        <form method="GET" action="cbt.php" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <input type="hidden" name="admin_preview" value="1">
+            <select name="preview_kelas" onchange="this.form.submit()" style="flex: 1; min-width: 130px; padding: 6px 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 0.78rem; font-weight: 700;">
+                <?php foreach ($prevKelasOpts as $pkOpt): ?>
+                    <option value="<?= htmlspecialchars($pkOpt) ?>" <?= ($previewKelas === $pkOpt) ? 'selected' : '' ?>>Kelas: <?= htmlspecialchars($pkOpt) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <input type="date" name="preview_date" value="<?= htmlspecialchars($previewDate) ?>" onchange="this.form.submit()" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 0.78rem; font-weight: 700;">
+        </form>
+    </div>
+    <?php endif; ?>
+
     <!-- Card Identitas Siswa: HANYA NAMA & KELAS -->
     <div class="cbt-user-card">
         <div class="cbt-avatar">
@@ -1806,7 +1890,14 @@ include 'header.php';
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
                 <?php elseif ($u['can_take']): ?>
-                    <?php if ($requireAttendance && empty($u['has_absen'])): ?>
+                    <?php if ($isAdminPreview): ?>
+                        <div style="font-size: 0.72rem; color: #0369a1; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #e0f2fe; padding: 6px 10px; border-radius: 8px; border: 1px solid #bae6fd;">
+                            <i class="fa-solid fa-shield-halved"></i> Mode Pratinjau Admin (Bypass Jam, Absen & Token)
+                        </div>
+                        <a href="<?= $cbtKerjakanBase ?>?ujian_id=<?= (int)$u['id'] ?>&admin_preview=1&preview_kelas=<?= urlencode($previewKelas) ?>&preview_date=<?= urlencode($previewDate) ?>" class="btn-ujian btn-ujian-start" style="text-decoration: none;">
+                            <i class="fa-solid fa-magnifying-glass"></i> Cek & Uji Soal Sekarang
+                        </a>
+                    <?php elseif ($requireAttendance && empty($u['has_absen'])): ?>
                         <div style="font-size: 0.73rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; background: #fff1f2; padding: 7px 10px; border-radius: 8px; border: 1px solid #fecdd3;">
                             <i class="fa-solid fa-triangle-exclamation" style="color: #e11d48;"></i> Anda belum absen. Silakan scan barcode kartu Anda ke pengawas ujian.
                         </div>

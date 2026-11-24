@@ -56,6 +56,12 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis', 'daftar_hadir_kelas'
                 <span>Dashboard</span>
             </a>
 
+            <!-- 1b. Pratinjau Dashboard CBT Siswa -->
+            <a href="#" onclick="event.preventDefault(); openModalPreviewSiswa();" class="z-nav-item">
+                <i data-lucide="smartphone"></i>
+                <span>Pratinjau CBT Siswa</span>
+            </a>
+
             <!-- 2. Dropdown: Manajemen Ujian -->
             <div class="z-nav-dropdown <?php echo $isUjianOpen ? 'open' : ''; ?>">
                 <div class="z-nav-dropdown-toggle <?php echo $isUjianOpen ? 'active' : ''; ?>" onclick="toggleCbtDropdown(this)">
@@ -218,15 +224,117 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis', 'daftar_hadir_kelas'
     </div>
 </aside>
 
+<?php
+// Ambil daftar kelas untuk Modal Pratinjau Dashboard CBT Siswa
+$previewKelasListReg = [];
+$previewKelasListJauh = [];
+try {
+    $dbPrev = \App\Core\Database::connect('core');
+    if ($dbPrev) {
+        $previewKelasListReg = $dbPrev->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != '' ORDER BY nama_kelas ASC")->fetchAll(\PDO::FETCH_COLUMN);
+        $previewKelasListJauh = $dbPrev->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != '' ORDER BY kelas_nama ASC")->fetchAll(\PDO::FETCH_COLUMN);
+    }
+} catch (\Throwable $e) {}
+if (empty($previewKelasListReg)) {
+    $previewKelasListReg = ['X E.1', 'XI F.1', 'XII F.1', 'XII F.2'];
+}
+?>
+
+<!-- Modal Pilih Kelas untuk Pratinjau Dashboard CBT Siswa -->
+<div id="modalPreviewCbtSiswa" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="smartphone" style="width: 22px; height: 22px;"></i>
+                <div>
+                    <div style="font-weight: 800; font-size: 1.05rem;">Pratinjau Dashboard CBT Siswa</div>
+                    <div style="font-size: 0.75rem; opacity: 0.9;">Cek mapel terjadwal & uji butir soal per kelas (Bypass Jam & Absen)</div>
+                </div>
+            </div>
+            <button type="button" onclick="closeModalPreviewSiswa()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 1rem;">✕</button>
+        </div>
+
+        <div style="padding: 20px 22px;">
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">1. Pilih Kelas yang Ingin Dicek:</label>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;" id="previewKelasGrid">
+                    <?php foreach ($previewKelasListReg as $idx => $pkName): ?>
+                        <button type="button" onclick="selectPreviewKelas(this, '<?php echo htmlspecialchars(addslashes($pkName)); ?>')" class="btn-prev-kelas <?php echo $idx === 0 ? 'selected' : ''; ?>" style="padding: 10px 12px; border-radius: 10px; border: 2px solid <?php echo $idx === 0 ? '#2563eb' : '#e2e8f0'; ?>; background: <?php echo $idx === 0 ? '#eff6ff' : '#f8fafc'; ?>; color: <?php echo $idx === 0 ? '#1d4ed8' : '#334155'; ?>; font-weight: 800; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: 0.15s;">
+                            <span>🏛️ <?php echo htmlspecialchars($pkName); ?></span>
+                            <span class="prev-check" style="display: <?php echo $idx === 0 ? 'inline' : 'none'; ?>;">✓</span>
+                        </button>
+                    <?php endforeach; ?>
+                    <?php foreach ($previewKelasListJauh as $pkJauh): ?>
+                        <button type="button" onclick="selectPreviewKelas(this, '<?php echo htmlspecialchars(addslashes($pkJauh)); ?>')" class="btn-prev-kelas" style="padding: 10px 12px; border-radius: 10px; border: 2px solid #e2e8f0; background: #fffbeb; color: #92400e; font-weight: 800; font-size: 0.82rem; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: 0.15s;">
+                            <span>📡 <?php echo htmlspecialchars($pkJauh); ?></span>
+                            <span class="prev-check" style="display: none;">✓</span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" id="previewSiswaKelasInput" value="<?php echo htmlspecialchars($previewKelasListReg[0] ?? 'X E.1'); ?>">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">2. Tanggal Jadwal Ujian:</label>
+                <input type="date" id="previewSiswaDateInput" value="<?php echo date('Y-m-d'); ?>" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; font-weight: 700; color: #0f172a;">
+                <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Default hari ini. Bisa diganti tanggal besok untuk mengecek jadwal ujian besok.</div>
+            </div>
+
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 10px 14px; font-size: 0.76rem; color: #166534; font-weight: 600; line-height: 1.45; margin-bottom: 18px;">
+                <strong>✓ Mode Bebas Kunci (Simulasi Admin):</strong> Anda bisa langsung membuka & menguji soal pada seluruh mapel terjadwal hari tersebut meskipun jam sesi belum mulai, wajib absen aktif, atau token dikunci. Tidak akan mengotori data nilai siswa!
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="closeModalPreviewSiswa()" style="padding: 10px 16px; border-radius: 10px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 0.85rem; cursor: pointer;">Batal</button>
+                <button type="button" onclick="launchPreviewSiswa()" style="padding: 10px 18px; border-radius: 10px; border: none; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+                    <i data-lucide="external-link" style="width: 15px; height: 15px;"></i> Buka Dashboard Siswa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function toggleCbtDropdown(toggleEl) {
     const parent = toggleEl.parentElement;
-    const isAlreadyOpen = parent.classList.contains('open');
-    
-    // Opsional: Accordion behavior - jika ingin satu per satu terbuka
-    // document.querySelectorAll('.z-nav-dropdown').forEach(d => { if(d !== parent) d.classList.remove('open'); });
-
     parent.classList.toggle('open');
+}
+
+function openModalPreviewSiswa() {
+    const modal = document.getElementById('modalPreviewCbtSiswa');
+    if (modal) {
+        modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+function closeModalPreviewSiswa() {
+    const modal = document.getElementById('modalPreviewCbtSiswa');
+    if (modal) modal.style.display = 'none';
+}
+
+function selectPreviewKelas(btn, kelasName) {
+    document.getElementById('previewSiswaKelasInput').value = kelasName;
+    document.querySelectorAll('#previewKelasGrid .btn-prev-kelas').forEach(b => {
+        b.style.borderColor = '#e2e8f0';
+        b.style.background = b.textContent.includes('Kelas Jauh') ? '#fffbeb' : '#f8fafc';
+        b.style.color = b.textContent.includes('Kelas Jauh') ? '#92400e' : '#334155';
+        const chk = b.querySelector('.prev-check');
+        if (chk) chk.style.display = 'none';
+    });
+    btn.style.borderColor = '#2563eb';
+    btn.style.background = '#eff6ff';
+    btn.style.color = '#1d4ed8';
+    const chk = btn.querySelector('.prev-check');
+    if (chk) chk.style.display = 'inline';
+}
+
+function launchPreviewSiswa() {
+    const kelas = document.getElementById('previewSiswaKelasInput').value || 'X E.1';
+    const tgl = document.getElementById('previewSiswaDateInput').value || '<?php echo date('Y-m-d'); ?>';
+    const url = '<?php echo base_url("apk/cbt.php"); ?>?admin_preview=1&preview_kelas=' + encodeURIComponent(kelas) + '&preview_date=' + encodeURIComponent(tgl);
+    window.open(url, '_blank');
+    closeModalPreviewSiswa();
 }
 </script>
 

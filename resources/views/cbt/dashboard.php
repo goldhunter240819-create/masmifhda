@@ -261,6 +261,9 @@ $nama = $_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Pengguna');
                         <a href="<?php echo base_url('cbt/token'); ?>" class="hero-btn secondary">
                             <i data-lucide="key" style="width: 16px; height: 16px;"></i> Token Aktif: <?php echo htmlspecialchars($tokenAktif['token'] ?? 'OFF'); ?>
                         </a>
+                        <button type="button" onclick="openModalPreviewSiswa()" class="hero-btn secondary" style="cursor: pointer; border: 1px solid rgba(255,255,255,0.45); background: rgba(16, 185, 129, 0.28);">
+                            <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i> Cek Dashboard Siswa
+                        </button>
                     </div>
                 </div>
 

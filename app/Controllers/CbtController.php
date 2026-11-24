@@ -3358,6 +3358,14 @@ class CbtController {
             exit;
         }
 
+        // Jika dipanggil dari Mode Pratinjau Dashboard CBT Siswa oleh Admin/Proktor
+        if (!empty($_GET['admin_preview']) && !in_array((int)($_SESSION['role_id'] ?? 0), [3, 7], true) && empty($_SESSION['is_cbt_only'])) {
+            $ujianInfo['is_simulasi'] = true;
+            $pKelas = trim($_GET['preview_kelas'] ?? ($ujianInfo['kelas_nama'] ?? 'X E.1'));
+            $pDate = trim($_GET['preview_date'] ?? date('Y-m-d'));
+            $ujianInfo['back_url'] = base_url('apk/cbt.php?admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
+        }
+
         $mapelNama = trim($ujianInfo['mapel_nama'] ?? ($ujianInfo['nama_ujian'] ?? ''));
 
         // Ambil butir soal (Lengkap dengan tipe_soal dan konten_tambahan untuk 5 model CBT)
