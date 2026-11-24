@@ -2533,6 +2533,8 @@ $router->add('POST', '/cbt/absensi/delete', [\App\Controllers\CbtController::cla
 $router->add('POST', '/cbt/absensi/reset-today', [\App\Controllers\CbtController::class, 'resetAbsensiToday']);
 $router->add('POST', '/cbt/hasil/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
 $router->add('POST', '/cbt/peserta/buka-ujian', [\App\Controllers\CbtController::class, 'bukaUjianKembali']);
+$router->add('POST', '/cbt/hasil/buka-semua', [\App\Controllers\CbtController::class, 'bukaSemuaUjianKembali']);
+$router->add('POST', '/cbt/pengaturan/buka-semua', [\App\Controllers\CbtController::class, 'bukaSemuaUjianKembali']);
 $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'analisis']);
 $router->add('GET', '/cbt/pengaturan', [\App\Controllers\CbtController::class, 'pengaturan']);
 $router->add('POST', '/cbt/pengaturan/save', [\App\Controllers\CbtController::class, 'savePengaturan']);

@@ -735,6 +735,9 @@ $listTerkunci = $listTerkunci ?? [];
                             <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 2px 0;">Buka Ujian Kembali (Siswa Selesai / Ter-Auto-Submit)</h3>
                             <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Izinkan siswa yang sudah selesai atau ter-submit otomatis karena alarm pelanggaran untuk melanjutkan kembali ujiannya.</p>
                         </div>
+                        <button type="button" onclick="bukaModalReopenSemuaPengaturan()" class="e-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; padding: 9px 18px; font-weight: 800; font-size: 0.82rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 4px 14px rgba(2,132,199,0.3); cursor: pointer;">
+                            <i data-lucide="unlock" style="width: 15px; height: 15px;"></i> Buka Semua Ujian Siswa
+                        </button>
                     </div>
 
                     <?php if (!empty($listSelesai)): ?>
@@ -1001,6 +1004,14 @@ function bukaModalReopenPengaturan(pesertaId, namaSiswa, namaUjian) {
 function tutupModalReopenPengaturan() {
     document.getElementById('modalReopenPengaturan').style.display = 'none';
 }
+
+function bukaModalReopenSemuaPengaturan() {
+    document.getElementById('modalReopenSemuaPengaturan').style.display = 'flex';
+}
+
+function tutupModalReopenSemuaPengaturan() {
+    document.getElementById('modalReopenSemuaPengaturan').style.display = 'none';
+}
 </script>
 
 <!-- Modal Buka Ujian Modern untuk Tab Pengaturan -->
@@ -1056,4 +1067,58 @@ function tutupModalReopenPengaturan() {
         </form>
     </div>
 </div>
-</script>
+
+<!-- Modal Buka SEMUA Ujian Siswa Serentak -->
+<div id="modalReopenSemuaPengaturan" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 18px;">
+    <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden; animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        <form method="POST" action="<?php echo base_url('cbt/pengaturan/buka-semua'); ?>" style="margin: 0;">
+            <input type="hidden" name="tanggal" value="all">
+            
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 22px 24px; color: #ffffff; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                    🔓
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800;">Buka Semua Ujian Siswa</h3>
+                    <p style="margin: 3px 0 0; font-size: 0.78rem; color: #bae6fd;">Aktifkan kembali ujian untuk seluruh siswa yang selesai / terkunci</p>
+                </div>
+            </div>
+
+            <div style="padding: 20px 24px;">
+                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 14px; margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start;">
+                    <i data-lucide="info" style="width: 20px; height: 20px; color: #2563eb; flex-shrink: 0; margin-top: 2px;"></i>
+                    <div style="font-size: 0.8rem; color: #1e40af; line-height: 1.45;">
+                        Tindakan ini akan mengaktifkan kembali status pengerjaan seluruh siswa yang saat ini berstatus <b>Selesai</b>, <b>Terkunci</b>, atau <b>Pelanggaran</b> agar mereka dapat langsung login dan melanjutkan pengerjaan soal ujian secara serentak.
+                    </div>
+                </div>
+
+                <div style="font-size: 0.82rem; font-weight: 800; color: #334155; margin-bottom: 10px;">Pilih Mode Pembukaan:</div>
+
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 2px solid #0ea5e9; background: #f0f9ff; border-radius: 12px; margin-bottom: 10px; cursor: pointer;">
+                    <input type="radio" name="mode" value="lanjutkan" checked style="margin-top: 3px; accent-color: #0ea5e9;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #0369a1;">Lanjutkan Pengerjaan (Sangat Direkomendasikan)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; line-height: 1.4;">Seluruh jawaban yang telah dijawab sebelumnya tetap aman dan tidak terhapus. Siswa tinggal melanjutkan soal yang belum selesai.</div>
+                    </div>
+                </label>
+
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; cursor: pointer;">
+                    <input type="radio" name="mode" value="ulang" style="margin-top: 3px; accent-color: #ef4444;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #dc2626;">Ulang dari Awal (Reset Total Seluruh Siswa)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; line-height: 1.4;">Jawaban seluruh siswa akan dikosongkan kembali dari awal. Gunakan hanya jika ada keputusan ujian diulang total.</div>
+                    </div>
+                </label>
+            </div>
+
+            <div style="padding: 0 24px 24px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="tutupModalReopenSemuaPengaturan()" style="padding: 10px 18px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" style="padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
+                    Buka Semua Ujian Sekarang
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

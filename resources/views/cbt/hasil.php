@@ -31,13 +31,84 @@ $active_menu = 'hasil';
                         <p>Monitoring skor perolehan siswa, analisis ketuntasan terhadap KKM, dan rekapitulasi nilai ujian berbasis komputer.</p>
                     </div>
                     <div class="header-actions-premium" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="<?php echo base_url('cbt/hasil/cetak?topik_id=' . ($selectedTopikId ?? 0) . '&mapel=' . urlencode($selectedMapel ?? '') . '&ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" id="btnCetakRekap" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
+                        <a href="<?php echo base_url('cbt/hasil/cetak?scope=' . urlencode($scope ?? 'sesi_ini') . '&topik_id=' . ($selectedTopikId ?? 0) . '&mapel=' . urlencode($selectedMapel ?? '') . '&ujian_id=' . ($selectedUjianId ?? '') . '&kelas=' . urlencode($selectedKelas ?? '') . '&sort=' . urlencode($sort ?? 'nilai_desc') . '&q=' . urlencode($search ?? '')); ?>" id="btnCetakRekap" target="_blank" class="e-btn e-btn-glass" title="Buka Dokumen Rekap Nilai Resmi Kemenag A4">
                             <i data-lucide="printer"></i> Download PDF / Cetak (A4)
                         </a>
                         <a href="<?php echo base_url('cbt/analisis?topik_id=' . ($selectedTopikId ?? 0) . '&ujian_id=' . ($selectedUjianId ?? '')); ?>" id="btnAnalisisButir" class="e-btn e-btn-blue-light">
                             <i data-lucide="bar-chart-2"></i> Analisis Butir Soal
                         </a>
                     </div>
+                </div>
+            </div>
+
+            <!-- Live Realtime & Scope Switcher Bar -->
+            <div style="background: #ffffff; border-radius: 18px; border: 1px solid #e2e8f0; padding: 1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 4px 14px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <!-- Scope Buttons -->
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="scopeBtnGroup">
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">Fokus Data:</span>
+                        
+                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'sesi_ini') ? 'active' : ''; ?>" onclick="switchScope('sesi_ini')" id="scopePill-sesi_ini" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'sesi_ini') ? '#0284c7' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'sesi_ini') ? '#e0f2fe' : '#ffffff'; ?>; color: <?php echo ($scope === 'sesi_ini') ? '#0369a1' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #0284c7; animation: pulseDot 1.5s infinite;"></span>
+                            🎯 Sesi Berjalan (Realtime)
+                        </button>
+
+                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'hari_ini') ? 'active' : ''; ?>" onclick="switchScope('hari_ini')" id="scopePill-hari_ini" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'hari_ini') ? '#059669' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'hari_ini') ? '#ecfdf5' : '#ffffff'; ?>; color: <?php echo ($scope === 'hari_ini') ? '#065f46' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
+                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                            📅 Seluruh Hari Ini
+                        </button>
+
+                        <button type="button" class="cbt-scope-pill <?php echo ($scope === 'semua') ? 'active' : ''; ?>" onclick="switchScope('semua')" id="scopePill-semua" style="padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 800; border: 1.5px solid <?php echo ($scope === 'semua') ? '#6366f1' : '#cbd5e1'; ?>; background: <?php echo ($scope === 'semua') ? '#eef2ff' : '#ffffff'; ?>; color: <?php echo ($scope === 'semua') ? '#4338ca' : '#475569'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;">
+                            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+                            🌐 Semua Riwayat
+                        </button>
+
+                        <?php if (!empty($allSlots)): ?>
+                            <span style="color: #cbd5e1; font-weight: 300;">|</span>
+                            <?php foreach ($allSlots as $sl): 
+                                $sLabel = $sl['label_sesi'];
+                                $isThisSesiActive = ($scope === $sLabel);
+                            ?>
+                            <button type="button" class="cbt-scope-pill <?php echo $isThisSesiActive ? 'active' : ''; ?>" onclick="switchScope('<?php echo htmlspecialchars($sLabel); ?>')" id="scopePill-<?php echo preg_replace('/[^a-zA-Z0-9]/', '', $sLabel); ?>" style="padding: 6px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; border: 1.5px solid <?php echo $isThisSesiActive ? '#0284c7' : '#e2e8f0'; ?>; background: <?php echo $isThisSesiActive ? '#e0f2fe' : '#ffffff'; ?>; color: <?php echo $isThisSesiActive ? '#0369a1' : '#64748b'; ?>; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                ⏱️ <?php echo htmlspecialchars($sLabel); ?>
+                            </button>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Realtime Indicator & Refresh Controls -->
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1.5px solid #86efac; padding: 5px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800; color: #166534;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulseDot 1.2s infinite;"></span>
+                            <span id="lblLiveStatus">LIVE REALTIME</span>
+                            <span style="color: #15803d; font-weight: 500; margin-left: 2px;">• <span id="lblServerTime"><?php echo date('H:i:s'); ?></span></span>
+                        </div>
+
+                        <button type="button" onclick="toggleAutoRefresh()" id="btnAutoRefresh" class="e-btn" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #334155; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Nyalakan / Jeda Pembaruan Otomatis">
+                            <i data-lucide="pause-circle" id="iconAutoRefresh" style="width: 14px; height: 14px; color: #0284c7;"></i>
+                            <span id="lblBtnAutoRefresh">Auto 5s: AKTIF</span>
+                        </button>
+
+                        <button type="button" onclick="applyFilterAjax(false)" class="e-btn" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #0284c7; background: #e0f2fe; color: #0369a1; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Segarkan Data Sekarang">
+                            <i data-lucide="refresh-cw" id="iconManualRefresh" style="width: 14px; height: 14px;"></i>
+                            <span>Segarkan</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Sesi Description Alert Banner -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #334155;">
+                        <i data-lucide="info" style="width: 16px; height: 16px; color: #0284c7; flex-shrink: 0;"></i>
+                        <span id="lblSesiInfoBanner">
+                            <b>Fokus Aktif:</b> <?php echo htmlspecialchars($sesiInfo ?: 'Sesi Berjalan Hari Ini'); ?>
+                        </span>
+                    </div>
+                    <?php if ($scope === 'sesi_ini'): ?>
+                    <span style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 3px 10px; border-radius: 99px; font-weight: 800;">
+                        Otomatis menyesuaikan jam & mapel ujian saat ini
+                    </span>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -179,14 +250,19 @@ $active_menu = 'hasil';
                             <?php echo count($pesertaList); ?> Siswa
                         </span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Tampilkan:</span>
-                        <select id="selLimitHasil" onchange="applyFilterAjax(false)" style="padding: 5px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #ffffff; cursor: pointer;">
-                            <option value="30" <?php echo (($limit ?? 30) == 30) ? 'selected' : ''; ?>>30 Siswa (Default)</option>
-                            <option value="50" <?php echo (($limit ?? 30) == 50) ? 'selected' : ''; ?>>50 Siswa</option>
-                            <option value="100" <?php echo (($limit ?? 30) == 100) ? 'selected' : ''; ?>>100 Siswa</option>
-                            <option value="all" <?php echo (($limit ?? 30) === 0 || ($limit ?? 30) === 'all') ? 'selected' : ''; ?>>Semua Siswa</option>
-                        </select>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" onclick="bukaModalReopenSemuaHasil()" class="e-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; padding: 6px 14px; font-size: 0.78rem; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2,132,199,0.25); cursor: pointer;" title="Buka Ujian untuk Seluruh Siswa Selesai / Terkunci">
+                            <i data-lucide="unlock" style="width: 14px; height: 14px;"></i> Buka Semua Ujian
+                        </button>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Tampilkan:</span>
+                            <select id="selLimitHasil" onchange="applyFilterAjax(false)" style="padding: 5px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #ffffff; cursor: pointer;">
+                                <option value="30" <?php echo (($limit ?? 30) == 30) ? 'selected' : ''; ?>>30 Siswa (Default)</option>
+                                <option value="50" <?php echo (($limit ?? 30) == 50) ? 'selected' : ''; ?>>50 Siswa</option>
+                                <option value="100" <?php echo (($limit ?? 30) == 100) ? 'selected' : ''; ?>>100 Siswa</option>
+                                <option value="all" <?php echo (($limit ?? 30) === 0 || ($limit ?? 30) === 'all') ? 'selected' : ''; ?>>Semua Siswa</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -394,14 +470,81 @@ $active_menu = 'hasil';
     </div>
 </div>
 
+<!-- Modal Buka SEMUA Ujian Siswa di Hasil Ujian -->
+<div id="modalReopenSemuaHasil" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 18px;">
+    <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden; animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        <form method="POST" action="<?php echo base_url('cbt/hasil/buka-semua'); ?>" style="margin: 0;">
+            <input type="hidden" name="tanggal" value="<?php echo ($scope === 'semua') ? 'all' : date('Y-m-d'); ?>">
+            
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 22px 24px; color: #ffffff; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                    🔓
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800;">Buka Semua Ujian Siswa</h3>
+                    <p style="margin: 3px 0 0; font-size: 0.78rem; color: #bae6fd;">Aktifkan kembali ujian bagi seluruh siswa yang selesai / terkunci</p>
+                </div>
+            </div>
+
+            <div style="padding: 20px 24px;">
+                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 14px; margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start;">
+                    <i data-lucide="info" style="width: 20px; height: 20px; color: #2563eb; flex-shrink: 0; margin-top: 2px;"></i>
+                    <div style="font-size: 0.8rem; color: #1e40af; line-height: 1.45;">
+                        Tindakan ini akan mengaktifkan kembali lembar ujian bagi seluruh siswa yang telah berstatus <b>Selesai</b>, <b>Terkunci</b>, atau <b>Pelanggaran</b> pada sesi/tanggal ini agar dapat melanjutkan ujian.
+                    </div>
+                </div>
+
+                <div style="font-size: 0.82rem; font-weight: 800; color: #334155; margin-bottom: 10px;">Pilih Mode Pembukaan:</div>
+
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 2px solid #0ea5e9; background: #f0f9ff; border-radius: 12px; margin-bottom: 10px; cursor: pointer;">
+                    <input type="radio" name="mode" value="lanjutkan" checked style="margin-top: 3px; accent-color: #0ea5e9;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #0369a1;">Lanjutkan Pengerjaan (Direkomendasikan)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; line-height: 1.4;">Jawaban siswa sebelumnya tetap tersimpan rapi. Siswa dapat meneruskan soal yang belum selesai.</div>
+                    </div>
+                </label>
+
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; cursor: pointer;">
+                    <input type="radio" name="mode" value="ulang" style="margin-top: 3px; accent-color: #ef4444;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #dc2626;">Ulang dari Awal (Reset Total Jawaban)</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; line-height: 1.4;">Seluruh jawaban sebelumnya dikosongkan dan waktu pengerjaan diulang dari awal.</div>
+                    </div>
+                </label>
+            </div>
+
+            <div style="padding: 0 24px 24px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="tutupModalReopenSemuaHasil()" style="padding: 10px 18px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" style="padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
+                    Buka Semua Ujian Sekarang
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <style>
 @keyframes popInModal {
     0% { transform: scale(0.92); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
 }
+@keyframes pulseDot {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.7; }
+}
+.cbt-scope-pill:hover {
+    filter: brightness(0.97);
+}
 </style>
 
 <script>
+let currentScope = '<?php echo htmlspecialchars($scope ?? "sesi_ini"); ?>';
+let autoRefreshActive = true;
+let autoRefreshTimer = null;
+
 function bukaModalReopen(pesertaId, namaSiswa, paketJudul) {
     document.getElementById('reopenPesertaId').value = pesertaId;
     document.getElementById('reopenNamaSiswa').textContent = namaSiswa;
@@ -413,12 +556,57 @@ function tutupModalReopen() {
     document.getElementById('modalReopenExam').style.display = 'none';
 }
 
-// ================= AJAX FILTER & PAGINATION SYSTEM =================
+function bukaModalReopenSemuaHasil() {
+    document.getElementById('modalReopenSemuaHasil').style.display = 'flex';
+}
+
+function tutupModalReopenSemuaHasil() {
+    document.getElementById('modalReopenSemuaHasil').style.display = 'none';
+}
+
+function toggleAutoRefresh() {
+    autoRefreshActive = !autoRefreshActive;
+    const lbl = document.getElementById('lblBtnAutoRefresh');
+    const icon = document.getElementById('iconAutoRefresh');
+    const liveStatus = document.getElementById('lblLiveStatus');
+    if (autoRefreshActive) {
+        if (lbl) lbl.textContent = 'Auto 5s: AKTIF';
+        if (icon) icon.setAttribute('data-lucide', 'pause-circle');
+        if (liveStatus) liveStatus.textContent = 'LIVE REALTIME';
+    } else {
+        if (lbl) lbl.textContent = 'Auto: DIJEDA';
+        if (icon) icon.setAttribute('data-lucide', 'play-circle');
+        if (liveStatus) liveStatus.textContent = 'JEDA';
+    }
+    if (window.lucide) lucide.createIcons();
+}
+
+function switchScope(newScope) {
+    currentScope = newScope;
+    // Update active pill styling
+    document.querySelectorAll('.cbt-scope-pill').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#ffffff';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.color = '#475569';
+    });
+    const key = newScope.replace(/[^a-zA-Z0-9]/g, '');
+    const activePill = document.getElementById('scopePill-' + key);
+    if (activePill) {
+        activePill.classList.add('active');
+        activePill.style.background = '#e0f2fe';
+        activePill.style.borderColor = '#0284c7';
+        activePill.style.color = '#0369a1';
+    }
+    applyFilterAjax(false);
+}
+
+// ================= AJAX FILTER & REALTIME SYSTEM =================
 let currentLimitHasil = <?php echo (int)($limit ?? 30); ?>;
 let searchTimer = null;
 let ajaxAbortCtrl = null;
 
-function applyFilterAjax(isTopikChange) {
+function applyFilterAjax(isTopikChange, isSilent = false) {
     if (isTopikChange) {
         const selMapel = document.getElementById('selMapelHasil');
         if (selMapel) selMapel.value = '';
@@ -434,14 +622,14 @@ function applyFilterAjax(isTopikChange) {
     currentLimitHasil = (limit === 'all') ? 9999 : parseInt(limit || 30);
 
     const tbody = document.getElementById('hasilTableBody');
-    if (tbody) {
+    if (tbody && !isSilent) {
         tbody.style.opacity = '0.35';
         tbody.style.transition = 'opacity 0.15s ease';
     }
 
     const btnReset = document.getElementById('btnResetFilter');
     if (btnReset) {
-        const hasFilter = (topikId !== '0' || mapel !== '' || kelas !== '' || q !== '' || sort !== 'nilai_desc');
+        const hasFilter = (currentScope !== 'sesi_ini' || topikId !== '0' || mapel !== '' || kelas !== '' || q !== '' || sort !== 'nilai_desc');
         btnReset.style.display = hasFilter ? 'inline-flex' : 'none';
     }
 
@@ -451,6 +639,7 @@ function applyFilterAjax(isTopikChange) {
     ajaxAbortCtrl = new AbortController();
 
     const params = new URLSearchParams({
+        scope: currentScope,
         topik_id: topikId,
         mapel: mapel,
         kelas: kelas,
@@ -477,6 +666,96 @@ function applyFilterAjax(isTopikChange) {
         if (!data.success) return;
 
         // Update stats
+        const elTotal = document.getElementById('statTotalPeserta');
+        if (elTotal) elTotal.textContent = data.total_peserta;
+
+        const elRata = document.getElementById('statRataRata');
+        if (elRata) elRata.textContent = data.rata_rata;
+
+        const elTuntas = document.getElementById('statPersenTuntas');
+        if (elTuntas) elTuntas.textContent = data.persen_tuntas + '%';
+
+        const elKkm = document.getElementById('statKkmLabel');
+        if (elKkm) elKkm.textContent = 'Ketuntasan (KKM: ' + data.kkm + ')';
+
+        const elRem = document.getElementById('statRemedial');
+        if (elRem) elRem.textContent = data.jumlah_remedial;
+
+        const badgeTotal = document.getElementById('badgeTotalSiswa');
+        if (badgeTotal) badgeTotal.textContent = data.total_peserta + ' Siswa';
+
+        // Update server time & info banner
+        const elTime = document.getElementById('lblServerTime');
+        if (elTime && data.server_time) elTime.textContent = data.server_time;
+
+        const elBanner = document.getElementById('lblSesiInfoBanner');
+        if (elBanner && data.sesi_info) {
+            elBanner.innerHTML = '<b>Fokus Aktif:</b> ' + data.sesi_info;
+        }
+
+        // Update Cetak & Analisis Links
+        const btnCetak = document.getElementById('btnCetakRekap');
+        if (btnCetak && data.cetak_url) btnCetak.href = data.cetak_url;
+
+        const btnAnalisis = document.getElementById('btnAnalisisButir');
+        if (btnAnalisis && data.analisis_url) btnAnalisis.href = data.analisis_url;
+
+        // If Topik changed, re-populate Mapel options
+        if (isTopikChange && data.mapel_list) {
+            const selMapel = document.getElementById('selMapelHasil');
+            if (selMapel) {
+                const prev = selMapel.value;
+                selMapel.innerHTML = '<option value="">-- Semua Mapel --</option>';
+                data.mapel_list.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === prev) opt.selected = true;
+                    selMapel.appendChild(opt);
+                });
+            }
+        }
+
+        // Update Table Rows
+        if (tbody) {
+            tbody.innerHTML = data.table_html;
+            tbody.style.opacity = '1';
+        }
+
+        // Update Load More footer
+        const wrapMore = document.getElementById('wrapLoadMoreHasil');
+        if (wrapMore) {
+            const dispCount = data.display_count || data.total_peserta;
+            const totCount = data.total_peserta;
+            const elDisp = document.getElementById('lblDisplayCount');
+            if (elDisp) elDisp.textContent = dispCount;
+            const elTot = document.getElementById('lblTotalCount');
+            if (elTot) elTot.textContent = totCount;
+
+            if (totCount > dispCount) {
+                wrapMore.style.display = 'flex';
+            } else {
+                wrapMore.style.display = 'none';
+            }
+        }
+
+        // Re-init lucide icons
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    })
+    .catch(err => {
+        if (err.name === 'AbortError') return;
+        if (tbody) tbody.style.opacity = '1';
+    });
+}
+
+// Inisialisasi Realtime Polling setiap 5 detik
+autoRefreshTimer = setInterval(() => {
+    if (autoRefreshActive && !document.hidden) {
+        applyFilterAjax(false, true);
+    }
+}, 5000);
         const elTotal = document.getElementById('statTotalPeserta');
         if (elTotal) elTotal.textContent = data.total_peserta;
 

@@ -864,6 +864,8 @@ class BankSoalController {
             'durasi_menit' => $durasiMenit,
             'kelas_nama' => $paket['kelas_nama'] ?: 'Semua Kelas',
             'kkm' => (int)($paket['kkm'] ?: 75),
+            'acak_soal' => 1,
+            'acak_opsi' => 1,
             'is_simulasi' => true,
             'paket_id' => $paketId,
             'back_url' => base_url('bank_soal?topik_id=' . $paket['topik_id'])
@@ -897,7 +899,9 @@ class BankSoalController {
             'sound_alarm_on_violation' => '0',
             'block_back_button' => '0',
             'watermark_student_nis' => '0',
-            'require_all_answered_no_doubt' => '0'
+            'require_all_answered_no_doubt' => '0',
+            'acak_opsi_default' => '1',
+            'acak_soal_default' => '1'
         ];
 
         include __DIR__ . '/../../resources/views/cbt/kerjakan.php';

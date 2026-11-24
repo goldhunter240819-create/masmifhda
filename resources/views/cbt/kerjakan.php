@@ -1504,6 +1504,17 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
     <script>
         const isSimulasi = <?php echo $isSimulasi ? 'true' : 'false'; ?>;
+        <?php
+        $isAcakOpsiVal = false;
+        if (isset($ujianInfo['acak_opsi'])) {
+            $isAcakOpsiVal = ((int)$ujianInfo['acak_opsi'] === 1);
+        } elseif (isset($cbtSettings['acak_opsi_default'])) {
+            $isAcakOpsiVal = ($cbtSettings['acak_opsi_default'] === '1' || $cbtSettings['acak_opsi_default'] === 1 || $cbtSettings['acak_opsi_default'] === true);
+        } else {
+            $isAcakOpsiVal = true;
+        }
+        ?>
+        const isAcakOpsi = <?php echo $isAcakOpsiVal ? 'true' : 'false'; ?>;
         const soalList = <?php echo json_encode($soalList); ?>;
         const totalSoal = soalList.length;
         const ujianId = <?php echo (int)$ujianInfo['id']; ?>;
@@ -1807,6 +1818,19 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                             pgkOptions.push({ key: k, text: q['opsi_' + k.toLowerCase()] });
                         }
                     });
+                }
+
+                // Acak Opsi PGK jika isAcakOpsi aktif (Seeded PRNG)
+                if (isAcakOpsi && pgkOptions.length > 1) {
+                    const seedPgk = (Math.imul((pesertaId || 101), 7919) + Math.imul((q.id || (idx + 1)), 23)) >>> 0;
+                    let curSeedPgk = seedPgk;
+                    for (let i = pgkOptions.length - 1; i > 0; i--) {
+                        curSeedPgk = (curSeedPgk * 1664525 + 1013904223) >>> 0;
+                        const j = Math.floor((((curSeedPgk ^ (curSeedPgk >>> 14)) >>> 0) / 4294967296) * (i + 1));
+                        const tmp = pgkOptions[i];
+                        pgkOptions[i] = pgkOptions[j];
+                        pgkOptions[j] = tmp;
+                    }
                 }
 
                 // Petunjuk Centang PG Kompleks (Multi-Select)
@@ -2336,31 +2360,66 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
             } else {
                 // MODEL 1: Pilihan Ganda Biasa (A, B, C, D, E)
-                const opts = ['A', 'B', 'C', 'D', 'E'];
-                opts.forEach(k => {
-                    let text = q['opsi_' + k.toLowerCase()];
-                    if (!text && q.konten_tambahan) {
-                        try {
-                            const kd = JSON.parse(q.konten_tambahan);
-                            if (kd.opsi && kd.opsi[k]) text = kd.opsi[k];
-                        } catch(e) {}
-                    }
-                    if (!text) return;
-
-                    const isSelected = (userAnswers[idx] === k);
+                const opts = getQuestionOptions(q, idx);
+                opts.forEach(opt => {
+                    const isSelected = (userAnswers[idx] === opt.origKey);
                     const item = document.createElement('div');
                     item.className = 'opt-label' + (isSelected ? ' selected' : '');
-                    item.onclick = () => selectOption(idx, k);
+                    item.onclick = () => selectOption(idx, opt.origKey);
 
                     item.innerHTML = `
-                        <div class="opt-key">${k}</div>
-                        <div class="opt-text">${text}</div>
+                        <div class="opt-key">${opt.visualKey}</div>
+                        <div class="opt-text">${opt.text}</div>
                     `;
                     container.appendChild(item);
                 });
             }
 
             updatePaletteCurrent();
+        }
+
+        // Helper Ekstraksi & Pengacakan Opsi PG Berdasarkan Aturan acak_opsi
+        function getQuestionOptions(q, idx) {
+            const rawKeys = ['A', 'B', 'C', 'D', 'E'];
+            const items = [];
+            rawKeys.forEach(k => {
+                let text = q['opsi_' + k.toLowerCase()];
+                if (!text && q.konten_tambahan) {
+                    try {
+                        const kd = JSON.parse(q.konten_tambahan);
+                        if (kd.opsi && kd.opsi[k]) text = kd.opsi[k];
+                    } catch(e) {}
+                }
+                if (text) {
+                    items.push({ origKey: k, text: text });
+                }
+            });
+
+            if (!isAcakOpsi || items.length <= 1) {
+                return items.map((it, i) => ({
+                    visualKey: rawKeys[i],
+                    origKey: it.origKey,
+                    text: it.text
+                }));
+            }
+
+            // Seeded deterministic PRNG per siswa & butir soal agar stabil
+            const seed = (Math.imul((pesertaId || 101), 9973) + Math.imul((q.id || (idx + 1)), 31)) >>> 0;
+            const shuffled = [...items];
+            let curSeed = seed;
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                curSeed = (curSeed * 1664525 + 1013904223) >>> 0;
+                const j = Math.floor((((curSeed ^ (curSeed >>> 14)) >>> 0) / 4294967296) * (i + 1));
+                const temp = shuffled[i];
+                shuffled[i] = shuffled[j];
+                shuffled[j] = temp;
+            }
+
+            return shuffled.map((it, i) => ({
+                visualKey: rawKeys[i],
+                origKey: it.origKey,
+                text: it.text
+            }));
         }
 
         function selectOption(qIdx, key) {
@@ -2404,7 +2463,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 let ansTag = '';
                 const ans = userAnswers[i];
                 let isAnswered = false;
-                const qType = (Array.isArray(soalList) && soalList[i]) ? (soalList[i].tipe_soal || 'sec_pg') : 'sec_pg';
+                const curQ = (Array.isArray(soalList) && soalList[i]) ? soalList[i] : null;
+                const qType = curQ ? (curQ.tipe_soal || 'sec_pg') : 'sec_pg';
                 if (ans !== undefined && ans !== null && ans !== '') {
                     if (typeof ans === 'object') {
                         if (Object.keys(ans).length > 0) {
@@ -2417,7 +2477,13 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         if (str.length > 0) {
                             answeredCount++;
                             isAnswered = true;
-                            ansTag = (qType !== 'sec_pg' || str.length > 2) ? '✓' : str;
+                            if (qType === 'sec_pg' && str.length === 1 && curQ) {
+                                const qOpts = getQuestionOptions(curQ, i);
+                                const matchOpt = qOpts.find(o => o.origKey === str);
+                                ansTag = matchOpt ? matchOpt.visualKey : str;
+                            } else {
+                                ansTag = (qType !== 'sec_pg' || str.length > 2) ? '✓' : str;
+                            }
                         }
                     }
                 }
