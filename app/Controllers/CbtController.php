@@ -3749,7 +3749,7 @@ class CbtController {
                   AND (
                       g.ujian_id = ? 
                       OR (
-                          (g.mapel_nama = ? OR ? LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', ?, '%'))
+                          LOWER(TRIM(g.mapel_nama)) = LOWER(TRIM(?))
                           AND (
                               g.kelas_nama = ? 
                               OR ? LIKE CONCAT('%', g.kelas_nama, '%')
@@ -3769,8 +3769,6 @@ class CbtController {
                 $curHari,
                 $curHariLike,
                 $ujian_id,
-                $mapelNama,
-                $mapelNama,
                 $mapelNama,
                 $studentClass,
                 $studentClass,

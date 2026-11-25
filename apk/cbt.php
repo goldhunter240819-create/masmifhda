@@ -614,8 +614,29 @@ foreach ($ujianListRaw as $u) {
     $uTopikId = (int)($u['topik_id'] ?? 0);
     $uMapel = trim($u['mapel_nama'] ?? '');
 
+    $normMapelGrid = function($m) {
+        $s = strtolower(trim(preg_replace('/\s+/', ' ', (string)$m)));
+        $aliases = [
+            'fiqih' => 'fikih',
+            "al-quran hadits" => "al-qur'an hadits",
+            "al-qur'an hadis" => "al-qur'an hadits",
+            "quran hadits" => "al-qur'an hadits",
+            "qur'an hadits" => "al-qur'an hadits",
+            'ski' => 'sejarah kebudayaan islam',
+            'sejarah kebudayaan islam (ski)' => 'sejarah kebudayaan islam',
+            'pjok' => 'pendidikan jasmani, olahraga dan kesehatan',
+            'pendidikan jasmani, olahraga & kesehatan (pjok)' => 'pendidikan jasmani, olahraga dan kesehatan',
+            'ppkn' => 'pendidikan pancasila dan kewarganegaraan',
+            'pendidikan pancasila & kewarganegaraan (ppkn)' => 'pendidikan pancasila dan kewarganegaraan',
+            'pkwu' => 'prakarya dan kewirausahaan',
+            'prakarya & kewirausahaan' => 'prakarya dan kewirausahaan',
+        ];
+        return $aliases[$s] ?? $s;
+    };
+    $uMapelNorm = $normMapelGrid($uMapel);
+
     try {
-        // 1. Cek apakah ada jadwal spesifik untuk HARI INI yang SESUAI MAPEL & KELAS SISWA
+        // 1. Cek apakah ada jadwal spesifik untuk HARI INI yang SESUAI MAPEL (ketat) & KELAS SISWA
         $stmtToday = $core_db->prepare("
             SELECT g.*, s.jam_mulai, s.jam_selesai, s.label_sesi 
             FROM cbt_jadwal_grid g 
@@ -629,10 +650,6 @@ foreach ($ujianListRaw as $u) {
             WHERE (g.tanggal = :today OR (g.tanggal IS NULL AND (g.hari = :curHari OR g.hari LIKE CONCAT(:curHari2, '%'))))
               AND (:tid <= 0 OR g.topik_id = :tid2 OR g.topik_id IS NULL OR g.topik_id = 0)
               AND (
-                  (g.mapel_nama = :mapel OR :mapel LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', :mapel, '%'))
-                  OR (g.ujian_id = :uid AND (g.mapel_nama IS NULL OR g.mapel_nama = '' OR g.mapel_nama = :mapel2))
-              )
-              AND (
                   g.kelas_nama = :kelas 
                   OR g.kelas_nama = :tingkat 
                   OR g.kelas_nama = 'Semua Kelas' 
@@ -645,7 +662,7 @@ foreach ($ujianListRaw as $u) {
                       OR (:short_tingkat = 'X' AND ((g.kelas_nama LIKE 'X%' AND g.kelas_nama NOT LIKE 'XI%' AND g.kelas_nama NOT LIKE 'XII%') OR g.kelas_nama LIKE 'Kelas 10%' OR g.kelas_nama LIKE 'Kelas X%'))
                   )
               )
-            ORDER BY (g.mapel_nama = :mapel3) DESC, (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, (g.kelas_nama = :tingkat2) DESC, g.id ASC LIMIT 1
+            ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, (g.kelas_nama = :tingkat2) DESC, g.id ASC
         ");
         $stmtToday->execute([
             ':today' => $todayDate,
@@ -653,18 +670,22 @@ foreach ($ujianListRaw as $u) {
             ':curHari2' => $curHari,
             ':tid' => $uTopikId,
             ':tid2' => $uTopikId,
-            ':mapel' => $uMapel,
-            ':uid' => $u['id'],
-            ':mapel2' => $uMapel,
             ':kelas' => $siswa['nama_kelas'],
             ':tingkat' => $tingkat_kelas,
             ':short_tingkat' => $short_tingkat,
-            ':mapel3' => $uMapel,
             ':uid2' => $u['id'],
             ':kelas2' => $siswa['nama_kelas'],
             ':tingkat2' => $tingkat_kelas
         ]);
-        $jGrid = $stmtToday->fetch(PDO::FETCH_ASSOC);
+        $todayRows = $stmtToday->fetchAll(PDO::FETCH_ASSOC);
+        $jGrid = null;
+        foreach ($todayRows as $tr) {
+            $gMapel = trim((string)($tr['mapel_nama'] ?? ''));
+            if (((int)($tr['ujian_id'] ?? 0) === (int)$u['id'] && $gMapel === '') || $normMapelGrid($gMapel) === $uMapelNorm) {
+                $jGrid = $tr;
+                break;
+            }
+        }
 
             if ($jGrid) {
                 // Terjadwal HARI INI!
@@ -732,15 +753,14 @@ foreach ($ujianListRaw as $u) {
                     $scheduleNotice = 'Sesi Hari Ini Terbuka (' . ($timeRange ?: 'Bebas Jam') . ')';
                 }
             } else {
-                // Tidak ada jadwal untuk HARI INI. Cek apakah ada jadwal di hari lain di cbt_jadwal_grid
+                // Tidak ada jadwal untuk HARI INI. Cek apakah ada jadwal di hari lain di cbt_jadwal_grid (pencocokan mapel ketat)
                 $uTopikId = (int)($u['topik_id'] ?? 0);
                 $stmtOther = $core_db->prepare("
                     SELECT g.* 
                     FROM cbt_jadwal_grid g 
-                    WHERE g.ujian_id = :uid 
+                    WHERE (g.ujian_id = :uid)
                        OR (
-                           (g.mapel_nama = :mapel OR :mapel LIKE CONCAT('%', g.mapel_nama, '%') OR g.mapel_nama LIKE CONCAT('%', :mapel, '%'))
-                           AND (:tid <= 0 OR g.topik_id = :tid2 OR g.topik_id IS NULL OR g.topik_id = 0)
+                           (:tid <= 0 OR g.topik_id = :tid2 OR g.topik_id IS NULL OR g.topik_id = 0)
                            AND (
                                g.kelas_nama = :kelas 
                                OR g.kelas_nama = :tingkat 
@@ -755,11 +775,10 @@ foreach ($ujianListRaw as $u) {
                                )
                            )
                        )
-                    ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, g.jam_slot ASC, g.id ASC LIMIT 1
+                    ORDER BY (g.ujian_id = :uid2) DESC, (g.kelas_nama = :kelas2) DESC, CASE WHEN g.tanggal >= CURDATE() THEN 0 ELSE 1 END ASC, g.tanggal ASC, g.jam_slot ASC, g.id ASC
                 ");
                 $stmtOther->execute([
                     ':uid' => $u['id'],
-                    ':mapel' => $u['mapel_nama'],
                     ':tid' => $uTopikId,
                     ':tid2' => $uTopikId,
                     ':kelas' => $siswa['nama_kelas'],
@@ -768,7 +787,15 @@ foreach ($ujianListRaw as $u) {
                     ':uid2' => $u['id'],
                     ':kelas2' => $siswa['nama_kelas']
                 ]);
-                $otherGrid = $stmtOther->fetch(PDO::FETCH_ASSOC);
+                $otherRows = $stmtOther->fetchAll(PDO::FETCH_ASSOC);
+                $otherGrid = null;
+                foreach ($otherRows as $orRow) {
+                    $gMapel = trim((string)($orRow['mapel_nama'] ?? ''));
+                    if (((int)($orRow['ujian_id'] ?? 0) === (int)$u['id'] && $gMapel === '') || $normMapelGrid($gMapel) === $uMapelNorm) {
+                        $otherGrid = $orRow;
+                        break;
+                    }
+                }
 
                 if ($otherGrid) {
                     $isHariIni = false;
