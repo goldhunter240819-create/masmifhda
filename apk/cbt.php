@@ -875,11 +875,11 @@ foreach ($ujianListRaw as $u) {
         } elseif (!empty($uMapelClean) && isset($absenHariIniMap['mapel_' . $uMapelClean])) {
             $hasAbsen = true;
             $absenInfo = $absenHariIniMap['mapel_' . $uMapelClean];
-        } elseif (!empty($uMapelClean) && !empty($absenHariIniList)) {
-            // Cek pencocokan parsial nama mapel spesifik
+        } elseif (!empty($uMapelNorm) && !empty($absenHariIniList)) {
+            // Pencocokan ketat nama mapel (dengan alias resmi) agar 1 scan hanya berlaku untuk 1 mapel/sesi tersebut
             foreach ($absenHariIniList as $ab) {
-                $abMapelClean = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $ab['mapel_nama'] ?? '')));
-                if (!empty($abMapelClean) && (strpos($uMapelClean, $abMapelClean) !== false || strpos($abMapelClean, $uMapelClean) !== false)) {
+                $abMapelRaw = trim((string)($ab['mapel_nama'] ?? ''));
+                if ($abMapelRaw !== '' && $normMapelGrid($abMapelRaw) === $uMapelNorm) {
                     $hasAbsen = true;
                     $absenInfo = $ab;
                     break;

@@ -3806,8 +3806,8 @@ class CbtController {
             // Sesi ujian hari ini tetap dapat diakses sepanjang hari ujian untuk fleksibilitas proktor dan siswa
         }
 
-        // Security Guard: Wajib Absensi Per-Mata Pelajaran (Anti-Kerjakan dari Kantin/Luar)
-        $requireAttendance = ($cbtSettings['require_attendance_to_start'] ?? '1') === '1';
+        // Security Guard: Wajib Absensi Per-Mata Pelajaran / Sesi (Anti-Kerjakan Tanpa Scan)
+        $requireAttendance = ($cbtSettings['require_cbt_attendance'] ?? '0') === '1';
         if ($requireAttendance && ($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0)) {
             $hasAbsenForThisMapel = false;
             $apkCbtRedirectUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
@@ -3822,11 +3822,11 @@ class CbtController {
                     SELECT id FROM cbt_absensi 
                     WHERE (nis = ? OR (nis = ? AND ? != '') OR nama_siswa = ?)
                       AND (tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE())
-                      AND (ujian_id = ? OR mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+                      AND (ujian_id = ? OR LOWER(TRIM(mapel_nama)) = LOWER(TRIM(?)))
                       AND status IN ('Hadir', 'Terlambat')
                     LIMIT 1
                 ");
-                $stA->execute([$swNis, $swNis, $swNis, $swNama, $ujian_id, $mapelNama, $mapelNama, $mapelNama]);
+                $stA->execute([$swNis, $swNis, $swNis, $swNama, $ujian_id, $mapelNama]);
                 $hasAbsenForThisMapel = (bool)$stA->fetchColumn();
             } else {
                 $stS = $db->prepare("SELECT id, nis, nama FROM siswa WHERE (user_id = ? AND ? > 0) OR (id = ? AND ? > 0) LIMIT 1");
@@ -3838,50 +3838,17 @@ class CbtController {
                     SELECT id FROM cbt_absensi 
                     WHERE ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != ''))
                       AND (tanggal = CURDATE() OR DATE(waktu_scan) = CURDATE())
-                      AND (ujian_id = ? OR mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+                      AND (ujian_id = ? OR LOWER(TRIM(mapel_nama)) = LOWER(TRIM(?)))
                       AND status IN ('Hadir', 'Terlambat')
                     LIMIT 1
                 ");
-                $stA->execute([$swId ?: -1, $swNis, $swNis, $ujian_id, $mapelNama, $mapelNama, $mapelNama]);
+                $stA->execute([$swId ?: -1, $swNis, $swNis, $ujian_id, $mapelNama]);
                 $hasAbsenForThisMapel = (bool)$stA->fetchColumn();
             }
 
             if (!$hasAbsenForThisMapel) {
-                // FALLBACK CERDAS & OTOMATIS: Jangan blokir siswa!
-                // Otomatis catatkan status 'Hadir' ke cbt_absensi agar siswa bisa langsung mengerjakan ujian tanpa hambatan.
-                try {
-                    $swTipe = ($isCbtOnly || $roleId === 7) ? 'khusus' : 'reguler';
-                    $swSaveId = ($swTipe === 'reguler' && !empty($swId)) ? (int)$swId : null;
-                    $swNamaSave = !empty($swNama) ? $swNama : (!empty($rS['nama']) ? $rS['nama'] : 'Siswa');
-                    $swKelasSave = 'CBT';
-                    if (!empty($rS['kelas_id'])) {
-                        try {
-                            $kNm = $db->query("SELECT nama_kelas FROM kelas WHERE id = " . (int)$rS['kelas_id'])->fetchColumn();
-                            if ($kNm) $swKelasSave = $kNm;
-                        } catch (\Exception $e) {}
-                    } elseif (!empty($rK['kelas_nama'])) {
-                        $swKelasSave = $rK['kelas_nama'];
-                    }
-
-                    $stAuto = $db->prepare("
-                        INSERT INTO cbt_absensi 
-                        (tanggal, siswa_id, nis, nama_siswa, kelas_nama, tipe_peserta, topik_id, ujian_id, mapel_nama, jam_slot, waktu_scan, status, metode_scan, petugas_nama, ruang_nama, keterangan)
-                        VALUES (CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?, 'Presensi Ujian', NOW(), 'Hadir', 'AUTO_KERJAKAN', 'Sistem Mandiri', 'Ruang Ujian', 'Presensi Otomatis Sistem Saat Mulai Ujian')
-                    ");
-                    $stAuto->execute([
-                        $swSaveId,
-                        $swNis,
-                        $swNamaSave,
-                        $swKelasSave,
-                        $swTipe,
-                        $ujian['topik_id'] ?? null,
-                        $ujian_id,
-                        $mapelNama
-                    ]);
-                    $hasAbsenForThisMapel = true;
-                } catch (\Exception $e) {
-                    $hasAbsenForThisMapel = true;
-                }
+                echo "<script>alert('Anda belum melakukan scan presensi kehadiran untuk mata pelajaran/sesi ini! Silakan scan QR ke pengawas ruang terlebih dahulu.'); window.location.href='{$apkCbtRedirectUrl}';</script>";
+                exit;
             }
         }
 
