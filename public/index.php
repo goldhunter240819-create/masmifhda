@@ -150,16 +150,29 @@ $router->add('GET', '/portal', function() use ($portal_title, $portal_logo, $por
         exit;
     }
 
+    if (!empty($_SESSION['is_cbt_only']) || (int)$role === 7) {
+        redirect('/apk/cbt.php');
+        exit;
+    }
+    if (!empty($_SESSION['siswa_id']) || (int)$role === 3 || (int)$role === 6) {
+        if ((isset($_SESSION['siswa_status']) && $_SESSION['siswa_status'] === 'Alumni') || (int)$role === 6) {
+            redirect('/alumni/dashboard');
+        } else {
+            redirect('/siswa/dashboard');
+        }
+        exit;
+    }
     if ($is_logged_in && $role == 5) {
         redirect('/pengawas/pkkm');
         exit;
     }
-    if ($is_logged_in && $role == 2) {
+    if ($is_logged_in && ($role == 2 || $role == 4)) {
         redirect('/guru/dashboard');
         exit;
     }
-    if ($is_logged_in && $role == 3) {
-        redirect('/siswa/dashboard');
+    // Hanya Admin (1) dan Developer (99) yang boleh masuk ke /portal
+    if (!in_array((int)$role, [1, 99], true)) {
+        redirect('/login');
         exit;
     }
 

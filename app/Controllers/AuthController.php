@@ -219,12 +219,18 @@ class AuthController {
                     redirect('/dev-panel');
                 } elseif ($user['role_id'] == 5) {
                     redirect('/pengawas/pkkm');
-                } elseif ($user['role_id'] == 2) {
+                } elseif ($user['role_id'] == 2 || $user['role_id'] == 4) {
                     redirect('/guru/dashboard');
-                } elseif ($user['role_id'] == 3) {
+                } elseif ($user['role_id'] == 7) {
+                    redirect('/apk/cbt.php');
+                } elseif ($user['role_id'] == 6) {
+                    redirect('/alumni/dashboard');
+                } elseif ($user['role_id'] == 3 || !empty($_SESSION['siswa_id'])) {
                     redirect('/siswa/dashboard');
-                } else {
+                } elseif ($user['role_id'] == 1) {
                     redirect('/portal');
+                } else {
+                    redirect('/login');
                 }
                 exit;
             } else {
@@ -460,12 +466,16 @@ class AuthController {
                     // â”€â”€ Audit Log QR â”€â”€
                     AuditLogger::loginQr($identifier, true);
 
-                    $redir = '/portal';
+                    $redir = '/login';
                     if ($user['role_id'] == 99) $redir = '/dev-panel';
                     elseif ($user['role_id'] == 5) $redir = '/pengawas/pkkm';
-                    elseif ($user['role_id'] == 2) $redir = '/guru/dashboard';
-                    elseif ($user['role_id'] == 3) {
+                    elseif ($user['role_id'] == 2 || $user['role_id'] == 4) $redir = '/guru/dashboard';
+                    elseif ($user['role_id'] == 7) $redir = '/apk/cbt.php';
+                    elseif ($user['role_id'] == 6) $redir = '/alumni/dashboard';
+                    elseif ($user['role_id'] == 3 || !empty($_SESSION['siswa_id'])) {
                         $redir = $is_alumni ? '/alumni/dashboard' : '/siswa';
+                    } elseif ($user['role_id'] == 1) {
+                        $redir = '/portal';
                     }
 
                     echo json_encode([
