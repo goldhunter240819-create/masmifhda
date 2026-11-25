@@ -4148,61 +4148,102 @@ class CbtController {
 
             $kunciRaw = (string)$s['kunci_jawaban'];
             $kunci = strtoupper(trim($kunciRaw));
-            $isMatch = false;
+            $scoreRatio = 0.0;
 
-            // 1. Evaluasi Tipe JSON (Tabel Benar/Salah & Menjodohkan)
+            // 1. Evaluasi Tipe JSON (Tabel Benar/Salah & Menjodohkan) dengan Skor Parsial Proporsional
             $kDec = json_decode($kunciRaw, true);
             if (is_array($kDec)) {
                 if (is_array($userAnsRaw) && !empty($userAnsRaw)) {
                     if (isset($kDec[0]['respon'])) {
-                        // Menjodohkan
-                        ksort($userAnsRaw);
-                        $allMatched = true;
+                        // Menjodohkan: tiap pasangan yang benar memberi poin proporsional (benar 1 dari N = 1/N)
+                        $totalPairs = count($kDec);
+                        $matchedPairs = 0;
                         foreach ($kDec as $pIdx => $pItem) {
                             $expVal = strtoupper(trim((string)($pItem['respon'] ?? '')));
                             $usrVal = strtoupper(trim((string)($userAnsRaw[$pIdx] ?? '')));
-                            if ($usrVal === '' || $usrVal !== $expVal) {
-                                $allMatched = false;
-                                break;
+                            if ($usrVal !== '' && $usrVal === $expVal) {
+                                $matchedPairs++;
                             }
                         }
-                        if ($allMatched && count($userAnsRaw) === count($kDec)) {
-                            $isMatch = true;
+                        if ($totalPairs > 0) {
+                            $scoreRatio = min(1.0, $matchedPairs / $totalPairs);
                         }
                     } else {
-                        // Benar / Salah
-                        $expected = array_map(function($v) { return strtoupper(trim((string)$v)); }, $kDec);
-                        $actual = array_map(function($v) { return strtoupper(trim((string)$v)); }, array_values($userAnsRaw));
-                        if ($expected == $actual) $isMatch = true;
+                        // Benar / Salah: tiap pernyataan yang benar memberi poin proporsional (benar 1 dari N = 1/N)
+                        $kValues = array_values($kDec);
+                        $totalStmt = count($kValues);
+                        $matchedStmt = 0;
+                        foreach ($kValues as $bIdx => $expRaw) {
+                            $expVal = strtoupper(trim((string)$expRaw));
+                            $usrVal = strtoupper(trim((string)($userAnsRaw[$bIdx] ?? '')));
+                            if ($usrVal !== '' && $usrVal === $expVal) {
+                                $matchedStmt++;
+                            }
+                        }
+                        if ($totalStmt > 0) {
+                            $scoreRatio = min(1.0, $matchedStmt / $totalStmt);
+                        }
                     }
                 }
             } elseif (!empty($userAns)) {
-                // 2. Evaluasi PG Single Choice
-                if ($userAns === $kunci) {
-                    $isMatch = true;
-                } 
-                // 3. Evaluasi PG Kompleks (A, B, C)
-                elseif (strpos($kunci, ',') !== false) {
-                    $uParts = array_map('trim', explode(',', $userAns));
-                    $kParts = array_map('trim', explode(',', $kunci));
+                // 2. Evaluasi PG Kompleks (A, B, C) dengan Skor Parsial + Pengaman Anti-Centang-Semua
+                if (strpos($kunci, ',') !== false) {
+                    $uParts = array_values(array_unique(array_filter(array_map('trim', explode(',', $userAns)))));
+                    $kParts = array_values(array_unique(array_filter(array_map('trim', explode(',', $kunci)))));
                     sort($uParts);
                     sort($kParts);
+
                     if ($uParts === $kParts) {
-                        $isMatch = true;
+                        $scoreRatio = 1.0;
+                    } elseif (!empty($kParts) && !empty($uParts)) {
+                        // Hitung jumlah opsi tersedia pada butir ini untuk cegah centang semua opsi
+                        $availCount = 0;
+                        if (!empty($s['konten_tambahan'])) {
+                            $kdOpt = json_decode((string)$s['konten_tambahan'], true);
+                            if (is_array($kdOpt) && !empty($kdOpt['opsi']) && is_array($kdOpt['opsi'])) {
+                                $availCount = count(array_filter($kdOpt['opsi'], function($v) { return trim((string)$v) !== ''; }));
+                            }
+                        }
+                        if ($availCount <= 0) {
+                            $availCount = 5;
+                        }
+
+                        if (count($uParts) >= $availCount && count($kParts) < $availCount) {
+                            $scoreRatio = 0.0;
+                        } else {
+                            $benarCount = count(array_intersect($uParts, $kParts));
+                            $salahCount = count(array_diff($uParts, $kParts));
+                            $rawRatio = ($benarCount - (0.5 * $salahCount)) / count($kParts);
+                            $scoreRatio = max(0.0, min(1.0, $rawRatio));
+                        }
                     }
-                } 
+                }
+                // 3. Evaluasi PG Single Choice
+                elseif ($userAns === $kunci) {
+                    $scoreRatio = 1.0;
+                }
                 // 4. Evaluasi Isian Singkat (Numeric & Text tolerance)
                 elseif (is_numeric($kunci)) {
                     $numUser = preg_replace('/[^0-9]/', '', $userAns);
                     if ($numUser === $kunci) {
-                        $isMatch = true;
+                        $scoreRatio = 1.0;
                     }
                 }
             }
 
-            if ($isMatch) {
-                $poinPerolehan += $bobot;
+            if ($scoreRatio > 0) {
+                $poinPerolehan += ($bobot * $scoreRatio);
+            }
+
+            if ($scoreRatio >= 0.9999) {
                 $jumlahBenar++;
+            } elseif ($scoreRatio > 0) {
+                // Skor parsial (>= 50% masuk hitungan benar, < 50% masuk salah agar total butir tetap konsisten)
+                if ($scoreRatio >= 0.5) {
+                    $jumlahBenar++;
+                } else {
+                    $jumlahSalah++;
+                }
             } elseif ($hasAnswer) {
                 $jumlahSalah++;
             } else {
