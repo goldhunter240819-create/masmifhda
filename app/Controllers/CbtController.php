@@ -3377,9 +3377,11 @@ class CbtController {
             $dbsToCheck = (!empty($dbSiakad) && $dbSiakad !== $db) ? [$dbSiakad, $db] : [$db];
             $bsItems = [];
             $matchedPaketId = 0;
+            $foundMatchingPaket = false;
 
             // 1. Jika paket_id sudah ditautkan eksplisit ke cbt_ujian, langsung ambil dari paket tersebut!
             if ($explicitPaketId > 0) {
+                $foundMatchingPaket = true;
                 foreach ($dbsToCheck as $targetDb) {
                     $stmtBS = $targetDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
                     $stmtBS->execute([$explicitPaketId]);
@@ -3393,7 +3395,7 @@ class CbtController {
             }
 
             // 2. Jika belum ditautkan eksplisit, cari paket terbaik dengan pencocokan mapel ketat + prioritas guru/kunci
-            if (empty($bsItems) && $mapelNama !== '') {
+            if (empty($bsItems) && $explicitPaketId <= 0 && $mapelNama !== '') {
                 $getLevel = function($str) {
                     $s = strtoupper((string)$str);
                     if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
@@ -3436,11 +3438,13 @@ class CbtController {
                     $pkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
 
                     foreach ($pkts as $pkt) {
-                        if ((int)$pkt['soal_cnt'] <= 0) continue;
                         if ($normMapel($pkt['mapel_nama']) !== $uNorm) continue;
 
                         $pLvl = $getLevel(($pkt['kelas_nama'] ?? '') . ' ' . ($pkt['kelas_sasaran'] ?? ''));
                         if ($pLvl !== $uLvl && $uLvl !== 0 && $pLvl !== 0) continue;
+
+                        $foundMatchingPaket = true;
+                        if ((int)$pkt['soal_cnt'] <= 0) continue;
 
                         $sasaranMatch = ($kelasNama !== '' && stripos((string)($pkt['kelas_sasaran'] ?? ''), $kelasNama) !== false) ? 1 : 0;
                         $lockedScore = !empty($pkt['is_locked']) ? 1 : 0;
@@ -3477,7 +3481,21 @@ class CbtController {
                 }
             }
 
-            if (empty($bsItems)) return false;
+            if (empty($bsItems)) {
+                // Jika paket Bank Soal untuk mapel & jenjang ini memang ditemukan tapi masih 0 butir soal,
+                // bersihkan sisa cbt_soal lama (hanya jika belum ada peserta yang mengerjakan) agar status menjadi 0 Butir & terkunci.
+                if ($foundMatchingPaket) {
+                    $pesertaCnt = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = {$ujianId}")->fetchColumn();
+                    if ($pesertaCnt === 0) {
+                        $curCnt = (int)$db->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$ujianId}")->fetchColumn();
+                        if ($curCnt > 0) {
+                            $db->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$ujianId]);
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
 
             // Bandingkan isi cbt_soal saat ini dengan bs_soal terbaru
             $curSoal = $db->prepare("SELECT id, pertanyaan, kunci_jawaban, opsi_a FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");

@@ -578,97 +578,14 @@ foreach ($ujianListRaw as $u) {
         $u['kode_ujian'] = $newCode;
     }
 
-    // 0b. Auto-Sync Butir Soal: Jamin butir soal cbt_soal selaras 100% dengan Bank Soal (bs_soal)
+    // 0b. Auto-Sync Butir Soal: Gunakan satu logika terpusat CbtController::syncExamSoalFromBankSoal
     try {
-        $getLevel = function($str) {
-            $s = strtoupper((string)$str);
-            if (strpos($s, 'XII') !== false || preg_match('/\b12\b/', $s)) return 12;
-            if (strpos($s, 'XI') !== false || preg_match('/\b11\b/', $s)) return 11;
-            if (strpos($s, 'X') !== false || preg_match('/\b10\b/', $s)) return 10;
-            return 0;
-        };
-        $uLvl = $getLevel($u['kelas_nama'] ?: $tingkat_kelas);
-
-        $cleanMapel = trim($u['mapel_nama']);
-        $uTopik = (int)($u['topik_id'] ?: $nearestTopikId);
-        $dbsToCheck = (!empty($siakad_db) && $siakad_db !== $core_db) ? [$siakad_db, $core_db] : [$core_db];
-        $freshBs = [];
-        
-        // 1. Prioritaskan pencarian paket spesifik di bs_paket untuk jenjang kelas siswa ini
-        foreach ($dbsToCheck as $targetDb) {
-            $stmtAllPaket = $targetDb->prepare("
-                SELECT id, kelas_nama, kelas_sasaran FROM bs_paket 
-                WHERE (topik_id = ? OR ? = 0)
-                  AND (mapel_nama = ? OR mapel_nama LIKE ?)
-                ORDER BY id ASC
-            ");
-            $stmtAllPaket->execute([$uTopik, $uTopik, $cleanMapel, '%' . $cleanMapel . '%']);
-            $allPkts = $stmtAllPaket->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($allPkts as $pkt) {
-                $pLvl = $getLevel($pkt['kelas_nama'] . ' ' . ($pkt['kelas_sasaran'] ?? ''));
-                if ($pLvl === $uLvl || $uLvl === 0) {
-                    $stmtBS = $targetDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
-                    $stmtBS->execute([$pkt['id']]);
-                    $rows = $stmtBS->fetchAll(PDO::FETCH_ASSOC);
-                    if (!empty($rows)) {
-                        $freshBs = $rows;
-                        break 2;
-                    }
-                }
-            }
-        }
-
-        // 2. Fallback jika tidak lewat bs_paket: ambil dari bs_soal dengan filter level yang sama persis
-        if (empty($freshBs)) {
-            foreach ($dbsToCheck as $targetDb) {
-                $stmtAllSoal = $targetDb->prepare("
-                    SELECT * FROM bs_soal 
-                    WHERE (topik_id = ? OR ? = 0)
-                      AND (mapel_nama = ? OR mapel_nama LIKE ?)
-                    ORDER BY nomor_urut ASC, id ASC
-                ");
-                $stmtAllSoal->execute([$uTopik, $uTopik, $cleanMapel, '%' . $cleanMapel . '%']);
-                $allSoals = $stmtAllSoal->fetchAll(PDO::FETCH_ASSOC);
-                $matched = [];
-                foreach ($allSoals as $sRow) {
-                    $sLvl = $getLevel($sRow['kelas_nama']);
-                    if ($sLvl === $uLvl || $uLvl === 0) {
-                        $matched[] = $sRow;
-                    }
-                }
-                if (!empty($matched)) {
-                    $freshBs = $matched;
-                    break;
-                }
-            }
-        }
-
-        if (!empty($freshBs)) {
-            $bsCount = count($freshBs);
-            if ((int)$u['total_soal'] === 0 || (int)$u['total_soal'] !== $bsCount) {
-                $core_db->prepare("DELETE FROM cbt_soal WHERE ujian_id = ?")->execute([$u['id']]);
-                $stmtInsSoal = $core_db->prepare("
-                    INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ");
-                $noS = 1;
-                foreach ($freshBs as $fb) {
-                    $stmtInsSoal->execute([
-                        $u['id'],
-                        $noS++,
-                        $fb['pertanyaan'],
-                        $fb['opsi_a'] ?? '',
-                        $fb['opsi_b'] ?? '',
-                        $fb['opsi_c'] ?? '',
-                        $fb['opsi_d'] ?? '',
-                        $fb['opsi_e'] ?? '',
-                        $fb['kunci_jawaban'] ?? 'A',
-                        $fb['skor_maksimal'] ?? 10.00,
-                        $fb['tipe_soal'] ?? 'sec_pg',
-                        $fb['konten_tambahan'] ?? null
-                    ]);
-                }
-                $u['total_soal'] = $bsCount;
+        if (class_exists('\App\Controllers\CbtController')) {
+            $synced = \App\Controllers\CbtController::syncExamSoalFromBankSoal($core_db, $siakad_db ?? $core_db, $u);
+            if ($synced) {
+                $stmtCnt = $core_db->prepare("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = ?");
+                $stmtCnt->execute([$u['id']]);
+                $u['total_soal'] = (int)$stmtCnt->fetchColumn();
             }
         }
     } catch (\Throwable $e) {}
