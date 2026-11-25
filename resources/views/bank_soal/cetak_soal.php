@@ -629,7 +629,10 @@ function renderKontenTeks($str) {
                         <?php elseif ($tipe === 'sec_bs'): ?>
                             <?php 
                             $kData = json_decode($s['konten_tambahan'] ?? '{}', true) ?: [];
-                            $butir = $kData['butir'] ?? [];
+                            $butir = $kData['butir'] ?? ($kData['pernyataan'] ?? ($kData['items'] ?? []));
+                            if (empty($butir) && is_array($kData) && isset($kData[0])) {
+                                $butir = $kData;
+                            }
                             ?>
                             <?php if (!empty($butir)): ?>
                                 <table style="width: 100%; border-collapse: collapse; margin: 8px 0 12px 0; font-size: 9pt;">
@@ -641,9 +644,11 @@ function renderKontenTeks($str) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($butir as $bIdx => $b): ?>
+                                        <?php foreach ($butir as $bIdx => $b): 
+                                            $bTeks = is_array($b) ? ($b['teks'] ?? ($b['pernyataan'] ?? ($b['text'] ?? ($b['label'] ?? '')))) : (string)$b;
+                                        ?>
                                             <tr>
-                                                <td style="border: 1px solid #e2e8f0; padding: 6px 10px;"><?= ($bIdx + 1) ?>. <?= renderKontenTeks($b['pernyataan'] ?? '') ?></td>
+                                                <td style="border: 1px solid #e2e8f0; padding: 6px 10px;"><?= ($bIdx + 1) ?>. <?= renderKontenTeks($bTeks) ?></td>
                                                 <td style="border: 1px solid #e2e8f0; text-align: center; color: #64748b;">[ &nbsp; ]</td>
                                                 <td style="border: 1px solid #e2e8f0; text-align: center; color: #64748b;">[ &nbsp; ]</td>
                                             </tr>
