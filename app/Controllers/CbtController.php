@@ -4174,8 +4174,12 @@ class CbtController {
                         $totalStmt = count($kValues);
                         $matchedStmt = 0;
                         foreach ($kValues as $bIdx => $expRaw) {
+                            if (is_array($expRaw)) {
+                                $expRaw = $expRaw['kunci'] ?? ($expRaw['jawaban'] ?? '');
+                            }
                             $expVal = strtoupper(trim((string)$expRaw));
-                            $usrVal = strtoupper(trim((string)($userAnsRaw[$bIdx] ?? '')));
+                            $uRawVal = $userAnsRaw[$bIdx] ?? '';
+                            $usrVal = is_array($uRawVal) ? '' : strtoupper(trim((string)$uRawVal));
                             if ($usrVal !== '' && $usrVal === $expVal) {
                                 $matchedStmt++;
                             }
@@ -4201,7 +4205,10 @@ class CbtController {
                         if (!empty($s['konten_tambahan'])) {
                             $kdOpt = json_decode((string)$s['konten_tambahan'], true);
                             if (is_array($kdOpt) && !empty($kdOpt['opsi']) && is_array($kdOpt['opsi'])) {
-                                $availCount = count(array_filter($kdOpt['opsi'], function($v) { return trim((string)$v) !== ''; }));
+                                $availCount = count(array_filter($kdOpt['opsi'], function($v) {
+                                    if (is_array($v)) return !empty($v);
+                                    return trim((string)$v) !== '';
+                                }));
                             }
                         }
                         if ($availCount <= 0) {
