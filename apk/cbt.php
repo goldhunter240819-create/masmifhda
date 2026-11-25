@@ -386,7 +386,7 @@ try {
             $mKeyNorm = 'bahasa arab';
         } elseif (strpos($mRaw, 'biologi') !== false) {
             $mKeyNorm = 'biologi';
-        } elseif (strpos($mRaw, 'matematika') !== false) {
+        } elseif ($mRaw === 'matematika') {
             $mKeyNorm = 'matematika';
         } else {
             $mKeyNorm = $mRaw;
@@ -560,11 +560,12 @@ foreach ($ujianListRaw as $u) {
     // 0. Seragamkan format nama ujian mengikuti topik aktif: [Topik] - [Mapel] ([Kelas/Tingkat])
     if (!empty($u['nama_topik'])) {
         $curTopikName = trim($u['nama_topik']);
-        if (stripos($u['nama_ujian'], 'Simulasi ') === 0 || stripos($u['nama_ujian'], $curTopikName) === false) {
+        $curMapelDisp = trim($u['mapel_nama'] ?? '');
+        if (stripos($u['nama_ujian'], 'Simulasi ') === 0 || stripos($u['nama_ujian'], $curTopikName) === false || ($curMapelDisp !== '' && stripos($u['nama_ujian'], $curMapelDisp) === false)) {
             $klsDisplay = ($u['kelas_nama'] === $siswa['nama_kelas'] || in_array($u['kelas_nama'], [$tingkat_kelas, $short_tingkat])) 
                 ? $u['kelas_nama'] 
                 : ($siswa['nama_kelas'] ?? $tingkat_kelas);
-            $u['nama_ujian'] = $curTopikName . ' - ' . $u['mapel_nama'] . ' (' . $klsDisplay . ')';
+            $u['nama_ujian'] = $curTopikName . ' - ' . $curMapelDisp . ' (' . $klsDisplay . ')';
         }
     }
     // 0a. Normalisasi Kode Ujian jika ada tertukar prefix
