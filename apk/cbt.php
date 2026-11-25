@@ -16,7 +16,7 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 $isAdminPreview = false;
 if (!empty($_GET['admin_preview']) && $_GET['admin_preview'] == '1' && !empty($_SESSION['user_id'])) {
     $admRoleId = (int)($_SESSION['role_id'] ?? 0);
-    if (in_array($admRoleId, [1, 2, 4, 99], true) || !empty($_SESSION['username'])) {
+    if (in_array($admRoleId, [1, 2, 4, 99], true) && empty($_SESSION['siswa_id']) && empty($_SESSION['is_cbt_only'])) {
         $isAdminPreview = true;
     }
 }
