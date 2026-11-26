@@ -911,10 +911,20 @@ $ujianTerlewatHariIni = [];
 $ujianLainnya = [];
 
 foreach ($allEvaluatedUjian as $u) {
-    if ($u['status_pengerjaan'] === 'Selesai' || (float)($u['nilai_akhir'] ?? 0) > 0 || !empty($u['waktu_selesai'])) {
+    $isActiveMengerjakan = in_array($u['status_pengerjaan'] ?? '', ['Mengerjakan', 'Sedang Mengerjakan']) && empty($u['waktu_selesai']);
+    if (!$isActiveMengerjakan && ($u['status_pengerjaan'] === 'Selesai' || (float)($u['nilai_akhir'] ?? 0) > 0 || !empty($u['waktu_selesai']))) {
         continue;
     }
-    if (!empty($u['is_hari_ini'])) {
+    if ($isActiveMengerjakan) {
+        // Ujian yang sedang aktif dikerjakan / baru dibuka kembali oleh Admin wajib tampil di atas dan bisa langsung dilanjutkan
+        $u['can_take'] = true;
+        $u['has_absen'] = true;
+        $u['schedule_state'] = 'open';
+        if (empty($u['is_hari_ini'])) {
+            $u['schedule_notice'] = 'Akses Ujian Dibuka Admin (Lanjutkan Pengerjaan)';
+        }
+        $ujianHariIni[] = $u;
+    } elseif (!empty($u['is_hari_ini'])) {
         // Seluruh paket ujian yang dijadwalkan HARI INI dan belum selesai TETAP TAMPIL di "Paket Ujian Hari Ini"
         $ujianHariIni[] = $u;
     } else {
@@ -1758,7 +1768,7 @@ include 'header.php';
     <?php else: ?>
         <?php foreach ($ujianHariIni as $u): ?>
             <?php
-            $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']) && ($u['status_pengerjaan'] !== 'Selesai') && ((float)($u['nilai_akhir'] ?? 0) <= 0) && empty($u['waktu_selesai']);
+            $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']) && empty($u['waktu_selesai']);
             $durasi = (int)($u['durasi_menit'] ?? 90);
             $totalSoal = (int)($u['total_soal'] ?? 0);
             $kkm = (int)($u['kkm'] ?? 75);

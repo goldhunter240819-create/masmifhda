@@ -3695,11 +3695,38 @@ class CbtController {
         $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
         $isCbtOnly = !empty($_SESSION['is_cbt_only']);
 
+        // Cek Kebijakan Kunci Jadwal (Schedule Window Guard) & Absensi
+        // Jika peserta sudah memiliki sesi aktif ('Mengerjakan'/'Sedang Mengerjakan' dan waktu_selesai IS NULL),
+        // misalnya karena baru di-"Buka Ujian" oleh Admin, izinkan langsung melanjutkan tanpa terblokir jadwal/absen hari ini.
+        $isAlreadyActivePeserta = false;
+        if ($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0) {
+            try {
+                if ($isCbtOnly || $roleId === 7) {
+                    $stK0 = $db->prepare("SELECT no_peserta, nis FROM cbt_peserta_khusus WHERE id = ? LIMIT 1");
+                    $stK0->execute([$siswaSessionId]);
+                    $rK0 = $stK0->fetch(PDO::FETCH_ASSOC);
+                    $noP0 = $rK0['no_peserta'] ?: ($rK0['nis'] ?: ('KJ-' . $siswaSessionId));
+                    $stP0 = $db->prepare("SELECT id FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (nis = ? AND ? != '')) AND status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan') AND waktu_selesai IS NULL LIMIT 1");
+                    $stP0->execute([$ujian_id, $noP0, $rK0['nis'] ?? '', $rK0['nis'] ?? '']);
+                    $isAlreadyActivePeserta = (bool)$stP0->fetchColumn();
+                } else {
+                    $stS0 = $db->prepare("SELECT id, nis FROM siswa WHERE (user_id = ? AND ? > 0) OR (id = ? AND ? > 0) LIMIT 1");
+                    $stS0->execute([$userId, $userId, $siswaSessionId, $siswaSessionId]);
+                    $rS0 = $stS0->fetch(PDO::FETCH_ASSOC);
+                    $swId0 = (int)($rS0['id'] ?? $siswaSessionId);
+                    $swNis0 = (string)($rS0['nis'] ?? '');
+                    $stP0 = $db->prepare("SELECT id FROM cbt_peserta WHERE ujian_id = ? AND ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != '')) AND status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan') AND waktu_selesai IS NULL LIMIT 1");
+                    $stP0->execute([$ujian_id, $swId0 ?: -1, $swNis0, $swNis0]);
+                    $isAlreadyActivePeserta = (bool)$stP0->fetchColumn();
+                }
+            } catch (\Throwable $e) {}
+        }
+
         // Cek Kebijakan Kunci Jadwal (Schedule Window Guard)
         $cbtSettings = self::getAllPengaturan($db);
         $lockSchedule = ($cbtSettings['lock_by_schedule_time'] ?? '1') === '1';
 
-        if ($lockSchedule && ($roleId === 3 || $roleId === 7 || $isCbtOnly)) {
+        if (!$isAlreadyActivePeserta && $lockSchedule && ($roleId === 3 || $roleId === 7 || $isCbtOnly)) {
             $nowTs = time();
             $todayDate = date('Y-m-d');
             $hariIndo = ['Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'];
@@ -3814,7 +3841,7 @@ class CbtController {
 
         // Security Guard: Wajib Absensi Per-Mata Pelajaran / Sesi (Anti-Kerjakan Tanpa Scan)
         $requireAttendance = ($cbtSettings['require_cbt_attendance'] ?? '0') === '1';
-        if ($requireAttendance && ($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0)) {
+        if (!$isAlreadyActivePeserta && $requireAttendance && ($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0)) {
             $hasAbsenForThisMapel = false;
             $apkCbtRedirectUrl = function_exists('base_url') ? base_url('apk/cbt.php') : ((strpos($_SERVER['REQUEST_URI'] ?? '', '/cbt/') !== false) ? '/cbt/apk/cbt.php' : '/apk/cbt.php');
 
