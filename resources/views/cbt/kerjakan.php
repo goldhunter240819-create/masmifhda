@@ -3387,10 +3387,10 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
         }, { passive: false });
 
-        // Blokir tombol PrintScreen & shortcut screenshot keyboard
+        // Blokir tombol PrintScreen & shortcut screenshot keyboard (hanya saat Anti-Cheat aktif)
         window.addEventListener('keyup', function(e) {
+            if (!isAntiCheat || isExamSubmitted) return;
             if (e.key === 'PrintScreen' || e.keyCode === 44) {
-                try { navigator.clipboard.writeText(''); } catch(err) {}
                 activateSecurityShield('Tombol PrintScreen / Screenshot');
                 handleTabViolation('Menekan Tombol Screenshot');
             }

@@ -3925,10 +3925,10 @@ class CbtController {
             }
         }
 
-        // Jika Pengawas/Guru melakukan uji coba CBT
+        // Jika Pengawas/Guru melakukan uji coba CBT atau Pratinjau Admin
         if (!$pesertaInfo) {
             $sessKeyWaktu = 'cbt_trial_waktu_mulai_' . $ujian_id;
-            if (empty($_SESSION[$sessKeyWaktu])) {
+            if (!empty($ujianInfo['is_simulasi']) || empty($_SESSION[$sessKeyWaktu])) {
                 $_SESSION[$sessKeyWaktu] = date('Y-m-d H:i:s');
             }
             $pesertaInfo = [
