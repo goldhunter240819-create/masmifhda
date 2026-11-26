@@ -1276,9 +1276,14 @@ $router->add('GET', '/api/guru/siswa-kelas', [\App\Controllers\PortalGuruPribadi
 // Nilai Harian
 $router->add('GET', '/guru/nilai_harian', [\App\Controllers\PortalGuruNilaiHarianController::class, 'index']);
 $router->add('POST', '/guru/nilai_harian', [\App\Controllers\PortalGuruNilaiHarianController::class, 'index']); // For form submissions or filters
+$router->add('POST', '/guru/nilai_harian/store_new', [\App\Controllers\PortalGuruNilaiHarianController::class, 'storeNew']);
 $router->add('POST', '/guru/nilai_harian/save', [\App\Controllers\PortalGuruNilaiHarianController::class, 'save']);
 $router->add('GET', '/guru/nilai_harian/delete/{id}', [\App\Controllers\PortalGuruNilaiHarianController::class, 'delete']);
 $router->add('GET', '/guru/nilai_harian/detail/{id}', [\App\Controllers\PortalGuruNilaiHarianController::class, 'detail']);
+$router->add('POST', '/guru/nilai_harian/update', [\App\Controllers\PortalGuruNilaiHarianController::class, 'update']);
+$router->add('GET', '/guru/nilai_harian/rekap_detail', [\App\Controllers\PortalGuruNilaiHarianController::class, 'rekapDetail']);
+$router->add('GET', '/guru/nilai_harian/cetak_rekap', [\App\Controllers\PortalGuruNilaiHarianController::class, 'cetakRekap']);
+$router->add('GET', '/guru/nilai_harian/cetak_blanko', [\App\Controllers\PortalGuruNilaiHarianController::class, 'cetakBlanko']);
 
 // Tugas Tambahan - Pembina Ekstra
 $router->add('GET', '/guru/tugas_tambahan/pembina_ekstra', [\App\Controllers\PortalGuruEkstraController::class, 'index']);
