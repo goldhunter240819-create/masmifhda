@@ -246,8 +246,10 @@ $active_menu = 'hasil';
                             </tr>
                             <?php else: ?>
                                 <?php $no = 1; foreach($displayList as $p): 
-                                    $isSelesai = ($p['status_pengerjaan'] === 'Selesai');
-                                    $isTuntas = ($isSelesai && $p['nilai_akhir'] >= $kkmUjian);
+                                    $stPengerjaan = $p['status_pengerjaan'] ?? 'Belum Mengerjakan';
+                                    $isSelesai = ($stPengerjaan === 'Selesai');
+                                    $isSedangUjian = in_array($stPengerjaan, ['Mengerjakan', 'Sedang Mengerjakan']);
+                                    $isTerkunci = in_array($stPengerjaan, ['Terkunci', 'Pelanggaran']);
                                     $benar = (int)($p['jumlah_benar'] ?? 0);
                                     $salah = (int)($p['jumlah_salah'] ?? 0);
                                     $tidakJawab = (int)($p['jumlah_tidak_jawab'] ?? 0);
@@ -256,6 +258,9 @@ $active_menu = 'hasil';
                                     if ($tidakJawab == 0 && ($benar + $salah) < $totalSoal) {
                                         $tidakJawab = $totalSoal - ($benar + $salah);
                                     }
+                                    $hasScores = (!empty($p['jawaban_json']) || (float)($p['nilai_akhir'] ?? 0) > 0 || $benar > 0 || $salah > 0);
+                                    $canShowScore = ($isSelesai || ($isSedangUjian && $hasScores));
+                                    $isTuntas = ($canShowScore && (float)$p['nilai_akhir'] >= $kkmUjian);
                                 ?>
                                 <tr>
                                     <td style="color: #94a3b8; font-weight: 600;"><?php echo $no++; ?></td>
@@ -315,6 +320,14 @@ $active_menu = 'hasil';
                                         <?php if ($isSelesai): ?>
                                         <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 6px; <?php echo $isTuntas ? 'background:#dcfce7;color:#15803d;' : 'background:#fee2e2;color:#b91c1c;'; ?>">
                                             <?php echo $isTuntas ? 'Tuntas' : 'Remedial'; ?>
+                                        </span>
+                                        <?php elseif ($isSedangUjian): ?>
+                                        <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+                                            <?php echo $hasScores ? 'Sedang Ujian' : 'Mengerjakan'; ?>
+                                        </span>
+                                        <?php elseif ($isTerkunci): ?>
+                                        <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;">
+                                            Terkunci
                                         </span>
                                         <?php else: ?>
                                         <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b;">
