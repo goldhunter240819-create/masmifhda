@@ -2704,6 +2704,7 @@ class CbtController {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
         $db_siakad = $ctx['db_siakad'] ?? $db;
+        self::recoverAccidentalReopenedSelesai($db);
 
         $isAjax = (!empty($_GET['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'));
         if (!$isAjax) {
@@ -4390,12 +4391,68 @@ class CbtController {
     }
 
     /**
+     * Pulihkan otomatis status 'Selesai' & nilai bagi peserta yang sempat ikut terbuka akibat Buka Semua Kunci
+     */
+    public static function recoverAccidentalReopenedSelesai($db) {
+        try {
+            $rows = $db->query("
+                SELECT id, ujian_id, jawaban_json 
+                FROM cbt_peserta 
+                WHERE status_pengerjaan = 'Mengerjakan' 
+                  AND reset_count > 0 
+                  AND waktu_mulai <= '2026-11-26 08:35:00'
+                  AND jawaban_json LIKE '%\"submitted_at\"%'
+                LIMIT 500
+            ")->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($rows)) return 0;
+
+            $soalCache = [];
+            $restored = 0;
+            $stmtUp = $db->prepare("
+                UPDATE cbt_peserta 
+                SET status_pengerjaan = 'Selesai',
+                    waktu_selesai = COALESCE(?, NOW()),
+                    jumlah_benar = ?,
+                    jumlah_salah = ?,
+                    jumlah_tidak_jawab = ?,
+                    nilai_akhir = ?
+                WHERE id = ?
+            ");
+            foreach ($rows as $r) {
+                $jDec = json_decode((string)$r['jawaban_json'], true);
+                if (!is_array($jDec) || empty($jDec['submitted_at'])) continue;
+                $uId = (int)$r['ujian_id'];
+                if (!isset($soalCache[$uId])) {
+                    $stS = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stS->execute([$uId]);
+                    $soalCache[$uId] = $stS->fetchAll(PDO::FETCH_ASSOC);
+                }
+                if (empty($soalCache[$uId])) continue;
+                $eval = self::evaluatePesertaAnswers($soalCache[$uId], $jDec);
+                $stmtUp->execute([
+                    $jDec['submitted_at'],
+                    $eval['jumlahBenar'],
+                    $eval['jumlahSalah'],
+                    $eval['jumlahTidakJawab'],
+                    $eval['nilaiAkhir'],
+                    $r['id']
+                ]);
+                $restored++;
+            }
+            return $restored;
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
      * Halaman Pengaturan CBT & Keamanan Anti-Cheat
      */
     public static function pengaturan() {
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
         self::ensureTables($db);
+        self::recoverAccidentalReopenedSelesai($db);
 
         // Ambil semua pengaturan
         $stmt = $db->query("SELECT setting_key, setting_value, kategori, keterangan FROM cbt_pengaturan ORDER BY id ASC");
@@ -4565,12 +4622,11 @@ class CbtController {
                                             WHERE id = ?");
                     $stmt->execute([$peserta_id]);
                 } else {
-                    // Default: Lanjutkan ujian (mempertahankan jawaban yang sudah tersimpan, reset nilai_akhir agar tidak langsung ter-redirect ke selesai)
+                    // Default: Lanjutkan ujian (mempertahankan jawaban & nilai lama sampai siswa submit ulang)
                     $stmt = $db->prepare("UPDATE cbt_peserta 
                                             SET status_pengerjaan = 'Mengerjakan', 
                                                 waktu_selesai = NULL, 
                                                 waktu_mulai = NOW(),
-                                                nilai_akhir = 0.00,
                                                 reset_count = COALESCE(reset_count, 0) + 1,
                                                 violation_count = 0
                                             WHERE id = ?");
@@ -4607,19 +4663,25 @@ class CbtController {
             $tanggal = !empty($_POST['tanggal']) ? trim($_POST['tanggal']) : date('Y-m-d');
             $mode = $_POST['mode'] ?? 'lanjutkan'; // 'lanjutkan' (simpan jawaban) atau 'ulang'
 
+            $includeSelesai = ($ujian_id > 0 && !empty($_POST['include_selesai']));
+
             $sql = "UPDATE cbt_peserta 
                     SET status_pengerjaan = 'Mengerjakan', 
                         waktu_selesai = NULL, 
                         waktu_mulai = NOW(), 
-                        nilai_akhir = 0.00,
                         reset_count = COALESCE(reset_count, 0) + 1, 
                         violation_count = 0";
             
             if ($mode === 'ulang') {
-                $sql .= ", jumlah_benar = 0, jumlah_salah = 0, jawaban_json = NULL";
+                $sql .= ", nilai_akhir = 0.00, jumlah_benar = 0, jumlah_salah = 0, jawaban_json = NULL";
             }
 
-            $sql .= " WHERE status_pengerjaan IN ('Selesai', 'Terkunci', 'Pelanggaran', 'Sedang Mengerjakan')";
+            // Buka Semua Kunci hanya membuka siswa yang Terkunci / Pelanggaran (JANGAN sentuh yang sudah Selesai!)
+            if ($includeSelesai) {
+                $sql .= " WHERE status_pengerjaan IN ('Selesai', 'Terkunci', 'Pelanggaran')";
+            } else {
+                $sql .= " WHERE status_pengerjaan IN ('Terkunci', 'Pelanggaran')";
+            }
 
             $params = [];
             if ($ujian_id > 0) {
