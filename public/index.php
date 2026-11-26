@@ -2563,6 +2563,7 @@ $router->add('GET', '/cbt/analisis', [\App\Controllers\CbtController::class, 'an
 $router->add('GET', '/cbt/pengaturan', [\App\Controllers\CbtController::class, 'pengaturan']);
 $router->add('POST', '/cbt/pengaturan/save', [\App\Controllers\CbtController::class, 'savePengaturan']);
 $router->add('POST', '/cbt/pengaturan/reset-siswa', [\App\Controllers\CbtController::class, 'resetSiswaTerkunci']);
+$router->add('POST', '/cbt/pengaturan/selesaikan-semua', [\App\Controllers\CbtController::class, 'selesaikanSemuaMenggantung']);
 $router->add('POST', '/cbt/pengaturan/reset-default', [\App\Controllers\CbtController::class, 'resetDefaultPengaturan']);
 $router->add('GET', '/cbt/peserta_khusus', [\App\Controllers\CbtController::class, 'pesertaKhusus']);
 $router->add('POST', '/cbt/peserta_khusus/save', [\App\Controllers\CbtController::class, 'savePesertaKhusus']);

@@ -383,6 +383,33 @@ try {
                   AND (p1.jawaban_json IS NULL OR p1.jawaban_json = '')
                   AND (p2.nilai_akhir > 0 OR (p2.jawaban_json IS NOT NULL AND p2.jawaban_json != ''))
             ");
+
+            // 3.11b-2 Selesaikan semua peserta yang masih Mengerjakan / Terkunci / Pelanggaran dari Senin (2026-11-23) s/d Kamis (2026-11-26)
+            $hangingRows = $dbCore->query("
+                SELECT id, ujian_id, jawaban_json
+                FROM cbt_peserta
+                WHERE status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Terkunci', 'Pelanggaran')
+                  AND DATE(COALESCE(waktu_selesai, waktu_mulai, created_at)) BETWEEN '2026-11-23' AND '2026-11-26'
+            ")->fetchAll(PDO::FETCH_ASSOC);
+            $finalizedCnt = 0;
+            if (!empty($hangingRows)) {
+                $stFin = $dbCore->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Selesai', waktu_selesai = COALESCE(waktu_selesai, NOW()), jumlah_benar = ?, jumlah_salah = ?, jumlah_tidak_jawab = ?, nilai_akhir = ?, violation_count = 0 WHERE id = ?");
+                foreach ($hangingRows as $hr) {
+                    $uId = (int)$hr['ujian_id'];
+                    if (!isset($soalCacheWebhook[$uId])) {
+                        $stS = $dbCore->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+                        $stS->execute([$uId]);
+                        $soalCacheWebhook[$uId] = $stS->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                    $soals = $soalCacheWebhook[$uId] ?? [];
+                    $eval = (!empty($soals) && class_exists('\App\Controllers\CbtController'))
+                        ? \App\Controllers\CbtController::evaluatePesertaAnswers($soals, $hr['jawaban_json'] ?? '')
+                        : ['jumlahBenar' => 0, 'jumlahSalah' => 0, 'jumlahTidakJawab' => 0, 'nilaiAkhir' => 0];
+                    $stFin->execute([$eval['jumlahBenar'], $eval['jumlahSalah'], $eval['jumlahTidakJawab'], $eval['nilaiAkhir'], $hr['id']]);
+                    $finalizedCnt++;
+                }
+            }
+            $output .= "Finalisasi sesi menggantung/pelanggaran (23-26 Nov 2026): {$finalizedCnt} peserta diselesaikan.\n";
         } catch (\Throwable $e) {
             $output .= "Gagal hitung ulang nilai: " . $e->getMessage() . "\n";
         }

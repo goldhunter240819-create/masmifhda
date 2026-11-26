@@ -4650,6 +4650,64 @@ class CbtController {
     }
 
     /**
+     * Selesaikan & Evaluasi Semua Peserta Menggantung / Terkunci / Pelanggaran (S/D Hari Ini)
+     */
+    public static function selesaikanSemuaMenggantung() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $countDone = 0;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $rows = $db->query("
+                SELECT id, ujian_id, jawaban_json, waktu_mulai, created_at
+                FROM cbt_peserta
+                WHERE status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan', 'Terkunci', 'Pelanggaran')
+                  AND DATE(COALESCE(waktu_selesai, waktu_mulai, created_at)) <= CURDATE()
+                ORDER BY id ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            $soalCache = [];
+            $stmtUp = $db->prepare("
+                UPDATE cbt_peserta
+                SET status_pengerjaan = 'Selesai',
+                    waktu_selesai = COALESCE(waktu_selesai, NOW()),
+                    jumlah_benar = ?,
+                    jumlah_salah = ?,
+                    jumlah_tidak_jawab = ?,
+                    nilai_akhir = ?,
+                    violation_count = 0
+                WHERE id = ?
+            ");
+
+            foreach ($rows as $r) {
+                $uId = (int)$r['ujian_id'];
+                if (!isset($soalCache[$uId])) {
+                    $stS = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stS->execute([$uId]);
+                    $soalCache[$uId] = $stS->fetchAll(PDO::FETCH_ASSOC);
+                }
+                $soals = $soalCache[$uId] ?? [];
+                $eval = !empty($soals)
+                    ? self::evaluatePesertaAnswers($soals, $r['jawaban_json'] ?? '')
+                    : ['jumlahBenar' => 0, 'jumlahSalah' => 0, 'jumlahTidakJawab' => 0, 'nilaiAkhir' => 0];
+
+                $stmtUp->execute([
+                    $eval['jumlahBenar'],
+                    $eval['jumlahSalah'],
+                    $eval['jumlahTidakJawab'],
+                    $eval['nilaiAkhir'],
+                    $r['id']
+                ]);
+                $countDone++;
+            }
+            redirect('/cbt/pengaturan?finalized_all=' . $countDone);
+            exit;
+        }
+        redirect('/cbt/pengaturan');
+    }
+
+    /**
      * Buka Ujian Kembali / Izinkan Siswa Melanjutkan atau Mengulang Ujian
      * Digunakan ketika siswa ter-auto-submit karena 3x pelanggaran keluar tab, salah kirim, atau kendala jaringan.
      */

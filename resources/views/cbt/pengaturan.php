@@ -65,6 +65,16 @@ $listTerkunci = $listTerkunci ?? [];
             </div>
             <?php endif; ?>
 
+            <?php if (isset($_GET['finalized_all'])): ?>
+            <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(34,197,94,0.1);">
+                <i data-lucide="check-circle-2" style="width: 22px; height: 22px; color: #16a34a; flex-shrink: 0;"></i>
+                <div>
+                    <div style="font-size: 0.95rem;">Berhasil Menyelesaikan <?php echo (int)$_GET['finalized_all']; ?> Sesi Ujian Menggantung!</div>
+                    <div style="font-size: 0.82rem; font-weight: 500; color: #15803d; margin-top: 2px;">Seluruh siswa yang masih berstatus Mengerjakan, Terkunci, atau Pelanggaran s/d hari ini telah dinilai dan diubah menjadi Selesai.</div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <?php if (isset($_GET['reset'])): ?>
             <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 14px 20px; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-weight: 700;">
                 <i data-lucide="refresh-cw" style="width: 22px; height: 22px; color: #ef4444; flex-shrink: 0;"></i>
@@ -699,14 +709,21 @@ $listTerkunci = $listTerkunci ?? [];
                             <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Siswa yang pengerjaannya dibekukan oleh sistem anti-cheat.</p>
                         </div>
 
-                        <?php if (!empty($listTerkunci)): ?>
-                        <form method="POST" action="<?php echo base_url('cbt/pengaturan/reset-siswa'); ?>" onsubmit="return confirm('Buka kunci untuk SEMUA siswa yang terkunci?')">
-                            <input type="hidden" name="peserta_id" value="0">
-                            <button type="submit" class="e-btn e-btn-primary" style="background: #22c55e; border: none; padding: 8px 18px;">
-                                <i data-lucide="unlock"></i> Buka Kunci Semua Siswa
-                            </button>
-                        </form>
-                        <?php endif; ?>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <form method="POST" action="<?php echo base_url('cbt/pengaturan/selesaikan-semua'); ?>" onsubmit="return confirm('Selesaikan & nilai semua siswa yang masih berstatus Mengerjakan, Terkunci, atau Pelanggaran sampai hari ini?')">
+                                <button type="submit" class="e-btn e-btn-primary" style="background: #0284c7; border: none; padding: 8px 16px;">
+                                    <i data-lucide="check-check"></i> Selesaikan Semua S/D Hari Ini
+                                </button>
+                            </form>
+                            <?php if (!empty($listTerkunci)): ?>
+                            <form method="POST" action="<?php echo base_url('cbt/pengaturan/reset-siswa'); ?>" onsubmit="return confirm('Buka kunci untuk SEMUA siswa yang terkunci?')">
+                                <input type="hidden" name="peserta_id" value="0">
+                                <button type="submit" class="e-btn e-btn-primary" style="background: #22c55e; border: none; padding: 8px 18px;">
+                                    <i data-lucide="unlock"></i> Buka Kunci Semua Siswa
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <?php if (!empty($listTerkunci)): ?>

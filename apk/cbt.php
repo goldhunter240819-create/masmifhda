@@ -139,12 +139,8 @@ $is_standalone_env = !$is_online_server && (
 );
 $activeTab = $_GET['tab'] ?? 'beranda';
 
-// Proteksi: Siswa reguler hanya diizinkan ujian offline di Laboratorium Komputer Madrasah
+// Menu CBT dapat diakses oleh seluruh siswa (Reguler & Kelas Jauh)
 $is_kelas_jauh = $is_cbt_only || (isset($siswa['nama_kelas']) && stripos($siswa['nama_kelas'], 'jauh') !== false);
-if (!$isAdminPreview && $is_online_server && !$is_kelas_jauh) {
-    header("Location: aplikasi_siswa.php?msg=offline_only");
-    exit;
-}
 
 // Self Check-in / Verifikasi Presensi Mandiri
 if (isset($_GET['self_checkin'])) {
