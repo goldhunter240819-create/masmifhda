@@ -24,7 +24,7 @@ $showScore = ($settings['show_score_to_student'] ?? '1') === '1';
 $showDiscussion = ($settings['show_discussion_to_student'] ?? '0') === '1';
 $allowReview = ($settings['allow_student_review'] ?? '1') === '1';
 $requireAllAnswered = ($settings['require_all_answered_no_doubt'] ?? '1') === '1';
-$minSubmitPercent = (int)($settings['min_submit_percent'] ?? 50);
+$minSubmitPercent = (int)($settings['min_submit_percent'] ?? 80);
 $navDelaySeconds = (int)($settings['nav_delay_seconds'] ?? 10);
 $requireAttendance = ($settings['require_cbt_attendance'] ?? '0') === '1';
 $tokenMode = $settings['token_mode'] ?? 'manual';
@@ -608,7 +608,7 @@ $listTerkunci = $listTerkunci ?? [];
                                         <div class="setting-icon bg-indigo"><i data-lucide="hourglass"></i></div>
                                         <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Minimal Waktu Sebelum Submit (%)</div>
                                     </div>
-                                    <p class="setting-desc">Siswa belum dapat mengklik tombol <b>Selesai Ujian</b> sebelum waktu berjalan mencapai persentase ini dari durasi ujian (Default: <code>50%</code>, misal ujian 50 menit = 25 menit; 60 menit = 30 menit). Isi <code>0</code> agar bebas.</p>
+                                    <p class="setting-desc">Siswa belum dapat mengklik tombol <b>Selesai Ujian</b> sebelum waktu berjalan mencapai persentase ini dari durasi ujian (Default: <code>80%</code>, misal ujian 60 menit = 48 menit; 50 menit = 40 menit). Isi <code>0</code> agar bebas.</p>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                                     <input type="number" name="settings[min_submit_percent]" min="0" max="95" value="<?php echo $minSubmitPercent; ?>" style="width: 72px; padding: 8px 10px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-weight: 800; text-align: center; font-size: 0.95rem;">

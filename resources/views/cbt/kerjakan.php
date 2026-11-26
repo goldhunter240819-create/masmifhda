@@ -16,7 +16,7 @@ $soundAlarm = $isSimulasi ? false : (($cbtSettings['sound_alarm_on_violation'] ?
 $blockBackButton = $isSimulasi ? false : (($cbtSettings['block_back_button'] ?? '1') === '1');
 $watermark = $isSimulasi ? false : (($cbtSettings['watermark_student_nis'] ?? '1') === '1');
 $requireAllAnswered = ($cbtSettings['require_all_answered_no_doubt'] ?? '1') === '1';
-$minSubmitPercent = $isSimulasi ? 0 : max(0, min(95, (int)($cbtSettings['min_submit_percent'] ?? 50)));
+$minSubmitPercent = $isSimulasi ? 0 : max(0, min(95, (int)($cbtSettings['min_submit_percent'] ?? 80)));
 $navDelaySeconds = $isSimulasi ? 0 : max(0, min(60, (int)($cbtSettings['nav_delay_seconds'] ?? 10)));
 $totalDurasiUjianDetik = max(60, (int)($ujianInfo['durasi_menit'] ?? 90) * 60);
 $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');

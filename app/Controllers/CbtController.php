@@ -338,7 +338,7 @@ class CbtController {
                 ['token_refresh_interval', '120', 'ujian', 'Masa Berlaku Token (Menit)'],
                 ['lock_by_schedule_time', '1', 'aturan', 'Kunci Pengerjaan Sesuai Jadwal (Waktu Sesi)'],
                 ['require_all_answered_no_doubt', '1', 'aturan', 'Wajib Jawab Semua Soal & Bebas Ragu-Ragu Sebelum Selesai'],
-                ['min_submit_percent', '50', 'aturan', 'Minimal Persentase Waktu Pengerjaan Sebelum Submit (%)'],
+                ['min_submit_percent', '80', 'aturan', 'Minimal Persentase Waktu Pengerjaan Sebelum Submit (%)'],
                 ['nav_delay_seconds', '10', 'aturan', 'Jeda Waktu Minimal Pindah Antar Soal (Detik)'],
                 ['institution_name', 'MAS MIFTAHUL HUDA', 'umum', 'Nama Institusi / Madrasah'],
                 ['cbt_app_title', 'CBT Online v2.5 Online', 'umum', 'Label Branding Sistem CBT']
@@ -4340,7 +4340,7 @@ class CbtController {
             $isStudentRole = ($roleIdNow === 3 || $roleIdNow === 7 || !empty($_SESSION['is_cbt_only']));
             if (!$isAutoSubmit && $isStudentRole && $peserta_id > 0) {
                 $cbtCfg = self::getAllPengaturan($db);
-                $minPct = max(0, min(95, (int)($cbtCfg['min_submit_percent'] ?? 50)));
+                $minPct = max(0, min(95, (int)($cbtCfg['min_submit_percent'] ?? 80)));
                 if ($minPct > 0) {
                     $stMeta = $db->prepare("SELECT p.waktu_mulai, u.durasi_menit FROM cbt_peserta p JOIN cbt_ujian u ON u.id = p.ujian_id WHERE p.id = ? LIMIT 1");
                     $stMeta->execute([$peserta_id]);
