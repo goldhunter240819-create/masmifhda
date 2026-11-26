@@ -1345,6 +1345,7 @@ $router->add('POST', '/api/absen_v2/scan_sholat', [\App\Controllers\AbsenV2Contr
 $router->add('GET', '/admin/absen_v2/rekap-harian', [\App\Controllers\AbsenV2Controller::class, 'rekapHarian']);
 $router->add('GET', '/admin/absen_v2/rekap-detail', [\App\Controllers\AbsenV2Controller::class, 'rekapDetail']);
 $router->add('GET', '/admin/absen_v2/rekap-bulanan', [\App\Controllers\AbsenV2Controller::class, 'rekapBulanan']);
+$router->add('GET', '/admin/absen_v2/cetak-panggilan', [\App\Controllers\AbsenV2Controller::class, 'cetakPanggilan']);
 $router->add('GET', '/admin/absen_v2/ketidakhadiran', [\App\Controllers\AbsenV2Controller::class, 'ketidakhadiran']);
 $router->add('GET', '/admin/absen_v2/pengaturan', [\App\Controllers\AbsenV2Controller::class, 'pengaturan']);
 $router->add('POST', '/admin/absen_v2/pengaturan/save', [\App\Controllers\AbsenV2Controller::class, 'savePengaturan']);

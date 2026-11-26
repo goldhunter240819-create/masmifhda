@@ -699,6 +699,95 @@ class AbsenV2Controller {
         include __DIR__ . '/../../resources/views/siakad/layout.php';
     }
 
+    public static function cetakPanggilan() {
+        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
+            redirect('/login');
+            exit;
+        }
+
+        $siswa_id   = intval($_GET['siswa_id'] ?? 0);
+        $start_date = $_GET['start_date'] ?? date('Y-m-01');
+        $end_date   = $_GET['end_date'] ?? date('Y-m-t');
+        $jadwal_panggilan = trim($_GET['jadwal'] ?? '');
+        $jam_panggilan    = trim($_GET['jam'] ?? '08.00 WIB - Selesai');
+        $tempat_panggilan = trim($_GET['tempat'] ?? 'Ruang BK / Kantor Madrasah');
+        $nomor_surat      = trim($_GET['nomor_surat'] ?? '..../MA-MH/BK/' . date('m/Y'));
+
+        if ($siswa_id <= 0) {
+            die("Parameter siswa_id tidak valid.");
+        }
+
+        $db_core   = Database::connect('core');
+        $db_siakad = Database::connect('siakad');
+
+        $active_year = \App\Core\AcademicYear::current();
+        $active_year_name = $active_year ? $active_year['name'] : date('Y') . '/' . (date('Y') + 1);
+
+        $stmt_s = $db_core->prepare("
+            SELECT s.*, COALESCE(k_hist.nama_kelas, k.nama_kelas) as nama_kelas
+            FROM siswa s
+            LEFT JOIN riwayat_kelas_siswa rks ON s.id = rks.siswa_id
+                AND rks.tahun_ajaran_id IN (SELECT id FROM tahun_ajaran WHERE name = ?)
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN kelas k_hist ON rks.kelas_id = k_hist.id
+            WHERE s.id = ?
+            LIMIT 1
+        ");
+        $stmt_s->execute([$active_year_name, $siswa_id]);
+        $siswa = $stmt_s->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$siswa) {
+            die("Data siswa tidak ditemukan.");
+        }
+
+        $holidayMap = self::getKalenderHolidaysMap($db_siakad, $start_date, $end_date);
+        $stmt_det = $db_siakad->prepare("SELECT tanggal, status FROM absensi_siswa WHERE siswa_id = ? AND tanggal >= ? AND tanggal <= ?");
+        $stmt_det->execute([$siswa_id, $start_date, $end_date]);
+        $detail_rows = $stmt_det->fetchAll(\PDO::FETCH_ASSOC);
+
+        $statusByDate = [];
+        foreach ($detail_rows as $row) {
+            $statusByDate[$row['tanggal']] = $row['status'];
+        }
+
+        $today = date('Y-m-d');
+        $rekap = ['Hadir'=>0, 'Sakit'=>0, 'Izin'=>0, 'Alpa'=>0, 'Terlambat'=>0, 'Bolos'=>0];
+        $alpa_bolos_dates = [];
+
+        $curr = strtotime($start_date);
+        $endTs = strtotime($end_date);
+        while ($curr <= $endTs) {
+            $dt = date('Y-m-d', $curr);
+            if (!isset($holidayMap[$dt])) {
+                $st = $statusByDate[$dt] ?? (($dt <= $today) ? 'Alpa' : '-');
+                if (isset($rekap[$st])) {
+                    $rekap[$st]++;
+                }
+                if ($st === 'Alpa' || $st === 'Bolos') {
+                    $alpa_bolos_dates[] = ['tanggal' => $dt, 'status' => $st];
+                }
+            }
+            $curr = strtotime('+1 day', $curr);
+        }
+
+        $inst = $db_core->query("SELECT * FROM institusi LIMIT 1")->fetch(\PDO::FETCH_ASSOC) ?: [];
+        $wali_kelas = '-';
+        try {
+            $stmt_w = $db_core->prepare("
+                SELECT g.nama FROM guru_tugas gt
+                JOIN guru g ON gt.guru_id = g.id
+                WHERE gt.tugas = 'Wali Kelas' AND (gt.keterangan = ? OR gt.keterangan = ?) AND gt.tahun_ajaran = ?
+                LIMIT 1
+            ");
+            $stmt_w->execute([$siswa['nama_kelas'], 'Kelas ' . $siswa['nama_kelas'], $active_year_name]);
+            $w = $stmt_w->fetchColumn();
+            if ($w) $wali_kelas = $w;
+        } catch (\Throwable $e) {}
+
+        include __DIR__ . '/../../resources/views/admin/absen_v2/cetak_panggilan.php';
+        exit;
+    }
+
     public static function ketidakhadiran() {
         if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role_id'], [1, 99])) {
             redirect('/login');
