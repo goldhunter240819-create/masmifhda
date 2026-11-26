@@ -7932,10 +7932,9 @@ class CbtController {
                 }
             }
 
-            // Jika tidak ada manual override, tentukan otomatis berdasarkan jam sesi atau keterlambatan (molor)
+            // Jika tidak ada manual override, tentukan otomatis berdasarkan jam sesi berjalan (tidak boleh scan sebelum jam mulai sesi!)
             if (!$activeJadwal && !empty($allJadwalGrid)) {
                 $strictlyActiveJadwal = null;
-                $bufferActiveJadwal = null;
                 $upcomingJadwal = null;
 
                 foreach ($allJadwalGrid as $jg) {
@@ -7943,20 +7942,12 @@ class CbtController {
                     $jSelesai = $jg['parsed_jam_selesai'];
 
                     if (!empty($jMulai) && !empty($jSelesai)) {
-                        // Prioritas 1: Sesi yang benar-benar SEDANG BERLANGSUNG pada jam saat ini
+                        // Prioritas 1: Sesi yang benar-benar SEDANG BERLANGSUNG pada jam saat ini (jam_mulai <= now <= jam_selesai)
                         if ($curTime >= $jMulai && $curTime <= $jSelesai) {
                             if (!$strictlyActiveJadwal) {
                                 $strictlyActiveJadwal = $jg;
                             }
-                        }
-
-                        // Prioritas 2: Buffer scan awal 15 menit sebelum jam mulai sesi
-                        $earlyBuffer = date('H:i:s', strtotime($todayDate . ' ' . $jMulai) - 900);
-                        if ($curTime >= $earlyBuffer && $curTime <= $jSelesai) {
-                            if (!$bufferActiveJadwal) {
-                                $bufferActiveJadwal = $jg;
-                            }
-                        } elseif ($curTime < $earlyBuffer) {
+                        } elseif ($curTime < $jMulai) {
                             if (!$upcomingJadwal) {
                                 $upcomingJadwal = $jg;
                             }
@@ -7964,18 +7955,22 @@ class CbtController {
                     }
                 }
 
-                $activeJadwal = $strictlyActiveJadwal ?: $bufferActiveJadwal;
+                $activeJadwal = $strictlyActiveJadwal;
 
                 // TOLERANSI JADWAL MOLOR / KETERLAMBATAN:
-                // Jika jam resmi sudah lewat (molor), cari sesi hari ini yang belum pernah dihadiri siswa ini!
+                // Hanya berlaku untuk sesi yang jam mulainya SUDAH TIBA ($curTime >= $jMulai) dan belum dihadiri siswa ini!
                 if (!$activeJadwal) {
                     foreach ($allJadwalGrid as $jg) {
+                        $jMulai = $jg['parsed_jam_mulai'] ?? '';
+                        if (!empty($jMulai) && $curTime < $jMulai) {
+                            continue; // Jangan izinkan scan sesi yang jam mulainya belum tiba!
+                        }
                         $chkMpl = !empty($jg['mapel_nama']) ? $jg['mapel_nama'] : (!empty($jg['nama_ujian']) ? $jg['nama_ujian'] : '');
                         try {
                             $stChkA = $db->prepare("
                                 SELECT id FROM cbt_absensi 
                                 WHERE tanggal = ? AND (nis = ? OR (siswa_id IS NOT NULL AND siswa_id = ?))
-                                  AND (ujian_id = ? OR mapel_nama = ?)
+                                  AND (ujian_id = ? OR LOWER(TRIM(mapel_nama)) = LOWER(TRIM(?)))
                                 LIMIT 1
                             ");
                             $stChkA->execute([$todayDate, $siswa['nis'], $saveSiswaId ?: -1, (int)($jg['ujian_id'] ?? 0), $chkMpl]);
@@ -7985,15 +7980,23 @@ class CbtController {
                             }
                         } catch (\Exception $e) {}
                     }
-                    // Jika semua sudah dihadiri atau tidak ditemukan, gunakan jadwal terakhir hari ini
-                    if (!$activeJadwal) {
-                        $activeJadwal = end($allJadwalGrid);
-                    }
+                }
+
+                // Jika belum ada sesi yang dimulai (misal scan sebelum jam 08:00), tolak scan dengan pesan jelas
+                if (!$activeJadwal && $upcomingJadwal) {
+                    $upMapel = !empty($upcomingJadwal['mapel_nama']) ? $upcomingJadwal['mapel_nama'] : ($upcomingJadwal['nama_ujian'] ?? 'Sesi Berikutnya');
+                    $upSesi = !empty($upcomingJadwal['label_sesi']) ? $upcomingJadwal['label_sesi'] : ($upcomingJadwal['jam_slot'] ?? 'Sesi Ujian');
+                    $upJam = substr((string)($upcomingJadwal['parsed_jam_mulai'] ?? ''), 0, 5);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => "Belum waktunya scan! {$upSesi} ({$upMapel}) baru dibuka mulai pukul {$upJam} WIB."
+                    ]);
+                    exit;
                 }
             }
 
-            // Fallback pamungkas: jika tidak ada jadwal grid untuk kelas siswa ini, ambil dari cbt_ujian aktif hari ini
-            if (!$activeJadwal) {
+            // Fallback pamungkas: jika tidak ada jadwal grid sama sekali untuk kelas siswa ini hari ini, ambil dari cbt_ujian aktif hari ini
+            if (!$activeJadwal && empty($allJadwalGrid)) {
                 try {
                     $stAny = $db->query("
                         SELECT id as ujian_id, topik_id, nama_ujian, 
@@ -8024,19 +8027,19 @@ class CbtController {
             $ujianId = (int)($jadwal['ujian_id'] ?? 0);
             $ruangNama = trim($_POST['ruang_nama'] ?? ($jadwal['ruang'] ?? 'Gerbang / 1 Pintu'));
 
-            // 3. Cek apakah sudah absen untuk mapel & tanggal ini
+            // 3. Cek apakah sudah absen untuk mapel & tanggal ini (ketat per mapel)
             if ($tipePeserta === 'khusus') {
                 $stmtCheck = $db->prepare("
                     SELECT id, waktu_scan FROM cbt_absensi 
-                    WHERE tanggal = ? AND (nis = ? OR (nis = ? AND ? != '') OR nama_siswa = ?) AND (mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+                    WHERE tanggal = ? AND (nis = ? OR (nis = ? AND ? != '') OR nama_siswa = ?) AND LOWER(TRIM(mapel_nama)) = LOWER(TRIM(?))
                 ");
-                $stmtCheck->execute([$todayDate, $siswa['nis'], $siswa['nis'], $siswa['nis'], $siswa['nama'], $mapelNama, $mapelNama, $mapelNama]);
+                $stmtCheck->execute([$todayDate, $siswa['nis'], $siswa['nis'], $siswa['nis'], $siswa['nama'], $mapelNama]);
             } else {
                 $stmtCheck = $db->prepare("
                     SELECT id, waktu_scan FROM cbt_absensi 
-                    WHERE tanggal = ? AND (siswa_id = ? OR (nis = ? AND ? != '')) AND (mapel_nama = ? OR ? LIKE CONCAT('%', mapel_nama, '%') OR mapel_nama LIKE CONCAT('%', ?, '%'))
+                    WHERE tanggal = ? AND (siswa_id = ? OR (nis = ? AND ? != '')) AND LOWER(TRIM(mapel_nama)) = LOWER(TRIM(?))
                 ");
-                $stmtCheck->execute([$todayDate, $siswa['id'], $siswa['nis'], $siswa['nis'], $mapelNama, $mapelNama, $mapelNama]);
+                $stmtCheck->execute([$todayDate, $siswa['id'], $siswa['nis'], $siswa['nis'], $mapelNama]);
             }
             $exist = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
