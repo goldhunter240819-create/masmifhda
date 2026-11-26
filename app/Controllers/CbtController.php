@@ -9547,17 +9547,35 @@ class CbtController {
             }
         }
 
-        // 5. Soal
+        // 5. Soal (Bersihkan soal lama untuk ujian hari ini/mendatang atau yang belum ada peserta selesai agar tidak dobel 80 soal)
         if (!empty($data['soal'])) {
             $payloadUjianIds = array_unique(array_filter(array_map('intval', array_column($data['soal'], 'ujian_id'))));
-            if (!empty($payloadUjianIds)) {
-                $inPayloadU = implode(',', $payloadUjianIds);
+            // Sertakan juga ujian dari payload yang mungkin memiliki 0 soal di pusat & belum dikerjakan di lokal
+            $allPayloadUIds = !empty($data['ujian']) ? array_unique(array_filter(array_map('intval', array_column($data['ujian'], 'id')))) : [];
+            $cleanIds = [];
+            foreach (array_unique(array_merge($payloadUjianIds, $allPayloadUIds)) as $cid) {
+                if ($cid <= 0) continue;
                 try {
-                    $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN ($inPayloadU)");
+                    // Biarkan ujian hari-hari sebelumnya yang sudah ada peserta Selesai di lokal
+                    $hasDonePast = (int)$db->query("SELECT COUNT(*) FROM cbt_peserta WHERE ujian_id = {$cid} AND status_pengerjaan = 'Selesai' AND DATE(COALESCE(waktu_selesai, waktu_mulai)) < CURDATE()")->fetchColumn();
+                    if ($hasDonePast === 0) {
+                        $cleanIds[] = $cid;
+                    }
+                } catch (\Throwable $e) {
+                    $cleanIds[] = $cid;
+                }
+            }
+            if (!empty($cleanIds)) {
+                $inCleanU = implode(',', $cleanIds);
+                try {
+                    $db->exec("DELETE FROM cbt_soal WHERE ujian_id IN ($inCleanU)");
                 } catch (\Exception $e) {}
             }
+            $cleanIdMap = array_flip($cleanIds);
             $stmtSoal = $db->prepare("INSERT INTO cbt_soal (id, ujian_id, nomor_urut, tipe_soal, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pertanyaan = VALUES(pertanyaan), kunci_jawaban = VALUES(kunci_jawaban), tipe_soal = VALUES(tipe_soal), konten_tambahan = VALUES(konten_tambahan)");
             foreach ($data['soal'] as $so) {
+                $soUId = (int)($so['ujian_id'] ?? 0);
+                if (!isset($cleanIdMap[$soUId])) continue;
                 try {
                     $stmtSoal->execute([$so['id'], $so['ujian_id'], $so['nomor_urut'], $so['tipe_soal'] ?? 'sec_pg', $so['pertanyaan'], $so['opsi_a'] ?? null, $so['opsi_b'] ?? null, $so['opsi_c'] ?? null, $so['opsi_d'] ?? null, $so['opsi_e'] ?? null, $so['kunci_jawaban'] ?? null, $so['bobot'] ?? 1.00, $so['konten_tambahan'] ?? null]);
                     $details['soal']++;
