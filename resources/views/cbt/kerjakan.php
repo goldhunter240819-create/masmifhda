@@ -16,6 +16,9 @@ $soundAlarm = $isSimulasi ? false : (($cbtSettings['sound_alarm_on_violation'] ?
 $blockBackButton = $isSimulasi ? false : (($cbtSettings['block_back_button'] ?? '1') === '1');
 $watermark = $isSimulasi ? false : (($cbtSettings['watermark_student_nis'] ?? '1') === '1');
 $requireAllAnswered = ($cbtSettings['require_all_answered_no_doubt'] ?? '1') === '1';
+$minSubmitPercent = $isSimulasi ? 0 : max(0, min(95, (int)($cbtSettings['min_submit_percent'] ?? 50)));
+$navDelaySeconds = $isSimulasi ? 0 : max(0, min(60, (int)($cbtSettings['nav_delay_seconds'] ?? 10)));
+$totalDurasiUjianDetik = max(60, (int)($ujianInfo['durasi_menit'] ?? 90) * 60);
 $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 ?>
 <!DOCTYPE html>
@@ -1787,6 +1790,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
             currentIndex = idx;
             saveCurrentAnswers(false); // Simpan nomor soal terakhir yang dibuka
+            if (typeof startNavCooldown === 'function') startNavCooldown();
 
             const qBadge = document.getElementById('currentQBadge');
             if (qBadge) qBadge.innerHTML = `Soal <strong>${idx + 1}</strong> <span style="font-weight:600;opacity:0.75;">/ ${totalSoal}</span>`;
@@ -2612,7 +2616,91 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             saveCurrentAnswers(true);
         }
 
+        const navDelaySeconds = <?= (int)$navDelaySeconds ?>;
+        const minSubmitPercent = <?= (int)$minSubmitPercent ?>;
+        const totalDurasiUjianDetik = <?= (int)$totalDurasiUjianDetik ?>;
+        const minSubmitSeconds = minSubmitPercent > 0 ? Math.floor(totalDurasiUjianDetik * minSubmitPercent / 100) : 0;
+        let navCooldownRemaining = 0;
+        let navCooldownTimer = null;
+
+        function getElapsedExamSeconds() {
+            return Math.max(0, totalDurasiUjianDetik - (typeof timeLeft === 'number' ? timeLeft : totalDurasiUjianDetik));
+        }
+
+        function getMinSubmitRemainingSeconds() {
+            return minSubmitSeconds > 0 ? Math.max(0, minSubmitSeconds - getElapsedExamSeconds()) : 0;
+        }
+
+        function applyNavCooldownUI() {
+            const locked = navCooldownRemaining > 0;
+            const secTxt = locked ? ` (${navCooldownRemaining}d)` : '';
+
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+            const btnPrevMob = document.getElementById('btnPrevMobile');
+            const btnNextMob = document.getElementById('btnNextMobile');
+
+            if (btnPrev) {
+                btnPrev.disabled = locked;
+                btnPrev.style.opacity = locked ? '0.55' : '';
+                btnPrev.style.cursor = locked ? 'not-allowed' : '';
+                btnPrev.innerHTML = `<i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Sebelumnya${secTxt}`;
+            }
+            if (btnNext) {
+                btnNext.disabled = locked;
+                btnNext.style.opacity = locked ? '0.55' : '';
+                btnNext.style.cursor = locked ? 'not-allowed' : '';
+                btnNext.innerHTML = `Selanjutnya${secTxt} <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>`;
+            }
+            if (btnPrevMob) {
+                btnPrevMob.disabled = locked;
+                if (currentIndex > 0) {
+                    btnPrevMob.style.opacity = locked ? '0.45' : '1';
+                    btnPrevMob.style.pointerEvents = locked ? 'none' : 'auto';
+                }
+                const sp = btnPrevMob.querySelector('span');
+                if (sp) sp.textContent = `Sebelumnya${secTxt}`;
+            }
+            if (btnNextMob) {
+                btnNextMob.disabled = locked;
+                btnNextMob.style.opacity = locked ? '0.5' : '1';
+                btnNextMob.style.pointerEvents = locked ? 'none' : 'auto';
+                const sp = btnNextMob.querySelector('span');
+                if (sp) sp.textContent = `Selanjutnya${secTxt}`;
+            }
+
+            document.querySelectorAll('.pal-btn').forEach(b => {
+                b.disabled = locked;
+                b.style.opacity = locked ? '0.5' : '';
+                b.style.cursor = locked ? 'wait' : 'pointer';
+                b.title = locked ? `Tunggu ${navCooldownRemaining} detik untuk pindah soal` : '';
+            });
+
+            if (window.lucide) {
+                try { lucide.createIcons(); } catch(e) {}
+            }
+        }
+
+        function startNavCooldown() {
+            if (navDelaySeconds <= 0 || isSimulasi) return;
+            if (navCooldownTimer) {
+                clearInterval(navCooldownTimer);
+                navCooldownTimer = null;
+            }
+            navCooldownRemaining = navDelaySeconds;
+            applyNavCooldownUI();
+            navCooldownTimer = setInterval(() => {
+                navCooldownRemaining = Math.max(0, navCooldownRemaining - 1);
+                applyNavCooldownUI();
+                if (navCooldownRemaining <= 0) {
+                    clearInterval(navCooldownTimer);
+                    navCooldownTimer = null;
+                }
+            }, 1000);
+        }
+
         function navigateQuestion(step) {
+            if (navCooldownRemaining > 0) return;
             isNavigatingQuestion = true;
             lastUserActionTime = Date.now();
             const nextIdx = currentIndex + step;
@@ -2673,6 +2761,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         btn.classList.add('doubt');
                     }
                     btn.onclick = () => {
+                        if (navCooldownRemaining > 0) return;
                         loadQuestion(i);
                         if (isForMobile) closeMobilePalette();
                     };
@@ -2693,6 +2782,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             const mobSummary = document.getElementById('drawerAnsweredSummary');
             if (mobSummary) mobSummary.textContent = answeredLabel;
 
+            applyNavCooldownUI();
             updateSubmitButtonAppearance();
         }
 
@@ -2774,6 +2864,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
                 if (!updateTimerDisplay()) {
                     clearInterval(interval);
+                } else if (minSubmitSeconds > 0 && currentIndex === totalSoal - 1) {
+                    updateSubmitButtonAppearance();
                 }
             }, 1000);
         }
@@ -2804,14 +2896,23 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
 
                 const unanswered = totalSoal - answered;
-                const isReady = (unanswered === 0 && raguCount === 0);
+                const minWaitRem = getMinSubmitRemainingSeconds();
+                const isReady = (unanswered === 0 && raguCount === 0 && minWaitRem <= 0);
 
                 const btnSubmitDesk = document.getElementById('btnSubmitModal');
                 const btnSubmitMob = document.getElementById('btnSubmitMobile');
 
                 [btnSubmitDesk, btnSubmitMob].forEach(btn => {
                     if (!btn) return;
-                    if (isReady) {
+                    if (minWaitRem > 0) {
+                        const wm = String(Math.floor(minWaitRem / 60)).padStart(2, '0');
+                        const ws = String(minWaitRem % 60).padStart(2, '0');
+                        btn.style.setProperty('background', '#64748b', 'important');
+                        btn.style.setProperty('color', '#ffffff', 'important');
+                        btn.style.setProperty('box-shadow', 'none', 'important');
+                        btn.style.cursor = 'not-allowed';
+                        btn.innerHTML = `<i data-lucide="hourglass" style="width: 16px; height: 16px;"></i> <span>Selesai (${wm}:${ws})</span>`;
+                    } else if (isReady) {
                         btn.style.setProperty('background', 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', 'important');
                         btn.style.setProperty('color', '#ffffff', 'important');
                         btn.style.setProperty('box-shadow', '0 4px 14px rgba(22, 163, 74, 0.4)', 'important');
@@ -2862,7 +2963,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
 
                 let unanswered = totalSoal - answered;
-                const isBlocked = requireAllAnsweredNoDoubt && (unanswered > 0 || raguList.length > 0);
+                const minWaitRem = getMinSubmitRemainingSeconds();
+                const isBlocked = (minWaitRem > 0) || (requireAllAnsweredNoDoubt && (unanswered > 0 || raguList.length > 0));
 
                 const btnSubmit = document.getElementById('btnSubmitConfirm');
                 const btnCancel = document.getElementById('btnCancelConfirm');
@@ -2873,17 +2975,22 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     if (iconBox) {
                         iconBox.style.background = '#fee2e2';
                         iconBox.style.color = '#dc2626';
-                        iconBox.innerHTML = '<span style="font-size: 28px; line-height: 1;">⚠️</span>';
+                        iconBox.innerHTML = '<span style="font-size: 28px; line-height: 1;">⏳</span>';
                     }
                     if (modalTitle) modalTitle.innerText = 'Belum Dapat Diselesaikan!';
 
                     let alertDetails = `Anda telah menjawab <strong>${answered}</strong> dari <strong>${totalSoal}</strong> butir soal.<br>`;
                     alertDetails += `<div style="background:#fef2f2; border:1.5px solid #fecaca; border-radius:12px; padding:12px 14px; margin-top:12px; text-align:left; font-size:0.84rem; color:#991b1b; line-height:1.5;">`;
                     alertDetails += `<div style="font-weight:800; margin-bottom:6px; display:flex; align-items:center; gap:6px;">⚠️ Syarat Menyelesaikan Ujian:</div>`;
-                    if (unanswered > 0) {
+                    if (minWaitRem > 0) {
+                        const wm = Math.floor(minWaitRem / 60);
+                        const ws = minWaitRem % 60;
+                        alertDetails += `<div style="margin-bottom:4px;">• <b>Minimal Waktu Pengerjaan (${minSubmitPercent}%):</b> Silakan tunggu <b>${wm} menit ${ws} detik</b> lagi dan teliti kembali jawaban Anda sebelum mengumpulkan ujian.</div>`;
+                    }
+                    if (requireAllAnsweredNoDoubt && unanswered > 0) {
                         alertDetails += `<div style="margin-bottom:4px;">• <b>${unanswered} Soal Belum Dijawab:</b> No. ${unansweredList.join(', ')}</div>`;
                     }
-                    if (raguList.length > 0) {
+                    if (requireAllAnsweredNoDoubt && raguList.length > 0) {
                         alertDetails += `<div>• <b>${raguList.length} Soal Masih Ragu-Ragu:</b> No. ${raguList.join(', ')}</div>`;
                     }
                     alertDetails += `<div style="margin-top:8px; color:#475569; font-size:0.78rem;">Sesuai aturan panitia, seluruh butir soal <strong>wajib dijawab</strong> dan <strong>tidak boleh ada yang masih ditandai Ragu-Ragu</strong>.</div></div>`;
@@ -3030,6 +3137,14 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 payload[soalList[i].id] = userAnswers[i] !== undefined ? userAnswers[i] : '';
             }
             document.getElementById('jawabanPayloadInput').value = JSON.stringify(payload);
+            const formSub = document.getElementById('formSubmitUjian');
+            if (formSub && !formSub.querySelector('input[name="is_auto_submit"]')) {
+                const hid = document.createElement('input');
+                hid.type = 'hidden';
+                hid.name = 'is_auto_submit';
+                hid.value = '1';
+                formSub.appendChild(hid);
+            }
             try {
                 localStorage.removeItem(storageKeyAns);
                 localStorage.removeItem(storageKeyRagu);

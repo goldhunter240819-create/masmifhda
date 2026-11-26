@@ -338,6 +338,8 @@ class CbtController {
                 ['token_refresh_interval', '120', 'ujian', 'Masa Berlaku Token (Menit)'],
                 ['lock_by_schedule_time', '1', 'aturan', 'Kunci Pengerjaan Sesuai Jadwal (Waktu Sesi)'],
                 ['require_all_answered_no_doubt', '1', 'aturan', 'Wajib Jawab Semua Soal & Bebas Ragu-Ragu Sebelum Selesai'],
+                ['min_submit_percent', '50', 'aturan', 'Minimal Persentase Waktu Pengerjaan Sebelum Submit (%)'],
+                ['nav_delay_seconds', '10', 'aturan', 'Jeda Waktu Minimal Pindah Antar Soal (Detik)'],
                 ['institution_name', 'MAS MIFTAHUL HUDA', 'umum', 'Nama Institusi / Madrasah'],
                 ['cbt_app_title', 'CBT Online v2.5 Online', 'umum', 'Label Branding Sistem CBT']
             ];
@@ -4328,6 +4330,32 @@ class CbtController {
                         $stFindP = $db->prepare("SELECT id FROM cbt_peserta WHERE ujian_id = ? AND ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
                         $stFindP->execute([$ujian_id, $rS['id'], $rS['nis'], $rS['nis']]);
                         $peserta_id = (int)$stFindP->fetchColumn();
+                    }
+                }
+            }
+
+            // Validasi Minimal Waktu Pengerjaan Sebelum Submit Manual (kecuali Auto-Submit waktu habis / pelanggaran / Simulasi)
+            $isAutoSubmit = !empty($_POST['is_auto_submit']);
+            $roleIdNow = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+            $isStudentRole = ($roleIdNow === 3 || $roleIdNow === 7 || !empty($_SESSION['is_cbt_only']));
+            if (!$isAutoSubmit && $isStudentRole && $peserta_id > 0) {
+                $cbtCfg = self::getAllPengaturan($db);
+                $minPct = max(0, min(95, (int)($cbtCfg['min_submit_percent'] ?? 50)));
+                if ($minPct > 0) {
+                    $stMeta = $db->prepare("SELECT p.waktu_mulai, u.durasi_menit FROM cbt_peserta p JOIN cbt_ujian u ON u.id = p.ujian_id WHERE p.id = ? LIMIT 1");
+                    $stMeta->execute([$peserta_id]);
+                    $meta = $stMeta->fetch(PDO::FETCH_ASSOC);
+                    if ($meta && !empty($meta['waktu_mulai'])) {
+                        $totalDurSec = max(60, (int)($meta['durasi_menit'] ?? 90) * 60);
+                        $minReqSec = (int)floor($totalDurSec * $minPct / 100);
+                        $elapsedSec = max(0, time() - strtotime($meta['waktu_mulai']));
+                        if ($elapsedSec < ($minReqSec - 5)) {
+                            $sisaDetik = $minReqSec - $elapsedSec;
+                            $sisaMnt = ceil($sisaDetik / 60);
+                            $backUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id);
+                            echo "<script>alert('Anda terlalu cepat! Minimal waktu pengerjaan adalah {$minPct}% dari durasi ujian. Silakan tunggu sekitar {$sisaMnt} menit lagi dan periksa kembali jawaban Anda.'); window.location.href='{$backUrl}';</script>";
+                            exit;
+                        }
                     }
                 }
             }

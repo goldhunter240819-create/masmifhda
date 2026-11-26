@@ -24,6 +24,8 @@ $showScore = ($settings['show_score_to_student'] ?? '1') === '1';
 $showDiscussion = ($settings['show_discussion_to_student'] ?? '0') === '1';
 $allowReview = ($settings['allow_student_review'] ?? '1') === '1';
 $requireAllAnswered = ($settings['require_all_answered_no_doubt'] ?? '1') === '1';
+$minSubmitPercent = (int)($settings['min_submit_percent'] ?? 50);
+$navDelaySeconds = (int)($settings['nav_delay_seconds'] ?? 10);
 $requireAttendance = ($settings['require_cbt_attendance'] ?? '0') === '1';
 $tokenMode = $settings['token_mode'] ?? 'manual';
 $tokenInterval = (int)($settings['token_refresh_interval'] ?? 120);
@@ -595,6 +597,40 @@ $listTerkunci = $listTerkunci ?? [];
                                     <input type="checkbox" name="settings[require_all_answered_no_doubt]" value="1" <?php echo $requireAllAnswered ? 'checked' : ''; ?>>
                                     <span class="cbt-slider"></span>
                                 </label>
+                            </div>
+                        </div>
+
+                        <!-- 9. Minimal Waktu Pengerjaan Sebelum Submit (%) -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-indigo"><i data-lucide="hourglass"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Minimal Waktu Sebelum Submit (%)</div>
+                                    </div>
+                                    <p class="setting-desc">Siswa belum dapat mengklik tombol <b>Selesai Ujian</b> sebelum waktu berjalan mencapai persentase ini dari durasi ujian (Default: <code>50%</code>, misal ujian 50 menit = 25 menit; 60 menit = 30 menit). Isi <code>0</code> agar bebas.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                    <input type="number" name="settings[min_submit_percent]" min="0" max="95" value="<?php echo $minSubmitPercent; ?>" style="width: 72px; padding: 8px 10px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-weight: 800; text-align: center; font-size: 0.95rem;">
+                                    <span style="font-weight: 700; color: #475569; font-size: 0.85rem;">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 10. Jeda Navigasi Antar Soal (Detik) -->
+                        <div class="card setting-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-amber"><i data-lucide="timer"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Jeda Navigasi Antar Soal (Detik)</div>
+                                    </div>
+                                    <p class="setting-desc">Setiap pindah soal, tombol <b>Selanjutnya</b>, <b>Sebelumnya</b>, dan <b>Daftar Nomor Soal</b> terkunci sementara sesuai jeda detik ini agar siswa membaca soal dengan teliti (Default: <code>10 detik</code>). Isi <code>0</code> untuk mematikan.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                    <input type="number" name="settings[nav_delay_seconds]" min="0" max="60" value="<?php echo $navDelaySeconds; ?>" style="width: 72px; padding: 8px 10px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-weight: 800; text-align: center; font-size: 0.95rem;">
+                                    <span style="font-weight: 700; color: #475569; font-size: 0.85rem;">Detik</span>
+                                </div>
                             </div>
                         </div>
 
