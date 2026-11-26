@@ -3882,7 +3882,7 @@ class CbtController {
                         'status_pengerjaan' => 'Mengerjakan',
                         'jawaban_json' => null
                     ];
-                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai' || (float)($pesertaInfo['nilai_akhir'] ?? 0) > 0) {
+                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai') {
                     redirect("/cbt/kerjakan/selesai?peserta_id={$pesertaInfo['id']}&ujian_id={$ujian_id}");
                     exit;
                 }
@@ -3918,7 +3918,7 @@ class CbtController {
                         'status_pengerjaan' => 'Mengerjakan',
                         'jawaban_json' => null
                     ];
-                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai' || (float)($pesertaInfo['nilai_akhir'] ?? 0) > 0) {
+                } elseif ($pesertaInfo['status_pengerjaan'] === 'Selesai') {
                     redirect("/cbt/kerjakan/selesai?peserta_id={$pesertaInfo['id']}&ujian_id={$ujian_id}");
                     exit;
                 }
@@ -4565,11 +4565,12 @@ class CbtController {
                                             WHERE id = ?");
                     $stmt->execute([$peserta_id]);
                 } else {
-                    // Default: Lanjutkan ujian (mempertahankan jawaban yang sudah tersimpan)
+                    // Default: Lanjutkan ujian (mempertahankan jawaban yang sudah tersimpan, reset nilai_akhir agar tidak langsung ter-redirect ke selesai)
                     $stmt = $db->prepare("UPDATE cbt_peserta 
                                             SET status_pengerjaan = 'Mengerjakan', 
                                                 waktu_selesai = NULL, 
                                                 waktu_mulai = NOW(),
+                                                nilai_akhir = 0.00,
                                                 reset_count = COALESCE(reset_count, 0) + 1,
                                                 violation_count = 0
                                             WHERE id = ?");
@@ -4610,11 +4611,12 @@ class CbtController {
                     SET status_pengerjaan = 'Mengerjakan', 
                         waktu_selesai = NULL, 
                         waktu_mulai = NOW(), 
+                        nilai_akhir = 0.00,
                         reset_count = COALESCE(reset_count, 0) + 1, 
                         violation_count = 0";
             
             if ($mode === 'ulang') {
-                $sql .= ", nilai_akhir = 0.00, jumlah_benar = 0, jumlah_salah = 0, jawaban_json = NULL";
+                $sql .= ", jumlah_benar = 0, jumlah_salah = 0, jawaban_json = NULL";
             }
 
             $sql .= " WHERE status_pengerjaan IN ('Selesai', 'Terkunci', 'Pelanggaran', 'Sedang Mengerjakan')";
