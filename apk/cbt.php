@@ -1082,7 +1082,8 @@ $riwayatUjian = [];
 try {
     if ($is_cbt_only) {
         $stmtRiw = $core_db->prepare("
-            SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit
+            SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit,
+                   (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as total_soal_ujian
             FROM cbt_peserta p
             JOIN cbt_ujian u ON p.ujian_id = u.id
             WHERE (p.siswa_id IS NULL OR p.siswa_id = 0 OR p.siswa_id = :sid) 
@@ -1098,7 +1099,8 @@ try {
         ]);
     } else {
         $stmtRiw = $core_db->prepare("
-            SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit
+            SELECT p.*, u.nama_ujian, u.mapel_nama, u.kkm, u.durasi_menit,
+                   (SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = u.id) as total_soal_ujian
             FROM cbt_peserta p
             JOIN cbt_ujian u ON p.ujian_id = u.id
             WHERE (p.siswa_id = :sid OR (p.nis = :nis AND :nis != ''))
@@ -1549,6 +1551,13 @@ include 'header.php';
                 <?php foreach ($riwayatUjian as $r): ?>
                     <?php
                     $isTuntas = ((float)$r['nilai_akhir'] >= (float)($r['kkm'] ?? 75));
+                    $jmlBenar = (int)($r['jumlah_benar'] ?? ($r['jml_benar'] ?? 0));
+                    $jmlSalah = (int)($r['jumlah_salah'] ?? ($r['jml_salah'] ?? 0));
+                    $jmlKosong = (int)($r['jumlah_tidak_jawab'] ?? ($r['jml_kosong'] ?? 0));
+                    $totSoalRiw = (int)($r['total_soal_ujian'] ?? 0);
+                    if ($jmlKosong === 0 && $totSoalRiw > ($jmlBenar + $jmlSalah)) {
+                        $jmlKosong = $totSoalRiw - ($jmlBenar + $jmlSalah);
+                    }
                     ?>
                     <div class="item-riwayat filter-selesai" style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; transition: all 0.2s;">
                         <div style="min-width: 0; flex: 1; padding-right: 10px;">
@@ -1559,6 +1568,11 @@ include 'header.php';
                             <div style="font-size: 0.74rem; color: #64748b; margin-top: 3px;">
                                 <span style="font-weight: 600; color: #334155;"><?= htmlspecialchars($r['mapel_nama']) ?></span> • 
                                 <span><?= date('d M Y, H:i', strtotime($r['waktu_selesai'])) ?> WIB</span>
+                            </div>
+                            <div style="margin-top: 6px; display: flex; gap: 10px; font-size: 0.7rem; color: #64748b; font-weight: 600;">
+                                <span><i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Benar: <b style="color: #334155;"><?= $jmlBenar ?></b></span>
+                                <span><i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i> Salah: <b style="color: #334155;"><?= $jmlSalah ?></b></span>
+                                <span><i class="fa-solid fa-circle-minus" style="color: #94a3b8;"></i> Kosong: <b style="color: #334155;"><?= $jmlKosong ?></b></span>
                             </div>
                         </div>
                         <div style="text-align: right; flex-shrink: 0;">
@@ -2019,6 +2033,13 @@ include 'header.php';
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <?php foreach ($riwayatUjian as $r): 
                             $isTuntas = ((float)($r['nilai_akhir'] ?? 0) >= (float)($r['kkm'] ?? 75));
+                            $jmlBenar = (int)($r['jumlah_benar'] ?? ($r['jml_benar'] ?? 0));
+                            $jmlSalah = (int)($r['jumlah_salah'] ?? ($r['jml_salah'] ?? 0));
+                            $jmlKosong = (int)($r['jumlah_tidak_jawab'] ?? ($r['jml_kosong'] ?? 0));
+                            $totSoalRiw = (int)($r['total_soal_ujian'] ?? 0);
+                            if ($jmlKosong === 0 && $totSoalRiw > ($jmlBenar + $jmlSalah)) {
+                                $jmlKosong = $totSoalRiw - ($jmlBenar + $jmlSalah);
+                            }
                         ?>
                             <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 13px 15px; border-left: 4px solid <?= $isTuntas ? '#10b981' : '#ef4444' ?>; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
@@ -2042,16 +2063,19 @@ include 'header.php';
                                                 <?= $isTuntas ? 'TUNTAS' : 'REMEDIAL' ?>
                                             </span>
                                         <?php else: ?>
-                                            <span style="font-size: 0.68rem; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 6px;">
-                                                SELESAI
+                                            <span style="display: inline-block; font-size: 0.72rem; font-weight: 800; background: <?= $isTuntas ? '#ecfdf5' : '#fef2f2' ?>; color: <?= $isTuntas ? '#059669' : '#dc2626' ?>; border: 1px solid <?= $isTuntas ? '#a7f3d0' : '#fecaca' ?>; padding: 3px 9px; border-radius: 6px;">
+                                                <?= $isTuntas ? '✓ TUNTAS' : '✕ REMEDIAL' ?>
                                             </span>
+                                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; margin-top: 3px;">
+                                                KKM: <?= (int)($r['kkm'] ?? 75) ?>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
                                 <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #f1f5f9; display: flex; gap: 12px; font-size: 0.72rem; color: #64748b; font-weight: 600;">
-                                    <span><i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Benar: <b style="color: #334155;"><?= (int)($r['jml_benar'] ?? 0) ?></b></span>
-                                    <span><i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i> Salah: <b style="color: #334155;"><?= (int)($r['jml_salah'] ?? 0) ?></b></span>
-                                    <span><i class="fa-solid fa-circle-minus" style="color: #94a3b8;"></i> Kosong: <b style="color: #334155;"><?= (int)($r['jml_kosong'] ?? 0) ?></b></span>
+                                    <span><i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Benar: <b style="color: #334155;"><?= $jmlBenar ?></b></span>
+                                    <span><i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i> Salah: <b style="color: #334155;"><?= $jmlSalah ?></b></span>
+                                    <span><i class="fa-solid fa-circle-minus" style="color: #94a3b8;"></i> Kosong: <b style="color: #334155;"><?= $jmlKosong ?></b></span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
