@@ -2848,10 +2848,15 @@ class CbtController {
         $stmtP->execute($params);
         $pesertaList = $stmtP->fetchAll(PDO::FETCH_ASSOC);
 
-        // Auto-pulihkan peserta yang memiliki jawaban_json tapi nilainya masih 0 atau statusnya masih Mengerjakan
+        // Auto-pulihkan peserta yang sudah Selesai/punya waktu_selesai tapi nilainya masih 0 atau tidak sinkron
+        // PENTING: Jangan pernah memaksa peserta yang sedang 'Mengerjakan' / 'Terkunci' (waktu_selesai NULL) menjadi 'Selesai',
+        // agar fitur Buka Ujian (mode Lanjutkan) maupun auto-save siswa yang sedang ujian tidak langsung tertutup kembali!
         $soalCacheHasil = [];
         foreach ($pesertaList as &$pItem) {
-            if (!empty($pItem['jawaban_json']) && ((float)($pItem['nilai_akhir'] ?? 0) <= 0 || $pItem['status_pengerjaan'] !== 'Selesai' || (int)($pItem['jumlah_tidak_jawab'] ?? 0) >= 30)) {
+            $stNow = (string)($pItem['status_pengerjaan'] ?? '');
+            $hasWaktuSelesai = !empty($pItem['waktu_selesai']);
+            $isActuallyFinished = ($stNow === 'Selesai' || $hasWaktuSelesai);
+            if ($isActuallyFinished && !empty($pItem['jawaban_json']) && ((float)($pItem['nilai_akhir'] ?? 0) <= 0 || $stNow !== 'Selesai' || (int)($pItem['jumlah_tidak_jawab'] ?? 0) >= 30)) {
                 $uId = (int)$pItem['ujian_id'];
                 if (!isset($soalCacheHasil[$uId])) {
                     $stS = $db->prepare("SELECT id, nomor_urut, kunci_jawaban, bobot, tipe_soal, konten_tambahan FROM cbt_soal WHERE ujian_id = ? ORDER BY nomor_urut ASC, id ASC");
@@ -2861,7 +2866,7 @@ class CbtController {
                 $soals = $soalCacheHasil[$uId] ?? [];
                 if (!empty($soals)) {
                     $eval = self::evaluatePesertaAnswers($soals, $pItem['jawaban_json']);
-                    if ($eval['nilaiAkhir'] > (float)($pItem['nilai_akhir'] ?? 0) || $eval['jumlahBenar'] > (int)($pItem['jumlah_benar'] ?? 0) || $pItem['status_pengerjaan'] !== 'Selesai') {
+                    if ($eval['nilaiAkhir'] > (float)($pItem['nilai_akhir'] ?? 0) || $eval['jumlahBenar'] > (int)($pItem['jumlah_benar'] ?? 0) || $stNow !== 'Selesai') {
                         $pItem['jumlah_benar'] = $eval['jumlahBenar'];
                         $pItem['jumlah_salah'] = $eval['jumlahSalah'];
                         $pItem['jumlah_tidak_jawab'] = $eval['jumlahTidakJawab'];
