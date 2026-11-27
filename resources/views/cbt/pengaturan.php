@@ -781,6 +781,66 @@ $listTerkunci = $listTerkunci ?? [];
                     <?php endif; ?>
                 </div>
 
+                <!-- Log Pelanggaran Anti-Cheat Real-Time -->
+                <div class="card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid #fecaca; margin-bottom: 1.5rem; background: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="font-size: 1rem; font-weight: 800; color: #991b1b; margin: 0 0 2px 0; display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #dc2626;"></i> Log Pelanggaran Siswa (Real-Time)
+                            </h3>
+                            <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Mencatat setiap siswa yang terdeteksi keluar tab, menekan tombol kembali, atau keluar fullscreen (pelanggaran ke-1, ke-2, dst).</p>
+                        </div>
+                        <span style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800;">
+                            <?php echo count($listPelanggaranLog ?? []); ?> Catatan
+                        </span>
+                    </div>
+
+                    <?php if (!empty($listPelanggaranLog)): ?>
+                        <div class="table-responsive">
+                            <table class="table-custom" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">NO</th>
+                                        <th>WAKTU</th>
+                                        <th>NAMA SISWA</th>
+                                        <th>KELAS</th>
+                                        <th>MAPEL / UJIAN</th>
+                                        <th>JENIS PELANGGARAN</th>
+                                        <th style="text-align: center;">KE-</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php $noLog = 1; foreach ($listPelanggaranLog as $pl): ?>
+                                    <tr>
+                                        <td style="font-weight: 700; color: #64748b;"><?php echo $noLog++; ?></td>
+                                        <td style="font-size: 0.78rem; color: #475569; white-space: nowrap;">
+                                            <?php echo !empty($pl['created_at']) ? date('d/m H:i:s', strtotime($pl['created_at'])) : '-'; ?>
+                                        </td>
+                                        <td style="font-weight: 800; color: #0f172a;"><?php echo htmlspecialchars($pl['nama_siswa'] ?: 'Siswa'); ?></td>
+                                        <td><span class="badge badge-subtle"><?php echo htmlspecialchars($pl['kelas_nama'] ?: '-'); ?></span></td>
+                                        <td style="font-size: 0.82rem; font-weight: 600; color: #1e293b;"><?php echo htmlspecialchars($pl['nama_ujian'] ?: '-'); ?></td>
+                                        <td>
+                                            <span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 3px 9px; border-radius: 8px; font-size: 0.74rem; font-weight: 700;">
+                                                <?php echo htmlspecialchars($pl['reason'] ?: 'Keluar Tab'); ?>
+                                            </span>
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <span style="background: #fee2e2; color: #b91c1c; padding: 3px 10px; border-radius: 99px; font-size: 0.76rem; font-weight: 900;">
+                                                <?php echo (int)($pl['violation_count'] ?? 1); ?>x
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div style="padding: 2rem; text-align: center; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; color: #64748b; font-size: 0.84rem; font-weight: 600;">
+                            Belum ada catatan pelanggaran siswa yang masuk.
+                        </div>
+                    <?php endif; ?>
+                </div>
+
                 <!-- Daftar Siswa yang Telah Selesai / Auto-Submit -->
                 <div class="card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: #ffffff;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">

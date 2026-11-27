@@ -4608,6 +4608,15 @@ class CbtController {
                                    ORDER BY p.id DESC LIMIT 50");
         $listTerkunci = $stmtTerkunci->fetchAll(PDO::FETCH_ASSOC);
 
+        // Log pelanggaran real-time (termasuk pelanggaran ke-1, ke-2, dst.)
+        $listPelanggaranLog = [];
+        try {
+            $hasLogTbl = $db->query("SHOW TABLES LIKE 'cbt_pelanggaran_log'")->fetchColumn();
+            if ($hasLogTbl) {
+                $listPelanggaranLog = $db->query("SELECT * FROM cbt_pelanggaran_log ORDER BY id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Throwable $e) {}
+
         // Daftar peserta yang telah selesai / auto-submit untuk pemulihan cepat
         $stmtSelesai = $db->query("SELECT p.*, u.nama_ujian, u.mapel_nama 
                                    FROM cbt_peserta p 
