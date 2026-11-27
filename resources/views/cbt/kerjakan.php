@@ -3353,43 +3353,80 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
             } catch(e) {}
 
-            let backSpamTimes = [];
+            let backSpamTotal = 0;
+            let lastBackPopAt = 0;
             let isBackSpamLocking = false;
+
+            function triggerBackSpamLockAndLogout() {
+                if (isBackSpamLocking || backSpamLockHours <= 0 || isSimulasi) return;
+                isBackSpamLocking = true;
+                isExamSubmitted = true;
+                const lockUrl = '<?php echo base_url("cbt/api/lock-back-spam"); ?>';
+                const payloadStr = `peserta_id=${pesertaId}&source=Ruang%20Ujian`;
+                try {
+                    if (navigator.sendBeacon) {
+                        const blob = new Blob([payloadStr], { type: 'application/x-www-form-urlencoded' });
+                        navigator.sendBeacon(lockUrl, blob);
+                    }
+                } catch(e) {}
+                fetch(lockUrl, {
+                    method: 'POST',
+                    keepalive: true,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: payloadStr
+                })
+                .then(r => r.json())
+                .then(res => {
+                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam (hingga ${(res && res.locked_until) ? res.locked_until : 'nanti'}) karena menekan tombol Kembali saat ujian.`;
+                    window.location.replace('<?php echo base_url("apk/login.php"); ?>?locked_msg=' + encodeURIComponent(msg));
+                })
+                .catch(() => {
+                    window.location.replace('<?php echo base_url("apk/logout.php"); ?>');
+                });
+            }
+
+            // Setiap kali siswa klik/tap di soal (user gesture asli), perkuat 1 history guard agar Chrome tidak mengabaikan
+            document.addEventListener('pointerdown', function() {
+                if (isExamSubmitted || isBackSpamLocking) return;
+                try {
+                    if (!window.history.state || !window.history.state.cbt_gesture) {
+                        window.history.pushState({ cbt_session: 'active', cbt_gesture: 1 }, document.title, window.location.href);
+                    }
+                } catch(e) {}
+            }, { passive: true });
+
             window.addEventListener('popstate', function(event) {
                 if (isExamSubmitted || isBackSpamLocking) return;
+                lastBackPopAt = Date.now();
+                backSpamTotal++;
 
-                // Segera tahan posisi history dengan banyak state agar tidak lolos walau spam Back cepat
                 try {
                     for (let h = 0; h < 5; h++) {
                         window.history.pushState({ cbt_session: 'active', hold: h }, document.title, window.location.href);
                     }
                 } catch(e) {}
 
-                const now = Date.now();
-                backSpamTimes = backSpamTimes.filter(t => (now - t) <= 6000);
-                backSpamTimes.push(now);
-
-                if (backSpamTimes.length >= 3 && backSpamLockHours > 0 && !isSimulasi) {
-                    isBackSpamLocking = true;
-                    isExamSubmitted = true;
-                    fetch('<?php echo base_url("cbt/api/lock-back-spam"); ?>', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `peserta_id=${pesertaId}&source=Ruang%20Ujian`
-                    })
-                    .then(r => r.json())
-                    .then(res => {
-                        const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam (hingga ${(res && res.locked_until) ? res.locked_until : 'nanti'}) karena spam tombol Kembali saat ujian.`;
-                        window.location.href = '<?php echo base_url("apk/login.php"); ?>?locked_msg=' + encodeURIComponent(msg);
-                    })
-                    .catch(() => {
-                        window.location.href = '<?php echo base_url("apk/logout.php"); ?>';
-                    });
+                // Pada tekan Kembali ke-2 selama ujian, langsung kunci & logout paksa (tidak menunggu 3x)
+                if (backSpamTotal >= 2 && backSpamLockHours > 0 && !isSimulasi) {
+                    triggerBackSpamLockAndLogout();
                     return;
                 }
 
-                // Picu pelanggaran & alarm bahaya meme!
+                // Picu pelanggaran & alarm bahaya!
                 handleTabViolation('Mencoba Menekan Tombol Kembali');
+            });
+
+            // Jika siswa berhasil lolos keluar halaman tepat setelah tekan Kembali (Chrome back-spam bypass)
+            window.addEventListener('pagehide', function() {
+                if (!isExamSubmitted && !isBackSpamLocking && lastBackPopAt > 0 && (Date.now() - lastBackPopAt) <= 4000 && backSpamLockHours > 0 && !isSimulasi) {
+                    const lockUrl = '<?php echo base_url("cbt/api/lock-back-spam"); ?>';
+                    const payloadStr = `peserta_id=${pesertaId}&source=Ruang%20Ujian%20(Exit)`;
+                    try {
+                        if (navigator.sendBeacon) {
+                            navigator.sendBeacon(lockUrl, new Blob([payloadStr], { type: 'application/x-www-form-urlencoded' }));
+                        }
+                    } catch(e) {}
+                }
             });
 
             // Cegah penutupan / reload tab browser tanpa konfirmasi

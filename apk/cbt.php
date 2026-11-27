@@ -42,6 +42,52 @@ if (!$isAdminPreview) {
                 exit;
             }
         }
+
+        // Jika siswa kabur dari Ruang Ujian (kerjakan) ke Beranda CBT tanpa submit (misal lewat spam tombol Back):
+        if (!empty($_SESSION['cbt_exam_active_lock'])) {
+            $exLock = $_SESSION['cbt_exam_active_lock'];
+            $lockHours = 10;
+            try {
+                $vH = $core_db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'back_spam_lock_hours' LIMIT 1")->fetchColumn();
+                if ($vH !== false && $vH !== null) $lockHours = max(0, min(72, (int)$vH));
+            } catch (\Throwable $e) {}
+
+            // Pastikan peserta belum selesai di DB (kalau sudah Selesai, bersihkan flag saja)
+            $stillActive = false;
+            try {
+                $stPChk = $core_db->prepare("SELECT status_pengerjaan FROM cbt_peserta WHERE id = ? LIMIT 1");
+                $stPChk->execute([(int)($exLock['peserta_id'] ?? 0)]);
+                $stNow = (string)$stPChk->fetchColumn();
+                $stillActive = ($stNow !== 'Selesai');
+            } catch (\Throwable $e) {}
+
+            if ($stillActive && $lockHours > 0) {
+                $namaSw = $_SESSION['siswa_nama'] ?? ($_SESSION['nama'] ?? 'Siswa');
+                $klsSw = $_SESSION['rombel_kelas'] ?? '';
+                $core_db->exec("CREATE TABLE IF NOT EXISTS cbt_login_lock (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_key VARCHAR(120) NOT NULL UNIQUE,
+                    nama_siswa VARCHAR(150) DEFAULT '',
+                    kelas_nama VARCHAR(100) DEFAULT '',
+                    reason VARCHAR(200) DEFAULT 'Spam Tombol Kembali',
+                    locked_until DATETIME NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                $stInsLk = $core_db->prepare("INSERT INTO cbt_login_lock (user_key, nama_siswa, kelas_nama, reason, locked_until)
+                    VALUES (?, ?, ?, 'Kabur dari Ruang Ujian (Spam Tombol Kembali)', DATE_ADD(NOW(), INTERVAL ? HOUR))
+                    ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), kelas_nama = VALUES(kelas_nama), reason = VALUES(reason), locked_until = DATE_ADD(NOW(), INTERVAL ? HOUR)");
+                $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
+
+                $untilFmt = date('d/m H:i', time() + ($lockHours * 3600)) . ' WIB';
+                $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}) karena keluar paksa / spam tombol Kembali saat ujian berlangsung.";
+                $_SESSION = [];
+                if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+                header("Location: login.php?locked_msg=" . urlencode($msgLk));
+                exit;
+            } else {
+                unset($_SESSION['cbt_exam_active_lock']);
+            }
+        }
     } catch (\Throwable $e) {}
 }
 
@@ -2352,7 +2398,7 @@ function verifikasiDanMulaiUjian() {
     } else if (curPath.indexOf('/cbt/') !== -1) {
         cbtPrefix = curPath.substring(0, curPath.indexOf('/cbt/') + 4);
     }
-    window.location.href = cbtPrefix + '/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken);
+    window.location.replace(cbtPrefix + '/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken));
 }
 
 // Enter key submit on input token

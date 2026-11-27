@@ -4019,6 +4019,15 @@ class CbtController {
 
         $cbtSettings = self::getAllPengaturan($db);
 
+        // Tandai sesi ujian aktif di session agar jika siswa kabur lewat spam Back ke Beranda CBT, langsung terdeteksi & dikunci
+        if (empty($ujianInfo['is_simulasi']) && !empty($pesertaInfo['id'])) {
+            $_SESSION['cbt_exam_active_lock'] = [
+                'ujian_id' => $ujian_id,
+                'peserta_id' => (int)$pesertaInfo['id'],
+                'started_at' => time()
+            ];
+        }
+
         include __DIR__ . '/../../resources/views/cbt/kerjakan.php';
     }
 
@@ -4653,6 +4662,7 @@ class CbtController {
                 $peserta_id = (int)$db->lastInsertId();
             }
 
+            unset($_SESSION['cbt_exam_active_lock']);
             redirect("/cbt/kerjakan/selesai?peserta_id={$peserta_id}&ujian_id={$ujian_id}");
             exit;
         }
