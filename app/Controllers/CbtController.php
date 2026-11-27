@@ -10528,4 +10528,110 @@ class CbtController {
         readfile($zipFile);
         exit;
     }
+
+    /**
+     * Helper internal: Ambil status_pengerjaan peserta saat ini untuk ujian tertentu.
+     */
+    private static function getCurrentPesertaStatusForUjian($db, $ujian_id) {
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $roleId = (int)($_SESSION['role_id'] ?? 0);
+        $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
+        $isCbtOnly = !empty($_SESSION['is_cbt_only']);
+
+        try {
+            if ($isCbtOnly || $roleId === 7) {
+                $stK = $db->prepare("SELECT no_peserta, nis FROM cbt_peserta_khusus WHERE id = ? LIMIT 1");
+                $stK->execute([$siswaSessionId]);
+                $rK = $stK->fetch(PDO::FETCH_ASSOC);
+                $noP = $rK['no_peserta'] ?: ($rK['nis'] ?: ('KJ-' . $siswaSessionId));
+                $stP = $db->prepare("SELECT status_pengerjaan FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
+                $stP->execute([$ujian_id, $noP, $rK['nis'] ?? '', $rK['nis'] ?? '']);
+                return (string)($stP->fetchColumn() ?: '');
+            } else {
+                $stS = $db->prepare("SELECT id, nis FROM siswa WHERE (user_id = ? AND ? > 0) OR (id = ? AND ? > 0) LIMIT 1");
+                $stS->execute([$userId, $userId, $siswaSessionId, $siswaSessionId]);
+                $rS = $stS->fetch(PDO::FETCH_ASSOC);
+                $swId = (int)($rS['id'] ?? $siswaSessionId);
+                $swNis = (string)($rS['nis'] ?? '');
+                $stP = $db->prepare("SELECT status_pengerjaan FROM cbt_peserta WHERE ujian_id = ? AND ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
+                $stP->execute([$ujian_id, $swId ?: -1, $swNis, $swNis]);
+                return (string)($stP->fetchColumn() ?: '');
+            }
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Halaman Tata Tertib (Bantalan / Loop Trap sebelum masuk ruang ujian)
+     */
+    public static function tataTertib() {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $ctx = self::getAuthContext(true);
+        $db = $ctx['db_core'];
+
+        $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+        $token = isset($_GET['token']) ? trim((string)$_GET['token']) : '';
+        $dashboardUrl = base_url('apk/cbt.php');
+
+        if ($ujian_id <= 0) {
+            header('Location: ' . $dashboardUrl);
+            exit;
+        }
+
+        $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ? LIMIT 1");
+        $stmtU->execute([$ujian_id]);
+        $ujianInfo = $stmtU->fetch(PDO::FETCH_ASSOC);
+        if (!$ujianInfo) {
+            header('Location: ' . $dashboardUrl);
+            exit;
+        }
+
+        $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . ($token !== '' ? '&token=' . urlencode($token) : ''));
+        $statusNow = self::getCurrentPesertaStatusForUjian($db, $ujian_id);
+
+        // Jika sudah Selesai -> kembalikan ke dashboard
+        if ($statusNow === 'Selesai') {
+            header('Location: ' . $dashboardUrl);
+            exit;
+        }
+
+        // Jika masih Mengerjakan / Sedang Mengerjakan / Terkunci -> loop balik ke halaman kerjakan!
+        if (in_array($statusNow, ['Mengerjakan', 'Sedang Mengerjakan', 'Terkunci'], true)) {
+            header('Location: ' . $kerjakanUrl);
+            exit;
+        }
+
+        $stCnt = $db->prepare("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = ?");
+        $stCnt->execute([$ujian_id]);
+        $jumlahSoal = (int)$stCnt->fetchColumn();
+
+        $cbtSettings = self::getAllPengaturan($db);
+        $maxPelanggaran = (int)($cbtSettings['max_violations'] ?? 3);
+        if ($maxPelanggaran <= 0) $maxPelanggaran = 3;
+
+        $statusUrl = base_url('cbt/api/status-peserta?ujian_id=' . $ujian_id);
+        include __DIR__ . '/../../resources/views/cbt/tata_tertib.php';
+    }
+
+    /**
+     * API cek status pengerjaan peserta (digunakan pageshow bfcache di halaman Tata Tertib)
+     */
+    public static function ajaxStatusPeserta() {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        $ctx = self::getAuthContext(true);
+        $db = $ctx['db_core'];
+        $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+        if ($ujian_id <= 0) {
+            echo json_encode(['success' => false, 'status' => '']);
+            exit;
+        }
+        $status = self::getCurrentPesertaStatusForUjian($db, $ujian_id);
+        echo json_encode(['success' => true, 'status' => $status]);
+        exit;
+    }
 }

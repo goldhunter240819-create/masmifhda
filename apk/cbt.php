@@ -1927,6 +1927,7 @@ include 'header.php';
                 <!-- Action Button -->
                 <?php
                 $cbtKerjakanBase = (isset($_SERVER['SCRIPT_NAME']) && strpos($_SERVER['SCRIPT_NAME'], '/masmifhda/') !== false) ? '/masmifhda/cbt/kerjakan' : '/cbt/kerjakan';
+                $cbtTataTertibBase = (isset($_SERVER['SCRIPT_NAME']) && strpos($_SERVER['SCRIPT_NAME'], '/masmifhda/') !== false) ? '/masmifhda/cbt/tata-tertib' : '/cbt/tata-tertib';
                 ?>
                 <?php if ($totalSoal <= 0): ?>
                     <div style="font-size: 0.72rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #fef2f2; padding: 6px 10px; border-radius: 8px; border: 1px solid #fecaca;">
@@ -1936,7 +1937,7 @@ include 'header.php';
                         <i class="fa-solid fa-ban"></i> Soal Belum Tersedia (0 Butir)
                     </button>
                 <?php elseif ($isMengerjakan): ?>
-                    <a href="<?= $cbtKerjakanBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
+                    <a href="<?= $cbtTataTertibBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
                 <?php elseif ($u['can_take']): ?>
@@ -2406,7 +2407,7 @@ function verifikasiDanMulaiUjian() {
     } else if (curPath.indexOf('/cbt/') !== -1) {
         cbtPrefix = curPath.substring(0, curPath.indexOf('/cbt/') + 4);
     }
-    window.location.replace(cbtPrefix + '/kerjakan?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken));
+    window.location.href = cbtPrefix + '/tata-tertib?ujian_id=' + curUjianId + '&token=' + encodeURIComponent(curExpectedToken);
 }
 
 // Enter key submit on input token

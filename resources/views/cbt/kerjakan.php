@@ -3504,21 +3504,23 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
         }
 
-        // Deteksi Split Screen (Layar Belah)
+        // Deteksi Split Screen (Layar Belah) & Floating Window / Freeform Chrome di HP/Tablet
         function checkSplitScreenMode() {
             if (!isAntiCheat || isExamSubmitted || isNavigatingQuestion) return;
 
-            // Abaikan jika siswa sedang mengetik pada input / textarea
+            // Abaikan jika siswa sedang mengetik pada input / textarea (keyboard virtual bisa mengecilkan tinggi)
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
             if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
 
-            // Jika tinggi viewport kurang dari 62% tinggi layar fisik di HP (Split Screen aktif)
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0 && (window.screen.width || 0) <= 1280);
             const availH = window.screen.availHeight || window.screen.height || 0;
-            if (availH > 500 && window.innerWidth <= 800) {
-                const ratio = window.innerHeight / availH;
+            const availW = window.screen.availWidth || window.screen.width || 0;
+            if (isTouchDevice && availH > 400 && availW > 300) {
+                const hRatio = window.innerHeight / availH;
+                const wRatio = window.innerWidth / availW;
                 const splitModal = document.getElementById('cbtSplitScreenModal');
 
-                if (ratio < 0.52) {
+                if (hRatio < 0.72 || wRatio < 0.75) {
                     if (!isSplitScreenActive) {
                         isSplitScreenActive = true;
                         if (splitModal) splitModal.style.display = 'flex';
@@ -3527,9 +3529,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         clearTimeout(splitScreenTimer);
                         splitScreenTimer = setTimeout(() => {
                             if (isSplitScreenActive && !isExamSubmitted) {
-                                handleTabViolation('Menggunakan Mode Layar Belah (Split Screen)');
+                                handleTabViolation('Menggunakan Mode Layar Belah / Jendela Mengambang');
                             }
-                        }, 4000);
+                        }, 3000);
                     }
                 } else {
                     if (isSplitScreenActive) {
@@ -3615,7 +3617,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }, 1200);
             });
 
+            let focusLostAt = 0;
             window.addEventListener('focus', function() {
+                focusLostAt = 0;
                 if (isShieldActive) {
                     resumeFromShield();
                 }
@@ -3625,8 +3629,16 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             setInterval(() => {
                 if (!isExamSubmitted && isAntiCheat) {
                     checkSplitScreenMode();
-                    if ((document.hidden || !document.hasFocus()) && !isNavigatingQuestion && !isViolationModalOpen && (Date.now() - lastUserActionTime > 2000)) {
+                    const isUnfocused = (document.hidden || !document.hasFocus()) && !isNavigatingQuestion && !isViolationModalOpen && (Date.now() - lastUserActionTime > 1500);
+                    if (isUnfocused) {
                         activateSecurityShield('Aplikasi Lain / Jendela Mengambang Terdeteksi');
+                        if (!focusLostAt) focusLostAt = Date.now();
+                        if (Date.now() - focusLostAt >= 2000) {
+                            focusLostAt = Date.now();
+                            handleTabViolation('Jendela Mengambang / Aplikasi Lain Aktif');
+                        }
+                    } else {
+                        focusLostAt = 0;
                     }
                     // Deteksi DevTools Docked di Laptop/Desktop
                     if (!isSimulasi && window.innerWidth > 800 && !isViolationModalOpen) {
