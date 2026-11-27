@@ -191,11 +191,14 @@
             </div>
 
             <ul class="tt-list">
-                <li><i class="fa-solid fa-ban"></i><span><strong>Wajib Layar Penuh (Fullscreen):</strong> Ujian harus dikerjakan dalam mode layar penuh. Keluar fullscreen dihitung sebagai pelanggaran.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Pindah Tab / Home / Floating Window:</strong> Membuka WhatsApp, Google, AI, layar belah (split screen), atau jendela mengambang otomatis terdeteksi &amp; memicu alarm.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Spam Tombol Kembali:</strong> Menekan tombol kembali paksa saat ujian berlangsung dapat menyebabkan akun terkunci otomatis.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>1 Akun 1 Perangkat:</strong> Login akun yang sama di perangkat lain saat ujian aktif otomatis ditolak.</span></li>
-                <li><i class="fa-solid fa-circle-exclamation"></i><span><strong>Batas Maksimal <?= (int)($maxPelanggaran ?? 3) ?>x Pelanggaran:</strong> Jika melewati batas pelanggaran, sistem otomatis mengunci atau men-submit ujian Anda.</span></li>
+                <li><i class="fa-solid fa-sun" style="color:#d97706;"></i><span><strong>Layar Wajib Tetap Hidup (Tidak Boleh Terkunci/Mati):</strong> Pastikan layar HP/laptop selalu menyala selama ujian. Jika layar mati atau terkunci (sleep/power), sistem menganggap Anda meninggalkan ujian.</span></li>
+                <li><i class="fa-solid fa-ban"></i><span><strong>Wajib Layar Penuh (Fullscreen):</strong> Ujian wajib dikerjakan dalam mode layar penuh. Keluar dari mode fullscreen dihitung sebagai pelanggaran dan harus segera kembali sebelum waktu hitung mundur habis.</span></li>
+                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Pindah Tab / Tombol Home / Aplikasi Lain:</strong> Menekan tombol Home, berpindah tab, Alt+Tab / tombol Windows, atau membuka WhatsApp, Google, dan AI otomatis memicu alarm &amp; pelanggaran.</span></li>
+                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Layar Belah (Split Screen) &amp; Jendela Mengambang:</strong> Mengaktifkan split screen atau floating window di atas ujian otomatis terblokir dan tercatat sebagai pelanggaran.</span></li>
+                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Ganti Jaringan &amp; Screenshot / DevTools:</strong> Dilarang mengganti WiFi ke Data Seluler saat ujian, melakukan tangkapan layar (gestur 3 jari / PrintScreen), atau membuka Inspect Element / DevTools.</span></li>
+                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Spam Tombol Kembali:</strong> Menekan tombol Kembali secara paksa saat ujian berlangsung akan langsung me-logout &amp; mengunci akun selama 10 jam.</span></li>
+                <li><i class="fa-solid fa-ban"></i><span><strong>1 Akun 1 Perangkat:</strong> Login akun yang sama di perangkat lain saat ujian berlangsung otomatis ditolak sistem.</span></li>
+                <li><i class="fa-solid fa-circle-exclamation"></i><span><strong>Batas Maksimal <?= (int)($maxPelanggaran ?? 3) ?>x Pelanggaran:</strong> Jika melewati batas pelanggaran, sistem otomatis mengunci atau men-submit ujian Anda (pelanggaran bersifat kumulatif dan tidak hilang saat reload).</span></li>
             </ul>
 
             <label class="tt-agree" for="chkSetujuTatib">
