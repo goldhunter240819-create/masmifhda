@@ -3216,6 +3216,44 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         document.addEventListener('keydown', unlockAudio, { once: true });
         document.addEventListener('touchstart', unlockAudio, { once: true });
 
+        const studentNameForVoice = <?php echo json_encode(trim((string)($pesertaInfo['nama_siswa'] ?? 'Peserta Ujian'))); ?>;
+
+        function speakViolationWarning(reason = 'Keluar Tab', count = 1, maxViol = 3) {
+            if (!soundAlarm || isSimulasi) return;
+            if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+            try {
+                window.speechSynthesis.cancel();
+
+                let aksi = 'keluar dari layar ujian';
+                if (reason.includes('Kembali')) aksi = 'menekan tombol kembali';
+                else if (reason.includes('Fullscreen')) aksi = 'keluar dari mode layar penuh';
+
+                const text = (count >= maxViol)
+                    ? `Peringatan keras! ${studentNameForVoice}, batas pelanggaran telah terlampaui. Sesi ujian Anda dihentikan oleh sistem pengawas.`
+                    : `Peringatan untuk ${studentNameForVoice}! Anda terdeteksi ${aksi}. Pelanggaran ke ${count} dari ${maxViol}. Harap segera kembali ke layar ujian!`;
+
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'id-ID';
+                utter.rate = 1.0;
+                utter.pitch = 1.05;
+                utter.volume = 1.0;
+
+                const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+                const idVoice = voices.find(v => (v.lang || '').toLowerCase().startsWith('id'));
+                if (idVoice) utter.voice = idVoice;
+
+                if (alarmAudio) alarmAudio.volume = 0.28;
+                utter.onend = () => {
+                    try { if (alarmAudio) alarmAudio.volume = 1.0; } catch(e) {}
+                };
+                utter.onerror = () => {
+                    try { if (alarmAudio) alarmAudio.volume = 1.0; } catch(e) {}
+                };
+
+                window.speechSynthesis.speak(utter);
+            } catch(e) {}
+        }
+
         function playDangerAlarm() {
             try {
                 if (typeof Android !== "undefined" && typeof Android.forceMaxVolume === "function") Android.forceMaxVolume();
@@ -3231,6 +3269,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         }
 
         function stopDangerAlarm() {
+            try {
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            } catch(e) {}
             if (!alarmAudio) return;
             try {
                 alarmAudio.pause();
@@ -3251,8 +3292,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             violationCount++;
             localStorage.setItem(storageKeyViol, violationCount);
 
-            // Putar sound effect meme danger alarm!
+            // Putar sound effect alarm & suara peringatan AI!
             playDangerAlarm();
+            speakViolationWarning(reason, violationCount, maxViolations);
 
             // Tampilkan modal peringatan
             showViolationModal(reason);

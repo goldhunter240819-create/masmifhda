@@ -297,7 +297,13 @@ if (empty($previewKelasListReg)) {
 <script>
 function toggleCbtDropdown(toggleEl) {
     const parent = toggleEl.parentElement;
-    parent.classList.toggle('open');
+    const wasOpen = parent.classList.contains('open');
+    document.querySelectorAll('.z-nav-dropdown.open').forEach(el => {
+        el.classList.remove('open');
+    });
+    if (!wasOpen) {
+        parent.classList.add('open');
+    }
 }
 
 function openModalPreviewSiswa() {
