@@ -1584,13 +1584,16 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         const storageKeyViol = `cbt_viol_${ujianId}_${pesertaId}`;
         const storageKeySessViol = `cbt_sess_viol_${ujianId}_${pesertaId}`;
         const storageKeyReset = `cbt_reset_${ujianId}_${pesertaId}`;
+        const storageKeyPendingViol = `cbt_pending_viol_${ujianId}_${pesertaId}`;
+        const storageKeyPendingLock = `cbt_pending_lock_${ujianId}_${pesertaId}`;
         const serverResetCount = <?php echo (int)($pesertaInfo['reset_count'] ?? 0); ?>;
         const serverViolationCount = <?php echo (int)($serverTotalViolations ?? ($pesertaInfo['violation_count'] ?? 0)); ?>;
+        const serverSessionViolations = <?php echo (int)($serverSessionViolations ?? 0); ?>;
         const localResetCount = parseInt(localStorage.getItem(storageKeyReset) || '0', 10);
 
         // Total pelanggaran kumulatif TIDAK PERNAH di-reset oleh reload maupun Buka Ujian (lanjut 4x, 5x, 6x...)
         let violationCount = Math.max(parseInt(localStorage.getItem(storageKeyViol) || '0', 10) || 0, serverViolationCount);
-        let sessionViolationCount = parseInt(localStorage.getItem(storageKeySessViol) || '0', 10) || 0;
+        let sessionViolationCount = Math.max(parseInt(localStorage.getItem(storageKeySessViol) || '0', 10) || 0, serverSessionViolations);
         if (serverResetCount === 0 && sessionViolationCount < violationCount) {
             sessionViolationCount = violationCount;
         }
@@ -1600,9 +1603,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             try {
                 localStorage.removeItem(storageKeySessViol);
                 localStorage.removeItem(storageKeyDeadline);
+                localStorage.removeItem(storageKeyPendingLock);
+                localStorage.removeItem(storageKeyPendingViol);
                 localStorage.setItem(storageKeyReset, String(serverResetCount));
             } catch(e) {}
-            sessionViolationCount = 0;
+            sessionViolationCount = Math.max(0, serverSessionViolations);
         }
 
         let currentIndex = 0;
@@ -3269,15 +3274,37 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             localStorage.setItem(storageKeyViol, violationCount);
             localStorage.setItem(storageKeySessViol, sessionViolationCount);
 
-            // Kirim laporan pelanggaran ke server agar tercatat kumulatif & di log pelanggaran
+            // Kirim laporan pelanggaran ke server agar tercatat kumulatif & di log pelanggaran (simpan antrean offline jika Mode Pesawat)
             if (pesertaId > 0 && !isSimulasi) {
+                const isLockedNow = (sessionViolationCount >= maxViolations && actionViolation !== 'submit');
+                const isAutoSubmitNow = (sessionViolationCount >= maxViolations && actionViolation === 'submit');
+                const payloadBody = `peserta_id=${pesertaId}&violation_count=${violationCount}&reason=${encodeURIComponent(reason)}&status=${isLockedNow ? 'Terkunci' : ''}&is_autosubmit=${isAutoSubmitNow ? '1' : '0'}`;
+                if (isLockedNow) {
+                    try { localStorage.setItem(storageKeyPendingLock, payloadBody); } catch(e) {}
+                } else {
+                    try {
+                        const q = JSON.parse(localStorage.getItem(storageKeyPendingViol) || '[]');
+                        q.push(payloadBody);
+                        localStorage.setItem(storageKeyPendingViol, JSON.stringify(q.slice(-10)));
+                    } catch(e) {}
+                }
                 try {
-                    const isLockedNow = (sessionViolationCount >= maxViolations && actionViolation !== 'submit');
-                    const isAutoSubmitNow = (sessionViolationCount >= maxViolations && actionViolation === 'submit');
                     fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
                         method: 'POST',
+                        keepalive: true,
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `peserta_id=${pesertaId}&violation_count=${violationCount}&reason=${encodeURIComponent(reason)}&status=${isLockedNow ? 'Terkunci' : ''}&is_autosubmit=${isAutoSubmitNow ? '1' : '0'}`
+                        body: payloadBody
+                    }).then(r => {
+                        if (r && r.ok) {
+                            if (isLockedNow) { try { localStorage.removeItem(storageKeyPendingLock); } catch(e) {} }
+                            else {
+                                try {
+                                    const q = JSON.parse(localStorage.getItem(storageKeyPendingViol) || '[]');
+                                    const idx = q.indexOf(payloadBody);
+                                    if (idx !== -1) { q.splice(idx, 1); localStorage.setItem(storageKeyPendingViol, JSON.stringify(q)); }
+                                } catch(e) {}
+                            }
+                        }
                     }).catch(() => {});
                 } catch(e) {}
             }
@@ -3301,12 +3328,16 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             if (modalL) modalL.classList.add('open');
 
             if (pesertaId > 0 && !isSimulasi) {
+                const lockBody = `peserta_id=${pesertaId}&violation_count=${Math.max(1, violationCount)}&reason=${encodeURIComponent(reason)}&status=Terkunci`;
+                try { localStorage.setItem(storageKeyPendingLock, lockBody); } catch(e) {}
                 try {
                     fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
                         method: 'POST',
                         keepalive: true,
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `peserta_id=${pesertaId}&violation_count=${Math.max(1, violationCount)}&reason=${encodeURIComponent(reason)}&status=Terkunci`
+                        body: lockBody
+                    }).then(r => {
+                        if (r && r.ok) { try { localStorage.removeItem(storageKeyPendingLock); } catch(e) {} }
                     }).catch(() => {});
                 } catch(e) {}
             }
@@ -3863,11 +3894,46 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
         });
 
+        function syncPendingOfflineAntiCheat() {
+            if (pesertaId <= 0 || isSimulasi) return;
+            try {
+                const pendingLock = localStorage.getItem(storageKeyPendingLock);
+                if (pendingLock) {
+                    isExamSubmitted = true;
+                    const lModal = document.getElementById('modalLocked');
+                    if (lModal) lModal.classList.add('open');
+                    fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
+                        method: 'POST',
+                        keepalive: true,
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: pendingLock
+                    }).then(r => { if (r && r.ok) localStorage.removeItem(storageKeyPendingLock); }).catch(() => {});
+                }
+                const pendingViols = JSON.parse(localStorage.getItem(storageKeyPendingViol) || '[]');
+                if (Array.isArray(pendingViols) && pendingViols.length > 0) {
+                    const remaining = [];
+                    Promise.all(pendingViols.map(b =>
+                        fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
+                            method: 'POST',
+                            keepalive: true,
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: b
+                        }).then(r => { if (!r || !r.ok) remaining.push(b); }).catch(() => { remaining.push(b); })
+                    )).then(() => {
+                        try { localStorage.setItem(storageKeyPendingViol, JSON.stringify(remaining)); } catch(e) {}
+                    });
+                }
+            } catch(e) {}
+        }
+        window.addEventListener('online', syncPendingOfflineAntiCheat);
+
         function runCbtApp() {
             try { initCbt(); } catch(e) { console.error('Init error:', e); }
+            try { syncPendingOfflineAntiCheat(); } catch(e) {}
             try {
                 const isServerTerkunci = <?php echo !empty($isPesertaTerkunci) ? 'true' : 'false'; ?>;
-                if (isServerTerkunci || (typeof isAntiCheat !== 'undefined' && isAntiCheat && sessionViolationCount >= maxViolations && actionViolation === 'lock')) {
+                const hasPendingLock = !!(localStorage.getItem(storageKeyPendingLock));
+                if (isServerTerkunci || hasPendingLock || (typeof isAntiCheat !== 'undefined' && isAntiCheat && sessionViolationCount >= maxViolations && actionViolation === 'lock')) {
                     isExamSubmitted = true;
                     const lModal = document.getElementById('modalLocked');
                     if (lModal) lModal.classList.add('open');

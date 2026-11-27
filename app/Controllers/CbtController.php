@@ -4032,6 +4032,8 @@ class CbtController {
 
         // Hitung total pelanggaran kumulatif (tidak pernah ter-reset oleh reload atau buka ujian kembali)
         $serverTotalViolations = (int)($pesertaInfo['violation_count'] ?? 0);
+        $serverResetNow = (int)($pesertaInfo['reset_count'] ?? 0);
+        $serverSessionViolations = !empty($pesertaInfo['id']) ? (int)($_SESSION['cbt_sess_viol_' . (int)$pesertaInfo['id'] . '_r' . $serverResetNow] ?? 0) : 0;
         if (!empty($pesertaInfo['id'])) {
             try {
                 $hasLogT = $db->query("SHOW TABLES LIKE 'cbt_pelanggaran_log'")->fetchColumn();
@@ -4107,9 +4109,13 @@ class CbtController {
                     $stmt = $db->prepare("UPDATE cbt_peserta SET violation_count = COALESCE(violation_count, 0) + 1 WHERE id = ?");
                     $stmt->execute([$peserta_id]);
                 }
-                $stGetV = $db->prepare("SELECT violation_count FROM cbt_peserta WHERE id = ? LIMIT 1");
+                $stGetV = $db->prepare("SELECT violation_count, reset_count FROM cbt_peserta WHERE id = ? LIMIT 1");
                 $stGetV->execute([$peserta_id]);
-                $newPesertaViol = (int)$stGetV->fetchColumn();
+                $vRow = $stGetV->fetch(PDO::FETCH_ASSOC);
+                $newPesertaViol = (int)($vRow['violation_count'] ?? 0);
+                $curResetCnt = (int)($vRow['reset_count'] ?? 0);
+                $sessViolKey = 'cbt_sess_viol_' . $peserta_id . '_r' . $curResetCnt;
+                $_SESSION[$sessViolKey] = (int)($_SESSION[$sessViolKey] ?? 0) + 1;
 
                 $stInfo = $db->prepare("SELECT p.nama_siswa, p.kelas_nama, COALESCE(u.mapel_nama, u.nama_ujian, 'Ujian') as nama_ujian FROM cbt_peserta p LEFT JOIN cbt_ujian u ON u.id = p.ujian_id WHERE p.id = ? LIMIT 1");
                 $stInfo->execute([$peserta_id]);
