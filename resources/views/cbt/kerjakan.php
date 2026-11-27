@@ -3325,9 +3325,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             isViolationModalOpen = false;
             document.getElementById('modalViolation').classList.remove('open');
 
-            // Kunci kembali history gawai
+            // Kunci kembali history gawai (dipanggil dari klik tombol user -> diterima Chrome)
             try {
-                window.history.pushState({ cbt_session: 'active' }, document.title, window.location.href);
+                for (let h = 0; h < 5; h++) {
+                    window.history.pushState({ cbt_session: 'active', modal_close: h }, document.title, window.location.href);
+                }
             } catch(e) {}
 
             if (forceFullscreen && !document.fullscreenElement) {
@@ -3353,7 +3355,8 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
             } catch(e) {}
 
-            let backSpamTotal = 0;
+            const storageKeyBackSpam = `cbt_back_spam_${ujianId}_${pesertaId}`;
+            let backSpamTotal = parseInt(localStorage.getItem(storageKeyBackSpam) || '0', 10) || 0;
             let lastBackPopAt = 0;
             let isBackSpamLocking = false;
 
@@ -3361,6 +3364,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 if (isBackSpamLocking || backSpamLockHours <= 0 || isSimulasi) return;
                 isBackSpamLocking = true;
                 isExamSubmitted = true;
+                try { localStorage.removeItem(storageKeyBackSpam); } catch(e) {}
                 const lockUrl = '<?php echo base_url("cbt/api/lock-back-spam"); ?>';
                 const payloadStr = `peserta_id=${pesertaId}&source=Ruang%20Ujian`;
                 try {
@@ -3385,7 +3389,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 });
             }
 
-            // Setiap kali siswa klik/tap di soal (user gesture asli), perkuat 1 history guard agar Chrome tidak mengabaikan
+            // Setiap kali siswa klik/tap di soal (user gesture asli), perkuat history guard agar Chrome tidak mengabaikan
             document.addEventListener('pointerdown', function() {
                 if (isExamSubmitted || isBackSpamLocking) return;
                 try {
@@ -3399,6 +3403,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 if (isExamSubmitted || isBackSpamLocking) return;
                 lastBackPopAt = Date.now();
                 backSpamTotal++;
+                try { localStorage.setItem(storageKeyBackSpam, String(backSpamTotal)); } catch(e) {}
 
                 try {
                     for (let h = 0; h < 5; h++) {
@@ -3406,7 +3411,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     }
                 } catch(e) {}
 
-                // Pada tekan Kembali ke-2 selama ujian, langsung kunci & logout paksa (tidak menunggu 3x)
+                // Pada tekan Kembali ke-2 (atau jika sudah pernah diperingatkan sebelumnya), langsung kunci 10 jam & logout paksa!
                 if (backSpamTotal >= 2 && backSpamLockHours > 0 && !isSimulasi) {
                     triggerBackSpamLockAndLogout();
                     return;
@@ -3416,9 +3421,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 handleTabViolation('Mencoba Menekan Tombol Kembali');
             });
 
-            // Jika siswa berhasil lolos keluar halaman tepat setelah tekan Kembali (Chrome back-spam bypass)
+            // Jika siswa berhasil lolos keluar halaman setelah menekan tombol Kembali (Chrome back-spam bypass)
             window.addEventListener('pagehide', function() {
-                if (!isExamSubmitted && !isBackSpamLocking && lastBackPopAt > 0 && (Date.now() - lastBackPopAt) <= 4000 && backSpamLockHours > 0 && !isSimulasi) {
+                if (!isExamSubmitted && !isBackSpamLocking && lastBackPopAt > 0 && backSpamLockHours > 0 && !isSimulasi) {
                     const lockUrl = '<?php echo base_url("cbt/api/lock-back-spam"); ?>';
                     const payloadStr = `peserta_id=${pesertaId}&source=Ruang%20Ujian%20(Exit)`;
                     try {
