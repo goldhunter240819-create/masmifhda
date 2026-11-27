@@ -366,6 +366,7 @@ try {
           AND (u.topik_id IS NULL OR u.topik_id = 0 OR (t.id IS NOT NULL AND t.status = 'Aktif'))
           AND (u.kelas_nama IS NULL OR u.kelas_nama = '' OR u.kelas_nama IN ($inPlaceholders))
         ORDER BY 
+            CASE WHEN p.status_pengerjaan IN ('Mengerjakan', 'Sedang Mengerjakan') AND p.waktu_selesai IS NULL THEN 0 ELSE 1 END ASC,
             CASE WHEN u.topik_id = {$nearestTopikId} THEN 0 ELSE 1 END ASC,
             CASE 
                 WHEN u.kelas_nama = ? THEN 0
