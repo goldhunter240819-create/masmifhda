@@ -86,7 +86,7 @@ if (!empty($_SESSION['cbt_exam_active_lock']) && !empty($_SESSION['siswa_id']) &
                 ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), kelas_nama = VALUES(kelas_nama), reason = VALUES(reason), locked_until = DATE_ADD(NOW(), INTERVAL ? HOUR)");
             $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
             $untilFmt = date('d/m H:i', time() + ($lockHours * 3600)) . ' WIB';
-            $error_msg = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}) karena keluar paksa / spam tombol Kembali saat ujian berlangsung.";
+            $error_msg = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}). Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
             $active_tab = 'manual';
             $_SESSION = [];
             if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
@@ -103,7 +103,7 @@ $checkLoginLockMsg = function($db, $userKey) {
         $row = $st->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $untilFmt = date('d/m H:i', strtotime($row['locked_until'])) . ' WIB';
-            return "Akun Anda dikunci sementara hingga {$untilFmt} karena {$row['reason']}. Hubungi Admin/Proktor untuk membuka kunci.";
+            return "Akun Anda dikunci sementara hingga {$untilFmt} karena {$row['reason']}. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
         }
     } catch (\Throwable $e) {}
     return '';

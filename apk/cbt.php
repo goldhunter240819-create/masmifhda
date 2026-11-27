@@ -43,7 +43,7 @@ if (!$isAdminPreview) {
             $stLk->execute([$uKeyChk]);
             $lkRow = $stLk->fetch(PDO::FETCH_ASSOC);
             if ($lkRow) {
-                $msgLk = "Akun Anda dikunci sementara hingga " . date('d/m H:i', strtotime($lkRow['locked_until'])) . " WIB karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ".";
+                $msgLk = "Akun Anda dikunci sementara hingga " . date('d/m H:i', strtotime($lkRow['locked_until'])) . " WIB karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ". Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
                 header("Location: login.php?locked_msg=" . urlencode($msgLk));
@@ -87,7 +87,7 @@ if (!$isAdminPreview) {
                 $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
 
                 $untilFmt = date('d/m H:i', time() + ($lockHours * 3600)) . ' WIB';
-                $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}) karena keluar paksa / spam tombol Kembali saat ujian berlangsung.";
+                $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}). Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
                 header("Location: login.php?locked_msg=" . urlencode($msgLk));
@@ -2523,7 +2523,7 @@ setInterval(function() {
                 })
                 .then(r => r.json())
                 .then(res => {
-                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam (hingga ${(res && res.locked_until) ? res.locked_until : 'nanti'}) karena menekan tombol Kembali berulang kali.`;
+                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam (hingga ${(res && res.locked_until) ? res.locked_until : 'nanti'}). Silahkan pulang saja, nunggu di rumah, besok kesini lagi!`;
                     window.location.href = 'login.php?locked_msg=' + encodeURIComponent(msg);
                 })
                 .catch(() => {
