@@ -4022,6 +4022,12 @@ class CbtController {
         $status = $_POST['status'] ?? ''; // 'Terkunci' jika melampaui batas
         $violCount = isset($_POST['violation_count']) ? max(1, (int)$_POST['violation_count']) : 1;
         $reason = trim((string)($_POST['reason'] ?? 'Keluar Tab'));
+        $isAutoSubmit = !empty($_POST['is_autosubmit']);
+        if ($isAutoSubmit && stripos($reason, 'Auto-Submit') === false) {
+            $reason = 'Auto-Submit Pelanggaran (' . $reason . ')';
+        } elseif ($status === 'Terkunci' && stripos($reason, 'Terkunci') === false) {
+            $reason = 'Terkunci Pelanggaran (' . $reason . ')';
+        }
 
         if ($peserta_id > 0) {
             try {

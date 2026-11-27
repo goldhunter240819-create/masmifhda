@@ -3255,10 +3255,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             if (pesertaId > 0 && !isSimulasi) {
                 try {
                     const isLockedNow = (violationCount >= maxViolations && actionViolation !== 'submit');
+                    const isAutoSubmitNow = (violationCount >= maxViolations && actionViolation === 'submit');
                     fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `peserta_id=${pesertaId}&violation_count=${violationCount}&reason=${encodeURIComponent(reason)}&status=${isLockedNow ? 'Terkunci' : ''}`
+                        body: `peserta_id=${pesertaId}&violation_count=${violationCount}&reason=${encodeURIComponent(reason)}&status=${isLockedNow ? 'Terkunci' : ''}&is_autosubmit=${isAutoSubmitNow ? '1' : '0'}`
                     }).catch(() => {});
                 } catch(e) {}
             }

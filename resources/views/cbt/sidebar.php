@@ -353,8 +353,9 @@ function launchPreviewSiswa() {
 // SUARA AI PENGAWAS CBT DI ADMIN (Real-time Violation Monitor)
 // ============================================================
 let adminAiVoiceEnabled = (localStorage.getItem('cbt_admin_ai_voice') !== '0');
-let lastViolationLogId = 0;
-let adminViolationInitDone = false;
+let lastViolationLogId = parseInt(localStorage.getItem('cbt_last_spoken_viol_id') || '0', 10) || 0;
+let adminViolationInitDone = (lastViolationLogId > 0);
+const spokenViolationIds = new Set();
 
 function updateAdminAiVoiceUI() {
     const lbl = document.getElementById('lblAdminAiVoice');
@@ -420,24 +421,49 @@ function pollAdminViolations() {
     .then(r => r.json())
     .then(res => {
         if (!res || !res.success) return;
+        const srvLatest = parseInt(res.latest_id || 0, 10);
         if (!adminViolationInitDone) {
-            lastViolationLogId = parseInt(res.latest_id || 0, 10);
+            lastViolationLogId = srvLatest;
+            localStorage.setItem('cbt_last_spoken_viol_id', String(lastViolationLogId));
             adminViolationInitDone = true;
             return;
         }
-        if (typeof res.latest_id !== 'undefined' && parseInt(res.latest_id, 10) > lastViolationLogId) {
-            lastViolationLogId = parseInt(res.latest_id, 10);
+        // Jika database di-reset / ID server lebih kecil dari localStorage, sinkronkan ulang tanpa bunyi
+        if (srvLatest > 0 && srvLatest < lastViolationLogId && (!res.items || res.items.length === 0)) {
+            lastViolationLogId = srvLatest;
+            localStorage.setItem('cbt_last_spoken_viol_id', String(lastViolationLogId));
+            return;
         }
         if (Array.isArray(res.items) && res.items.length > 0) {
             res.items.forEach(item => {
+                const idNum = parseInt(item.id || 0, 10);
+                const storedMax = parseInt(localStorage.getItem('cbt_last_spoken_viol_id') || '0', 10) || 0;
+                if (idNum <= storedMax || spokenViolationIds.has(idNum)) {
+                    return; // Sudah pernah diucapkan, jangan ulangi walau reload/multi-tab!
+                }
+                spokenViolationIds.add(idNum);
+                if (idNum > lastViolationLogId) {
+                    lastViolationLogId = idNum;
+                }
+                localStorage.setItem('cbt_last_spoken_viol_id', String(Math.max(storedMax, idNum)));
+
                 showAdminViolationToast(item);
-                let aksi = 'keluar dari layar ujian';
                 const rsn = String(item.reason || '');
-                if (rsn.includes('Kembali')) aksi = 'menekan tombol kembali';
-                else if (rsn.includes('Fullscreen')) aksi = 'keluar dari layar penuh';
-                const msg = `Perhatian! Siswa ${item.nama_siswa || ''}, kelas ${item.kelas_nama || ''}, terdeteksi ${aksi}, pelanggaran ke ${item.violation_count || 1}.`;
+                let msg = '';
+                if (rsn.includes('Auto-Submit')) {
+                    msg = `Perhatian! Siswa ${item.nama_siswa || ''}, kelas ${item.kelas_nama || ''}, melakukan pelanggaran dan ujian ter auto submit.`;
+                } else {
+                    let aksi = 'keluar dari layar ujian';
+                    if (rsn.includes('Kembali')) aksi = 'menekan tombol kembali';
+                    else if (rsn.includes('Fullscreen')) aksi = 'keluar dari layar penuh';
+                    msg = `Perhatian! Siswa ${item.nama_siswa || ''}, kelas ${item.kelas_nama || ''}, melakukan pelanggaran ${aksi}, ke ${item.violation_count || 1}.`;
+                }
                 speakAdminAiText(msg);
             });
+        }
+        if (srvLatest > lastViolationLogId) {
+            lastViolationLogId = srvLatest;
+            localStorage.setItem('cbt_last_spoken_viol_id', String(lastViolationLogId));
         }
     })
     .catch(() => {});
