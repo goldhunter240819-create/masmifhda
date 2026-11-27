@@ -205,12 +205,20 @@ $router->add('POST', '/cbt/ujian/save', [\App\Controllers\CbtController::class, 
 $router->add('POST', '/cbt/ujian/delete', [\App\Controllers\CbtController::class, 'deleteUjian']);
 $router->add('POST', '/cbt/ujian/sync-peserta', [\App\Controllers\CbtController::class, 'syncPesertaAction']);
 
+$router->add('GET', '/cbt/tata-tertib', [\App\Controllers\CbtController::class, 'tataTertib']);
+$router->add('GET', '/cbt/konfirmasi-token', [\App\Controllers\CbtController::class, 'tokenUjian']);
+$router->add('GET', '/cbt/api/status-peserta', [\App\Controllers\CbtController::class, 'ajaxStatusPeserta']);
+$router->add('POST', '/cbt/api/lock-back-spam', [\App\Controllers\CbtController::class, 'ajaxLockBackSpam']);
+$router->add('POST', '/cbt/pengaturan/unlock-login', [\App\Controllers\CbtController::class, 'unlockLoginAkun']);
+$router->add('POST', '/cbt/api/toggle-menu-apk', [\App\Controllers\CbtController::class, 'ajaxToggleMenuApk']);
 $router->add('GET', '/cbt/kerjakan', [\App\Controllers\CbtController::class, 'kerjakan']);
 $router->add('POST', '/cbt/kerjakan/simpan-jawaban', [\App\Controllers\CbtController::class, 'ajaxSimpanJawaban']);
 $router->add('POST', '/cbt/kerjakan/pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCatatPelanggaran']);
 $router->add('POST', '/cbt/kerjakan/submit', [\App\Controllers\CbtController::class, 'submitKerjakan']);
 $router->add('GET', '/cbt/kerjakan/selesai', [\App\Controllers\CbtController::class, 'selesaiKerjakan']);
 
+$router->add('GET', '/tata-tertib', [\App\Controllers\CbtController::class, 'tataTertib']);
+$router->add('GET', '/konfirmasi-token', [\App\Controllers\CbtController::class, 'tokenUjian']);
 $router->add('GET', '/kerjakan', [\App\Controllers\CbtController::class, 'kerjakan']);
 $router->add('POST', '/kerjakan/simpan-jawaban', [\App\Controllers\CbtController::class, 'ajaxSimpanJawaban']);
 $router->add('POST', '/kerjakan/pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCatatPelanggaran']);

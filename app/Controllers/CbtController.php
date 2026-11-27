@@ -10649,10 +10649,10 @@ class CbtController {
         if ($isAdminPreview) {
             if ($pKelas === '') $pKelas = (string)($ujianInfo['kelas_nama'] ?? 'X E.1');
             $dashboardUrl = base_url('apk/cbt.php?admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
-            $nextTokenUrl = base_url('cbt/token?ujian_id=' . $ujian_id . '&admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
+            $nextTokenUrl = base_url('cbt/konfirmasi-token?ujian_id=' . $ujian_id . '&admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
             $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . '&admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
         } else {
-            $nextTokenUrl = base_url('cbt/token?ujian_id=' . $ujian_id);
+            $nextTokenUrl = base_url('cbt/konfirmasi-token?ujian_id=' . $ujian_id);
             $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id);
             $pRow = self::getCurrentPesertaRowForUjian($db, $ujian_id);
             $statusNow = (string)($pRow['status_pengerjaan'] ?? '');
