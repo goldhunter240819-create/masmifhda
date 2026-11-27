@@ -3624,13 +3624,89 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             document.addEventListener('paste', function(e) { e.preventDefault(); return false; });
         }
 
-        // Listener keluar fullscreen
+        // Listener wajib fullscreen & keluar fullscreen (Halaman Kerjakan)
         if (isAntiCheat && forceFullscreen) {
-            document.addEventListener('fullscreenchange', function() {
-                if (!document.fullscreenElement && !isExamSubmitted && !isViolationModalOpen) {
-                    handleTabViolation('Keluar Fullscreen');
+            (function() {
+                const isNativeBridge = (typeof Android !== 'undefined' || typeof AndroidOneSignal !== 'undefined');
+                const fsSupported = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+                if (isNativeBridge || !fsSupported) return;
+
+                // Buat overlay popup wajib fullscreen
+                const ov = document.createElement('div');
+                ov.id = 'fsKerjakanOverlay';
+                ov.style.cssText = 'display:none; position:fixed; inset:0; z-index:999998; background:rgba(15,23,42,0.92); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px;';
+                ov.innerHTML = `<div style="background:#ffffff; border-radius:22px; max-width:400px; width:100%; padding:26px 22px; text-align:center; box-shadow:0 25px 50px rgba(0,0,0,0.45); border:2px solid #ef4444;">
+                    <div style="width:64px; height:64px; border-radius:50%; background:#fef2f2; color:#dc2626; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:1.75rem;">🖥️</div>
+                    <h3 style="margin:0 0 8px; font-size:1.15rem; font-weight:800; color:#0f172a;">Wajib Mode Layar Penuh!</h3>
+                    <p style="margin:0 0 14px; font-size:0.84rem; color:#475569; line-height:1.5;">Ruang ujian CBT wajib menggunakan mode <b>Layar Penuh (Fullscreen)</b>. Jika tidak diaktifkan, Anda akan dikeluarkan otomatis.</p>
+                    <div style="margin-bottom:16px; padding:9px 12px; border-radius:10px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:0.82rem; font-weight:800;">
+                        Otomatis keluar dalam <span id="fsKerjakanSec">12</span> detik jika tidak diaktifkan!
+                    </div>
+                    <button type="button" id="btnActivateKerjakanFs" style="width:100%; padding:13px 16px; border:none; border-radius:12px; background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%); color:#fff; font-weight:800; font-size:0.92rem; cursor:pointer; box-shadow:0 6px 18px rgba(37,99,235,0.35);">
+                        Aktifkan Layar Penuh Sekarang
+                    </button>
+                </div>`;
+                document.body.appendChild(ov);
+
+                const secEl = document.getElementById('fsKerjakanSec');
+                let fsKickTimer = null;
+                let fsKickLeft = 12;
+                let hadEnteredFs = false;
+
+                function stopKerjakanFsKick() {
+                    if (fsKickTimer) { clearInterval(fsKickTimer); fsKickTimer = null; }
                 }
-            });
+
+                function startKerjakanFsKick(sec = 12) {
+                    stopKerjakanFsKick();
+                    fsKickLeft = sec;
+                    if (secEl) secEl.textContent = fsKickLeft;
+                    fsKickTimer = setInterval(() => {
+                        if (isExamSubmitted) { stopKerjakanFsKick(); return; }
+                        fsKickLeft--;
+                        if (secEl) secEl.textContent = Math.max(0, fsKickLeft);
+                        if (fsKickLeft <= 0) {
+                            stopKerjakanFsKick();
+                            isExamSubmitted = true;
+                            window.location.href = '<?php echo base_url("apk/logout.php"); ?>';
+                        }
+                    }, 1000);
+                }
+
+                function syncKerjakanFs(fromExit) {
+                    if (isExamSubmitted) return;
+                    if (document.fullscreenElement) {
+                        hadEnteredFs = true;
+                        stopKerjakanFsKick();
+                        ov.style.display = 'none';
+                    } else {
+                        ov.style.display = 'flex';
+                        startKerjakanFsKick(fromExit ? 7 : 12);
+                    }
+                }
+
+                document.getElementById('btnActivateKerjakanFs').onclick = function() {
+                    const el = document.documentElement;
+                    if (el.requestFullscreen) {
+                        el.requestFullscreen().then(() => {
+                            hadEnteredFs = true;
+                            stopKerjakanFsKick();
+                            ov.style.display = 'none';
+                        }).catch(() => {});
+                    }
+                };
+
+                document.addEventListener('fullscreenchange', function() {
+                    const exited = !document.fullscreenElement;
+                    if (exited && hadEnteredFs && !isExamSubmitted && !isViolationModalOpen) {
+                        handleTabViolation('Keluar Fullscreen');
+                    }
+                    syncKerjakanFs(exited);
+                });
+
+                window.addEventListener('DOMContentLoaded', function() { syncKerjakanFs(false); });
+                setTimeout(function() { syncKerjakanFs(false); }, 250);
+            })();
         }
 
         window.addEventListener('resize', () => {
