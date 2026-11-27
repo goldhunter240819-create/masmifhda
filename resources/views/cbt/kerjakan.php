@@ -3288,6 +3288,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             } else if (reason.includes('Fullscreen')) {
                 if (titleEl) titleEl.textContent = 'Terdeteksi Keluar dari Layar Penuh!';
                 if (descEl) descEl.textContent = 'Anda wajib mengerjakan ujian dalam mode layar penuh (Fullscreen) tanpa meminimalkan jendela.';
+            } else if (reason.includes('Jaringan')) {
+                if (titleEl) titleEl.textContent = 'Terdeteksi Mengganti Jaringan!';
+                if (descEl) descEl.textContent = 'Anda terdeteksi mengganti koneksi jaringan / Wi-Fi / Data Seluler saat ujian berlangsung. Harap tetap menggunakan jaringan resmi ujian!';
             } else {
                 if (titleEl) titleEl.textContent = 'Terdeteksi Keluar dari Lembar Ujian!';
                 if (descEl) descEl.textContent = 'Anda terdeteksi berpindah tab browser, membuka aplikasi lain, atau meninggalkan layar ujian. Tindakan ini telah dicatat oleh sistem pengawas!';
@@ -3450,6 +3453,44 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     }
                 }
             }
+        }
+
+        // ─── ANTI GANTI JARINGAN (WIFI <-> DATA SELULER / RECONNECT) ─────────
+        if (isAntiCheat) {
+            try {
+                const netConn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+                let initialNetType = (netConn && netConn.type && netConn.type !== 'none' && netConn.type !== 'unknown') ? netConn.type : '';
+                let netOfflineAt = 0;
+
+                if (netConn && typeof netConn.addEventListener === 'function') {
+                    netConn.addEventListener('change', function() {
+                        if (!isAntiCheat || isExamSubmitted) return;
+                        const newType = (netConn.type && netConn.type !== 'none' && netConn.type !== 'unknown') ? netConn.type : '';
+                        if (initialNetType && newType && newType !== initialNetType) {
+                            const oldT = initialNetType;
+                            initialNetType = newType;
+                            handleTabViolation('Ganti Jaringan (' + oldT + ' ke ' + newType + ')');
+                        } else if (!initialNetType && newType) {
+                            initialNetType = newType;
+                        }
+                    });
+                }
+
+                window.addEventListener('offline', function() {
+                    if (!isAntiCheat || isExamSubmitted) return;
+                    netOfflineAt = Date.now();
+                });
+
+                window.addEventListener('online', function() {
+                    if (!isAntiCheat || isExamSubmitted || netOfflineAt <= 0) return;
+                    const offlineDuration = Date.now() - netOfflineAt;
+                    netOfflineAt = 0;
+                    const hasTypeApi = !!(netConn && netConn.type && netConn.type !== 'unknown');
+                    if (!hasTypeApi && offlineDuration >= 5000) {
+                        handleTabViolation('Ganti Jaringan (Putus & Sambung Ulang)');
+                    }
+                });
+            } catch(e) {}
         }
 
         // Listener pindah tab & keluar layar & floating window
