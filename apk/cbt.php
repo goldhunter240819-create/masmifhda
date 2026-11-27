@@ -44,7 +44,7 @@ if (!$isAdminPreview) {
             $lkRow = $stLk->fetch(PDO::FETCH_ASSOC);
             if ($lkRow) {
                 $lkTs = (int)strtotime($lkRow['locked_until']);
-                $msgLk = "Akun Anda dikunci sementara karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ". Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+                $msgLk = "Akun Anda dikunci sementara karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ". Silahkan pulang saja, renungi di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
                 header("Location: login.php?locked_msg=" . urlencode($msgLk) . "&locked_until_ts=" . $lkTs);
@@ -88,7 +88,7 @@ if (!$isAdminPreview) {
                 $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
 
                 $lkTs = time() + ($lockHours * 3600);
-                $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+                $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam. Silahkan pulang saja, renungi di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
                 header("Location: login.php?locked_msg=" . urlencode($msgLk) . "&locked_until_ts=" . $lkTs);
@@ -2524,7 +2524,7 @@ setInterval(function() {
                 })
                 .then(r => r.json())
                 .then(res => {
-                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!`;
+                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam. Silahkan pulang saja, renungi di rumah, besok kesini lagi!`;
                     const ts = (res && res.locked_until_ts) ? res.locked_until_ts : (Math.floor(Date.now() / 1000) + (backSpamLockHours * 3600));
                     window.location.href = 'login.php?locked_msg=' + encodeURIComponent(msg) + '&locked_until_ts=' + ts;
                 })

@@ -3395,7 +3395,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 })
                 .then(r => r.json())
                 .then(res => {
-                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!`;
+                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam. Silahkan pulang saja, renungi di rumah, besok kesini lagi!`;
                     const ts = (res && res.locked_until_ts) ? res.locked_until_ts : (Math.floor(Date.now() / 1000) + (backSpamLockHours * 3600));
                     window.location.replace('<?php echo base_url("apk/login.php"); ?>?locked_msg=' + encodeURIComponent(msg) + '&locked_until_ts=' + ts);
                 })

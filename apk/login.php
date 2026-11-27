@@ -87,7 +87,7 @@ if (!empty($_SESSION['cbt_exam_active_lock']) && !empty($_SESSION['siswa_id']) &
                 ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), kelas_nama = VALUES(kelas_nama), reason = VALUES(reason), locked_until = DATE_ADD(NOW(), INTERVAL ? HOUR)");
             $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
             $locked_until_ts = time() + ($lockHours * 3600);
-            $error_msg = "Akun Anda di-logout & dikunci {$lockHours} jam. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+            $error_msg = "Akun Anda di-logout & dikunci {$lockHours} jam. Silahkan pulang saja, renungi di rumah, besok kesini lagi!";
             $active_tab = 'manual';
             $_SESSION = [];
             if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
@@ -104,7 +104,7 @@ $checkLoginLockMsg = function($db, $userKey) {
         $row = $st->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $GLOBALS['cbt_locked_until_ts'] = (int)strtotime($row['locked_until']);
-            return "Akun Anda dikunci sementara karena {$row['reason']}. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+            return "Akun Anda dikunci sementara karena {$row['reason']}. Silahkan pulang saja, renungi di rumah, besok kesini lagi!";
         }
     } catch (\Throwable $e) {}
     return '';
