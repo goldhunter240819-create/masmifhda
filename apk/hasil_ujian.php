@@ -223,20 +223,50 @@ if ($selectedTopikId > 0) {
     }
 }
 
-if (!empty($selectedMapel)) {
-    $sql .= " AND (u.mapel_nama = :mapel OR u.mapel_nama LIKE :mapel_like OR u.nama_ujian LIKE :mapel_like2)";
-    $params[':mapel'] = $selectedMapel;
-    $params[':mapel_like'] = "%{$selectedMapel}%";
-    $params[':mapel_like2'] = "%{$selectedMapel}%";
-} elseif (!$isAdmin && !empty($guruMapelList)) {
-    // Jika tidak spesifik, batasi HANYA pada mapel-mapel guru ini
-    $inPlaceholders = [];
-    foreach ($guruMapelList as $idx => $gm) {
-        $key = ":gm_" . $idx;
-        $inPlaceholders[] = $key;
-        $params[$key] = $gm;
+$mapelAliasGroups = [
+    ['Sejarah', 'Sejarah Indonesia'],
+    ['Fikih', 'Fiqih'],
+    ["Al-Qur'an Hadits", "Al-Quran Hadits", "Al-Qur'an Hadis"],
+    ['PJOK', 'Pendidikan Jasmani, Olahraga dan Kesehatan', 'Pendidikan Jasmani, Olahraga & Kesehatan (PJOK)'],
+    ['PPKn', 'Pendidikan Pancasila', 'Pendidikan Pancasila dan Kewarganegaraan', 'Pendidikan Pancasila & Kewarganegaraan (PPKn)'],
+    ['PKWU', 'Prakarya dan Kewirausahaan', 'Prakarya & Kewirausahaan'],
+];
+$expandMapelAliases = function($mName) use ($mapelAliasGroups) {
+    $mTrim = trim((string)$mName);
+    if ($mTrim === '') return [];
+    foreach ($mapelAliasGroups as $grp) {
+        foreach ($grp as $gItem) {
+            if (strcasecmp($mTrim, $gItem) === 0) {
+                return $grp;
+            }
+        }
     }
-    $sql .= " AND u.mapel_nama IN (" . implode(',', $inPlaceholders) . ")";
+    return [$mTrim];
+};
+
+if (!empty($selectedMapel)) {
+    $aliases = $expandMapelAliases($selectedMapel);
+    $mpConds = [];
+    foreach ($aliases as $aIdx => $aVal) {
+        $pKey = ":mp_eq_{$aIdx}";
+        $params[$pKey] = $aVal;
+        $mpConds[] = "LOWER(TRIM(u.mapel_nama)) = LOWER(TRIM({$pKey}))";
+        $mpConds[] = "u.nama_ujian LIKE " . ":mp_lk_{$aIdx}";
+        $params[":mp_lk_{$aIdx}"] = "%- {$aVal} (%";
+    }
+    $sql .= " AND (" . implode(' OR ', $mpConds) . ")";
+} elseif (!$isAdmin && !empty($guruMapelList)) {
+    // Jika tidak spesifik, batasi HANYA pada mapel-mapel guru ini (beserta alias resmi)
+    $inPlaceholders = [];
+    $gmIdx = 0;
+    foreach ($guruMapelList as $gm) {
+        foreach ($expandMapelAliases($gm) as $aVal) {
+            $key = ":gm_" . ($gmIdx++);
+            $inPlaceholders[] = "LOWER(TRIM({$key}))";
+            $params[$key] = $aVal;
+        }
+    }
+    $sql .= " AND LOWER(TRIM(u.mapel_nama)) IN (" . implode(',', $inPlaceholders) . ")";
 }
 
 if (!empty($selectedKelas)) {
