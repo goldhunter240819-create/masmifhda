@@ -3587,13 +3587,13 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     if (isNavigatingQuestion || (Date.now() - lastUserActionTime < 1500)) {
                         return;
                     }
-                    if (document.hidden) {
+                    if (document.hidden || !document.hasFocus()) {
                         if (!isViolationModalOpen && !isExamSubmitted) {
                             activateSecurityShield('Jendela Mengambang / Aplikasi Lain Aktif');
-                            handleTabViolation('Fokus Hilang');
+                            handleTabViolation('Membuka Aplikasi Lain / Fokus Hilang');
                         }
                     }
-                }, 1000);
+                }, 1200);
             });
 
             window.addEventListener('focus', function() {
@@ -3602,12 +3602,12 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
             });
 
-            // Focus Heartbeat: deteksi jendela mengambang / split screen tanpa mengganggu navigasi soal
+            // Focus Heartbeat: deteksi jendela mengambang / aplikasi lain / tombol Windows
             setInterval(() => {
                 if (!isExamSubmitted && isAntiCheat) {
                     checkSplitScreenMode();
-                    if (document.hidden && !isNavigatingQuestion && (Date.now() - lastUserActionTime > 1500)) {
-                        activateSecurityShield('Aplikasi Mengambang / Popup Terdeteksi');
+                    if ((document.hidden || !document.hasFocus()) && !isNavigatingQuestion && !isViolationModalOpen && (Date.now() - lastUserActionTime > 2000)) {
+                        activateSecurityShield('Aplikasi Lain / Jendela Mengambang Terdeteksi');
                     }
                 }
             }, 1200);
