@@ -213,6 +213,12 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis', 'daftar_hadir_kelas'
                 <span>Sinkron Semi-Online</span>
             </a>
 
+            <!-- Toggle Suara AI Pengawas di Admin -->
+            <button type="button" id="btnToggleAdminAiVoice" onclick="toggleAdminAiVoice()" class="z-nav-item" style="width: calc(100% - 1rem); background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); cursor: pointer; text-align: left; margin-top: 6px;">
+                <i data-lucide="volume-2" id="iconAdminAiVoice" style="color: #38bdf8;"></i>
+                <span id="lblAdminAiVoice" style="color: #e0f2fe; font-size: 0.78rem;">Suara AI Pengawas: ON</span>
+            </button>
+
             <div class="z-nav-label" style="margin-top: 1rem;">Integrasi</div>
 
             <!-- Portal Utama -->
@@ -342,6 +348,106 @@ function launchPreviewSiswa() {
     window.open(url, '_blank');
     closeModalPreviewSiswa();
 }
+
+// ============================================================
+// SUARA AI PENGAWAS CBT DI ADMIN (Real-time Violation Monitor)
+// ============================================================
+let adminAiVoiceEnabled = (localStorage.getItem('cbt_admin_ai_voice') !== '0');
+let lastViolationLogId = 0;
+let adminViolationInitDone = false;
+
+function updateAdminAiVoiceUI() {
+    const lbl = document.getElementById('lblAdminAiVoice');
+    const icon = document.getElementById('iconAdminAiVoice');
+    const btn = document.getElementById('btnToggleAdminAiVoice');
+    if (lbl) lbl.textContent = adminAiVoiceEnabled ? 'Suara AI Pengawas: ON' : 'Suara AI Pengawas: OFF';
+    if (btn) btn.style.opacity = adminAiVoiceEnabled ? '1' : '0.6';
+    if (icon) {
+        icon.setAttribute('data-lucide', adminAiVoiceEnabled ? 'volume-2' : 'volume-x');
+        if (window.lucide) try { lucide.createIcons(); } catch(e) {}
+    }
+}
+
+function toggleAdminAiVoice() {
+    adminAiVoiceEnabled = !adminAiVoiceEnabled;
+    localStorage.setItem('cbt_admin_ai_voice', adminAiVoiceEnabled ? '1' : '0');
+    updateAdminAiVoiceUI();
+    if (adminAiVoiceEnabled) {
+        speakAdminAiText('Suara AI pengawas ujian diaktifkan.');
+    } else if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch(e) {}
+    }
+}
+
+function speakAdminAiText(text) {
+    if (!adminAiVoiceEnabled) return;
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+    try {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'id-ID';
+        utter.rate = 1.0;
+        utter.pitch = 1.05;
+        utter.volume = 1.0;
+        const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+        const idVoice = voices.find(v => (v.lang || '').toLowerCase().startsWith('id'));
+        if (idVoice) utter.voice = idVoice;
+        window.speechSynthesis.speak(utter);
+    } catch(e) {}
+}
+
+function showAdminViolationToast(item) {
+    let container = document.getElementById('adminViolationToastBox');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'adminViolationToastBox';
+        container.style.cssText = 'position:fixed; top:18px; right:18px; z-index:999999; display:flex; flex-direction:column; gap:10px; max-width:360px;';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.style.cssText = 'background:#7f1d1d; color:#fff; padding:12px 16px; border-radius:14px; border:2px solid #ef4444; box-shadow:0 12px 28px rgba(0,0,0,0.28); font-size:0.82rem; line-height:1.45;';
+    toast.innerHTML = `<div style="font-weight:900; color:#fecaca; margin-bottom:2px;">🚨 PELANGGARAN CBT (${item.violation_count}x)</div>
+        <div><b>${item.nama_siswa || 'Siswa'}</b> (${item.kelas_nama || '-'})</div>
+        <div style="font-size:0.75rem; color:#fde68a; margin-top:2px;">${item.reason || 'Keluar Tab'} • ${item.nama_ujian || ''}</div>`;
+    container.appendChild(toast);
+    setTimeout(() => { try { toast.remove(); } catch(e) {} }, 7000);
+}
+
+function pollAdminViolations() {
+    if (!adminAiVoiceEnabled || document.hidden) return;
+    fetch('<?php echo base_url("cbt/api/cek-pelanggaran"); ?>?after_id=' + lastViolationLogId, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (!res || !res.success) return;
+        if (!adminViolationInitDone) {
+            lastViolationLogId = parseInt(res.latest_id || 0, 10);
+            adminViolationInitDone = true;
+            return;
+        }
+        if (typeof res.latest_id !== 'undefined' && parseInt(res.latest_id, 10) > lastViolationLogId) {
+            lastViolationLogId = parseInt(res.latest_id, 10);
+        }
+        if (Array.isArray(res.items) && res.items.length > 0) {
+            res.items.forEach(item => {
+                showAdminViolationToast(item);
+                let aksi = 'keluar dari layar ujian';
+                const rsn = String(item.reason || '');
+                if (rsn.includes('Kembali')) aksi = 'menekan tombol kembali';
+                else if (rsn.includes('Fullscreen')) aksi = 'keluar dari layar penuh';
+                const msg = `Perhatian! Siswa ${item.nama_siswa || ''}, kelas ${item.kelas_nama || ''}, terdeteksi ${aksi}, pelanggaran ke ${item.violation_count || 1}.`;
+                speakAdminAiText(msg);
+            });
+        }
+    })
+    .catch(() => {});
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAdminAiVoiceUI();
+    pollAdminViolations();
+    setInterval(pollAdminViolations, 4000);
+});
 </script>
 
 <style>

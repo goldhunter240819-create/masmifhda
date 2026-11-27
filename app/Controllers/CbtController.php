@@ -4020,13 +4020,84 @@ class CbtController {
 
         $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
         $status = $_POST['status'] ?? ''; // 'Terkunci' jika melampaui batas
+        $violCount = isset($_POST['violation_count']) ? max(1, (int)$_POST['violation_count']) : 1;
+        $reason = trim((string)($_POST['reason'] ?? 'Keluar Tab'));
 
-        if ($peserta_id > 0 && $status === 'Terkunci') {
-            $stmt = $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Terkunci' WHERE id = ?");
-            $stmt->execute([$peserta_id]);
+        if ($peserta_id > 0) {
+            try {
+                if ($status === 'Terkunci') {
+                    $stmt = $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Terkunci', violation_count = GREATEST(COALESCE(violation_count, 0), ?) WHERE id = ?");
+                    $stmt->execute([$violCount, $peserta_id]);
+                } else {
+                    $stmt = $db->prepare("UPDATE cbt_peserta SET violation_count = GREATEST(COALESCE(violation_count, 0), ?) WHERE id = ?");
+                    $stmt->execute([$violCount, $peserta_id]);
+                }
+
+                $db->exec("CREATE TABLE IF NOT EXISTS cbt_pelanggaran_log (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    peserta_id INT NOT NULL,
+                    nama_siswa VARCHAR(150) DEFAULT '',
+                    kelas_nama VARCHAR(100) DEFAULT '',
+                    nama_ujian VARCHAR(255) DEFAULT '',
+                    reason VARCHAR(120) DEFAULT 'Keluar Tab',
+                    violation_count INT DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $stInfo = $db->prepare("SELECT p.nama_siswa, p.kelas_nama, COALESCE(u.mapel_nama, u.nama_ujian, 'Ujian') as nama_ujian FROM cbt_peserta p LEFT JOIN cbt_ujian u ON u.id = p.ujian_id WHERE p.id = ? LIMIT 1");
+                $stInfo->execute([$peserta_id]);
+                $pRow = $stInfo->fetch(PDO::FETCH_ASSOC);
+                if ($pRow) {
+                    $stLog = $db->prepare("INSERT INTO cbt_pelanggaran_log (peserta_id, nama_siswa, kelas_nama, nama_ujian, reason, violation_count) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stLog->execute([
+                        $peserta_id,
+                        $pRow['nama_siswa'] ?? 'Siswa',
+                        $pRow['kelas_nama'] ?? '',
+                        $pRow['nama_ujian'] ?? 'Ujian',
+                        substr($reason, 0, 115),
+                        $violCount
+                    ]);
+                }
+            } catch (\Throwable $e) {}
         }
         echo json_encode(['status' => 'success']);
         exit;
+    }
+
+    /**
+     * API Polling Pelanggaran Terbaru untuk Suara AI di Dashboard/Halaman Admin CBT
+     */
+    public static function ajaxCekPelanggaran() {
+        header('Content-Type: application/json; charset=utf-8');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        $afterId = isset($_GET['after_id']) ? (int)$_GET['after_id'] : 0;
+
+        try {
+            $hasTbl = $db->query("SHOW TABLES LIKE 'cbt_pelanggaran_log'")->fetchColumn();
+            if (!$hasTbl) {
+                echo json_encode(['success' => true, 'latest_id' => 0, 'items' => []]);
+                exit;
+            }
+            if ($afterId <= 0) {
+                $maxId = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM cbt_pelanggaran_log")->fetchColumn();
+                echo json_encode(['success' => true, 'latest_id' => $maxId, 'items' => []]);
+                exit;
+            }
+            $st = $db->prepare("SELECT id, peserta_id, nama_siswa, kelas_nama, nama_ujian, reason, violation_count, created_at FROM cbt_pelanggaran_log WHERE id > ? AND created_at >= (NOW() - INTERVAL 3 MINUTE) ORDER BY id ASC LIMIT 5");
+            $st->execute([$afterId]);
+            $items = $st->fetchAll(PDO::FETCH_ASSOC);
+            $latestId = $afterId;
+            foreach ($items as $it) {
+                if ((int)$it['id'] > $latestId) $latestId = (int)$it['id'];
+            }
+            echo json_encode(['success' => true, 'latest_id' => $latestId, 'items' => $items]);
+            exit;
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'latest_id' => $afterId, 'items' => []]);
+            exit;
+        }
     }
 
     /**
