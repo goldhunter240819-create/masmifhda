@@ -43,10 +43,11 @@ if (!$isAdminPreview) {
             $stLk->execute([$uKeyChk]);
             $lkRow = $stLk->fetch(PDO::FETCH_ASSOC);
             if ($lkRow) {
-                $msgLk = "Akun Anda dikunci sementara hingga " . date('d/m H:i', strtotime($lkRow['locked_until'])) . " WIB karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ". Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+                $lkTs = (int)strtotime($lkRow['locked_until']);
+                $msgLk = "Akun Anda dikunci sementara karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ". Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
-                header("Location: login.php?locked_msg=" . urlencode($msgLk));
+                header("Location: login.php?locked_msg=" . urlencode($msgLk) . "&locked_until_ts=" . $lkTs);
                 exit;
             }
         }
@@ -86,11 +87,11 @@ if (!$isAdminPreview) {
                     ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), kelas_nama = VALUES(kelas_nama), reason = VALUES(reason), locked_until = DATE_ADD(NOW(), INTERVAL ? HOUR)");
                 $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
 
-                $untilFmt = date('d/m H:i', time() + ($lockHours * 3600)) . ' WIB';
-                $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}). Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+                $lkTs = time() + ($lockHours * 3600);
+                $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
-                header("Location: login.php?locked_msg=" . urlencode($msgLk));
+                header("Location: login.php?locked_msg=" . urlencode($msgLk) . "&locked_until_ts=" . $lkTs);
                 exit;
             } else {
                 unset($_SESSION['cbt_exam_active_lock']);
@@ -2523,8 +2524,9 @@ setInterval(function() {
                 })
                 .then(r => r.json())
                 .then(res => {
-                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam (hingga ${(res && res.locked_until) ? res.locked_until : 'nanti'}). Silahkan pulang saja, nunggu di rumah, besok kesini lagi!`;
-                    window.location.href = 'login.php?locked_msg=' + encodeURIComponent(msg);
+                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!`;
+                    const ts = (res && res.locked_until_ts) ? res.locked_until_ts : (Math.floor(Date.now() / 1000) + (backSpamLockHours * 3600));
+                    window.location.href = 'login.php?locked_msg=' + encodeURIComponent(msg) + '&locked_until_ts=' + ts;
                 })
                 .catch(() => {
                     window.location.href = 'logout.php';

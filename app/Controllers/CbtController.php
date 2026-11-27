@@ -4294,7 +4294,8 @@ class CbtController {
             'success' => true,
             'locked' => ($lockHours > 0),
             'hours' => $lockHours,
-            'locked_until' => $lockedUntilFmt
+            'locked_until' => $lockedUntilFmt,
+            'locked_until_ts' => ($lockHours > 0) ? (time() + ($lockHours * 3600)) : 0
         ]);
         exit;
     }

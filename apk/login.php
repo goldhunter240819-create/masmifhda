@@ -59,6 +59,7 @@ if (isset($_SESSION['siswa_id'])) {
 }
 
 $error_msg = isset($_GET['locked_msg']) ? trim((string)$_GET['locked_msg']) : '';
+$locked_until_ts = isset($_GET['locked_until_ts']) ? (int)$_GET['locked_until_ts'] : 0;
 $active_tab = isset($_GET['locked_msg']) ? 'manual' : 'qr';
 
 // Jika siswa kabur dari Ruang Ujian ke halaman login lewat spam Back tanpa submit:
@@ -85,8 +86,8 @@ if (!empty($_SESSION['cbt_exam_active_lock']) && !empty($_SESSION['siswa_id']) &
                 VALUES (?, ?, ?, 'Kabur dari Ruang Ujian (Spam Tombol Kembali)', DATE_ADD(NOW(), INTERVAL ? HOUR))
                 ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), kelas_nama = VALUES(kelas_nama), reason = VALUES(reason), locked_until = DATE_ADD(NOW(), INTERVAL ? HOUR)");
             $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
-            $untilFmt = date('d/m H:i', time() + ($lockHours * 3600)) . ' WIB';
-            $error_msg = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}). Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+            $locked_until_ts = time() + ($lockHours * 3600);
+            $error_msg = "Akun Anda di-logout & dikunci {$lockHours} jam. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
             $active_tab = 'manual';
             $_SESSION = [];
             if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
@@ -102,8 +103,8 @@ $checkLoginLockMsg = function($db, $userKey) {
         $st->execute([$userKey]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         if ($row) {
-            $untilFmt = date('d/m H:i', strtotime($row['locked_until'])) . ' WIB';
-            return "Akun Anda dikunci sementara hingga {$untilFmt} karena {$row['reason']}. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
+            $GLOBALS['cbt_locked_until_ts'] = (int)strtotime($row['locked_until']);
+            return "Akun Anda dikunci sementara karena {$row['reason']}. Silahkan pulang saja, nunggu di rumah, besok kesini lagi!";
         }
     } catch (\Throwable $e) {}
     return '';
@@ -1160,8 +1161,34 @@ $relative_logo_fallback = '../' . $logo_file;
             </div>
 
             <?php if(!empty($error_msg)): ?>
+                <?php $finalLockTs = !empty($GLOBALS['cbt_locked_until_ts']) ? (int)$GLOBALS['cbt_locked_until_ts'] : (int)$locked_until_ts; ?>
                 <div class="error-msg">
-                    <i class="fa-solid fa-triangle-exclamation"></i> <?= htmlspecialchars($error_msg) ?>
+                    <div><i class="fa-solid fa-triangle-exclamation"></i> <?= htmlspecialchars($error_msg) ?></div>
+                    <?php if ($finalLockTs > time()): ?>
+                        <div style="margin-top: 8px; padding: 6px 10px; background: rgba(185,28,28,0.12); border: 1px solid rgba(185,28,28,0.28); border-radius: 8px; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-regular fa-clock"></i> Sisa Waktu Kunci: <span id="lockCountdown" data-until="<?= $finalLockTs ?>">--:--:--</span>
+                        </div>
+                        <script>
+                            (function() {
+                                const el = document.getElementById('lockCountdown');
+                                if (!el) return;
+                                const targetTs = parseInt(el.getAttribute('data-until') || '0', 10);
+                                function tickLock() {
+                                    const diff = Math.max(0, targetTs - Math.floor(Date.now() / 1000));
+                                    const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+                                    const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+                                    const s = String(diff % 60).padStart(2, '0');
+                                    el.textContent = h + ':' + m + ':' + s;
+                                    if (diff <= 0) {
+                                        clearInterval(iv);
+                                        el.textContent = '00:00:00 (Silakan login ulang)';
+                                    }
+                                }
+                                tickLock();
+                                const iv = setInterval(tickLock, 1000);
+                            })();
+                        </script>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
