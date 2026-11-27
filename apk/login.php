@@ -1316,5 +1316,84 @@ $relative_logo_fallback = '../' . $logo_file;
             document.getElementById('login-qr-form').submit();
         }
     </script>
+
+    <!-- Popup Wajib Fullscreen di Halaman Login -->
+    <div id="fsLoginOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #ffffff; border-radius: 22px; max-width: 390px; width: 100%; padding: 26px 22px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.45); border: 2px solid #3b82f6;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.75rem;">
+                <i class="fa-solid fa-expand"></i>
+            </div>
+            <h3 style="margin: 0 0 8px; font-size: 1.15rem; font-weight: 800; color: #0f172a;">Wajib Mode Layar Penuh</h3>
+            <p id="fsLoginDesc" style="margin: 0 0 18px; font-size: 0.84rem; color: #475569; line-height: 1.5;">
+                Untuk masuk ke portal &amp; ujian CBT, browser wajib berada dalam mode <b>Layar Penuh (Fullscreen)</b>.
+            </p>
+            <div id="fsLoginCountdownWrap" style="display: none; margin-bottom: 14px; padding: 8px 12px; border-radius: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 0.8rem; font-weight: 700;">
+                Anda keluar dari layar penuh! Kembali dalam <span id="fsLoginSec">7</span> detik atau sesi ditutup.
+            </div>
+            <button type="button" onclick="activateLoginFullscreen()" style="width: 100%; padding: 13px 16px; border: none; border-radius: 12px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #fff; font-weight: 800; font-size: 0.92rem; cursor: pointer; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);">
+                <i class="fa-solid fa-maximize"></i> Aktifkan Layar Penuh
+            </button>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const isNativeBridge = (typeof Android !== 'undefined' || typeof AndroidOneSignal !== 'undefined');
+            const fsSupported = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+            if (isNativeBridge || !fsSupported) return;
+
+            const overlay = document.getElementById('fsLoginOverlay');
+            const cdWrap = document.getElementById('fsLoginCountdownWrap');
+            const cdSec = document.getElementById('fsLoginSec');
+            let wasInFs = false;
+            let kickTimer = null;
+            let kickLeft = 7;
+
+            function stopKickTimer() {
+                if (kickTimer) { clearInterval(kickTimer); kickTimer = null; }
+                if (cdWrap) cdWrap.style.display = 'none';
+            }
+
+            function startKickTimer() {
+                stopKickTimer();
+                kickLeft = 7;
+                if (cdSec) cdSec.textContent = kickLeft;
+                if (cdWrap) cdWrap.style.display = 'block';
+                kickTimer = setInterval(() => {
+                    kickLeft--;
+                    if (cdSec) cdSec.textContent = Math.max(0, kickLeft);
+                    if (kickLeft <= 0) {
+                        clearInterval(kickTimer);
+                        window.location.replace('about:blank');
+                    }
+                }, 1000);
+            }
+
+            function checkLoginFs() {
+                if (document.fullscreenElement) {
+                    wasInFs = true;
+                    stopKickTimer();
+                    if (overlay) overlay.style.display = 'none';
+                } else {
+                    if (overlay) overlay.style.display = 'flex';
+                    if (wasInFs) startKickTimer();
+                }
+            }
+
+            window.activateLoginFullscreen = function() {
+                const el = document.documentElement;
+                if (el.requestFullscreen) {
+                    el.requestFullscreen().then(() => {
+                        wasInFs = true;
+                        stopKickTimer();
+                        if (overlay) overlay.style.display = 'none';
+                    }).catch(() => {});
+                }
+            };
+
+            document.addEventListener('fullscreenchange', checkLoginFs);
+            window.addEventListener('DOMContentLoaded', checkLoginFs);
+            setTimeout(checkLoginFs, 150);
+        })();
+    </script>
 </body>
 </html>

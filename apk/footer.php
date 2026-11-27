@@ -148,5 +148,99 @@ $is_offline_cbt = !$is_online_server || !empty($_SESSION['is_cbt_only']) || (def
             }
         }
     </script>
+
+    <?php
+    $isStudentApkSession = empty($isAdminPreview) && (!empty($_SESSION['siswa_id']) || !empty($_SESSION['is_cbt_only']));
+    $forceFsApk = true;
+    if ($isStudentApkSession && isset($core_db) && $core_db) {
+        try {
+            $fsVal = $core_db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'force_fullscreen' LIMIT 1")->fetchColumn();
+            if ($fsVal !== false && $fsVal !== null) {
+                $forceFsApk = ($fsVal === '1');
+            }
+        } catch (\Throwable $e) {}
+    }
+    if ($isStudentApkSession && $forceFsApk):
+    ?>
+    <!-- Popup Wajib Fullscreen Seluruh Halaman Siswa -->
+    <div id="fsStudentOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #ffffff; border-radius: 22px; max-width: 400px; width: 100%; padding: 26px 22px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.45); border: 2px solid #ef4444;">
+            <div style="width: 66px; height: 66px; border-radius: 50%; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.8rem;">
+                <i class="fa-solid fa-expand"></i>
+            </div>
+            <h3 style="margin: 0 0 8px; font-size: 1.15rem; font-weight: 800; color: #0f172a;">Wajib Mode Layar Penuh!</h3>
+            <p style="margin: 0 0 14px; font-size: 0.84rem; color: #475569; line-height: 1.5;">
+                Seluruh halaman siswa wajib menggunakan mode <b>Layar Penuh (Fullscreen)</b>. Jika tidak diaktifkan, Anda akan dikeluarkan otomatis.
+            </p>
+            <div style="margin-bottom: 16px; padding: 9px 12px; border-radius: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 0.82rem; font-weight: 800;">
+                Otomatis keluar dalam <span id="fsStudentSec">12</span> detik jika tidak diaktifkan!
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button type="button" onclick="activateStudentFullscreen()" style="width: 100%; padding: 13px 16px; border: none; border-radius: 12px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #fff; font-weight: 800; font-size: 0.92rem; cursor: pointer; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);">
+                    <i class="fa-solid fa-maximize"></i> Aktifkan Layar Penuh Sekarang
+                </button>
+                <a href="logout.php" style="display: block; width: 100%; padding: 10px; border-radius: 10px; background: #f1f5f9; color: #475569; font-weight: 700; font-size: 0.82rem; text-decoration: none;">
+                    Keluar Aplikasi
+                </a>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const isNativeBridge = (typeof Android !== 'undefined' || typeof AndroidOneSignal !== 'undefined');
+            const fsSupported = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+            if (isNativeBridge || !fsSupported) return;
+
+            const overlay = document.getElementById('fsStudentOverlay');
+            const secEl = document.getElementById('fsStudentSec');
+            let kickTimer = null;
+            let kickLeft = 12;
+
+            function stopKick() {
+                if (kickTimer) { clearInterval(kickTimer); kickTimer = null; }
+            }
+
+            function startKick(seconds = 12) {
+                stopKick();
+                kickLeft = seconds;
+                if (secEl) secEl.textContent = kickLeft;
+                kickTimer = setInterval(() => {
+                    kickLeft--;
+                    if (secEl) secEl.textContent = Math.max(0, kickLeft);
+                    if (kickLeft <= 0) {
+                        clearInterval(kickTimer);
+                        window.location.href = 'logout.php';
+                    }
+                }, 1000);
+            }
+
+            function syncStudentFs(isFromExit) {
+                if (document.fullscreenElement) {
+                    stopKick();
+                    if (overlay) overlay.style.display = 'none';
+                } else {
+                    if (overlay) overlay.style.display = 'flex';
+                    startKick(isFromExit ? 7 : 12);
+                }
+            }
+
+            window.activateStudentFullscreen = function() {
+                const el = document.documentElement;
+                if (el.requestFullscreen) {
+                    el.requestFullscreen().then(() => {
+                        stopKick();
+                        if (overlay) overlay.style.display = 'none';
+                    }).catch(() => {});
+                }
+            };
+
+            document.addEventListener('fullscreenchange', function() {
+                syncStudentFs(!document.fullscreenElement);
+            });
+            window.addEventListener('DOMContentLoaded', function() { syncStudentFs(false); });
+            setTimeout(function() { syncStudentFs(false); }, 150);
+        })();
+    </script>
+    <?php endif; ?>
 </body>
 </html>
