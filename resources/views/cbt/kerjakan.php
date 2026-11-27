@@ -23,15 +23,17 @@ $totalDurasiUjianDetik = max(60, (int)($ujianInfo['durasi_menit'] ?? 90) * 60);
 $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" translate="no" class="notranslate">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
     <title><?php echo $pageTitle; ?></title>
     <link rel="stylesheet" href="<?php echo base_url('public/assets/css/plus-jakarta-sans.css'); ?>">
     <script src="<?php echo base_url('public/assets/js/lucide.min.js'); ?>"></script>
     <script src="<?php echo base_url('public/assets/js/sweetalert2.all.min.js'); ?>"></script>
     <style>
+        html, body { overscroll-behavior-y: contain; }
         :root {
             --primary: #4f46e5;
             --primary-dark: #3730a3;
