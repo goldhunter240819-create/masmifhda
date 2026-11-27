@@ -3585,12 +3585,30 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
         // Listener pindah tab & keluar layar & floating window
         if (isAntiCheat && blockTab) {
+            let tabHiddenAt = 0;
+            let bgAutoSubmitTimer = null;
+            const MAX_BG_AWAY_MS = 5000;
+
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
+                    if (!tabHiddenAt) tabHiddenAt = Date.now();
+                    clearTimeout(bgAutoSubmitTimer);
+                    bgAutoSubmitTimer = setTimeout(() => {
+                        if (document.hidden && isAntiCheat && !isExamSubmitted) {
+                            autoSubmit('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
+                        }
+                    }, MAX_BG_AWAY_MS);
                     activateSecurityShield('Tab Berpindah');
                     handleTabViolation('Tab Berpindah');
                 } else {
-                    // Siswa kembali ke tab ujian
+                    clearTimeout(bgAutoSubmitTimer);
+                    const awayMs = tabHiddenAt ? (Date.now() - tabHiddenAt) : 0;
+                    tabHiddenAt = 0;
+                    if (awayMs >= MAX_BG_AWAY_MS && !isExamSubmitted) {
+                        autoSubmit('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
+                        return;
+                    }
+                    // Siswa kembali ke tab ujian (< 5 detik)
                     if (violationCount > 0 && !isExamSubmitted) {
                         playDangerAlarm();
                         showViolationModal();
@@ -3629,6 +3647,10 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             // Focus Heartbeat: deteksi jendela mengambang / aplikasi lain / tombol Windows / DevTools Laptop
             setInterval(() => {
                 if (!isExamSubmitted && isAntiCheat) {
+                    if (document.hidden && tabHiddenAt && (Date.now() - tabHiddenAt >= MAX_BG_AWAY_MS)) {
+                        autoSubmit('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
+                        return;
+                    }
                     checkSplitScreenMode();
                     const isUnfocused = (document.hidden || !document.hasFocus()) && !isNavigatingQuestion && !isViolationModalOpen && (Date.now() - lastUserActionTime > 1500);
                     if (isUnfocused) {
