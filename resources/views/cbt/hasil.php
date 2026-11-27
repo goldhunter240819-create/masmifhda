@@ -414,13 +414,30 @@ $active_menu = 'hasil';
                 </label>
 
                 <!-- Opsi 2: Ulang dari Awal -->
-                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; cursor: pointer;">
+                <label style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; cursor: pointer; margin-bottom: 14px;">
                     <input type="radio" name="mode" value="ulang" style="margin-top: 3px; accent-color: #ef4444;">
                     <div>
                         <div style="font-weight: 800; font-size: 0.88rem; color: #dc2626;">Ulang dari Awal (Reset Jawaban)</div>
                         <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; line-height: 1.4;">Seluruh jawaban sebelumnya akan dihapus dan lembar ujian dimulai dari nomor 1.</div>
                     </div>
                 </label>
+
+                <!-- Pengaturan Sisa Waktu (Khusus Mode Lanjutkan) -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;">
+                    <label for="reopenExtraMinutes" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 6px;">⏱️ Pengaturan Sisa Waktu (Mode Lanjutkan):</label>
+                    <select name="extra_minutes" id="reopenExtraMinutes" style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.84rem; font-weight: 700; color: #0f172a; background: #ffffff;">
+                        <option value="-1" selected>Lanjutkan Sisa Waktu Sebelumnya (Min. 2 Menit)</option>
+                        <option value="5">Beri Waktu 5 Menit</option>
+                        <option value="10">Beri Waktu 10 Menit</option>
+                        <option value="15">Beri Waktu 15 Menit</option>
+                        <option value="20">Beri Waktu 20 Menit</option>
+                        <option value="30">Beri Waktu 30 Menit</option>
+                        <option value="60">Reset Penuh (60 Menit / Sesuai Paket)</option>
+                    </select>
+                    <div style="font-size: 0.71rem; color: #64748b; margin-top: 5px; line-height: 1.35;">
+                        Agar siswa yang ter-submit di akhir sesi tidak mendapat waktu 1 jam penuh lagi, pilih sisa waktu secukupnya.
+                    </div>
+                </div>
             </div>
 
             <!-- Footer -->

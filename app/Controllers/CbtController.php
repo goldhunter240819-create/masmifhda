@@ -5035,14 +5035,34 @@ class CbtController {
                                             WHERE id = ?");
                     $stmt->execute([$peserta_id]);
                 } else {
-                    // Default: Lanjutkan ujian (mempertahankan jawaban & nilai lama sampai siswa submit ulang)
+                    // Default: Lanjutkan ujian (pertahankan jawaban lama & lanjutkan sisa waktu / beri tambahan menit khusus)
+                    $extraMinutes = isset($_POST['extra_minutes']) ? (int)$_POST['extra_minutes'] : -1;
+                    $stMeta = $db->prepare("SELECT p.waktu_mulai, p.waktu_selesai, u.durasi_menit FROM cbt_peserta p LEFT JOIN cbt_ujian u ON u.id = p.ujian_id WHERE p.id = ? LIMIT 1");
+                    $stMeta->execute([$peserta_id]);
+                    $meta = $stMeta->fetch(PDO::FETCH_ASSOC);
+
+                    $totalDurSec = max(60, (int)($meta['durasi_menit'] ?? 90) * 60);
+                    if ($extraMinutes > 0) {
+                        $targetRemSec = min($totalDurSec, $extraMinutes * 60);
+                        $usedSec = max(0, $totalDurSec - $targetRemSec);
+                    } else {
+                        $endRef = !empty($meta['waktu_selesai']) ? strtotime($meta['waktu_selesai']) : time();
+                        $startRef = !empty($meta['waktu_mulai']) ? strtotime($meta['waktu_mulai']) : $endRef;
+                        $usedSec = max(0, $endRef - $startRef);
+                        // Jika waktu sebelumnya sudah habis atau tinggal < 2 menit, beri minimal 2 menit agar tidak langsung tertutup saat dibuka
+                        if (($totalDurSec - $usedSec) < 120) {
+                            $usedSec = max(0, $totalDurSec - 120);
+                        }
+                    }
+                    $newWaktuMulai = date('Y-m-d H:i:s', time() - $usedSec);
+
                     $stmt = $db->prepare("UPDATE cbt_peserta 
                                             SET status_pengerjaan = 'Mengerjakan', 
                                                 waktu_selesai = NULL, 
-                                                waktu_mulai = NOW(),
+                                                waktu_mulai = ?,
                                                 reset_count = COALESCE(reset_count, 0) + 1
                                             WHERE id = ?");
-                    $stmt->execute([$peserta_id]);
+                    $stmt->execute([$newWaktuMulai, $peserta_id]);
                 }
             }
 
