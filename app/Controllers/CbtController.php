@@ -2973,6 +2973,11 @@ class CbtController {
                         <td>
                             <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;"><?php echo htmlspecialchars($p['nama_siswa']); ?></div>
                             <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">NIS: <?php echo htmlspecialchars($p['nis'] ?: '-'); ?></div>
+                            <?php if ((int)($p['violation_count'] ?? 0) > 0): ?>
+                                <span style="display: inline-block; margin-top: 3px; font-size: 0.66rem; font-weight: 800; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 1px 6px; border-radius: 4px;">
+                                    ⚠️ <?php echo (int)$p['violation_count']; ?>x Pelanggaran
+                                </span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <span style="font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; <?php echo $isKJ ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;' : 'background: #e0e7ff; color: #4338ca;'; ?>">
@@ -4036,16 +4041,10 @@ class CbtController {
             $reason = 'Terkunci Pelanggaran (' . $reason . ')';
         }
 
+        $newTotalLog = $violCount;
+        $newPesertaViol = $violCount;
         if ($peserta_id > 0) {
             try {
-                if ($status === 'Terkunci') {
-                    $stmt = $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Terkunci', violation_count = GREATEST(COALESCE(violation_count, 0), ?) WHERE id = ?");
-                    $stmt->execute([$violCount, $peserta_id]);
-                } else {
-                    $stmt = $db->prepare("UPDATE cbt_peserta SET violation_count = GREATEST(COALESCE(violation_count, 0), ?) WHERE id = ?");
-                    $stmt->execute([$violCount, $peserta_id]);
-                }
-
                 $db->exec("CREATE TABLE IF NOT EXISTS cbt_pelanggaran_log (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     peserta_id INT NOT NULL,
@@ -4055,8 +4054,26 @@ class CbtController {
                     reason VARCHAR(120) DEFAULT 'Keluar Tab',
                     violation_count INT DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_created (created_at)
+                    INDEX idx_created (created_at),
+                    INDEX idx_peserta (peserta_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                // Hitung kumulatif pelanggaran agar tetap bertambah walau siswa reload/ganti browser
+                $stCntLog = $db->prepare("SELECT COUNT(*) FROM cbt_pelanggaran_log WHERE peserta_id = ?");
+                $stCntLog->execute([$peserta_id]);
+                $prevLogCnt = (int)$stCntLog->fetchColumn();
+                $newTotalLog = $prevLogCnt + 1;
+
+                if ($status === 'Terkunci') {
+                    $stmt = $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Terkunci', violation_count = COALESCE(violation_count, 0) + 1 WHERE id = ?");
+                    $stmt->execute([$peserta_id]);
+                } else {
+                    $stmt = $db->prepare("UPDATE cbt_peserta SET violation_count = COALESCE(violation_count, 0) + 1 WHERE id = ?");
+                    $stmt->execute([$peserta_id]);
+                }
+                $stGetV = $db->prepare("SELECT violation_count FROM cbt_peserta WHERE id = ? LIMIT 1");
+                $stGetV->execute([$peserta_id]);
+                $newPesertaViol = (int)$stGetV->fetchColumn();
 
                 $stInfo = $db->prepare("SELECT p.nama_siswa, p.kelas_nama, COALESCE(u.mapel_nama, u.nama_ujian, 'Ujian') as nama_ujian FROM cbt_peserta p LEFT JOIN cbt_ujian u ON u.id = p.ujian_id WHERE p.id = ? LIMIT 1");
                 $stInfo->execute([$peserta_id]);
@@ -4069,12 +4086,12 @@ class CbtController {
                         $pRow['kelas_nama'] ?? '',
                         $pRow['nama_ujian'] ?? 'Ujian',
                         substr($reason, 0, 115),
-                        $violCount
+                        $newTotalLog
                     ]);
                 }
             } catch (\Throwable $e) {}
         }
-        echo json_encode(['status' => 'success']);
+        echo json_encode(['status' => 'success', 'violation_count' => $newPesertaViol, 'total_log' => $newTotalLog]);
         exit;
     }
 

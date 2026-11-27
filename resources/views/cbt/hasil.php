@@ -267,6 +267,11 @@ $active_menu = 'hasil';
                                     <td>
                                         <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;"><?php echo htmlspecialchars($p['nama_siswa']); ?></div>
                                         <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">NIS: <?php echo htmlspecialchars($p['nis'] ?: '-'); ?></div>
+                                        <?php if ((int)($p['violation_count'] ?? 0) > 0): ?>
+                                            <span style="display: inline-block; margin-top: 3px; font-size: 0.66rem; font-weight: 800; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 1px 6px; border-radius: 4px;">
+                                                ⚠️ <?php echo (int)$p['violation_count']; ?>x Pelanggaran
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php $isKJ = (stripos($p['kelas_nama'] ?? '', 'jauh') !== false); ?>
