@@ -150,9 +150,10 @@ $is_offline_cbt = !$is_online_server || !empty($_SESSION['is_cbt_only']) || (def
     </script>
 
     <?php
-    $isStudentApkSession = empty($isAdminPreview) && (!empty($_SESSION['siswa_id']) || !empty($_SESSION['is_cbt_only']));
+    $curPageApk = basename($_SERVER['PHP_SELF'] ?? '');
+    $isCbtOfflineOnly = ($curPageApk === 'cbt.php') && !empty($is_standalone_env) && empty($isAdminPreview) && (!empty($_SESSION['siswa_id']) || !empty($_SESSION['is_cbt_only']));
     $forceFsApk = true;
-    if ($isStudentApkSession && isset($core_db) && $core_db) {
+    if ($isCbtOfflineOnly && isset($core_db) && $core_db) {
         try {
             $fsVal = $core_db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'force_fullscreen' LIMIT 1")->fetchColumn();
             if ($fsVal !== false && $fsVal !== null) {
@@ -160,9 +161,9 @@ $is_offline_cbt = !$is_online_server || !empty($_SESSION['is_cbt_only']) || (def
             }
         } catch (\Throwable $e) {}
     }
-    if ($isStudentApkSession && $forceFsApk):
+    if ($isCbtOfflineOnly && $forceFsApk):
     ?>
-    <!-- Popup Wajib Fullscreen Seluruh Halaman Siswa -->
+    <!-- Popup Wajib Fullscreen Khusus Beranda CBT Offline -->
     <div id="fsStudentOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px;">
         <div style="background: #ffffff; border-radius: 22px; max-width: 400px; width: 100%; padding: 26px 22px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.45); border: 2px solid #ef4444;">
             <div style="width: 66px; height: 66px; border-radius: 50%; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.8rem;">

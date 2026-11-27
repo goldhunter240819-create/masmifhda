@@ -1317,7 +1317,8 @@ $relative_logo_fallback = '../' . $logo_file;
         }
     </script>
 
-    <!-- Popup Wajib Fullscreen di Halaman Login -->
+    <?php if (!empty($is_standalone)): ?>
+    <!-- Popup Wajib Fullscreen di Halaman Login CBT Offline -->
     <div id="fsLoginOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px;">
         <div style="background: #ffffff; border-radius: 22px; max-width: 390px; width: 100%; padding: 26px 22px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.45); border: 2px solid #3b82f6;">
             <div style="width: 64px; height: 64px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.75rem;">
@@ -1395,5 +1396,6 @@ $relative_logo_fallback = '../' . $logo_file;
             setTimeout(checkLoginFs, 150);
         })();
     </script>
+    <?php endif; ?>
 </body>
 </html>
