@@ -213,6 +213,29 @@ $isHasilOpen = in_array($active_menu, ['hasil', 'analisis', 'daftar_hadir_kelas'
                 <span>Sinkron Semi-Online</span>
             </a>
 
+            <?php
+            $showCbtMenuApk = true;
+            try {
+                $dbSide = \App\Core\Database::connect('core');
+                if ($dbSide) {
+                    $vApk = $dbSide->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'show_cbt_menu_apk' LIMIT 1")->fetchColumn();
+                    if ($vApk !== false && $vApk !== null) {
+                        $showCbtMenuApk = ($vApk === '1');
+                    }
+                }
+            } catch (\Throwable $e) {}
+            ?>
+            <!-- Switch Tampil/Sembunyi Menu CBT di Aplikasi Siswa (APK) -->
+            <button type="button" id="btnToggleMenuCbtApk" onclick="toggleMenuCbtApk()" class="z-nav-item" style="width: calc(100% - 1rem); background: <?php echo $showCbtMenuApk ? 'rgba(16, 185, 129, 0.14)' : 'rgba(148, 163, 184, 0.12)'; ?>; border: 1px solid <?php echo $showCbtMenuApk ? 'rgba(52, 211, 153, 0.35)' : 'rgba(148, 163, 184, 0.25)'; ?>; cursor: pointer; text-align: left; margin-top: 6px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                    <i data-lucide="smartphone" style="color: <?php echo $showCbtMenuApk ? '#34d399' : '#94a3b8'; ?>;"></i>
+                    <span style="color: #e2e8f0; font-size: 0.78rem; font-weight: 700;">Menu CBT APK</span>
+                </span>
+                <span id="badgeMenuCbtApk" style="font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: <?php echo $showCbtMenuApk ? '#10b981' : '#64748b'; ?>; color: #ffffff;">
+                    <?php echo $showCbtMenuApk ? 'ON' : 'OFF'; ?>
+                </span>
+            </button>
+
             <div class="z-nav-label" style="margin-top: 1rem;">Integrasi</div>
 
             <!-- Portal Utama -->
@@ -341,6 +364,38 @@ function launchPreviewSiswa() {
     const url = '<?php echo base_url("apk/cbt.php"); ?>?admin_preview=1&preview_kelas=' + encodeURIComponent(kelas) + '&preview_date=' + encodeURIComponent(tgl);
     window.open(url, '_blank');
     closeModalPreviewSiswa();
+}
+
+let menuCbtApkEnabled = <?php echo !empty($showCbtMenuApk) ? 'true' : 'false'; ?>;
+function toggleMenuCbtApk() {
+    const nextState = !menuCbtApkEnabled;
+    const btn = document.getElementById('btnToggleMenuCbtApk');
+    const badge = document.getElementById('badgeMenuCbtApk');
+    if (badge) badge.textContent = '...';
+    fetch('<?php echo base_url("cbt/api/toggle-menu-apk"); ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: 'enabled=' + (nextState ? '1' : '0')
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res && res.success) {
+            menuCbtApkEnabled = !!res.enabled;
+        }
+        if (btn) {
+            btn.style.background = menuCbtApkEnabled ? 'rgba(16, 185, 129, 0.14)' : 'rgba(148, 163, 184, 0.12)';
+            btn.style.borderColor = menuCbtApkEnabled ? 'rgba(52, 211, 153, 0.35)' : 'rgba(148, 163, 184, 0.25)';
+            const ic = btn.querySelector('svg, i');
+            if (ic) ic.style.color = menuCbtApkEnabled ? '#34d399' : '#94a3b8';
+        }
+        if (badge) {
+            badge.textContent = menuCbtApkEnabled ? 'ON' : 'OFF';
+            badge.style.background = menuCbtApkEnabled ? '#10b981' : '#64748b';
+        }
+    })
+    .catch(() => {
+        if (badge) badge.textContent = menuCbtApkEnabled ? 'ON' : 'OFF';
+    });
 }
 </script>
 

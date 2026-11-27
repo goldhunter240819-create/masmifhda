@@ -78,6 +78,18 @@ include 'header.php';
                     <h3 style="margin: 0; font-size: 0.75rem; color: #1e293b; font-weight: 700; line-height: 1.2;">Tabungan</h3>
                 </a>
 
+                <?php
+                $showCbtMenuApk = true;
+                try {
+                    if (isset($core_db) && $core_db) {
+                        $vApk = $core_db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'show_cbt_menu_apk' LIMIT 1")->fetchColumn();
+                        if ($vApk !== false && $vApk !== null) {
+                            $showCbtMenuApk = ($vApk === '1');
+                        }
+                    }
+                } catch (\Throwable $e) {}
+                if ($showCbtMenuApk):
+                ?>
                 <!-- CBT Ujian -->
                 <a href="cbt.php" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: white; padding: 15px 10px; border-radius: 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; gap: 8px; position: relative;">
                     <div style="position: absolute; top: -6px; right: -6px; background: #6366f1; color: white; font-size: 0.55rem; font-weight: 800; padding: 2px 6px; border-radius: 8px;">CBT v2.5</div>
@@ -86,6 +98,7 @@ include 'header.php';
                     </div>
                     <h3 style="margin: 0; font-size: 0.75rem; color: #1e293b; font-weight: 700; line-height: 1.2;">CBT Ujian</h3>
                 </a>
+                <?php endif; ?>
                 
                 
                 <!-- Chat Wali Kelas -->

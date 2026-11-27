@@ -4114,6 +4114,29 @@ class CbtController {
     }
 
     /**
+     * Toggle Tampil / Sembunyi Menu CBT di Aplikasi Siswa (APK)
+     */
+    public static function ajaxToggleMenuApk() {
+        header('Content-Type: application/json; charset=utf-8');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        try {
+            $cur = $db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'show_cbt_menu_apk' LIMIT 1")->fetchColumn();
+            $curVal = ($cur === false || $cur === null) ? '1' : (string)$cur;
+            $newVal = isset($_POST['enabled']) ? (($_POST['enabled'] === '1') ? '1' : '0') : (($curVal === '1') ? '0' : '1');
+            $st = $db->prepare("INSERT INTO cbt_pengaturan (setting_key, setting_value, kategori, keterangan)
+                                VALUES ('show_cbt_menu_apk', ?, 'umum', 'Tampilkan Menu CBT di Aplikasi Siswa (APK)')
+                                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+            $st->execute([$newVal]);
+            echo json_encode(['success' => true, 'enabled' => ($newVal === '1')]);
+            exit;
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
+    }
+
+    /**
      * Auto-Save Jawaban Siswa secara Real-Time (AJAX)
      */
     public static function ajaxSimpanJawaban() {

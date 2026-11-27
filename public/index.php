@@ -2512,6 +2512,7 @@ $router->add('GET', '/cbt/kerjakan', [\App\Controllers\CbtController::class, 'ke
 $router->add('POST', '/cbt/kerjakan/simpan-jawaban', [\App\Controllers\CbtController::class, 'ajaxSimpanJawaban']);
 $router->add('POST', '/cbt/kerjakan/pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCatatPelanggaran']);
 $router->add('GET', '/cbt/api/cek-pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCekPelanggaran']);
+$router->add('POST', '/cbt/api/toggle-menu-apk', [\App\Controllers\CbtController::class, 'ajaxToggleMenuApk']);
 $router->add('POST', '/cbt/kerjakan/submit', [\App\Controllers\CbtController::class, 'submitKerjakan']);
 $router->add('GET', '/cbt/kerjakan/selesai', [\App\Controllers\CbtController::class, 'selesaiKerjakan']);
 
