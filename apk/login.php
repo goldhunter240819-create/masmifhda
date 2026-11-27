@@ -1162,19 +1162,11 @@ $relative_logo_fallback = '../' . $logo_file;
 
             <?php if(!empty($error_msg)): ?>
                 <?php $finalLockTs = !empty($GLOBALS['cbt_locked_until_ts']) ? (int)$GLOBALS['cbt_locked_until_ts'] : (int)$locked_until_ts; ?>
-                <?php if ($finalLockTs > time()): ?>
-                    <div class="error-msg" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 14px 16px; border-radius: 14px; background: #fef2f2; border: 1.5px solid #fecaca;">
-                        <div style="display: inline-flex; align-items: center; gap: 6px; background: #dc2626; color: #ffffff; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; padding: 4px 12px; border-radius: 999px;">
-                            <i class="fa-solid fa-lock"></i> Akun Terkunci Sementara
-                        </div>
-                        <div style="font-size: 0.82rem; line-height: 1.5; color: #7f1d1d; font-weight: 600;">
-                            <?= htmlspecialchars($error_msg) ?>
-                        </div>
-                        <div style="width: 100%; padding: 10px 12px; background: #ffffff; border: 1.5px solid #fca5a5; border-radius: 10px; box-shadow: 0 2px 6px rgba(220,38,38,0.08);">
-                            <div style="font-size: 0.68rem; font-weight: 800; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px;">
-                                <i class="fa-regular fa-clock"></i> Sisa Waktu Kunci
-                            </div>
-                            <div id="lockCountdown" data-until="<?= $finalLockTs ?>" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 1.45rem; font-weight: 900; color: #dc2626; letter-spacing: 2px; font-variant-numeric: tabular-nums;">-- : -- : --</div>
+                <div class="error-msg">
+                    <div><i class="fa-solid fa-triangle-exclamation"></i> <?= htmlspecialchars($error_msg) ?></div>
+                    <?php if ($finalLockTs > time()): ?>
+                        <div style="margin-top: 8px; padding: 6px 10px; background: rgba(185,28,28,0.12); border: 1px solid rgba(185,28,28,0.28); border-radius: 8px; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-regular fa-clock"></i> Sisa Waktu Kunci: <span id="lockCountdown" data-until="<?= $finalLockTs ?>">--:--:--</span>
                         </div>
                         <script>
                             (function() {
@@ -1186,24 +1178,18 @@ $relative_logo_fallback = '../' . $logo_file;
                                     const h = String(Math.floor(diff / 3600)).padStart(2, '0');
                                     const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
                                     const s = String(diff % 60).padStart(2, '0');
-                                    el.textContent = h + ' : ' + m + ' : ' + s;
+                                    el.textContent = h + ':' + m + ':' + s;
                                     if (diff <= 0) {
                                         clearInterval(iv);
-                                        el.style.fontSize = '0.9rem';
-                                        el.style.letterSpacing = '0px';
-                                        el.textContent = 'Waktu kunci habis — Silakan login ulang';
+                                        el.textContent = '00:00:00 (Silakan login ulang)';
                                     }
                                 }
                                 tickLock();
                                 const iv = setInterval(tickLock, 1000);
                             })();
                         </script>
-                    </div>
-                <?php else: ?>
-                    <div class="error-msg">
-                        <i class="fa-solid fa-triangle-exclamation"></i> <?= htmlspecialchars($error_msg) ?>
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
 
             <!-- ============================================================= -->
@@ -1458,9 +1444,11 @@ $relative_logo_fallback = '../' . $logo_file;
                     wasInFs = true;
                     stopKickTimer();
                     if (overlay) overlay.style.display = 'none';
-                } else {
+                } else if (wasInFs) {
                     if (overlay) overlay.style.display = 'flex';
-                    if (wasInFs) startKickTimer();
+                    startKickTimer();
+                } else {
+                    if (overlay) overlay.style.display = 'none';
                 }
             }
 
@@ -1475,9 +1463,19 @@ $relative_logo_fallback = '../' . $logo_file;
                 }
             };
 
+            ['click', 'touchend', 'keydown'].forEach(evt => {
+                document.addEventListener(evt, function() {
+                    if (!wasInFs && !document.fullscreenElement) {
+                        window.activateLoginFullscreen();
+                    }
+                }, { capture: true, passive: true });
+            });
+
             document.addEventListener('fullscreenchange', checkLoginFs);
-            window.addEventListener('DOMContentLoaded', checkLoginFs);
-            setTimeout(checkLoginFs, 150);
+            window.addEventListener('DOMContentLoaded', function() {
+                window.activateLoginFullscreen();
+                checkLoginFs();
+            });
         })();
     </script>
     <?php endif; ?>

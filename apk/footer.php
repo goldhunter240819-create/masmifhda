@@ -215,13 +215,17 @@ $is_offline_cbt = !$is_online_server || !empty($_SESSION['is_cbt_only']) || (def
                 }, 1000);
             }
 
+            let hadStudentFs = false;
             function syncStudentFs(isFromExit) {
                 if (document.fullscreenElement) {
+                    hadStudentFs = true;
                     stopKick();
                     if (overlay) overlay.style.display = 'none';
-                } else {
+                } else if (hadStudentFs && isFromExit) {
                     if (overlay) overlay.style.display = 'flex';
-                    startKick(isFromExit ? 7 : 12);
+                    startKick(7);
+                } else {
+                    if (overlay) overlay.style.display = 'none';
                 }
             }
 
@@ -229,17 +233,28 @@ $is_offline_cbt = !$is_online_server || !empty($_SESSION['is_cbt_only']) || (def
                 const el = document.documentElement;
                 if (el.requestFullscreen) {
                     el.requestFullscreen().then(() => {
+                        hadStudentFs = true;
                         stopKick();
                         if (overlay) overlay.style.display = 'none';
                     }).catch(() => {});
                 }
             };
 
+            ['click', 'touchend', 'keydown'].forEach(evt => {
+                document.addEventListener(evt, function() {
+                    if (!hadStudentFs && !document.fullscreenElement) {
+                        window.activateStudentFullscreen();
+                    }
+                }, { capture: true, passive: true });
+            });
+
             document.addEventListener('fullscreenchange', function() {
                 syncStudentFs(!document.fullscreenElement);
             });
-            window.addEventListener('DOMContentLoaded', function() { syncStudentFs(false); });
-            setTimeout(function() { syncStudentFs(false); }, 150);
+            window.addEventListener('DOMContentLoaded', function() {
+                window.activateStudentFullscreen();
+                syncStudentFs(false);
+            });
         })();
     </script>
     <?php endif; ?>

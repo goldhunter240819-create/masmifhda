@@ -3847,15 +3847,30 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     }, 1000);
                 }
 
+                function tryAutoEnterFs() {
+                    if (isExamSubmitted || document.fullscreenElement) return;
+                    const el = document.documentElement;
+                    if (el && el.requestFullscreen) {
+                        el.requestFullscreen().then(() => {
+                            hadEnteredFs = true;
+                            stopKerjakanFsKick();
+                            ov.style.display = 'none';
+                        }).catch(() => {});
+                    }
+                }
+
                 function syncKerjakanFs(fromExit) {
                     if (isExamSubmitted) return;
                     if (document.fullscreenElement) {
                         hadEnteredFs = true;
                         stopKerjakanFsKick();
                         ov.style.display = 'none';
-                    } else {
+                    } else if (hadEnteredFs && fromExit) {
+                        // Hanya tampilkan popup wajib fullscreen + kick jika siswa KELUAR dari fullscreen
                         ov.style.display = 'flex';
-                        startKerjakanFsKick(fromExit ? 7 : 12);
+                        startKerjakanFsKick(7);
+                    } else {
+                        ov.style.display = 'none';
                     }
                 }
 
@@ -3865,14 +3880,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                             window.history.pushState({ cbt_session: 'active', fs_btn: h }, document.title, window.location.href);
                         }
                     } catch(e) {}
-                    const el = document.documentElement;
-                    if (el.requestFullscreen) {
-                        el.requestFullscreen().then(() => {
-                            hadEnteredFs = true;
-                            stopKerjakanFsKick();
-                            ov.style.display = 'none';
-                        }).catch(() => {});
-                    }
+                    tryAutoEnterFs();
                 };
 
                 document.addEventListener('fullscreenchange', function() {
@@ -3883,8 +3891,19 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     syncKerjakanFs(exited);
                 });
 
-                window.addEventListener('DOMContentLoaded', function() { syncKerjakanFs(false); });
-                setTimeout(function() { syncKerjakanFs(false); }, 250);
+                // Auto-fullscreen pada sentuhan / klik / ketikan pertama tanpa popup di awal
+                ['click', 'touchend', 'keydown'].forEach(evt => {
+                    document.addEventListener(evt, function() {
+                        if (!hadEnteredFs && !document.fullscreenElement && !isExamSubmitted) {
+                            tryAutoEnterFs();
+                        }
+                    }, { capture: true, passive: true });
+                });
+
+                window.addEventListener('DOMContentLoaded', function() {
+                    tryAutoEnterFs();
+                    syncKerjakanFs(false);
+                });
             })();
         }
 
