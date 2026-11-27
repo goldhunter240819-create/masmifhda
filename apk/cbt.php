@@ -1950,7 +1950,7 @@ include 'header.php';
                         <i class="fa-solid fa-lock"></i> Sesi Terkunci (Lapor Pengawas)
                     </button>
                 <?php elseif ($isMengerjakan): ?>
-                    <a href="<?= $cbtTataTertibBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
+                    <a href="<?= $cbtKerjakanBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
                         <i class="fa-solid fa-play"></i> Lanjutkan Pengerjaan Ujian
                     </a>
                 <?php elseif ($u['can_take']): ?>
