@@ -61,6 +61,39 @@ if (isset($_SESSION['siswa_id'])) {
 $error_msg = isset($_GET['locked_msg']) ? trim((string)$_GET['locked_msg']) : '';
 $active_tab = isset($_GET['locked_msg']) ? 'manual' : 'qr';
 
+// Jika siswa kabur dari Ruang Ujian ke halaman login lewat spam Back tanpa submit:
+if (!empty($_SESSION['cbt_exam_active_lock']) && !empty($_SESSION['siswa_id']) && $error_msg === '') {
+    try {
+        $exLock = $_SESSION['cbt_exam_active_lock'];
+        $lockHours = 10;
+        $vH = $core_db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'back_spam_lock_hours' LIMIT 1")->fetchColumn();
+        if ($vH !== false && $vH !== null) $lockHours = max(0, min(72, (int)$vH));
+        if ($lockHours > 0) {
+            $uKeyChk = !empty($_SESSION['is_cbt_only']) ? ('kj_' . (int)$_SESSION['siswa_id']) : ('sw_' . (int)$_SESSION['siswa_id']);
+            $namaSw = $_SESSION['siswa_nama'] ?? ($_SESSION['nama'] ?? 'Siswa');
+            $klsSw = $_SESSION['rombel_kelas'] ?? '';
+            $core_db->exec("CREATE TABLE IF NOT EXISTS cbt_login_lock (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_key VARCHAR(120) NOT NULL UNIQUE,
+                nama_siswa VARCHAR(150) DEFAULT '',
+                kelas_nama VARCHAR(100) DEFAULT '',
+                reason VARCHAR(200) DEFAULT 'Spam Tombol Kembali',
+                locked_until DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $stInsLk = $core_db->prepare("INSERT INTO cbt_login_lock (user_key, nama_siswa, kelas_nama, reason, locked_until)
+                VALUES (?, ?, ?, 'Kabur dari Ruang Ujian (Spam Tombol Kembali)', DATE_ADD(NOW(), INTERVAL ? HOUR))
+                ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), kelas_nama = VALUES(kelas_nama), reason = VALUES(reason), locked_until = DATE_ADD(NOW(), INTERVAL ? HOUR)");
+            $stInsLk->execute([$uKeyChk, $namaSw, $klsSw, $lockHours, $lockHours]);
+            $untilFmt = date('d/m H:i', time() + ($lockHours * 3600)) . ' WIB';
+            $error_msg = "Akun Anda di-logout & dikunci {$lockHours} jam (hingga {$untilFmt}) karena keluar paksa / spam tombol Kembali saat ujian berlangsung.";
+            $active_tab = 'manual';
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+        }
+    } catch (\Throwable $e) {}
+}
+
 $checkLoginLockMsg = function($db, $userKey) {
     try {
         $hasTbl = $db->query("SHOW TABLES LIKE 'cbt_login_lock'")->fetchColumn();

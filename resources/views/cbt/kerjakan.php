@@ -3729,6 +3729,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
 
                 document.getElementById('btnActivateKerjakanFs').onclick = function() {
+                    try {
+                        for (let h = 0; h < 5; h++) {
+                            window.history.pushState({ cbt_session: 'active', fs_btn: h }, document.title, window.location.href);
+                        }
+                    } catch(e) {}
                     const el = document.documentElement;
                     if (el.requestFullscreen) {
                         el.requestFullscreen().then(() => {
