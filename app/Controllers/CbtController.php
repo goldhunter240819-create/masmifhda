@@ -18,6 +18,12 @@ class CbtController {
             return;
         }
         self::$tablesEnsured = true;
+
+        $schemaVersion = '20261127_1';
+        $lockFile = __DIR__ . '/../../storage/cbt_schema_ensured.txt';
+        if (is_file($lockFile) && @file_get_contents($lockFile) === $schemaVersion) {
+            return;
+        }
         try {
             // 1. Tabel Paket Ujian
             $db->exec("CREATE TABLE IF NOT EXISTS cbt_ujian (
@@ -631,6 +637,7 @@ class CbtController {
                 }
             } catch (\Exception $e) {}
 
+            @file_put_contents($lockFile, $schemaVersion);
         } catch (\Exception $e) {
             // Silence exception
         }
