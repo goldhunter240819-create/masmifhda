@@ -34,9 +34,13 @@ class DeveloperController {
         $cmdStash = "{$gitBin} -C \"{$projectRoot}\" stash 2>&1";
         $outStash = @shell_exec($cmdStash);
 
-        // 3. Git Pull origin main
+        // 3. Git Pull origin main (otomatis pulihkan jika ref origin/main rusak/duplikat)
         $cmdPull = "{$gitBin} -C \"{$projectRoot}\" pull origin main 2>&1";
         $outPull = @shell_exec($cmdPull);
+        if (is_string($outPull) && (stripos($outPull, 'reference already exists') !== false || stripos($outPull, 'refs/remotes/origin/main') !== false)) {
+            @shell_exec("{$gitBin} -C \"{$projectRoot}\" update-ref -d refs/remotes/origin/main 2>&1");
+            $outPull = @shell_exec($cmdPull);
+        }
 
         // 4. Ambil ringkasan commit terbaru
         $cmdLog = "{$gitBin} -C \"{$projectRoot}\" log -1 --pretty=format:\"%h - %an, %ar : %s\" 2>&1";

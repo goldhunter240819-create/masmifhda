@@ -12,8 +12,12 @@ shell_exec('git -c safe.directory="*" checkout -- . 2>&1');
 shell_exec('git -c safe.directory="*" clean -fd 2>&1');
 
 // 2. Tarik kode terbaru dari GitHub origin/main dan paksa sync ke HEAD origin/main
-shell_exec('git -c safe.directory="*" fetch origin main 2>&1');
-$output = shell_exec('git -c safe.directory="*" reset --hard origin/main 2>&1');
+$fetchOut = shell_exec('git -c safe.directory="*" fetch origin main 2>&1');
+if ($fetchOut && (stripos($fetchOut, 'reference already exists') !== false || stripos($fetchOut, 'refs/remotes/origin/main') !== false)) {
+    @shell_exec('git -c safe.directory="*" update-ref -d refs/remotes/origin/main 2>&1');
+    $fetchOut = shell_exec('git -c safe.directory="*" fetch origin main 2>&1');
+}
+$output = shell_exec('git -c safe.directory="*" reset --hard FETCH_HEAD 2>&1');
 $headLog = shell_exec('git -c safe.directory="*" log -1 --oneline 2>&1');
 $output .= "\nHEAD: " . trim($headLog);
 
