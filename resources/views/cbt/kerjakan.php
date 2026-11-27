@@ -1503,7 +1503,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         </div>
     </div>
 
-    <div id="modalViolation" class="cbt-modal-backdrop" style="z-index: 99999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px);">
+    <div id="modalViolation" class="cbt-modal-backdrop" style="z-index: 99999; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(16px);">
         <div class="cbt-modal-box" style="border: 3px solid #ef4444; box-shadow: 0 25px 60px rgba(239, 68, 68, 0.45); text-align: center; max-width: 500px; animation: pulseBorder 1.5s infinite;">
             
             <!-- Pulsing Hazard Icon -->
@@ -3653,7 +3653,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         return;
                     }
                     if (document.hidden || !document.hasFocus()) {
-                        if (!isViolationModalOpen && !isExamSubmitted) {
+                        if (!isExamSubmitted) {
                             activateSecurityShield('Jendela Mengambang / Aplikasi Lain Aktif');
                             handleTabViolation('Membuka Aplikasi Lain / Fokus Hilang');
                         }
@@ -3677,11 +3677,11 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         return;
                     }
                     checkSplitScreenMode();
-                    const isUnfocused = (document.hidden || !document.hasFocus()) && !isNavigatingQuestion && !isViolationModalOpen && (Date.now() - lastUserActionTime > 1500);
+                    const isUnfocused = (document.hidden || !document.hasFocus()) && !isNavigatingQuestion && (Date.now() - lastUserActionTime > 1500);
                     if (isUnfocused) {
                         activateSecurityShield('Aplikasi Lain / Jendela Mengambang Terdeteksi');
                         if (!focusLostAt) focusLostAt = Date.now();
-                        if (Date.now() - focusLostAt >= 2000) {
+                        if (Date.now() - focusLostAt >= 2500) {
                             focusLostAt = Date.now();
                             handleTabViolation('Jendela Mengambang / Aplikasi Lain Aktif');
                         }
@@ -3689,7 +3689,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                         focusLostAt = 0;
                     }
                     // Deteksi DevTools Docked di Laptop/Desktop
-                    if (!isSimulasi && window.innerWidth > 800 && !isViolationModalOpen) {
+                    if (!isSimulasi && window.innerWidth > 800) {
                         const wDiff = Math.abs((window.outerWidth || 0) - (window.innerWidth || 0));
                         const hDiff = Math.abs((window.outerHeight || 0) - (window.innerHeight || 0));
                         if (wDiff > 190 || hDiff > 190) {
@@ -3702,7 +3702,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             // Deteksi DevTools Undocked via console getter (hanya di Desktop/Laptop)
             if (!isSimulasi && window.innerWidth > 800) {
                 setInterval(() => {
-                    if (isExamSubmitted || isViolationModalOpen) return;
+                    if (isExamSubmitted) return;
                     let devOpen = false;
                     const probe = new Image();
                     Object.defineProperty(probe, 'id', {
@@ -3844,7 +3844,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
 
                 document.addEventListener('fullscreenchange', function() {
                     const exited = !document.fullscreenElement;
-                    if (exited && hadEnteredFs && !isExamSubmitted && !isViolationModalOpen) {
+                    if (exited && hadEnteredFs && !isExamSubmitted) {
                         handleTabViolation('Keluar Fullscreen');
                     }
                     syncKerjakanFs(exited);
