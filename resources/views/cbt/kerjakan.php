@@ -9,7 +9,8 @@ $isAntiCheat = $isSimulasi ? false : (($cbtSettings['anti_cheat_mode'] ?? '1') =
 $forceFullscreen = $isSimulasi ? false : (($cbtSettings['force_fullscreen'] ?? '1') === '1');
 $blockTab = $isSimulasi ? false : (($cbtSettings['block_tab_switch'] ?? '1') === '1');
 $maxViolations = (int)($cbtSettings['max_tab_violations'] ?? 3);
-$actionViolation = $cbtSettings['action_on_violation'] ?? 'submit';
+$actionViolation = 'lock'; // Pelanggaran ujian (3x / >5s Home) mengunci pengerjaan (Terkunci), terpisah dari lock login 10 jam
+$isPesertaTerkunci = (($pesertaInfo['status_pengerjaan'] ?? '') === 'Terkunci');
 $disableRightClick = $isSimulasi ? false : (($cbtSettings['disable_right_click'] ?? '1') === '1');
 $disableCopyPaste = $isSimulasi ? false : (($cbtSettings['disable_copy_paste'] ?? '1') === '1');
 $soundAlarm = $isSimulasi ? false : (($cbtSettings['sound_alarm_on_violation'] ?? '1') === '1');
@@ -3286,6 +3287,30 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             showViolationModal(reason);
         }
 
+        function lockExamSession(reason = 'Melampaui batas pelanggaran') {
+            if (isExamSubmitted) return;
+            isExamSubmitted = true;
+            stopDangerAlarm();
+            const shield = document.getElementById('cbtSecurityShield');
+            if (shield) shield.classList.remove('active');
+            const modalV = document.getElementById('modalViolation');
+            if (modalV) modalV.classList.remove('open');
+            const modalL = document.getElementById('modalLocked');
+            if (modalL) modalL.classList.add('open');
+
+            if (pesertaId > 0 && !isSimulasi) {
+                try {
+                    fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
+                        method: 'POST',
+                        keepalive: true,
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `peserta_id=${pesertaId}&violation_count=${Math.max(1, violationCount)}&reason=${encodeURIComponent(reason)}&status=Terkunci`
+                    }).catch(() => {});
+                } catch(e) {}
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
         function showViolationModal(reason = '') {
             if (isExamSubmitted) return;
             isViolationModalOpen = true;
@@ -3595,7 +3620,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     clearTimeout(bgAutoSubmitTimer);
                     bgAutoSubmitTimer = setTimeout(() => {
                         if (document.hidden && isAntiCheat && !isExamSubmitted) {
-                            autoSubmit('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
+                            lockExamSession('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
                         }
                     }, MAX_BG_AWAY_MS);
                     activateSecurityShield('Tab Berpindah');
@@ -3605,7 +3630,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     const awayMs = tabHiddenAt ? (Date.now() - tabHiddenAt) : 0;
                     tabHiddenAt = 0;
                     if (awayMs >= MAX_BG_AWAY_MS && !isExamSubmitted) {
-                        autoSubmit('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
+                        lockExamSession('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
                         return;
                     }
                     // Siswa kembali ke tab ujian (< 5 detik)
@@ -3648,7 +3673,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             setInterval(() => {
                 if (!isExamSubmitted && isAntiCheat) {
                     if (document.hidden && tabHiddenAt && (Date.now() - tabHiddenAt >= MAX_BG_AWAY_MS)) {
-                        autoSubmit('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
+                        lockExamSession('Meninggalkan layar ujian (Home / Tab lain) lebih dari 5 detik!');
                         return;
                     }
                     checkSplitScreenMode();
@@ -3839,7 +3864,9 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         function runCbtApp() {
             try { initCbt(); } catch(e) { console.error('Init error:', e); }
             try {
-                if (typeof isAntiCheat !== 'undefined' && isAntiCheat && sessionViolationCount >= maxViolations && actionViolation === 'lock') {
+                const isServerTerkunci = <?php echo !empty($isPesertaTerkunci) ? 'true' : 'false'; ?>;
+                if (isServerTerkunci || (typeof isAntiCheat !== 'undefined' && isAntiCheat && sessionViolationCount >= maxViolations && actionViolation === 'lock')) {
+                    isExamSubmitted = true;
                     const lModal = document.getElementById('modalLocked');
                     if (lModal) lModal.classList.add('open');
                 }

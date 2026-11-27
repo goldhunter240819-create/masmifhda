@@ -67,7 +67,7 @@ if (!$isAdminPreview) {
                 $stPChk = $core_db->prepare("SELECT status_pengerjaan FROM cbt_peserta WHERE id = ? LIMIT 1");
                 $stPChk->execute([(int)($exLock['peserta_id'] ?? 0)]);
                 $stNow = (string)$stPChk->fetchColumn();
-                $stillActive = ($stNow !== 'Selesai');
+                $stillActive = in_array($stNow, ['Mengerjakan', 'Sedang Mengerjakan'], true);
             } catch (\Throwable $e) {}
 
             if ($stillActive && $lockHours > 0) {
@@ -1047,7 +1047,7 @@ if (!$activeOngoingUjian) {
 // Prioritas 2: Yang aktif hari ini dan siap dikerjakan (dan sudah memiliki butir soal)
 if (!$activeOngoingUjian) {
     foreach ($ujianHariIni as $uItem) {
-        if ($uItem['status_pengerjaan'] !== 'Selesai' && $uItem['can_take'] && (int)($uItem['total_soal'] ?? 0) > 0) {
+        if (!in_array($uItem['status_pengerjaan'], ['Selesai', 'Terkunci'], true) && $uItem['can_take'] && (int)($uItem['total_soal'] ?? 0) > 0) {
             $activeOngoingUjian = $uItem;
             break;
         }
@@ -1854,6 +1854,7 @@ include 'header.php';
         <?php foreach ($ujianHariIni as $u): ?>
             <?php
             $isMengerjakan = in_array($u['status_pengerjaan'], ['Mengerjakan', 'Sedang Mengerjakan']) && empty($u['waktu_selesai']);
+            $isTerkunciUjian = (($u['status_pengerjaan'] ?? '') === 'Terkunci');
             $durasi = (int)($u['durasi_menit'] ?? 90);
             $totalSoal = (int)($u['total_soal'] ?? 0);
             $kkm = (int)($u['kkm'] ?? 75);
@@ -1872,6 +1873,10 @@ include 'header.php';
                     <?php if ($totalSoal <= 0): ?>
                         <span style="background: #fef2f2; color: #dc2626; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #fecaca; white-space: nowrap;">
                             ⚠️ Soal Kosong
+                        </span>
+                    <?php elseif ($isTerkunciUjian): ?>
+                        <span style="background: #fee2e2; color: #b91c1c; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #fecaca; white-space: nowrap;">
+                            🔒 Terkunci
                         </span>
                     <?php elseif ($isMengerjakan): ?>
                         <span style="background: #fffbeb; color: #d97706; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; border: 1px solid #fde68a; white-space: nowrap;">
@@ -1936,6 +1941,13 @@ include 'header.php';
                     </div>
                     <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #e2e8f0; color: #64748b; cursor: not-allowed; border: 1px solid #cbd5e1; box-shadow: none;" disabled>
                         <i class="fa-solid fa-ban"></i> Soal Belum Tersedia (0 Butir)
+                    </button>
+                <?php elseif ($isTerkunciUjian): ?>
+                    <div style="font-size: 0.72rem; color: #b91c1c; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #fef2f2; padding: 6px 10px; border-radius: 8px; border: 1px solid #fecaca;">
+                        <i class="fa-solid fa-lock"></i> Sesi ujian Anda terkunci karena pelanggaran. Silakan hubungi Pengawas / Admin untuk membuka kunci.
+                    </div>
+                    <button type="button" class="btn-ujian btn-ujian-disabled" style="background: #fee2e2; color: #b91c1c; cursor: not-allowed; border: 1px solid #fecaca; box-shadow: none;" disabled>
+                        <i class="fa-solid fa-lock"></i> Sesi Terkunci (Lapor Pengawas)
                     </button>
                 <?php elseif ($isMengerjakan): ?>
                     <a href="<?= $cbtTataTertibBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-continue">
