@@ -163,6 +163,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         \App\Services\AuditLogger::loginSuccess($cbtUser['nama_siswa'], 'CBT Kelas Jauh (APK)');
+                        try {
+                            if (class_exists('\App\Controllers\CbtController')) {
+                                \App\Controllers\CbtController::registerActiveSession($core_db, 'kj_' . (int)$cbtUser['id']);
+                            }
+                        } catch (\Throwable $e) {}
 
                             header("Location: cbt.php");
                             exit;
@@ -420,6 +425,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
 
                                 \App\Services\AuditLogger::loginSuccess($siswa_nama, 'Siswa (APK Manual)');
+                                try {
+                                    if (class_exists('\App\Controllers\CbtController')) {
+                                        \App\Controllers\CbtController::registerActiveSession($core_db, 'sw_' . (int)$siswa_id);
+                                    }
+                                } catch (\Throwable $e) {}
 
                                 if ($is_standalone) {
                                     header("Location: cbt.php");

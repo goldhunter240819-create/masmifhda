@@ -28,6 +28,14 @@ if (!$isAdminPreview && !isset($_SESSION['siswa_id'])) {
 
 if (!$isAdminPreview) {
     try {
+        if (class_exists('\App\Controllers\CbtController') && !\App\Controllers\CbtController::verifySingleDeviceSession($core_db)) {
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+            header("Location: login.php?locked_msg=" . urlencode('Akun Anda baru saja login di perangkat lain! Maksimal 1 perangkat aktif.'));
+            exit;
+        }
+    } catch (\Throwable $e) {}
+    try {
         $uKeyChk = !empty($_SESSION['is_cbt_only']) ? ('kj_' . (int)$_SESSION['siswa_id']) : ('sw_' . (int)$_SESSION['siswa_id']);
         $hasLockTbl = $core_db->query("SHOW TABLES LIKE 'cbt_login_lock'")->fetchColumn();
         if ($hasLockTbl) {

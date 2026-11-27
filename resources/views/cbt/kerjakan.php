@@ -1751,6 +1751,12 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                     })
                     .then(res => res.json())
                     .then(data => {
+                        if (data && data.status === 'kicked') {
+                            isExamSubmitted = true;
+                            alert(data.message || 'Akun Anda terdeteksi login di perangkat lain! Sesi ini dihentikan.');
+                            window.location.replace('<?php echo base_url("apk/logout.php"); ?>');
+                            return;
+                        }
                         if (data && data.status === 'success') {
                             showSaveIndicator('Tersimpan di Cloud ✓', false);
                         } else {
@@ -3615,15 +3621,39 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 }
             });
 
-            // Focus Heartbeat: deteksi jendela mengambang / aplikasi lain / tombol Windows
+            // Focus Heartbeat: deteksi jendela mengambang / aplikasi lain / tombol Windows / DevTools Laptop
             setInterval(() => {
                 if (!isExamSubmitted && isAntiCheat) {
                     checkSplitScreenMode();
                     if ((document.hidden || !document.hasFocus()) && !isNavigatingQuestion && !isViolationModalOpen && (Date.now() - lastUserActionTime > 2000)) {
                         activateSecurityShield('Aplikasi Lain / Jendela Mengambang Terdeteksi');
                     }
+                    // Deteksi DevTools Docked di Laptop/Desktop
+                    if (!isSimulasi && window.innerWidth > 800 && !isViolationModalOpen) {
+                        const wDiff = Math.abs((window.outerWidth || 0) - (window.innerWidth || 0));
+                        const hDiff = Math.abs((window.outerHeight || 0) - (window.innerHeight || 0));
+                        if (wDiff > 190 || hDiff > 190) {
+                            handleTabViolation('DevTools / Inspect Element Terdeteksi');
+                        }
+                    }
                 }
             }, 1200);
+
+            // Deteksi DevTools Undocked via console getter (hanya di Desktop/Laptop)
+            if (!isSimulasi && window.innerWidth > 800) {
+                setInterval(() => {
+                    if (isExamSubmitted || isViolationModalOpen) return;
+                    let devOpen = false;
+                    const probe = new Image();
+                    Object.defineProperty(probe, 'id', {
+                        get: function() { devOpen = true; }
+                    });
+                    console.debug(probe);
+                    if (devOpen) {
+                        handleTabViolation('DevTools / Inspect Element Terdeteksi');
+                    }
+                }, 3000);
+            }
         }
 
         // ─── BLOKIR SCREENSHOT GESTUR 3 JARI DI HP ANDROID ───────────────────

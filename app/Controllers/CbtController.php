@@ -4019,6 +4019,17 @@ class CbtController {
 
         $cbtSettings = self::getAllPengaturan($db);
 
+        // Kunci 1 Akun 1 Perangkat (Anti Multi-Login)
+        if (empty($ujianInfo['is_simulasi']) && ($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0)) {
+            if (!self::verifySingleDeviceSession($db)) {
+                $loginUrl = function_exists('base_url') ? base_url('apk/login.php') : '/apk/login.php';
+                $_SESSION = [];
+                if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+                header("Location: {$loginUrl}?locked_msg=" . urlencode('Akun Anda sedang login di perangkat lain! Hanya 1 perangkat yang diizinkan saat ujian.'));
+                exit;
+            }
+        }
+
         // Hitung total pelanggaran kumulatif (tidak pernah ter-reset oleh reload atau buka ujian kembali)
         $serverTotalViolations = (int)($pesertaInfo['violation_count'] ?? 0);
         if (!empty($pesertaInfo['id'])) {
@@ -4310,12 +4321,70 @@ class CbtController {
     }
 
     /**
+     * Daftarkan session_id aktif untuk Kunci 1 Akun 1 Perangkat (Anti Multi-Login)
+     */
+    public static function registerActiveSession($db, $userKey) {
+        if (!$db || $userKey === '' || session_id() === '') return;
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_active_sessions (
+                user_key VARCHAR(120) PRIMARY KEY,
+                session_token VARCHAR(128) NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $st = $db->prepare("INSERT INTO cbt_active_sessions (user_key, session_token) VALUES (?, ?) ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), updated_at = NOW()");
+            $st->execute([$userKey, session_id()]);
+        } catch (\Throwable $e) {}
+    }
+
+    /**
+     * Verifikasi apakah perangkat saat ini masih menjadi satu-satunya perangkat aktif
+     */
+    public static function verifySingleDeviceSession($db) {
+        try {
+            $roleId = (int)($_SESSION['role_id'] ?? 0);
+            $isCbtOnly = !empty($_SESSION['is_cbt_only']);
+            $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
+            if (!($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0)) return true;
+
+            $vLock = $db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'lock_single_device' LIMIT 1")->fetchColumn();
+            if ($vLock === '0') return true;
+
+            $userKey = ($isCbtOnly || $roleId === 7) ? ('kj_' . $siswaSessionId) : ('sw_' . $siswaSessionId);
+            $curSid = session_id();
+            if ($userKey === '' || $curSid === '') return true;
+
+            $hasTbl = $db->query("SHOW TABLES LIKE 'cbt_active_sessions'")->fetchColumn();
+            if (!$hasTbl) {
+                self::registerActiveSession($db, $userKey);
+                return true;
+            }
+            $st = $db->prepare("SELECT session_token FROM cbt_active_sessions WHERE user_key = ? LIMIT 1");
+            $st->execute([$userKey]);
+            $srvSid = $st->fetchColumn();
+            if ($srvSid === false || $srvSid === null || $srvSid === '') {
+                self::registerActiveSession($db, $userKey);
+                return true;
+            }
+            return ($srvSid === $curSid);
+        } catch (\Throwable $e) {
+            return true;
+        }
+    }
+
+    /**
      * Auto-Save Jawaban Siswa secara Real-Time (AJAX)
      */
     public static function ajaxSimpanJawaban() {
         header('Content-Type: application/json; charset=utf-8');
         $ctx = self::getAuthContext(true);
         $db = $ctx['db_core'];
+
+        if (!self::verifySingleDeviceSession($db)) {
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+            echo json_encode(['status' => 'kicked', 'message' => 'Akun Anda terdeteksi login di perangkat lain!']);
+            exit;
+        }
 
         $ujian_id = isset($_POST['ujian_id']) ? (int)$_POST['ujian_id'] : 0;
         $peserta_id = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
