@@ -26,6 +26,25 @@ if (!$isAdminPreview && !isset($_SESSION['siswa_id'])) {
     exit;
 }
 
+if (!$isAdminPreview) {
+    try {
+        $uKeyChk = !empty($_SESSION['is_cbt_only']) ? ('kj_' . (int)$_SESSION['siswa_id']) : ('sw_' . (int)$_SESSION['siswa_id']);
+        $hasLockTbl = $core_db->query("SHOW TABLES LIKE 'cbt_login_lock'")->fetchColumn();
+        if ($hasLockTbl) {
+            $stLk = $core_db->prepare("SELECT locked_until, reason FROM cbt_login_lock WHERE user_key = ? AND locked_until > NOW() LIMIT 1");
+            $stLk->execute([$uKeyChk]);
+            $lkRow = $stLk->fetch(PDO::FETCH_ASSOC);
+            if ($lkRow) {
+                $msgLk = "Akun Anda dikunci sementara hingga " . date('d/m H:i', strtotime($lkRow['locked_until'])) . " WIB karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ".";
+                $_SESSION = [];
+                if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+                header("Location: login.php?locked_msg=" . urlencode($msgLk));
+                exit;
+            }
+        }
+    } catch (\Throwable $e) {}
+}
+
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -2392,6 +2411,84 @@ function setFilterRiwayat(type) {
 setInterval(function() {
     fetch('ping_tracker.php').catch(function(){});
 }, 45000);
+
+<?php if (!$isAdminPreview): ?>
+// Fullscreen & Anti-Back Spam dari Beranda CBT
+(function() {
+    const isAntiCheatCfg = <?= (($cbtSettings['anti_cheat_mode'] ?? '1') === '1') ? 'true' : 'false' ?>;
+    const blockBackCfg = <?= (($cbtSettings['block_back_button'] ?? '1') === '1') ? 'true' : 'false' ?>;
+    const forceFsCfg = <?= (($cbtSettings['force_fullscreen'] ?? '1') === '1') ? 'true' : 'false' ?>;
+    const backSpamLockHours = <?= (int)($cbtSettings['back_spam_lock_hours'] ?? 10) ?>;
+
+    function enterFullscreenBeranda() {
+        if (!isAntiCheatCfg || !forceFsCfg) return;
+        const el = document.documentElement;
+        if (!document.fullscreenElement && el.requestFullscreen) {
+            el.requestFullscreen().catch(() => {});
+        }
+    }
+    if (isAntiCheatCfg && forceFsCfg) {
+        document.addEventListener('click', enterFullscreenBeranda, { once: true });
+        document.addEventListener('touchstart', enterFullscreenBeranda, { once: true });
+    }
+
+    if (isAntiCheatCfg && blockBackCfg) {
+        try {
+            for (let i = 0; i < 15; i++) {
+                window.history.pushState({ cbt_beranda: i }, document.title, window.location.href);
+            }
+        } catch(e) {}
+
+        let backTapTimes = [];
+        let isLockingNow = false;
+        window.addEventListener('popstate', function() {
+            if (isLockingNow) return;
+            try {
+                for (let i = 0; i < 5; i++) {
+                    window.history.pushState({ cbt_beranda: 'hold' }, document.title, window.location.href);
+                }
+            } catch(e) {}
+
+            const now = Date.now();
+            backTapTimes = backTapTimes.filter(t => (now - t) <= 6000);
+            backTapTimes.push(now);
+
+            if (backTapTimes.length >= 3 && backSpamLockHours > 0) {
+                isLockingNow = true;
+                let curPath = window.location.pathname;
+                let cbtPrefix = '/cbt';
+                if (curPath.indexOf('/masmifhda/') !== -1) cbtPrefix = '/masmifhda/cbt';
+                else if (curPath.indexOf('/cbt/') !== -1) cbtPrefix = curPath.substring(0, curPath.indexOf('/cbt/') + 4);
+
+                fetch(cbtPrefix + '/api/lock-back-spam', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'source=Beranda%20CBT'
+                })
+                .then(r => r.json())
+                .then(res => {
+                    const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam (hingga ${(res && res.locked_until) ? res.locked_until : 'nanti'}) karena menekan tombol Kembali berulang kali.`;
+                    window.location.href = 'login.php?locked_msg=' + encodeURIComponent(msg);
+                })
+                .catch(() => {
+                    window.location.href = 'logout.php';
+                });
+                return;
+            }
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Dilarang Tekan Kembali!',
+                    text: `Peringatan (${backTapTimes.length}/3): Jika menekan tombol Kembali berulang kali, akun Anda akan otomatis logout & dikunci ${backSpamLockHours} jam!`,
+                    confirmButtonColor: '#dc2626',
+                    timer: 3500
+                });
+            }
+        });
+    }
+})();
+<?php endif; ?>
 </script>
 
 <?php include 'footer.php'; ?>

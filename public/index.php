@@ -2513,6 +2513,8 @@ $router->add('POST', '/cbt/kerjakan/simpan-jawaban', [\App\Controllers\CbtContro
 $router->add('POST', '/cbt/kerjakan/pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCatatPelanggaran']);
 $router->add('GET', '/cbt/api/cek-pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCekPelanggaran']);
 $router->add('POST', '/cbt/api/toggle-menu-apk', [\App\Controllers\CbtController::class, 'ajaxToggleMenuApk']);
+$router->add('POST', '/cbt/api/lock-back-spam', [\App\Controllers\CbtController::class, 'ajaxLockBackSpam']);
+$router->add('POST', '/cbt/pengaturan/unlock-login', [\App\Controllers\CbtController::class, 'unlockLoginAkun']);
 $router->add('POST', '/cbt/kerjakan/submit', [\App\Controllers\CbtController::class, 'submitKerjakan']);
 $router->add('GET', '/cbt/kerjakan/selesai', [\App\Controllers\CbtController::class, 'selesaiKerjakan']);
 

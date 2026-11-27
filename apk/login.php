@@ -58,8 +58,23 @@ if (isset($_SESSION['siswa_id'])) {
     exit;
 }
 
-$error_msg = '';
-$active_tab = 'qr';
+$error_msg = isset($_GET['locked_msg']) ? trim((string)$_GET['locked_msg']) : '';
+$active_tab = isset($_GET['locked_msg']) ? 'manual' : 'qr';
+
+$checkLoginLockMsg = function($db, $userKey) {
+    try {
+        $hasTbl = $db->query("SHOW TABLES LIKE 'cbt_login_lock'")->fetchColumn();
+        if (!$hasTbl) return '';
+        $st = $db->prepare("SELECT locked_until, reason FROM cbt_login_lock WHERE user_key = ? AND locked_until > NOW() LIMIT 1");
+        $st->execute([$userKey]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $untilFmt = date('d/m H:i', strtotime($row['locked_until'])) . ' WIB';
+            return "Akun Anda dikunci sementara hingga {$untilFmt} karena {$row['reason']}. Hubungi Admin/Proktor untuk membuka kunci.";
+        }
+    } catch (\Throwable $e) {}
+    return '';
+};
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login_mode = $_POST['login_mode'] ?? (isset($_POST['username']) ? 'manual' : 'qr');
@@ -93,7 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     if ($cbt_pass_ok) {
-                        $_SESSION['is_cbt_only'] = true;
+                        $lockErr = $checkLoginLockMsg($core_db, 'kj_' . (int)$cbtUser['id']);
+                        if ($lockErr !== '') {
+                            $error_msg = $lockErr;
+                        } else {
+                            $_SESSION['is_cbt_only'] = true;
                         $_SESSION['siswa_id'] = $cbtUser['id'];
                         $_SESSION['cbt_khusus_id'] = $cbtUser['id'];
                         $_SESSION['siswa_nama'] = $cbtUser['nama_siswa'];
@@ -112,8 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         \App\Services\AuditLogger::loginSuccess($cbtUser['nama_siswa'], 'CBT Kelas Jauh (APK)');
 
-                        header("Location: cbt.php");
-                        exit;
+                            header("Location: cbt.php");
+                            exit;
+                        }
                     } else {
                         $error_msg = "Password salah untuk akun peserta ujian.";
                     }
@@ -349,6 +369,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
 
                             if ($siswa_id) {
+                                $lockErr = $checkLoginLockMsg($core_db, 'sw_' . (int)$siswa_id);
+                                if ($lockErr !== '') {
+                                    $error_msg = $lockErr;
+                                } else {
                                 $_SESSION['siswa_id'] = $siswa_id;
                                 $_SESSION['siswa_nama'] = $siswa_nama;
                                 $_SESSION['siswa_nis'] = $siswa_nis;
@@ -375,6 +399,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     header("Location: index.php");
                                 }
                                 exit;
+                                }
                             } else {
                                 $error_msg = "Data Siswa tidak ditemukan untuk akun ini.";
                             }

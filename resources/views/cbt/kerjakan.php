@@ -3343,19 +3343,49 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             }
         }
 
-        // ─── BLOKIR TOMBOL KEMBALI GAWAI / BROWSER (ANTI-BACK) ────────────────
+        // ─── BLOKIR TOMBOL KEMBALI GAWAI / BROWSER (ANTI-BACK & ANTI-SPAM) ────
+        const backSpamLockHours = <?php echo (int)($cbtSettings['back_spam_lock_hours'] ?? 10); ?>;
         if (isAntiCheat && blockBackButton) {
             try {
-                window.history.pushState({ cbt_session: 'active' }, document.title, window.location.href);
+                for (let h = 0; h < 15; h++) {
+                    window.history.pushState({ cbt_session: 'active', idx: h }, document.title, window.location.href);
+                }
             } catch(e) {}
 
+            let backSpamTimes = [];
+            let isBackSpamLocking = false;
             window.addEventListener('popstate', function(event) {
-                if (isExamSubmitted) return;
+                if (isExamSubmitted || isBackSpamLocking) return;
 
-                // Segera tahan posisi history agar tidak kembali ke APK / halaman sebelumnya
+                // Segera tahan posisi history dengan banyak state agar tidak lolos walau spam Back cepat
                 try {
-                    window.history.pushState({ cbt_session: 'active' }, document.title, window.location.href);
+                    for (let h = 0; h < 5; h++) {
+                        window.history.pushState({ cbt_session: 'active', hold: h }, document.title, window.location.href);
+                    }
                 } catch(e) {}
+
+                const now = Date.now();
+                backSpamTimes = backSpamTimes.filter(t => (now - t) <= 6000);
+                backSpamTimes.push(now);
+
+                if (backSpamTimes.length >= 3 && backSpamLockHours > 0 && !isSimulasi) {
+                    isBackSpamLocking = true;
+                    isExamSubmitted = true;
+                    fetch('<?php echo base_url("cbt/api/lock-back-spam"); ?>', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `peserta_id=${pesertaId}&source=Ruang%20Ujian`
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        const msg = `Akun Anda di-logout & dikunci ${backSpamLockHours} jam (hingga ${(res && res.locked_until) ? res.locked_until : 'nanti'}) karena spam tombol Kembali saat ujian.`;
+                        window.location.href = '<?php echo base_url("apk/login.php"); ?>?locked_msg=' + encodeURIComponent(msg);
+                    })
+                    .catch(() => {
+                        window.location.href = '<?php echo base_url("apk/logout.php"); ?>';
+                    });
+                    return;
+                }
 
                 // Picu pelanggaran & alarm bahaya meme!
                 handleTabViolation('Mencoba Menekan Tombol Kembali');

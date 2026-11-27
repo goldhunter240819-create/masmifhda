@@ -14,6 +14,7 @@ $lockDevice = ($settings['lock_single_device'] ?? '1') === '1';
 $watermark = ($settings['watermark_student_nis'] ?? '1') === '1';
 $soundAlarm = ($settings['sound_alarm_on_violation'] ?? '1') === '1';
 $blockBackButton = ($settings['block_back_button'] ?? '1') === '1';
+$backSpamLockHours = (int)($settings['back_spam_lock_hours'] ?? 10);
 
 $durasiMenit = (int)($settings['default_durasi_menit'] ?? 90);
 $defaultKkm = (int)($settings['default_kkm'] ?? 75);
@@ -411,6 +412,25 @@ $listTerkunci = $listTerkunci ?? [];
                             </div>
                         </div>
 
+                        <!-- 11. Durasi Kunci Akun Spam Tombol Kembali -->
+                        <div class="card setting-card" style="border-left: 4px solid #ef4444;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="setting-icon bg-rose"><i data-lucide="shield-alert"></i></div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Kunci Akun Jika Spam Tombol Kembali (Jam)</div>
+                                    </div>
+                                    <p class="setting-desc">
+                                        Jika siswa menekan tombol <b>Kembali (Back)</b> berulang kali secara cepat (≥ 3x dalam 6 detik) di Beranda CBT maupun Ruang Ujian, siswa langsung di-logout dan akunnya dikunci selama durasi ini (Default: <code>10 jam</code>). Isi <code>0</code> untuk mematikan.
+                                    </p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                    <input type="number" name="settings[back_spam_lock_hours]" min="0" max="72" value="<?php echo $backSpamLockHours; ?>" style="width: 72px; padding: 8px 10px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-weight: 800; text-align: center; font-size: 0.95rem;">
+                                    <span style="font-weight: 700; color: #475569; font-size: 0.85rem;">Jam</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -777,6 +797,66 @@ $listTerkunci = $listTerkunci ?? [];
                             </div>
                             <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Tidak Ada Siswa yang Terkunci</div>
                             <div style="font-size: 0.82rem; color: #64748b; margin-top: 4px;">Seluruh peserta ujian saat ini berstatus normal atau belum memulai sesi.</div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Daftar Akun Siswa Terkunci Login (Spam Tombol Kembali) -->
+                <div class="card" style="padding: 1.5rem; border-radius: 16px; border: 1px solid #fed7aa; margin-bottom: 1.5rem; background: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="font-size: 1rem; font-weight: 800; color: #9a3412; margin: 0 0 2px 0; display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="user-x" style="width: 18px; height: 18px; color: #ea580c;"></i> Akun Terkunci Login (Spam Tombol Kembali)
+                            </h3>
+                            <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Siswa yang ter-logout & terkunci otomatis karena menekan tombol Kembali berkali-kali secara cepat.</p>
+                        </div>
+                        <?php if (!empty($listLoginLock)): ?>
+                        <form method="POST" action="<?php echo base_url('cbt/pengaturan/unlock-login'); ?>" onsubmit="return confirm('Buka kunci login untuk SEMUA siswa ini?')">
+                            <input type="hidden" name="lock_id" value="0">
+                            <button type="submit" class="e-btn e-btn-primary" style="background: #ea580c; border: none; padding: 8px 16px;">
+                                <i data-lucide="unlock"></i> Buka Semua Kunci Login
+                            </button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!empty($listLoginLock)): ?>
+                        <div class="table-responsive">
+                            <table class="table-custom" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">NO</th>
+                                        <th>NAMA SISWA</th>
+                                        <th>KELAS</th>
+                                        <th>ALASAN</th>
+                                        <th>TERKUNCI HINGGA</th>
+                                        <th style="text-align: right;">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php $noL = 1; foreach ($listLoginLock as $ll): ?>
+                                    <tr>
+                                        <td style="font-weight: 700; color: #64748b;"><?php echo $noL++; ?></td>
+                                        <td style="font-weight: 800; color: #0f172a;"><?php echo htmlspecialchars($ll['nama_siswa'] ?: 'Siswa'); ?></td>
+                                        <td><span class="badge badge-subtle"><?php echo htmlspecialchars($ll['kelas_nama'] ?: '-'); ?></span></td>
+                                        <td style="font-size: 0.8rem; color: #9a3412; font-weight: 700;"><?php echo htmlspecialchars($ll['reason'] ?: 'Spam Tombol Kembali'); ?></td>
+                                        <td style="font-size: 0.8rem; color: #dc2626; font-weight: 800;"><?php echo !empty($ll['locked_until']) ? date('d/m H:i', strtotime($ll['locked_until'])) . ' WIB' : '-'; ?></td>
+                                        <td style="text-align: right;">
+                                            <form method="POST" action="<?php echo base_url('cbt/pengaturan/unlock-login'); ?>" style="display: inline-block;">
+                                                <input type="hidden" name="lock_id" value="<?php echo (int)$ll['id']; ?>">
+                                                <button type="submit" class="e-btn e-btn-primary" style="background: #0ea5e9; padding: 6px 14px; font-size: 0.78rem;">
+                                                    <i data-lucide="unlock" style="width: 14px; height: 14px;"></i> Buka Kunci Login
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div style="padding: 1.5rem; text-align: center; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; color: #64748b; font-size: 0.84rem; font-weight: 600;">
+                            Tidak ada akun siswa yang sedang terkunci login.
                         </div>
                     <?php endif; ?>
                 </div>

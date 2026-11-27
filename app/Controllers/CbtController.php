@@ -4137,6 +4137,137 @@ class CbtController {
     }
 
     /**
+     * Kunci Akun & Logout Paksa Siswa Akibat Spam Tombol Kembali (Back Button)
+     */
+    public static function ajaxLockBackSpam() {
+        header('Content-Type: application/json; charset=utf-8');
+        $ctx = self::getAuthContext(true);
+        $db = $ctx['db_core'];
+
+        $roleId = (int)($_SESSION['role_id'] ?? 0);
+        $isCbtOnly = !empty($_SESSION['is_cbt_only']);
+        $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $pesertaId = isset($_POST['peserta_id']) ? (int)$_POST['peserta_id'] : 0;
+        $source = trim((string)($_POST['source'] ?? 'Beranda CBT'));
+
+        // Jangan kunci akun Admin/Guru/Pratinjau
+        if (!($roleId === 3 || $roleId === 7 || $isCbtOnly || $siswaSessionId > 0)) {
+            echo json_encode(['success' => false, 'locked' => false]);
+            exit;
+        }
+
+        $lockHours = 10;
+        try {
+            $vH = $db->query("SELECT setting_value FROM cbt_pengaturan WHERE setting_key = 'back_spam_lock_hours' LIMIT 1")->fetchColumn();
+            if ($vH !== false && $vH !== null) {
+                $lockHours = max(0, min(72, (int)$vH));
+            }
+        } catch (\Throwable $e) {}
+
+        $userKey = '';
+        $namaSiswa = $_SESSION['siswa_nama'] ?? ($_SESSION['nama'] ?? 'Siswa');
+        $kelasNama = $_SESSION['rombel_kelas'] ?? '';
+
+        if ($isCbtOnly || $roleId === 7) {
+            $userKey = 'kj_' . $siswaSessionId;
+        } elseif ($siswaSessionId > 0) {
+            $userKey = 'sw_' . $siswaSessionId;
+        } elseif ($userId > 0) {
+            $userKey = 'usr_' . $userId;
+        }
+
+        $lockedUntilFmt = '';
+        if ($userKey !== '' && $lockHours > 0) {
+            try {
+                $db->exec("CREATE TABLE IF NOT EXISTS cbt_login_lock (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_key VARCHAR(120) NOT NULL UNIQUE,
+                    nama_siswa VARCHAR(150) DEFAULT '',
+                    kelas_nama VARCHAR(100) DEFAULT '',
+                    reason VARCHAR(200) DEFAULT 'Spam Tombol Kembali',
+                    locked_until DATETIME NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $reasonTxt = "Spam Tombol Kembali ({$source})";
+                $st = $db->prepare("INSERT INTO cbt_login_lock (user_key, nama_siswa, kelas_nama, reason, locked_until)
+                                    VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? HOUR))
+                                    ON DUPLICATE KEY UPDATE
+                                        nama_siswa = VALUES(nama_siswa),
+                                        kelas_nama = VALUES(kelas_nama),
+                                        reason = VALUES(reason),
+                                        locked_until = DATE_ADD(NOW(), INTERVAL ? HOUR)");
+                $st->execute([$userKey, $namaSiswa, $kelasNama, $reasonTxt, $lockHours, $lockHours]);
+                $lockedUntilFmt = date('H:i', time() + ($lockHours * 3600)) . ' WIB';
+            } catch (\Throwable $e) {}
+        }
+
+        // Catat ke log pelanggaran
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_pelanggaran_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                peserta_id INT NOT NULL,
+                nama_siswa VARCHAR(150) DEFAULT '',
+                kelas_nama VARCHAR(100) DEFAULT '',
+                nama_ujian VARCHAR(255) DEFAULT '',
+                reason VARCHAR(120) DEFAULT 'Keluar Tab',
+                violation_count INT DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $stLog = $db->prepare("INSERT INTO cbt_pelanggaran_log (peserta_id, nama_siswa, kelas_nama, nama_ujian, reason, violation_count) VALUES (?, ?, ?, ?, ?, ?)");
+            $stLog->execute([
+                $pesertaId,
+                $namaSiswa,
+                $kelasNama,
+                $source,
+                "Spam Tombol Kembali (Logout & Kunci {$lockHours} Jam)",
+                3
+            ]);
+        } catch (\Throwable $e) {}
+
+        // Hancurkan sesi agar siswa benar-benar ter-logout
+        try {
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_destroy();
+            }
+            @setcookie('apk_remember_cbt', '', time() - 3600, '/');
+            @setcookie('apk_remember_siswa', '', time() - 3600, '/');
+        } catch (\Throwable $e) {}
+
+        echo json_encode([
+            'success' => true,
+            'locked' => ($lockHours > 0),
+            'hours' => $lockHours,
+            'locked_until' => $lockedUntilFmt
+        ]);
+        exit;
+    }
+
+    /**
+     * Buka Kunci Akun Login Siswa (Akibat Spam Tombol Kembali)
+     */
+    public static function unlockLoginAkun() {
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $lockId = isset($_POST['lock_id']) ? (int)$_POST['lock_id'] : 0;
+            try {
+                if ($lockId > 0) {
+                    $db->prepare("DELETE FROM cbt_login_lock WHERE id = ?")->execute([$lockId]);
+                } else {
+                    $db->exec("DELETE FROM cbt_login_lock");
+                }
+            } catch (\Throwable $e) {}
+            redirect('/cbt/pengaturan?unlocked=1');
+            exit;
+        }
+        redirect('/cbt/pengaturan');
+    }
+
+    /**
      * Auto-Save Jawaban Siswa secara Real-Time (AJAX)
      */
     public static function ajaxSimpanJawaban() {
@@ -4650,6 +4781,15 @@ class CbtController {
             $hasLogTbl = $db->query("SHOW TABLES LIKE 'cbt_pelanggaran_log'")->fetchColumn();
             if ($hasLogTbl) {
                 $listPelanggaranLog = $db->query("SELECT * FROM cbt_pelanggaran_log ORDER BY id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Throwable $e) {}
+
+        // Daftar akun siswa yang terkunci login (spam tombol kembali)
+        $listLoginLock = [];
+        try {
+            $hasLockTbl = $db->query("SHOW TABLES LIKE 'cbt_login_lock'")->fetchColumn();
+            if ($hasLockTbl) {
+                $listLoginLock = $db->query("SELECT * FROM cbt_login_lock WHERE locked_until > NOW() ORDER BY id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
             }
         } catch (\Throwable $e) {}
 
