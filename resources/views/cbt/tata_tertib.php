@@ -221,9 +221,13 @@
         (function() {
             const ujianId = <?= (int)$ujian_id ?>;
             const isAdminPreview = <?= !empty($isAdminPreview) ? 'true' : 'false' ?>;
+            const nextTokenUrl = <?= json_encode($nextTokenUrl ?? $kerjakanUrl) ?>;
             const kerjakanUrl = <?= json_encode($kerjakanUrl) ?>;
             const statusUrl = <?= json_encode($statusUrl) ?>;
             const dashboardUrl = <?= json_encode($dashboardUrl) ?>;
+            const lockBackUrl = <?= json_encode($lockBackUrl ?? '') ?>;
+            const loginUrl = <?= json_encode($loginUrl ?? '') ?>;
+            const lockHours = <?= (int)($lockHours ?? 10) ?>;
             const agreedKey = 'cbt_tatib_agreed_' + ujianId;
 
             const chk = document.getElementById('chkSetujuTatib');
@@ -242,17 +246,46 @@
             btn.addEventListener('click', function() {
                 if (!chk.checked) return;
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Membuka Ruang Ujian...';
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menuju Konfirmasi Token...';
                 if (!isAdminPreview) {
                     try { sessionStorage.setItem(agreedKey, '1'); } catch (e) {}
                 }
                 // Navigasi normal agar halaman Tata Tertib tetap berada di history sebagai bantalan sebelum dashboard
-                window.location.href = kerjakanUrl;
+                window.location.href = nextTokenUrl;
             });
+
+            if (!isAdminPreview && lockBackUrl) {
+                let backTaps = [];
+                try {
+                    for (let i = 0; i < 4; i++) {
+                        window.history.pushState({ cbt_tt: i }, document.title, window.location.href);
+                    }
+                } catch (e) {}
+                window.addEventListener('popstate', function() {
+                    const now = Date.now();
+                    backTaps.push(now);
+                    backTaps = backTaps.filter(t => now - t <= 4000);
+                    try { window.history.pushState({ cbt_tt: 'trap' }, document.title, window.location.href); } catch (e) {}
+                    if (backTaps.length >= 3 && lockHours > 0) {
+                        fetch(lockBackUrl, {
+                            method: 'POST',
+                            keepalive: true,
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'source=' + encodeURIComponent('Halaman Tata Tertib')
+                        }).then(r => r.json()).then(res => {
+                            const ts = (res && res.locked_until_ts) ? res.locked_until_ts : (Math.floor(Date.now() / 1000) + (lockHours * 3600));
+                            const msg = `Akun Anda di-logout & dikunci ${lockHours} jam. Silahkan pulang saja, renungi di rumah, besok kesini lagi!`;
+                            window.location.replace(loginUrl + '?locked_msg=' + encodeURIComponent(msg) + '&locked_until_ts=' + ts);
+                        }).catch(() => {
+                            window.location.replace(loginUrl);
+                        });
+                    }
+                });
+            }
 
             function checkAndRouteLoop() {
                 if (isAdminPreview) return;
-                fetch(statusUrl, { cache: 'no-store', credentials: 'same-origin' })
+                fetch(statusUrl + '&record_escape=1&source=Halaman%20Tata%20Tertib', { cache: 'no-store', credentials: 'same-origin' })
                     .then(r => r.json())
                     .then(res => {
                         if (!res || !res.success) return;
@@ -262,12 +295,6 @@
                             window.location.replace(dashboardUrl);
                         } else if (st === 'Mengerjakan' || st === 'Sedang Mengerjakan' || st === 'Terkunci') {
                             window.location.replace(kerjakanUrl);
-                        } else {
-                            let wasAgreed = false;
-                            try { wasAgreed = sessionStorage.getItem(agreedKey) === '1'; } catch (e) {}
-                            if (wasAgreed) {
-                                window.location.replace(kerjakanUrl);
-                            }
                         }
                     })
                     .catch(() => {});

@@ -10537,9 +10537,9 @@ class CbtController {
     }
 
     /**
-     * Helper internal: Ambil status_pengerjaan peserta saat ini untuk ujian tertentu.
+     * Helper internal: Ambil baris peserta saat ini untuk ujian tertentu.
      */
-    private static function getCurrentPesertaStatusForUjian($db, $ujian_id) {
+    private static function getCurrentPesertaRowForUjian($db, $ujian_id) {
         $userId = (int)($_SESSION['user_id'] ?? 0);
         $roleId = (int)($_SESSION['role_id'] ?? 0);
         $siswaSessionId = (int)($_SESSION['siswa_id'] ?? 0);
@@ -10551,26 +10551,71 @@ class CbtController {
                 $stK->execute([$siswaSessionId]);
                 $rK = $stK->fetch(PDO::FETCH_ASSOC);
                 $noP = $rK['no_peserta'] ?: ($rK['nis'] ?: ('KJ-' . $siswaSessionId));
-                $stP = $db->prepare("SELECT status_pengerjaan FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
+                $stP = $db->prepare("SELECT id, status_pengerjaan, reset_count, violation_count, nama_siswa, kelas_nama FROM cbt_peserta WHERE ujian_id = ? AND (nis = ? OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
                 $stP->execute([$ujian_id, $noP, $rK['nis'] ?? '', $rK['nis'] ?? '']);
-                return (string)($stP->fetchColumn() ?: '');
+                return $stP->fetch(PDO::FETCH_ASSOC) ?: null;
             } else {
                 $stS = $db->prepare("SELECT id, nis FROM siswa WHERE (user_id = ? AND ? > 0) OR (id = ? AND ? > 0) LIMIT 1");
                 $stS->execute([$userId, $userId, $siswaSessionId, $siswaSessionId]);
                 $rS = $stS->fetch(PDO::FETCH_ASSOC);
                 $swId = (int)($rS['id'] ?? $siswaSessionId);
                 $swNis = (string)($rS['nis'] ?? '');
-                $stP = $db->prepare("SELECT status_pengerjaan FROM cbt_peserta WHERE ujian_id = ? AND ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
+                $stP = $db->prepare("SELECT id, status_pengerjaan, reset_count, violation_count, nama_siswa, kelas_nama FROM cbt_peserta WHERE ujian_id = ? AND ((siswa_id IS NOT NULL AND siswa_id = ?) OR (nis = ? AND ? != '')) ORDER BY id DESC LIMIT 1");
                 $stP->execute([$ujian_id, $swId ?: -1, $swNis, $swNis]);
-                return (string)($stP->fetchColumn() ?: '');
+                return $stP->fetch(PDO::FETCH_ASSOC) ?: null;
             }
         } catch (\Throwable $e) {
-            return '';
+            return null;
         }
     }
 
     /**
-     * Halaman Tata Tertib (Bantalan / Loop Trap sebelum masuk ruang ujian)
+     * Catat +1 pelanggaran jika siswa sudah Mengerjakan lalu lolos kembali ke Tata Tertib / Token.
+     */
+    private static function recordBackEscapeViolation($db, $pesertaRow, $ujianInfo, $sourceLabel) {
+        if (empty($pesertaRow['id'])) return;
+        $pid = (int)$pesertaRow['id'];
+        $nowTs = time();
+        $debKey = 'cbt_last_escape_at_' . $pid;
+        if (!empty($_SESSION[$debKey]) && ($nowTs - (int)$_SESSION[$debKey]) < 3) {
+            return;
+        }
+        $_SESSION[$debKey] = $nowTs;
+
+        $resetCnt = (int)($pesertaRow['reset_count'] ?? 0);
+        $sessKey = 'cbt_sess_viol_' . $pid . '_r' . $resetCnt;
+        $newSessViol = (int)($_SESSION[$sessKey] ?? 0) + 1;
+        $_SESSION[$sessKey] = $newSessViol;
+
+        $cbtSettings = self::getAllPengaturan($db);
+        $maxViol = max(1, (int)($cbtSettings['max_tab_violations'] ?? 3));
+        $lockNow = ($newSessViol >= $maxViol);
+
+        try {
+            if ($lockNow) {
+                $db->prepare("UPDATE cbt_peserta SET status_pengerjaan = 'Terkunci', violation_count = COALESCE(violation_count, 0) + 1 WHERE id = ?")->execute([$pid]);
+            } else {
+                $db->prepare("UPDATE cbt_peserta SET violation_count = COALESCE(violation_count, 0) + 1 WHERE id = ?")->execute([$pid]);
+            }
+            $stCnt = $db->prepare("SELECT COUNT(*) FROM cbt_pelanggaran_log WHERE peserta_id = ?");
+            $stCnt->execute([$pid]);
+            $totalLog = (int)$stCnt->fetchColumn() + 1;
+
+            $reason = $lockNow ? "Terkunci Pelanggaran ({$sourceLabel})" : $sourceLabel;
+            $stLog = $db->prepare("INSERT INTO cbt_pelanggaran_log (peserta_id, nama_siswa, kelas_nama, nama_ujian, reason, violation_count) VALUES (?, ?, ?, ?, ?, ?)");
+            $stLog->execute([
+                $pid,
+                $pesertaRow['nama_siswa'] ?? 'Siswa',
+                $pesertaRow['kelas_nama'] ?? '',
+                $ujianInfo['mapel_nama'] ?? ($ujianInfo['nama_ujian'] ?? 'Ujian'),
+                substr($reason, 0, 115),
+                $totalLog
+            ]);
+        } catch (\Throwable $e) {}
+    }
+
+    /**
+     * Halaman Tata Tertib (Tahap 1 sebelum Konfirmasi Token & Ruang Ujian)
      */
     public static function tataTertib() {
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -10581,7 +10626,6 @@ class CbtController {
         $db = $ctx['db_core'];
 
         $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
-        $token = isset($_GET['token']) ? trim((string)$_GET['token']) : '';
         $isAdminPreview = !empty($_GET['admin_preview']) && !in_array((int)($_SESSION['role_id'] ?? 0), [3, 7], true) && empty($_SESSION['is_cbt_only']);
         $pKelas = trim($_GET['preview_kelas'] ?? '');
         $pDate = trim($_GET['preview_date'] ?? date('Y-m-d'));
@@ -10605,19 +10649,24 @@ class CbtController {
         if ($isAdminPreview) {
             if ($pKelas === '') $pKelas = (string)($ujianInfo['kelas_nama'] ?? 'X E.1');
             $dashboardUrl = base_url('apk/cbt.php?admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
+            $nextTokenUrl = base_url('cbt/token?ujian_id=' . $ujian_id . '&admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
             $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . '&admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
         } else {
-            $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . ($token !== '' ? '&token=' . urlencode($token) : ''));
-            $statusNow = self::getCurrentPesertaStatusForUjian($db, $ujian_id);
+            $nextTokenUrl = base_url('cbt/token?ujian_id=' . $ujian_id);
+            $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id);
+            $pRow = self::getCurrentPesertaRowForUjian($db, $ujian_id);
+            $statusNow = (string)($pRow['status_pengerjaan'] ?? '');
 
-            // Jika sudah Selesai -> kembalikan ke dashboard
             if ($statusNow === 'Selesai') {
                 header('Location: ' . $dashboardUrl);
                 exit;
             }
-
-            // Jika masih Mengerjakan / Sedang Mengerjakan / Terkunci -> loop balik ke halaman kerjakan!
-            if (in_array($statusNow, ['Mengerjakan', 'Sedang Mengerjakan', 'Terkunci'], true)) {
+            if (in_array($statusNow, ['Mengerjakan', 'Sedang Mengerjakan'], true)) {
+                self::recordBackEscapeViolation($db, $pRow, $ujianInfo, 'Kembali ke Halaman Tata Tertib Saat Ujian Aktif');
+                header('Location: ' . $kerjakanUrl);
+                exit;
+            }
+            if ($statusNow === 'Terkunci') {
                 header('Location: ' . $kerjakanUrl);
                 exit;
             }
@@ -10628,15 +10677,89 @@ class CbtController {
         $jumlahSoal = (int)$stCnt->fetchColumn();
 
         $cbtSettings = self::getAllPengaturan($db);
-        $maxPelanggaran = (int)($cbtSettings['max_violations'] ?? 3);
+        $maxPelanggaran = (int)($cbtSettings['max_tab_violations'] ?? ($cbtSettings['max_violations'] ?? 3));
         if ($maxPelanggaran <= 0) $maxPelanggaran = 3;
+        $lockHours = max(0, min(72, (int)($cbtSettings['back_spam_lock_hours'] ?? 10)));
 
         $statusUrl = base_url('cbt/api/status-peserta?ujian_id=' . $ujian_id);
+        $lockBackUrl = base_url('cbt/api/lock-back-spam');
+        $loginUrl = base_url('apk/login.php');
         include __DIR__ . '/../../resources/views/cbt/tata_tertib.php';
     }
 
     /**
-     * API cek status pengerjaan peserta (digunakan pageshow bfcache di halaman Tata Tertib)
+     * Halaman Konfirmasi Token (Tahap 2 setelah Tata Tertib, sebelum Ruang Ujian)
+     */
+    public static function tokenUjian() {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $ctx = self::getAuthContext(true);
+        $db = $ctx['db_core'];
+
+        $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
+        $isAdminPreview = !empty($_GET['admin_preview']) && !in_array((int)($_SESSION['role_id'] ?? 0), [3, 7], true) && empty($_SESSION['is_cbt_only']);
+        $pKelas = trim($_GET['preview_kelas'] ?? '');
+        $pDate = trim($_GET['preview_date'] ?? date('Y-m-d'));
+        $dashboardUrl = $isAdminPreview
+            ? base_url('apk/cbt.php?admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate))
+            : base_url('apk/cbt.php');
+
+        if ($ujian_id <= 0) {
+            header('Location: ' . $dashboardUrl);
+            exit;
+        }
+
+        $stmtU = $db->prepare("SELECT * FROM cbt_ujian WHERE id = ? LIMIT 1");
+        $stmtU->execute([$ujian_id]);
+        $ujianInfo = $stmtU->fetch(PDO::FETCH_ASSOC);
+        if (!$ujianInfo) {
+            header('Location: ' . $dashboardUrl);
+            exit;
+        }
+
+        $tokenResmi = strtoupper(trim((string)($ujianInfo['token'] ?? '')));
+
+        if ($isAdminPreview) {
+            if ($pKelas === '') $pKelas = (string)($ujianInfo['kelas_nama'] ?? 'X E.1');
+            $dashboardUrl = base_url('apk/cbt.php?admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
+            $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . '&admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
+        } else {
+            $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . ($tokenResmi !== '' ? '&token=' . urlencode($tokenResmi) : ''));
+            $pRow = self::getCurrentPesertaRowForUjian($db, $ujian_id);
+            $statusNow = (string)($pRow['status_pengerjaan'] ?? '');
+
+            if ($statusNow === 'Selesai') {
+                header('Location: ' . $dashboardUrl);
+                exit;
+            }
+            if (in_array($statusNow, ['Mengerjakan', 'Sedang Mengerjakan'], true)) {
+                self::recordBackEscapeViolation($db, $pRow, $ujianInfo, 'Kembali ke Halaman Token Saat Ujian Aktif');
+                header('Location: ' . $kerjakanUrl);
+                exit;
+            }
+            if ($statusNow === 'Terkunci') {
+                header('Location: ' . $kerjakanUrl);
+                exit;
+            }
+        }
+
+        $stCnt = $db->prepare("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = ?");
+        $stCnt->execute([$ujian_id]);
+        $jumlahSoal = (int)$stCnt->fetchColumn();
+
+        $cbtSettings = self::getAllPengaturan($db);
+        $lockHours = max(0, min(72, (int)($cbtSettings['back_spam_lock_hours'] ?? 10)));
+        $statusUrl = base_url('cbt/api/status-peserta?ujian_id=' . $ujian_id);
+        $lockBackUrl = base_url('cbt/api/lock-back-spam');
+        $loginUrl = base_url('apk/login.php');
+
+        include __DIR__ . '/../../resources/views/cbt/token_ujian.php';
+    }
+
+    /**
+     * API cek status pengerjaan peserta (digunakan pageshow bfcache di Tata Tertib & Token)
      */
     public static function ajaxStatusPeserta() {
         header('Content-Type: application/json; charset=utf-8');
@@ -10648,7 +10771,15 @@ class CbtController {
             echo json_encode(['success' => false, 'status' => '']);
             exit;
         }
-        $status = self::getCurrentPesertaStatusForUjian($db, $ujian_id);
+        $pRow = self::getCurrentPesertaRowForUjian($db, $ujian_id);
+        $status = (string)($pRow['status_pengerjaan'] ?? '');
+        if (!empty($_GET['record_escape']) && in_array($status, ['Mengerjakan', 'Sedang Mengerjakan'], true)) {
+            $stU = $db->prepare("SELECT id, nama_ujian, mapel_nama FROM cbt_ujian WHERE id = ? LIMIT 1");
+            $stU->execute([$ujian_id]);
+            $uInfo = $stU->fetch(PDO::FETCH_ASSOC) ?: [];
+            $src = trim((string)($_GET['source'] ?? 'Kembali ke Halaman Sebelumnya'));
+            self::recordBackEscapeViolation($db, $pRow, $uInfo, $src . ' Saat Ujian Aktif');
+        }
         echo json_encode(['success' => true, 'status' => $status]);
         exit;
     }

@@ -2509,6 +2509,7 @@ $router->add('GET', '/cbt/ujian/tambah', function() { redirect('/cbt/jadwal'); e
 $router->add('POST', '/cbt/ujian/save', [\App\Controllers\CbtController::class, 'saveUjian']);
 $router->add('POST', '/cbt/ujian/sync-peserta', [\App\Controllers\CbtController::class, 'syncPesertaAction']);
 $router->add('GET', '/cbt/tata-tertib', [\App\Controllers\CbtController::class, 'tataTertib']);
+$router->add('GET', '/cbt/token', [\App\Controllers\CbtController::class, 'tokenUjian']);
 $router->add('GET', '/cbt/api/status-peserta', [\App\Controllers\CbtController::class, 'ajaxStatusPeserta']);
 $router->add('GET', '/cbt/kerjakan', [\App\Controllers\CbtController::class, 'kerjakan']);
 $router->add('POST', '/cbt/kerjakan/simpan-jawaban', [\App\Controllers\CbtController::class, 'ajaxSimpanJawaban']);
@@ -2521,6 +2522,7 @@ $router->add('POST', '/cbt/kerjakan/submit', [\App\Controllers\CbtController::cl
 $router->add('GET', '/cbt/kerjakan/selesai', [\App\Controllers\CbtController::class, 'selesaiKerjakan']);
 
 $router->add('GET', '/tata-tertib', [\App\Controllers\CbtController::class, 'tataTertib']);
+$router->add('GET', '/token', [\App\Controllers\CbtController::class, 'tokenUjian']);
 $router->add('GET', '/kerjakan', [\App\Controllers\CbtController::class, 'kerjakan']);
 $router->add('POST', '/kerjakan/simpan-jawaban', [\App\Controllers\CbtController::class, 'ajaxSimpanJawaban']);
 $router->add('POST', '/kerjakan/pelanggaran', [\App\Controllers\CbtController::class, 'ajaxCatatPelanggaran']);

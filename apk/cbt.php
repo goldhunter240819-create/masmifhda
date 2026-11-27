@@ -2344,35 +2344,14 @@ function tutupModalTataTertib() {
 }
 
 function konfirmasiMulaiUjian(ujianId, namaUjian, mapelNama, durasi, totalSoal, tokenResmi, kkm) {
-    curUjianId = ujianId;
-    curExpectedToken = (tokenResmi || '').trim().toUpperCase();
-
-    document.getElementById('modalExamTitle').textContent = namaUjian;
-    document.getElementById('modalExamMapel').textContent = mapelNama || 'CBT Online';
-    document.getElementById('modalExamDurasi').textContent = durasi + ' Menit';
-    document.getElementById('modalExamSoal').textContent = (totalSoal > 0 ? totalSoal + ' Soal' : '10 Soal');
-    document.getElementById('modalExamToken').textContent = curExpectedToken || '------';
-    
-    // Hint cerdas untuk membedakan Huruf O vs Angka 0
-    const hintEl = document.getElementById('tokenCharHint');
-    if (hintEl) {
-        if (curExpectedToken.indexOf('O') !== -1) {
-            hintEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> Memakai <b>HURUF O</b> (Bukan angka nol 0)';
-            hintEl.style.display = 'inline-block';
-        } else if (curExpectedToken.indexOf('0') !== -1) {
-            hintEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> Memakai <b>ANGKA 0 (NOL)</b>';
-            hintEl.style.display = 'inline-block';
-        } else {
-            hintEl.style.display = 'none';
-        }
+    let curPath = window.location.pathname;
+    let cbtPrefix = '/cbt';
+    if (curPath.indexOf('/masmifhda/') !== -1) {
+        cbtPrefix = '/masmifhda/cbt';
+    } else if (curPath.indexOf('/cbt/') !== -1) {
+        cbtPrefix = curPath.substring(0, curPath.indexOf('/cbt/') + 4);
     }
-
-    const inp = document.getElementById('inputTokenUjian');
-    inp.value = curExpectedToken; // Otomatis isi token resmi agar tidak terpotong oleh keyboard di HP!
-    inp.style.borderColor = '#22c55e';
-    document.getElementById('tokenErrorMsg').style.display = 'none';
-
-    document.getElementById('modalStartExam').style.display = 'flex';
+    window.location.href = cbtPrefix + '/tata-tertib?ujian_id=' + encodeURIComponent(ujianId);
 }
 
 function tutupModalMulai() {
