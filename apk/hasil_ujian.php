@@ -192,37 +192,17 @@ if (!$isAdmin && !empty($guruMapelList)) {
     }
 }
 
-// 5. Ambil Daftar Kelas (Diprioritaskan sesuai kelas dari mapel yang dipilih)
+// 5. Ambil Seluruh Daftar Kelas (Reguler SIAKAD + Kelas Jauh + Peserta CBT)
 $kelasList = [];
 try {
-    if (!empty($selectedMapel)) {
-        $stmtK = $core_db->prepare("
-            SELECT DISTINCT p.kelas_nama 
-            FROM cbt_peserta p
-            JOIN cbt_ujian u ON p.ujian_id = u.id
-            WHERE (u.mapel_nama = ? OR u.mapel_nama LIKE ? OR u.nama_ujian LIKE ?)
-              AND p.kelas_nama IS NOT NULL AND p.kelas_nama != ''
-            ORDER BY p.kelas_nama ASC
-        ");
-        $stmtK->execute([$selectedMapel, "%{$selectedMapel}%", "%{$selectedMapel}%"]);
-        $kelasList = $stmtK->fetchAll(PDO::FETCH_COLUMN);
-    }
+    $genericTingkat = ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas'];
+    $k1 = $core_db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $k2 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $k3 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $mergedKls = array_diff(array_unique(array_filter(array_merge($k1, $k2, $k3))), $genericTingkat);
+    usort($mergedKls, function($a, $b) { return strnatcasecmp($a, $b); });
+    $kelasList = array_values($mergedKls);
 } catch (\Exception $e) {}
-
-// Fallback jika belum ada peserta yang ujian pada mapel ini
-if (empty($kelasList)) {
-    try {
-        $k1 = $core_db->query("SELECT DISTINCT nama_kelas FROM kelas WHERE nama_kelas IS NOT NULL AND nama_kelas != ''")->fetchAll(PDO::FETCH_COLUMN);
-        $k2 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-        $k3 = $core_db->query("SELECT DISTINCT kelas_nama FROM cbt_peserta_khusus WHERE kelas_nama IS NOT NULL AND kelas_nama != ''")->fetchAll(PDO::FETCH_COLUMN);
-        $mergedKls = array_unique(array_filter(array_merge($k1, $k2, $k3)));
-        $mergedKls = array_diff($mergedKls, ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas']);
-        usort($mergedKls, function($a, $b) { return strnatcasecmp($a, $b); });
-        $kelasList = array_values($mergedKls);
-    } catch (\Exception $e) {}
-} else {
-    usort($kelasList, function($a, $b) { return strnatcasecmp($a, $b); });
-}
 
 // 6. Query Daftar Peserta & Nilai CBT (100% Terisolasi per Mapel Guru)
 $sql = "SELECT p.*, u.nama_ujian, u.kode_ujian, u.mapel_nama as ujian_mapel, u.kkm as kkm_ujian, u.durasi_menit,
