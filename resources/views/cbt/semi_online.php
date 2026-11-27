@@ -166,7 +166,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;">
                             <div style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                                <i data-lucide="cloud-download"></i>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
                             </div>
                             <div>
                                 <span style="font-size: 0.72rem; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px;">Langkah 1 (Pra-Ujian)</span>
@@ -212,7 +212,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;">
                             <div style="width: 44px; height: 44px; border-radius: 12px; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                                <i data-lucide="cloud-upload"></i>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
                             </div>
                             <div>
                                 <span style="font-size: 0.72rem; font-weight: 800; color: #16a34a; text-transform: uppercase; letter-spacing: 0.5px;">Langkah 2 (Pasca-Ujian)</span>
@@ -226,7 +226,7 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
 
                         <div style="background: #f0fdf4; border-radius: 12px; padding: 12px 14px; margin-bottom: 1.5rem; border: 1px solid #bbf7d0;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.78rem; font-weight: 700; color: #166534;">Data Siap Unggah Hari Ini:</span>
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #166534;">Total Nilai Siap Unggah (Semua Sesi):</span>
                                 <span style="font-size: 0.82rem; font-weight: 900; color: #15803d;"><?= number_format($countHasil) ?> Nilai Siswa Siap Unggah</span>
                             </div>
                         </div>
