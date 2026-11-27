@@ -10575,7 +10575,12 @@ class CbtController {
 
         $ujian_id = isset($_GET['ujian_id']) ? (int)$_GET['ujian_id'] : 0;
         $token = isset($_GET['token']) ? trim((string)$_GET['token']) : '';
-        $dashboardUrl = base_url('apk/cbt.php');
+        $isAdminPreview = !empty($_GET['admin_preview']) && !in_array((int)($_SESSION['role_id'] ?? 0), [3, 7], true) && empty($_SESSION['is_cbt_only']);
+        $pKelas = trim($_GET['preview_kelas'] ?? '');
+        $pDate = trim($_GET['preview_date'] ?? date('Y-m-d'));
+        $dashboardUrl = $isAdminPreview
+            ? base_url('apk/cbt.php?admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate))
+            : base_url('apk/cbt.php');
 
         if ($ujian_id <= 0) {
             header('Location: ' . $dashboardUrl);
@@ -10590,19 +10595,25 @@ class CbtController {
             exit;
         }
 
-        $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . ($token !== '' ? '&token=' . urlencode($token) : ''));
-        $statusNow = self::getCurrentPesertaStatusForUjian($db, $ujian_id);
+        if ($isAdminPreview) {
+            if ($pKelas === '') $pKelas = (string)($ujianInfo['kelas_nama'] ?? 'X E.1');
+            $dashboardUrl = base_url('apk/cbt.php?admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
+            $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . '&admin_preview=1&preview_kelas=' . urlencode($pKelas) . '&preview_date=' . urlencode($pDate));
+        } else {
+            $kerjakanUrl = base_url('cbt/kerjakan?ujian_id=' . $ujian_id . ($token !== '' ? '&token=' . urlencode($token) : ''));
+            $statusNow = self::getCurrentPesertaStatusForUjian($db, $ujian_id);
 
-        // Jika sudah Selesai -> kembalikan ke dashboard
-        if ($statusNow === 'Selesai') {
-            header('Location: ' . $dashboardUrl);
-            exit;
-        }
+            // Jika sudah Selesai -> kembalikan ke dashboard
+            if ($statusNow === 'Selesai') {
+                header('Location: ' . $dashboardUrl);
+                exit;
+            }
 
-        // Jika masih Mengerjakan / Sedang Mengerjakan / Terkunci -> loop balik ke halaman kerjakan!
-        if (in_array($statusNow, ['Mengerjakan', 'Sedang Mengerjakan', 'Terkunci'], true)) {
-            header('Location: ' . $kerjakanUrl);
-            exit;
+            // Jika masih Mengerjakan / Sedang Mengerjakan / Terkunci -> loop balik ke halaman kerjakan!
+            if (in_array($statusNow, ['Mengerjakan', 'Sedang Mengerjakan', 'Terkunci'], true)) {
+                header('Location: ' . $kerjakanUrl);
+                exit;
+            }
         }
 
         $stCnt = $db->prepare("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = ?");

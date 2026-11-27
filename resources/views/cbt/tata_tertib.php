@@ -217,6 +217,7 @@
     <script>
         (function() {
             const ujianId = <?= (int)$ujian_id ?>;
+            const isAdminPreview = <?= !empty($isAdminPreview) ? 'true' : 'false' ?>;
             const kerjakanUrl = <?= json_encode($kerjakanUrl) ?>;
             const statusUrl = <?= json_encode($statusUrl) ?>;
             const dashboardUrl = <?= json_encode($dashboardUrl) ?>;
@@ -239,12 +240,15 @@
                 if (!chk.checked) return;
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Membuka Ruang Ujian...';
-                try { sessionStorage.setItem(agreedKey, '1'); } catch (e) {}
+                if (!isAdminPreview) {
+                    try { sessionStorage.setItem(agreedKey, '1'); } catch (e) {}
+                }
                 // Navigasi normal agar halaman Tata Tertib tetap berada di history sebagai bantalan sebelum dashboard
                 window.location.href = kerjakanUrl;
             });
 
             function checkAndRouteLoop() {
+                if (isAdminPreview) return;
                 fetch(statusUrl, { cache: 'no-store', credentials: 'same-origin' })
                     .then(r => r.json())
                     .then(res => {

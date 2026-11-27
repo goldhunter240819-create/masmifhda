@@ -1945,7 +1945,7 @@ include 'header.php';
                         <div style="font-size: 0.72rem; color: #0369a1; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; background: #e0f2fe; padding: 6px 10px; border-radius: 8px; border: 1px solid #bae6fd;">
                             <i class="fa-solid fa-shield-halved"></i> Mode Pratinjau Admin (Bypass Jam, Absen & Token)
                         </div>
-                        <a href="<?= $cbtKerjakanBase ?>?ujian_id=<?= (int)$u['id'] ?>&admin_preview=1&preview_kelas=<?= urlencode($previewKelas) ?>&preview_date=<?= urlencode($previewDate) ?>" class="btn-ujian btn-ujian-start" style="text-decoration: none;">
+                        <a href="<?= $cbtTataTertibBase ?>?ujian_id=<?= (int)$u['id'] ?>&admin_preview=1&preview_kelas=<?= urlencode($previewKelas) ?>&preview_date=<?= urlencode($previewDate) ?>" class="btn-ujian btn-ujian-start" style="text-decoration: none;">
                             <i class="fa-solid fa-magnifying-glass"></i> Cek & Uji Soal Sekarang
                         </a>
                     <?php elseif ($requireAttendance && empty($u['has_absen'])): ?>
