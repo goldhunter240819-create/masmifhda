@@ -1579,21 +1579,27 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         const storageKeyIdx = `cbt_idx_${ujianId}_${pesertaId}`;
         const storageKeyDeadline = `cbt_deadline_${ujianId}_${pesertaId}`;
         const storageKeyViol = `cbt_viol_${ujianId}_${pesertaId}`;
+        const storageKeySessViol = `cbt_sess_viol_${ujianId}_${pesertaId}`;
         const storageKeyReset = `cbt_reset_${ujianId}_${pesertaId}`;
         const serverResetCount = <?php echo (int)($pesertaInfo['reset_count'] ?? 0); ?>;
-        const serverViolationCount = <?php echo (int)($pesertaInfo['violation_count'] ?? 0); ?>;
+        const serverViolationCount = <?php echo (int)($serverTotalViolations ?? ($pesertaInfo['violation_count'] ?? 0)); ?>;
         const localResetCount = parseInt(localStorage.getItem(storageKeyReset) || '0', 10);
 
-        let violationCount = Math.max(parseInt(localStorage.getItem(storageKeyViol) || '0', 10), serverViolationCount);
+        // Total pelanggaran kumulatif TIDAK PERNAH di-reset oleh reload maupun Buka Ujian (lanjut 4x, 5x, 6x...)
+        let violationCount = Math.max(parseInt(localStorage.getItem(storageKeyViol) || '0', 10) || 0, serverViolationCount);
+        let sessionViolationCount = parseInt(localStorage.getItem(storageKeySessViol) || '0', 10) || 0;
+        if (serverResetCount === 0 && sessionViolationCount < violationCount) {
+            sessionViolationCount = violationCount;
+        }
 
-        // Jika ujian dibuka kembali oleh proktor / guru:
+        // Jika ujian dibuka kembali oleh proktor / guru: hanya reset toleransi sesi, BUKAN total pelanggaran kumulatif!
         if (serverResetCount > localResetCount) {
             try {
-                localStorage.removeItem(storageKeyViol);
+                localStorage.removeItem(storageKeySessViol);
                 localStorage.removeItem(storageKeyDeadline);
                 localStorage.setItem(storageKeyReset, String(serverResetCount));
             } catch(e) {}
-            violationCount = 0;
+            sessionViolationCount = 0;
         }
 
         let currentIndex = 0;
@@ -3250,13 +3256,15 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
             lastViolationTime = now;
 
             violationCount++;
+            sessionViolationCount++;
             localStorage.setItem(storageKeyViol, violationCount);
+            localStorage.setItem(storageKeySessViol, sessionViolationCount);
 
-            // Kirim laporan pelanggaran ke server agar Suara AI di Admin/Proktor langsung berbunyi
+            // Kirim laporan pelanggaran ke server agar tercatat kumulatif & di log pelanggaran
             if (pesertaId > 0 && !isSimulasi) {
                 try {
-                    const isLockedNow = (violationCount >= maxViolations && actionViolation !== 'submit');
-                    const isAutoSubmitNow = (violationCount >= maxViolations && actionViolation === 'submit');
+                    const isLockedNow = (sessionViolationCount >= maxViolations && actionViolation !== 'submit');
+                    const isAutoSubmitNow = (sessionViolationCount >= maxViolations && actionViolation === 'submit');
                     fetch('<?php echo base_url("cbt/kerjakan/pelanggaran"); ?>', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -3297,10 +3305,10 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
                 if (descEl) descEl.textContent = 'Anda terdeteksi berpindah tab browser, membuka aplikasi lain, atau meninggalkan layar ujian. Tindakan ini telah dicatat oleh sistem pengawas!';
             }
 
-            if (violationCount >= maxViolations) {
+            if (sessionViolationCount >= maxViolations) {
                 stopDangerAlarm();
                 if (actionViolation === 'submit') {
-                    autoSubmit(`🚨 BATAS PELANGGARAN TERLAMPAUI (${violationCount}x)!`);
+                    autoSubmit(`🚨 BATAS PELANGGARAN TERLAMPAUI (${sessionViolationCount}x di sesi ini • Total ${violationCount}x)!`);
                     return;
                 } else {
                     // Kunci sesi ujian
@@ -3766,7 +3774,7 @@ $alarmSoundUrl = base_url('assets/sounds/alarm-danger.mp3');
         function runCbtApp() {
             try { initCbt(); } catch(e) { console.error('Init error:', e); }
             try {
-                if (typeof isAntiCheat !== 'undefined' && isAntiCheat && violationCount >= maxViolations && actionViolation === 'lock') {
+                if (typeof isAntiCheat !== 'undefined' && isAntiCheat && sessionViolationCount >= maxViolations && actionViolation === 'lock') {
                     const lModal = document.getElementById('modalLocked');
                     if (lModal) lModal.classList.add('open');
                 }

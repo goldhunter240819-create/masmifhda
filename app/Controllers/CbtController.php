@@ -4019,6 +4019,22 @@ class CbtController {
 
         $cbtSettings = self::getAllPengaturan($db);
 
+        // Hitung total pelanggaran kumulatif (tidak pernah ter-reset oleh reload atau buka ujian kembali)
+        $serverTotalViolations = (int)($pesertaInfo['violation_count'] ?? 0);
+        if (!empty($pesertaInfo['id'])) {
+            try {
+                $hasLogT = $db->query("SHOW TABLES LIKE 'cbt_pelanggaran_log'")->fetchColumn();
+                if ($hasLogT) {
+                    $stLogV = $db->prepare("SELECT COUNT(*) FROM cbt_pelanggaran_log WHERE peserta_id = ?");
+                    $stLogV->execute([(int)$pesertaInfo['id']]);
+                    $cntLogV = (int)$stLogV->fetchColumn();
+                    if ($cntLogV > $serverTotalViolations) {
+                        $serverTotalViolations = $cntLogV;
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
         // Tandai sesi ujian aktif di session agar jika siswa kabur lewat spam Back ke Beranda CBT, langsung terdeteksi & dikunci
         if (empty($ujianInfo['is_simulasi']) && !empty($pesertaInfo['id'])) {
             $_SESSION['cbt_exam_active_lock'] = [
@@ -4913,8 +4929,7 @@ class CbtController {
                                         SET status_pengerjaan = 'Sedang Mengerjakan', 
                                             waktu_selesai = NULL, 
                                             waktu_mulai = NOW(), 
-                                            reset_count = COALESCE(reset_count, 0) + 1, 
-                                            violation_count = 0 
+                                            reset_count = COALESCE(reset_count, 0) + 1 
                                         WHERE id = ?");
                 $stmt->execute([$peserta_id]);
             } else {
@@ -4922,8 +4937,7 @@ class CbtController {
                             SET status_pengerjaan = 'Sedang Mengerjakan', 
                                 waktu_selesai = NULL, 
                                 waktu_mulai = NOW(), 
-                                reset_count = COALESCE(reset_count, 0) + 1, 
-                                violation_count = 0 
+                                reset_count = COALESCE(reset_count, 0) + 1 
                             WHERE status_pengerjaan IN ('Terkunci', 'Pelanggaran')");
             }
             redirect('/cbt/pengaturan?unlocked=1');
@@ -4958,8 +4972,7 @@ class CbtController {
                     jumlah_benar = ?,
                     jumlah_salah = ?,
                     jumlah_tidak_jawab = ?,
-                    nilai_akhir = ?,
-                    violation_count = 0
+                    nilai_akhir = ?
                 WHERE id = ?
             ");
 
@@ -5018,8 +5031,7 @@ class CbtController {
                                                 jumlah_benar = 0, 
                                                 jumlah_salah = 0, 
                                                 jawaban_json = NULL,
-                                                reset_count = COALESCE(reset_count, 0) + 1,
-                                                violation_count = 0
+                                                reset_count = COALESCE(reset_count, 0) + 1
                                             WHERE id = ?");
                     $stmt->execute([$peserta_id]);
                 } else {
@@ -5028,8 +5040,7 @@ class CbtController {
                                             SET status_pengerjaan = 'Mengerjakan', 
                                                 waktu_selesai = NULL, 
                                                 waktu_mulai = NOW(),
-                                                reset_count = COALESCE(reset_count, 0) + 1,
-                                                violation_count = 0
+                                                reset_count = COALESCE(reset_count, 0) + 1
                                             WHERE id = ?");
                     $stmt->execute([$peserta_id]);
                 }
@@ -5070,8 +5081,7 @@ class CbtController {
                     SET status_pengerjaan = 'Mengerjakan', 
                         waktu_selesai = NULL, 
                         waktu_mulai = NOW(), 
-                        reset_count = COALESCE(reset_count, 0) + 1, 
-                        violation_count = 0";
+                        reset_count = COALESCE(reset_count, 0) + 1";
             
             if ($mode === 'ulang') {
                 $sql .= ", nilai_akhir = 0.00, jumlah_benar = 0, jumlah_salah = 0, jawaban_json = NULL";
