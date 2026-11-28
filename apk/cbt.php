@@ -31,6 +31,8 @@ if (!$isAdminPreview) {
         if (class_exists('\App\Controllers\CbtController') && !\App\Controllers\CbtController::verifySingleDeviceSession($core_db)) {
             $_SESSION = [];
             if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+            @setcookie('apk_remember_cbt', '', time() - 3600, '/');
+            @setcookie('apk_remember_siswa', '', time() - 3600, '/');
             header("Location: login.php?locked_msg=" . urlencode('Akun Anda baru saja login di perangkat lain! Maksimal 1 perangkat aktif.'));
             exit;
         }
@@ -47,6 +49,8 @@ if (!$isAdminPreview) {
                 $msgLk = "Akun Anda dikunci sementara karena " . ($lkRow['reason'] ?: 'Spam Tombol Kembali') . ". Silahkan pulang saja, renungi di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+                @setcookie('apk_remember_cbt', '', time() - 3600, '/');
+                @setcookie('apk_remember_siswa', '', time() - 3600, '/');
                 header("Location: login.php?locked_msg=" . urlencode($msgLk) . "&locked_until_ts=" . $lkTs);
                 exit;
             }
@@ -91,6 +95,8 @@ if (!$isAdminPreview) {
                 $msgLk = "Akun Anda di-logout & dikunci {$lockHours} jam. Silahkan pulang saja, renungi di rumah, besok kesini lagi!";
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+                @setcookie('apk_remember_cbt', '', time() - 3600, '/');
+                @setcookie('apk_remember_siswa', '', time() - 3600, '/');
                 header("Location: login.php?locked_msg=" . urlencode($msgLk) . "&locked_until_ts=" . $lkTs);
                 exit;
             } else {

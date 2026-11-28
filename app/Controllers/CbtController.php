@@ -4025,6 +4025,8 @@ class CbtController {
                 $loginUrl = function_exists('base_url') ? base_url('apk/login.php') : '/apk/login.php';
                 $_SESSION = [];
                 if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+                @setcookie('apk_remember_cbt', '', time() - 3600, '/');
+                @setcookie('apk_remember_siswa', '', time() - 3600, '/');
                 header("Location: {$loginUrl}?locked_msg=" . urlencode('Akun Anda sedang login di perangkat lain! Hanya 1 perangkat yang diizinkan saat ujian.'));
                 exit;
             }

@@ -1,5 +1,15 @@
 <?php
+if (isset($_GET['locked_msg']) && trim((string)$_GET['locked_msg']) !== '') {
+    @setcookie('apk_remember_cbt', '', time() - 3600, '/');
+    @setcookie('apk_remember_siswa', '', time() - 3600, '/');
+    @setcookie('apk_remember_guru', '', time() - 3600, '/');
+    unset($_COOKIE['apk_remember_cbt'], $_COOKIE['apk_remember_siswa'], $_COOKIE['apk_remember_guru']);
+}
 require_once 'koneksi.php';
+if (isset($_GET['locked_msg']) && trim((string)$_GET['locked_msg']) !== '') {
+    $_SESSION = [];
+    if (session_status() === PHP_SESSION_ACTIVE) @session_destroy();
+}
 require_once __DIR__ . '/../app/Services/AuditLogger.php';
 // Force update dinonaktifkan: user bebas login tanpa paksaan update APK
 // require_once __DIR__ . '/apk_version_guard.php';
