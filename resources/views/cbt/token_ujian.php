@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="google" content="notranslate">
     <title>Konfirmasi Token Ujian - <?= htmlspecialchars($ujianInfo['nama_ujian'] ?? 'Ujian') ?></title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         html, body { overscroll-behavior-y: contain; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -175,12 +174,12 @@
 <body>
     <div class="tk-card">
         <div class="tk-header">
-            <div class="tk-badge"><i class="fa-solid fa-key"></i> TAHAP 2 • KONFIRMASI TOKEN UJIAN</div>
+            <div class="tk-badge">🔑 TAHAP 2 • KONFIRMASI TOKEN UJIAN</div>
             <h1><?= htmlspecialchars($ujianInfo['nama_ujian'] ?? 'Ujian CBT') ?></h1>
             <div class="tk-meta">
-                <span><i class="fa-solid fa-book"></i> <?= htmlspecialchars($ujianInfo['mapel_nama'] ?? '-') ?></span>
-                <span><i class="fa-regular fa-clock"></i> <?= (int)($ujianInfo['durasi_menit'] ?? 60) ?> Menit</span>
-                <span><i class="fa-solid fa-list-ol"></i> <?= (int)($jumlahSoal ?? 0) ?> Soal</span>
+                <span>📘 <?= htmlspecialchars($ujianInfo['mapel_nama'] ?? '-') ?></span>
+                <span>⏱️ <?= (int)($ujianInfo['durasi_menit'] ?? 60) ?> Menit</span>
+                <span>📝 <?= (int)($jumlahSoal ?? 0) ?> Soal</span>
             </div>
         </div>
 
@@ -189,9 +188,9 @@
                 <div class="tk-token-label">Kode Token Ujian Resmi (Ketik Ulang di Bawah)</div>
                 <div class="tk-token-code" id="txtTokenResmi"><?= htmlspecialchars($tokenResmi !== '' ? $tokenResmi : '------') ?></div>
                 <?php if (strpos($tokenResmi, 'O') !== false): ?>
-                    <div class="tk-hint"><i class="fa-solid fa-circle-info"></i> Memakai <b>HURUF O</b> (Bukan angka nol 0)</div>
+                    <div class="tk-hint">ℹ️ Memakai <b>HURUF O</b> (Bukan angka nol 0)</div>
                 <?php elseif (strpos($tokenResmi, '0') !== false): ?>
-                    <div class="tk-hint"><i class="fa-solid fa-circle-info"></i> Memakai <b>ANGKA 0 (NOL)</b></div>
+                    <div class="tk-hint">ℹ️ Memakai <b>ANGKA 0 (NOL)</b></div>
                 <?php endif; ?>
             </div>
 
@@ -202,16 +201,16 @@
             </div>
 
             <div class="tk-warn">
-                <i class="fa-solid fa-shield-halved" style="margin-top:2px;"></i>
+                <span>🛡️</span>
                 <div>Pengawasan aktif sejak tahap ini. Dilarang spam tombol kembali (kunci 10 jam) atau pindah tab/aplikasi.</div>
             </div>
 
             <div class="tk-actions">
                 <a href="<?= htmlspecialchars($dashboardUrl) ?>" class="btn-back">
-                    <i class="fa-solid fa-house"></i> Beranda
+                    🏠 Beranda
                 </a>
                 <button type="button" id="btnSubmitToken" class="btn-go">
-                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Mulai Kerjakan
+                    ▶ Mulai Kerjakan
                 </button>
             </div>
         </div>

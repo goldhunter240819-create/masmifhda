@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tata Tertib Ujian CBT - <?= htmlspecialchars($ujianInfo['nama_ujian'] ?? 'Ujian') ?></title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -175,30 +174,30 @@
 <body>
     <div class="tt-card">
         <div class="tt-header">
-            <div class="tt-badge"><i class="fa-solid fa-shield-halved"></i> TATA TERTIB UJIAN CBT</div>
+            <div class="tt-badge">🛡️ TATA TERTIB UJIAN CBT</div>
             <h1><?= htmlspecialchars($ujianInfo['nama_ujian'] ?? 'Ujian CBT') ?></h1>
             <div class="tt-meta">
-                <span><i class="fa-solid fa-book"></i> <?= htmlspecialchars($ujianInfo['mapel_nama'] ?? '-') ?></span>
-                <span><i class="fa-regular fa-clock"></i> <?= (int)($ujianInfo['durasi_menit'] ?? 60) ?> Menit</span>
-                <span><i class="fa-solid fa-list-ol"></i> <?= (int)($jumlahSoal ?? 0) ?> Soal</span>
+                <span>📘 <?= htmlspecialchars($ujianInfo['mapel_nama'] ?? '-') ?></span>
+                <span>⏱️ <?= (int)($ujianInfo['durasi_menit'] ?? 60) ?> Menit</span>
+                <span>📝 <?= (int)($jumlahSoal ?? 0) ?> Soal</span>
             </div>
         </div>
 
         <div class="tt-body">
             <div class="tt-alert">
-                <i class="fa-solid fa-triangle-exclamation" style="font-size:1.1rem; margin-top:2px;"></i>
+                <span style="font-size:1.1rem; line-height:1;">⚠️</span>
                 <div>Setelah Anda menyetujui tata tertib dan masuk ke ruang ujian, sesi langsung aktif. Tombol kembali akan otomatis mengarahkan Anda kembali ke halaman pengerjaan hingga ujian selesai disubmit.</div>
             </div>
 
             <ul class="tt-list">
-                <li><i class="fa-solid fa-sun" style="color:#d97706;"></i><span><strong>Layar Wajib Tetap Hidup (Tidak Boleh Terkunci/Mati):</strong> Pastikan layar HP/laptop selalu menyala selama ujian. Jika layar mati atau terkunci (sleep/power), sistem menganggap Anda meninggalkan ujian.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>Wajib Layar Penuh (Fullscreen):</strong> Ujian wajib dikerjakan dalam mode layar penuh. Keluar dari mode fullscreen dihitung sebagai pelanggaran dan harus segera kembali sebelum waktu hitung mundur habis.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Pindah Tab / Tombol Home / Aplikasi Lain:</strong> Menekan tombol Home, berpindah tab, Alt+Tab / tombol Windows, atau membuka WhatsApp, Google, dan AI otomatis memicu alarm &amp; pelanggaran.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Layar Belah (Split Screen) &amp; Jendela Mengambang:</strong> Mengaktifkan split screen atau floating window di atas ujian otomatis terblokir dan tercatat sebagai pelanggaran.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Ganti Jaringan &amp; Screenshot / DevTools:</strong> Dilarang mengganti WiFi ke Data Seluler saat ujian, melakukan tangkapan layar (gestur 3 jari / PrintScreen), atau membuka Inspect Element / DevTools.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>Dilarang Spam Tombol Kembali:</strong> Menekan tombol Kembali secara paksa saat ujian berlangsung akan langsung me-logout &amp; mengunci akun selama 10 jam.</span></li>
-                <li><i class="fa-solid fa-ban"></i><span><strong>1 Akun 1 Perangkat:</strong> Login akun yang sama di perangkat lain saat ujian berlangsung otomatis ditolak sistem.</span></li>
-                <li><i class="fa-solid fa-circle-exclamation"></i><span><strong>Batas Maksimal <?= (int)($maxPelanggaran ?? 3) ?>x Pelanggaran:</strong> Jika melewati batas pelanggaran, sistem otomatis mengunci atau men-submit ujian Anda (pelanggaran bersifat kumulatif dan tidak hilang saat reload).</span></li>
+                <li><span>☀️</span><span><strong>Layar Wajib Tetap Hidup (Tidak Boleh Terkunci/Mati):</strong> Pastikan layar HP/laptop selalu menyala selama ujian. Jika layar mati atau terkunci (sleep/power), sistem menganggap Anda meninggalkan ujian.</span></li>
+                <li><span>🚫</span><span><strong>Wajib Layar Penuh (Fullscreen):</strong> Ujian wajib dikerjakan dalam mode layar penuh. Keluar dari mode fullscreen dihitung sebagai pelanggaran dan harus segera kembali sebelum waktu hitung mundur habis.</span></li>
+                <li><span>🚫</span><span><strong>Dilarang Pindah Tab / Tombol Home / Aplikasi Lain:</strong> Menekan tombol Home, berpindah tab, Alt+Tab / tombol Windows, atau membuka WhatsApp, Google, dan AI otomatis memicu alarm &amp; pelanggaran.</span></li>
+                <li><span>🚫</span><span><strong>Dilarang Layar Belah (Split Screen) &amp; Jendela Mengambang:</strong> Mengaktifkan split screen atau floating window di atas ujian otomatis terblokir dan tercatat sebagai pelanggaran.</span></li>
+                <li><span>🚫</span><span><strong>Dilarang Screenshot / Inspect / DevTools:</strong> Dilarang melakukan tangkapan layar (gestur 3 jari / PrintScreen) atau membuka Inspect Element / DevTools.</span></li>
+                <li><span>🚫</span><span><strong>Dilarang Spam Tombol Kembali:</strong> Menekan tombol Kembali secara paksa saat ujian berlangsung akan langsung me-logout &amp; mengunci akun selama 10 jam.</span></li>
+                <li><span>🚫</span><span><strong>1 Akun 1 Perangkat:</strong> Login akun yang sama di perangkat lain saat ujian berlangsung otomatis ditolak sistem.</span></li>
+                <li><span>❗</span><span><strong>Batas Maksimal <?= (int)($maxPelanggaran ?? 3) ?>x Pelanggaran:</strong> Jika melewati batas pelanggaran, sistem otomatis mengunci ujian Anda (pelanggaran bersifat kumulatif dan tidak hilang saat reload).</span></li>
             </ul>
 
             <label class="tt-agree" for="chkSetujuTatib">
@@ -208,10 +207,10 @@
 
             <div class="tt-actions">
                 <a href="<?= htmlspecialchars($dashboardUrl) ?>" class="btn-back">
-                    <i class="fa-solid fa-arrow-left"></i> Kembali
+                    ← Kembali
                 </a>
                 <button type="button" id="btnMulaiUjian" class="btn-start" disabled>
-                    <i class="fa-solid fa-play"></i> Mulai Mengerjakan Ujian
+                    ▶ Mulai Mengerjakan Ujian
                 </button>
             </div>
         </div>
