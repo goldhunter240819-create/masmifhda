@@ -702,6 +702,12 @@ foreach ($ujianListRaw as $u) {
             'pendidikan pancasila & kewarganegaraan (ppkn)' => 'pendidikan pancasila dan kewarganegaraan',
             'pkwu' => 'prakarya dan kewirausahaan',
             'prakarya & kewirausahaan' => 'prakarya dan kewirausahaan',
+            'bahasa inggris lanjutan' => 'bahasa inggris',
+            'bahasa inggris tingkat lanjut' => 'bahasa inggris',
+            'b. inggris' => 'bahasa inggris',
+            'inggris' => 'bahasa inggris',
+            'matematika lanjutan' => 'matematika',
+            'matematika tingkat lanjut' => 'matematika',
         ];
         return $aliases[$s] ?? $s;
     };
@@ -753,7 +759,7 @@ foreach ($ujianListRaw as $u) {
         $jGrid = null;
         foreach ($todayRows as $tr) {
             $gMapel = trim((string)($tr['mapel_nama'] ?? ''));
-            if (((int)($tr['ujian_id'] ?? 0) === (int)$u['id'] && $gMapel === '') || $normMapelGrid($gMapel) === $uMapelNorm) {
+            if ((int)($tr['ujian_id'] ?? 0) === (int)$u['id'] || $normMapelGrid($gMapel) === $uMapelNorm) {
                 $jGrid = $tr;
                 break;
             }
