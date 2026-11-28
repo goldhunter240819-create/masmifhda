@@ -708,12 +708,8 @@ foreach ($ujianListRaw as $u) {
             'pendidikan pancasila & kewarganegaraan (ppkn)' => 'pendidikan pancasila dan kewarganegaraan',
             'pkwu' => 'prakarya dan kewirausahaan',
             'prakarya & kewirausahaan' => 'prakarya dan kewirausahaan',
-            'bahasa inggris lanjutan' => 'bahasa inggris',
-            'bahasa inggris tingkat lanjut' => 'bahasa inggris',
             'b. inggris' => 'bahasa inggris',
             'inggris' => 'bahasa inggris',
-            'matematika lanjutan' => 'matematika',
-            'matematika tingkat lanjut' => 'matematika',
         ];
         return $aliases[$s] ?? $s;
     };
@@ -1986,9 +1982,9 @@ include 'header.php';
                                 <i class="fa-solid fa-circle-check"></i> Absensi Terverifikasi (Pukul <?= date('H:i', strtotime($u['absen_info']['waktu_scan'])) ?> WIB)
                             </div>
                         <?php endif; ?>
-                        <button type="button" class="btn-ujian btn-ujian-start" onclick="konfirmasiMulaiUjian(<?= (int)$u['id'] ?>, '<?= htmlspecialchars(addslashes($u['nama_ujian'])) ?>', '<?= htmlspecialchars(addslashes($u['mapel_nama'])) ?>', <?= $durasi ?>, <?= $totalSoal ?>, '<?= htmlspecialchars(addslashes($tokenUjian)) ?>', <?= $kkm ?>)">
+                        <a href="<?= $cbtTataTertibBase ?>?ujian_id=<?= (int)$u['id'] ?>" class="btn-ujian btn-ujian-start" style="text-decoration: none;">
                             <i class="fa-solid fa-arrow-right-to-bracket"></i> Mulai Kerjakan Ujian
-                        </button>
+                        </a>
                     <?php endif; ?>
                 <?php elseif ($u['schedule_state'] === 'early'): ?>
                     <div class="btn-ujian btn-ujian-locked">

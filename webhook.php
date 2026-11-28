@@ -448,6 +448,63 @@ try {
         $output .= "\nPerbaikan Fikih error: " . $e->getMessage() . "\n";
     }
 
+    // 3.11d Pastikan jadwal 2026-11-28 Bahasa Inggris (XI F.1 & XII F.1) mengarah ke paket Bahasa Inggris (bukan Bahasa Inggris Lanjutan)
+    try {
+        $ingTargets = [
+            'XI F.1' => 158,
+            'XII F.1' => 159,
+        ];
+        foreach ($ingTargets as $klsTarget => $paketBsId) {
+            $stUIng = $dbCore->prepare("SELECT id FROM cbt_ujian WHERE topik_id = 3 AND mapel_nama = 'Bahasa Inggris' AND kelas_nama = ? LIMIT 1");
+            $stUIng->execute([$klsTarget]);
+            $uIngId = (int)$stUIng->fetchColumn();
+            if ($uIngId <= 0) {
+                $kodeBaru = 'UJN-ING-' . strtoupper(substr(md5('3_' . $klsTarget), 0, 4));
+                $tokenBaru = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
+                $namaBaru = "Sumatif Akhir Semester (SAS) Ganjil 2026/2027 - Bahasa Inggris ({$klsTarget})";
+                $dbCore->prepare("INSERT INTO cbt_ujian (kode_ujian, nama_ujian, mapel_nama, kelas_nama, topik_id, paket_id, durasi_menit, kkm, token, status, acak_soal, acak_opsi) VALUES (?, ?, 'Bahasa Inggris', ?, 3, ?, 60, 75, ?, 'Aktif', 1, 1)")
+                    ->execute([$kodeBaru, $namaBaru, $klsTarget, $paketBsId, $tokenBaru]);
+                $uIngId = (int)$dbCore->lastInsertId();
+            }
+            if ($uIngId > 0) {
+                $cntSoalIng = (int)$dbCore->query("SELECT COUNT(*) FROM cbt_soal WHERE ujian_id = {$uIngId}")->fetchColumn();
+                if ($cntSoalIng === 0) {
+                    $bsDb = isset($dbSiakad) ? $dbSiakad : $dbCore;
+                    $stBsRows = $bsDb->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                    $stBsRows->execute([$paketBsId]);
+                    $bsRows = $stBsRows->fetchAll(PDO::FETCH_ASSOC);
+                    if (empty($bsRows) && $bsDb !== $dbCore) {
+                        $stBsRows = $dbCore->prepare("SELECT * FROM bs_soal WHERE paket_id = ? ORDER BY nomor_urut ASC, id ASC");
+                        $stBsRows->execute([$paketBsId]);
+                        $bsRows = $stBsRows->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                    $stInsS = $dbCore->prepare("INSERT INTO cbt_soal (ujian_id, nomor_urut, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci_jawaban, bobot, tipe_soal, konten_tambahan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    foreach ($bsRows as $idxR => $br) {
+                        $stInsS->execute([
+                            $uIngId,
+                            (int)($br['nomor_urut'] ?? ($idxR + 1)),
+                            $br['pertanyaan'] ?? '',
+                            $br['opsi_a'] ?? '',
+                            $br['opsi_b'] ?? '',
+                            $br['opsi_c'] ?? '',
+                            $br['opsi_d'] ?? '',
+                            $br['opsi_e'] ?? '',
+                            $br['kunci_jawaban'] ?? 'A',
+                            $br['bobot'] ?? 1,
+                            $br['tipe_soal'] ?? 'sec_pg',
+                            $br['konten_tambahan'] ?? null
+                        ]);
+                    }
+                }
+                $dbCore->prepare("UPDATE cbt_jadwal_grid SET ujian_id = ? WHERE tanggal = '2026-11-28' AND mapel_nama = 'Bahasa Inggris' AND kelas_nama = ?")
+                    ->execute([$uIngId, $klsTarget]);
+            }
+        }
+        $output .= "Jadwal Bahasa Inggris (XI F.1 & XII F.1) tanggal 2026-11-28 disinkronkan ke paket Bahasa Inggris.\n";
+    } catch (\Throwable $e) {
+        $output .= "Sync Bahasa Inggris error: " . $e->getMessage() . "\n";
+    }
+
     $output .= "\nCBT Tables ensured, simulation attendance cleaned, and exam names synchronized.\n";
 } catch (\Throwable $e) {
     $output .= "\nCBT Tables ensure error: " . $e->getMessage() . "\n";
