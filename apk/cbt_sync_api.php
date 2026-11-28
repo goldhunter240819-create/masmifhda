@@ -29,6 +29,8 @@ if ($action === 'export') {
     \App\Controllers\CbtController::apiCheckVersionOnline();
 } elseif ($action === 'import') {
     \App\Controllers\CbtController::apiImportHasilOnline();
+} elseif ($action === 'import_pelanggaran') {
+    \App\Controllers\CbtController::apiImportPelanggaranOnline();
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Aksi tidak dikenal.']);
 }

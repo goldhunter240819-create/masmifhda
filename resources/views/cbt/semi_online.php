@@ -233,9 +233,13 @@ $isServerPusat = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 
                     </div>
 
                     <div>
-                        <button type="button" id="btnPushData" onclick="executePushData()" style="width: 100%; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; border: none; padding: 13px 20px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35); transition: 0.2s;">
+                        <button type="button" id="btnPushData" onclick="executePushData()" style="width: 100%; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; border: none; padding: 13px 20px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35); transition: 0.2s; margin-bottom: 0.75rem;">
                             <i data-lucide="upload"></i>
                             <span>Kirim Hasil Ujian ke Pusat</span>
+                        </button>
+                        <button type="button" id="btnPushPelanggaran" onclick="executePushPelanggaran()" style="width: 100%; background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.28); transition: 0.2s;">
+                            <i data-lucide="shield-alert"></i>
+                            <span>Kirim Log Pelanggaran &amp; Kunci ke Pusat</span>
                         </button>
                     </div>
                 </div>
@@ -474,6 +478,61 @@ function executePushData() {
             })
             .catch(err => {
                 Swal.fire('Koneksi Gagal', 'Gagal menghubungi server pusat. Pastikan laptop proktor terhubung ke internet saat mengirim hasil.', 'error');
+            });
+        }
+    });
+}
+
+function executePushPelanggaran() {
+    const serverUrl = document.getElementById('targetServerUrl').value.trim();
+    if (!serverUrl) {
+        Swal.fire('Perhatian', 'URL server pusat tidak boleh kosong!', 'warning');
+        return;
+    }
+
+    Swal.fire({
+        title: 'Kirim Log Pelanggaran ke Pusat?',
+        text: 'Catatan pelanggaran siswa & daftar akun terkunci 10 jam dari server lokal akan dikirim terpisah ke server pusat (tidak menimpa nilai).',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Kirim Pelanggaran',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Mengirim Log Pelanggaran...',
+                text: 'Mohon tunggu sebentar...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            fetch('<?= base_url('cbt/semi-online/push-pelanggaran') ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ server_url: serverUrl })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    Swal.fire({
+                        title: 'Log Pelanggaran Terkirim!',
+                        html: `<div style="text-align:left; font-size:0.88rem; line-height:1.6;">
+                            <b>${res.message}</b><br><br>
+                            • Log Pelanggaran Baru: <b>${res.details ? (res.details.pelanggaran || 0) : 0} Catatan</b><br>
+                            • Akun Terkunci Login: <b>${res.details ? (res.details.login_lock || 0) : 0} Akun</b>
+                        </div>`,
+                        icon: 'success',
+                        confirmButtonText: 'Selesai'
+                    });
+                } else {
+                    Swal.fire('Gagal Mengirim', res.message || 'Terjadi kesalahan saat pengiriman.', 'error');
+                }
+            })
+            .catch(() => {
+                Swal.fire('Koneksi Gagal', 'Gagal menghubungi server pusat. Pastikan laptop proktor terhubung ke internet.', 'error');
             });
         }
     });

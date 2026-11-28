@@ -4898,10 +4898,40 @@ class CbtController {
 
         // Log pelanggaran real-time (termasuk pelanggaran ke-1, ke-2, dst.)
         $listPelanggaranLog = [];
+        $listPelanggaranRekap = [];
+        $totalLogCatatan = 0;
         try {
             $hasLogTbl = $db->query("SHOW TABLES LIKE 'cbt_pelanggaran_log'")->fetchColumn();
             if ($hasLogTbl) {
-                $listPelanggaranLog = $db->query("SELECT * FROM cbt_pelanggaran_log ORDER BY id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
+                $listPelanggaranLog = $db->query("SELECT * FROM cbt_pelanggaran_log ORDER BY id DESC LIMIT 2000")->fetchAll(PDO::FETCH_ASSOC);
+                $totalLogCatatan = count($listPelanggaranLog);
+                $grouped = [];
+                foreach ($listPelanggaranLog as $plRow) {
+                    $key = strtolower(trim((string)($plRow['nama_siswa'] ?? 'Siswa'))) . '|' . strtolower(trim((string)($plRow['kelas_nama'] ?? '-')));
+                    if (!isset($grouped[$key])) {
+                        $grouped[$key] = [
+                            'nama_siswa' => $plRow['nama_siswa'] ?: 'Siswa',
+                            'kelas_nama' => $plRow['kelas_nama'] ?: '-',
+                            'last_time' => $plRow['created_at'] ?? '',
+                            'latest_reason' => $plRow['reason'] ?: 'Keluar Tab',
+                            'mapels' => [],
+                            'total_count' => 0,
+                            'items' => []
+                        ];
+                    }
+                    $mUjian = trim((string)($plRow['nama_ujian'] ?? '-'));
+                    if ($mUjian !== '' && !in_array($mUjian, $grouped[$key]['mapels'], true)) {
+                        $grouped[$key]['mapels'][] = $mUjian;
+                    }
+                    $grouped[$key]['total_count']++;
+                    $plRow['waktu_fmt'] = !empty($plRow['created_at']) ? date('d/m H:i:s', strtotime($plRow['created_at'])) : '-';
+                    $grouped[$key]['items'][] = $plRow;
+                }
+                foreach ($grouped as $gRow) {
+                    $gRow['mapel_summary'] = implode(', ', $gRow['mapels']);
+                    unset($gRow['mapels']);
+                    $listPelanggaranRekap[] = $gRow;
+                }
             }
         } catch (\Throwable $e) {}
 
@@ -10758,6 +10788,145 @@ class CbtController {
         $loginUrl = base_url('apk/login.php');
 
         include __DIR__ . '/../../resources/views/cbt/token_ujian.php';
+    }
+
+    /**
+     * API Import Log Pelanggaran & Akun Terkunci dari Server Lokal Semi-Online ke Pusat
+     */
+    public static function apiImportPelanggaranOnline() {
+        header('Content-Type: application/json');
+        $syncSecret = 'MIFHDA_CBT_SYNC_2026';
+        $providedToken = $_REQUEST['token'] ?? $_SERVER['HTTP_X_SYNC_TOKEN'] ?? '';
+        self::ensureSession();
+        if ($providedToken !== $syncSecret && empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['status' => 'error', 'message' => 'Akses ditolak: Token sinkronisasi tidak valid.']);
+            exit;
+        }
+        $db = \App\Core\Database::connect('core');
+        self::ensureTables($db);
+
+        $rawInput = file_get_contents('php://input');
+        $payload = json_decode($rawInput, true);
+        if (!$payload && !empty($_POST['payload'])) {
+            $payload = json_decode($_POST['payload'], true);
+        }
+        if (!$payload) {
+            echo json_encode(['status' => 'error', 'message' => 'Payload pelanggaran tidak valid.']);
+            exit;
+        }
+
+        $importedLog = 0;
+        $importedLock = 0;
+
+        if (!empty($payload['pelanggaran']) && is_array($payload['pelanggaran'])) {
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_pelanggaran_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                peserta_id INT NOT NULL,
+                nama_siswa VARCHAR(150) DEFAULT '',
+                kelas_nama VARCHAR(100) DEFAULT '',
+                nama_ujian VARCHAR(255) DEFAULT '',
+                reason VARCHAR(120) DEFAULT 'Keluar Tab',
+                violation_count INT DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_created (created_at),
+                INDEX idx_peserta (peserta_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $stChk = $db->prepare("SELECT id FROM cbt_pelanggaran_log WHERE nama_siswa = ? AND kelas_nama = ? AND reason = ? AND created_at = ? LIMIT 1");
+            $stIns = $db->prepare("INSERT INTO cbt_pelanggaran_log (peserta_id, nama_siswa, kelas_nama, nama_ujian, reason, violation_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            foreach ($payload['pelanggaran'] as $row) {
+                $nm = trim((string)($row['nama_siswa'] ?? 'Siswa'));
+                $kl = trim((string)($row['kelas_nama'] ?? ''));
+                $rs = trim((string)($row['reason'] ?? 'Keluar Tab'));
+                $ca = trim((string)($row['created_at'] ?? date('Y-m-d H:i:s')));
+                $stChk->execute([$nm, $kl, $rs, $ca]);
+                if (!$stChk->fetchColumn()) {
+                    $stIns->execute([(int)($row['peserta_id'] ?? 0), $nm, $kl, trim((string)($row['nama_ujian'] ?? 'Ujian')), $rs, (int)($row['violation_count'] ?? 1), $ca]);
+                    $importedLog++;
+                }
+            }
+        }
+
+        if (!empty($payload['login_lock']) && is_array($payload['login_lock'])) {
+            $db->exec("CREATE TABLE IF NOT EXISTS cbt_login_lock (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_key VARCHAR(120) NOT NULL UNIQUE,
+                nama_siswa VARCHAR(150) DEFAULT '',
+                kelas_nama VARCHAR(100) DEFAULT '',
+                reason VARCHAR(200) DEFAULT 'Spam Tombol Kembali',
+                locked_until DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $stLk = $db->prepare("INSERT INTO cbt_login_lock (user_key, nama_siswa, kelas_nama, reason, locked_until) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama_siswa = VALUES(nama_siswa), kelas_nama = VALUES(kelas_nama), reason = VALUES(reason), locked_until = GREATEST(locked_until, VALUES(locked_until))");
+            foreach ($payload['login_lock'] as $lk) {
+                $stLk->execute([$lk['user_key'] ?? '', $lk['nama_siswa'] ?? '', $lk['kelas_nama'] ?? '', $lk['reason'] ?? 'Spam Tombol Kembali', $lk['locked_until'] ?? date('Y-m-d H:i:s')]);
+                $importedLock++;
+            }
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => "Berhasil menyatukan {$importedLog} log pelanggaran & {$importedLock} akun terkunci ke pusat!",
+            'imported' => ['pelanggaran' => $importedLog, 'login_lock' => $importedLock]
+        ]);
+        exit;
+    }
+
+    /**
+     * AJAX Push Log Pelanggaran & Kunci Login dari Server Lokal ke Server Pusat
+     */
+    public static function ajaxPushPelanggaranOnline() {
+        header('Content-Type: application/json');
+        $ctx = self::getAuthContext();
+        $db = $ctx['db_core'];
+        self::ensureTables($db);
+
+        $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
+        $targetEndpoint = $serverUrl . '/apk/cbt_sync_api.php?action=import_pelanggaran&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
+
+        $pelanggaran = [];
+        try {
+            if ($db->query("SHOW TABLES LIKE 'cbt_pelanggaran_log'")->fetchColumn()) {
+                $pelanggaran = $db->query("SELECT * FROM cbt_pelanggaran_log ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Throwable $e) {}
+
+        $loginLock = [];
+        try {
+            if ($db->query("SHOW TABLES LIKE 'cbt_login_lock'")->fetchColumn()) {
+                $loginLock = $db->query("SELECT * FROM cbt_login_lock WHERE locked_until > NOW() ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (\Throwable $e) {}
+
+        if (empty($pelanggaran) && empty($loginLock)) {
+            echo json_encode(['success' => false, 'message' => 'Belum ada catatan pelanggaran atau akun terkunci di server lokal ini.']);
+            exit;
+        }
+
+        $payload = ['pelanggaran' => $pelanggaran, 'login_lock' => $loginLock, 'sent_at' => date('Y-m-d H:i:s')];
+        $ch = curl_init($targetEndpoint);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, ['payload' => json_encode($payload)]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlErr || $httpCode !== 200 || empty($response)) {
+            echo json_encode(['success' => false, 'message' => "Gagal mengirim ke pusat ({$targetEndpoint}). HTTP: {$httpCode}. Error: {$curlErr}"]);
+            exit;
+        }
+        $resData = json_decode($response, true);
+        if (!$resData || ($resData['status'] ?? '') !== 'success') {
+            echo json_encode(['success' => false, 'message' => $resData['message'] ?? 'Respon server pusat tidak valid.']);
+            exit;
+        }
+        echo json_encode(['success' => true, 'message' => $resData['message'], 'details' => $resData['imported'] ?? ['pelanggaran' => count($pelanggaran), 'login_lock' => count($loginLock)]]);
+        exit;
     }
 
     /**

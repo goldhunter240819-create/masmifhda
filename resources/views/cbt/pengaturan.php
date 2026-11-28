@@ -866,54 +866,108 @@ $listTerkunci = $listTerkunci ?? [];
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
                         <div>
                             <h3 style="font-size: 1rem; font-weight: 800; color: #991b1b; margin: 0 0 2px 0; display: flex; align-items: center; gap: 6px;">
-                                <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #dc2626;"></i> Log Pelanggaran Siswa (Real-Time)
+                                <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #dc2626;"></i> Log Pelanggaran Siswa (Rekap Per Anak)
                             </h3>
-                            <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Mencatat setiap siswa yang terdeteksi keluar tab, menekan tombol kembali, atau keluar fullscreen (pelanggaran ke-1, ke-2, dst).</p>
+                            <p style="font-size: 0.78rem; color: #64748b; margin: 0;">Menampilkan 1 baris per siswa agar ringkas. Klik <b>Detail</b> untuk melihat seluruh riwayat pelanggaran anak tersebut.</p>
                         </div>
                         <span style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800;">
-                            <?php echo count($listPelanggaranLog ?? []); ?> Catatan
+                            <?php echo count($listPelanggaranRekap ?? []); ?> Siswa (<?php echo (int)($totalLogCatatan ?? 0); ?> Catatan)
                         </span>
                     </div>
 
-                    <?php if (!empty($listPelanggaranLog)): ?>
+                    <?php if (!empty($listPelanggaranRekap)): ?>
                         <div class="table-responsive">
                             <table class="table-custom" style="width: 100%;">
                                 <thead>
                                     <tr>
                                         <th style="width: 50px;">NO</th>
-                                        <th>WAKTU</th>
+                                        <th>TERAKHIR</th>
                                         <th>NAMA SISWA</th>
                                         <th>KELAS</th>
                                         <th>MAPEL / UJIAN</th>
-                                        <th>JENIS PELANGGARAN</th>
-                                        <th style="text-align: center;">KE-</th>
+                                        <th>PELANGGARAN TERAKHIR</th>
+                                        <th style="text-align: center;">TOTAL</th>
+                                        <th style="text-align: center;">AKSI</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php $noLog = 1; foreach ($listPelanggaranLog as $pl): ?>
+                                    <?php $noLog = 1; foreach ($listPelanggaranRekap as $idxRec => $pl): ?>
                                     <tr>
                                         <td style="font-weight: 700; color: #64748b;"><?php echo $noLog++; ?></td>
                                         <td style="font-size: 0.78rem; color: #475569; white-space: nowrap;">
-                                            <?php echo !empty($pl['created_at']) ? date('d/m H:i:s', strtotime($pl['created_at'])) : '-'; ?>
+                                            <?php echo !empty($pl['last_time']) ? date('d/m H:i:s', strtotime($pl['last_time'])) : '-'; ?>
                                         </td>
                                         <td style="font-weight: 800; color: #0f172a;"><?php echo htmlspecialchars($pl['nama_siswa'] ?: 'Siswa'); ?></td>
                                         <td><span class="badge badge-subtle"><?php echo htmlspecialchars($pl['kelas_nama'] ?: '-'); ?></span></td>
-                                        <td style="font-size: 0.82rem; font-weight: 600; color: #1e293b;"><?php echo htmlspecialchars($pl['nama_ujian'] ?: '-'); ?></td>
+                                        <td style="font-size: 0.82rem; font-weight: 600; color: #1e293b;"><?php echo htmlspecialchars($pl['mapel_summary'] ?: '-'); ?></td>
                                         <td>
                                             <span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 3px 9px; border-radius: 8px; font-size: 0.74rem; font-weight: 700;">
-                                                <?php echo htmlspecialchars($pl['reason'] ?: 'Keluar Tab'); ?>
+                                                <?php echo htmlspecialchars($pl['latest_reason'] ?: 'Keluar Tab'); ?>
                                             </span>
                                         </td>
                                         <td style="text-align: center;">
                                             <span style="background: #fee2e2; color: #b91c1c; padding: 3px 10px; border-radius: 99px; font-size: 0.76rem; font-weight: 900;">
-                                                <?php echo (int)($pl['violation_count'] ?? 1); ?>x
+                                                <?php echo (int)($pl['total_count'] ?? 1); ?>x
                                             </span>
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <button type="button" onclick="bukaDetailPelanggaran(<?php echo (int)$idxRec; ?>)" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                                                Detail
+                                            </button>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
+                        <div id="modalDetailPelanggaran" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+                            <div style="background: #ffffff; width: 100%; max-width: 720px; border-radius: 18px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35);">
+                                <div style="background: #991b1b; color: #ffffff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h4 id="detPelTitle" style="margin: 0; font-size: 1rem; font-weight: 800;">Detail Pelanggaran Siswa</h4>
+                                        <div id="detPelSub" style="font-size: 0.78rem; opacity: 0.9; margin-top: 2px;"></div>
+                                    </div>
+                                    <button type="button" onclick="tutupDetailPelanggaran()" style="background: rgba(255,255,255,0.2); border: none; color: #ffffff; width: 32px; height: 32px; border-radius: 8px; font-weight: 800; cursor: pointer;">✕</button>
+                                </div>
+                                <div style="padding: 16px 20px; max-height: 65vh; overflow-y: auto;">
+                                    <table class="table-custom" style="width: 100%;">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 40px;">NO</th>
+                                                <th>WAKTU</th>
+                                                <th>MAPEL / UJIAN</th>
+                                                <th>JENIS PELANGGARAN</th>
+                                                <th style="text-align: center;">KE-</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="detPelBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                            const cbtPelanggaranData = <?php echo json_encode(array_values($listPelanggaranRekap ?? []), JSON_UNESCAPED_UNICODE); ?>;
+                            function bukaDetailPelanggaran(idx) {
+                                const rec = cbtPelanggaranData[idx];
+                                if (!rec) return;
+                                document.getElementById('detPelTitle').textContent = (rec.nama_siswa || 'Siswa') + ' (' + (rec.kelas_nama || '-') + ')';
+                                document.getElementById('detPelSub').textContent = 'Total ' + (rec.total_count || 0) + ' catatan pelanggaran';
+                                const tbody = document.getElementById('detPelBody');
+                                tbody.innerHTML = (rec.items || []).map((it, i) => `
+                                    <tr>
+                                        <td style="font-weight:700; color:#64748b;">${i + 1}</td>
+                                        <td style="font-size:0.78rem; color:#475569; white-space:nowrap;">${it.waktu_fmt || it.created_at || '-'}</td>
+                                        <td style="font-size:0.82rem; font-weight:600; color:#1e293b;">${(it.nama_ujian || '-').replace(/</g,'&lt;')}</td>
+                                        <td><span style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; padding:3px 9px; border-radius:8px; font-size:0.74rem; font-weight:700;">${(it.reason || '-').replace(/</g,'&lt;')}</span></td>
+                                        <td style="text-align:center;"><span style="background:#fee2e2; color:#b91c1c; padding:3px 10px; border-radius:99px; font-size:0.75rem; font-weight:900;">${it.violation_count || 1}x</span></td>
+                                    </tr>
+                                `).join('');
+                                document.getElementById('modalDetailPelanggaran').style.display = 'flex';
+                            }
+                            function tutupDetailPelanggaran() {
+                                document.getElementById('modalDetailPelanggaran').style.display = 'none';
+                            }
+                        </script>
                     <?php else: ?>
                         <div style="padding: 2rem; text-align: center; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; color: #64748b; font-size: 0.84rem; font-weight: 600;">
                             Belum ada catatan pelanggaran siswa yang masuk.

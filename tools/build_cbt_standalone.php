@@ -372,6 +372,8 @@ $router->add('POST', '/semi-online/pull-absen', [\App\Controllers\CbtController:
 $router->add('POST', '/cbt/semi-online/pull-absen', [\App\Controllers\CbtController::class, 'ajaxPullAbsensiOnline']);
 $router->add('POST', '/semi-online/push', [\App\Controllers\CbtController::class, 'ajaxPushHasilOnline']);
 $router->add('POST', '/cbt/semi-online/push', [\App\Controllers\CbtController::class, 'ajaxPushHasilOnline']);
+$router->add('POST', '/semi-online/push-pelanggaran', [\App\Controllers\CbtController::class, 'ajaxPushPelanggaranOnline']);
+$router->add('POST', '/cbt/semi-online/push-pelanggaran', [\App\Controllers\CbtController::class, 'ajaxPushPelanggaranOnline']);
 $router->add('POST', '/semi-online/update-engine', [\App\Controllers\CbtController::class, 'ajaxUpdateEngine']);
 $router->add('POST', '/cbt/semi-online/update-engine', [\App\Controllers\CbtController::class, 'ajaxUpdateEngine']);
 $router->add('GET', '/semi-online/api/version', [\App\Controllers\CbtController::class, 'apiCheckVersionOnline']);
