@@ -39,6 +39,12 @@ class AuthMiddleware {
                 strpos($path, '/cbt') !== false 
                 && strpos($path, '/cbt/kerjakan') === false 
                 && strpos($path, '/kerjakan') === false 
+                && strpos($path, '/cbt/tata-tertib') === false
+                && strpos($path, '/tata-tertib') === false
+                && strpos($path, '/cbt/konfirmasi-token') === false
+                && strpos($path, '/konfirmasi-token') === false
+                && strpos($path, '/cbt/api/status-peserta') === false
+                && strpos($path, '/cbt/api/lock-back-spam') === false
                 && strpos($path, '/apk/') === false
             ) || strpos($path, '/bank_soal') !== false 
               || strpos($path, '/admin') !== false 
