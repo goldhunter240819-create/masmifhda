@@ -9804,9 +9804,10 @@ class CbtController {
     }
 
     /**
-     * AJAX Push Hasil Ujian dari Laptop Proktor Lokal ke Server Pusat
+     * AJAX Push Hasil Ujian dari Laptop Proktor Lokal ke Server Pusat (Dipecah per 150 siswa agar anti-timeout & anti-limit)
      */
     public static function ajaxPushHasilOnline() {
+        set_time_limit(300);
         header('Content-Type: application/json');
         $ctx = self::getAuthContext();
         $db = $ctx['db_core'];
@@ -9815,52 +9816,59 @@ class CbtController {
         $serverUrl = rtrim(trim($_POST['server_url'] ?? 'https://apk.masmifhda.sch.id'), '/');
         $targetEndpoint = $serverUrl . '/apk/cbt_sync_api.php?action=import&token=' . urlencode('MIFHDA_CBT_SYNC_2026');
 
-        // Ambil data hasil ujian lokal (HANYA nilai & lembar jawaban peserta cbt_peserta, presensi sudah terpusat di server online)
-        $peserta = $db->query("SELECT * FROM cbt_peserta ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        // Ambil hanya data pengerjaan/nilai yang aktif atau selesai (hemat bandwidth & cepat)
+        $peserta = $db->query("SELECT * FROM cbt_peserta WHERE status_pengerjaan IN ('Selesai', 'Mengerjakan', 'Sedang Mengerjakan', 'Terkunci', 'Pelanggaran') OR nilai_akhir > 0 OR (jawaban_json IS NOT NULL AND jawaban_json != '') ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($peserta)) {
             echo json_encode(['success' => false, 'message' => 'Belum ada data pengerjaan atau nilai ujian siswa di server lokal ini.']);
             exit;
         }
 
-        $payload = [
-            'peserta' => $peserta,
-            'sent_at' => date('Y-m-d H:i:s')
-        ];
+        $chunks = array_chunk($peserta, 150);
+        $totalSent = 0;
+        foreach ($chunks as $chunkIdx => $chunkRows) {
+            $payload = [
+                'peserta' => $chunkRows,
+                'sent_at' => date('Y-m-d H:i:s')
+            ];
 
-        $ch = curl_init($targetEndpoint);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, ['payload' => json_encode($payload)]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlErr = curl_error($ch);
-        curl_close($ch);
+            $ch = curl_init($targetEndpoint);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, ['payload' => json_encode($payload)]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($ch);
+            curl_close($ch);
 
-        if ($curlErr || $httpCode !== 200 || empty($response)) {
-            echo json_encode([
-                'success' => false,
-                'message' => "Gagal mengirim data ke server pusat ({$targetEndpoint}). HTTP: {$httpCode}. Error: {$curlErr}"
-            ]);
-            exit;
-        }
+            if ($curlErr || $httpCode !== 200 || empty($response)) {
+                $batchNo = $chunkIdx + 1;
+                echo json_encode([
+                    'success' => false,
+                    'message' => "Gagal mengirim batch #{$batchNo} ke server pusat ({$targetEndpoint}). HTTP: {$httpCode}. Error: {$curlErr}"
+                ]);
+                exit;
+            }
 
-        $data = json_decode($response, true);
-        if (!$data || !($data['success'] ?? false)) {
-            echo json_encode([
-                'success' => false,
-                'message' => $data['message'] ?? 'Respon server pusat gagal.'
-            ]);
-            exit;
+            $data = json_decode($response, true);
+            if (!$data || !($data['success'] ?? false)) {
+                $batchNo = $chunkIdx + 1;
+                echo json_encode([
+                    'success' => false,
+                    'message' => "Batch #{$batchNo} ditolak pusat: " . ($data['message'] ?? 'Respon server pusat gagal.')
+                ]);
+                exit;
+            }
+            $totalSent += (int)($data['details']['peserta'] ?? count($chunkRows));
         }
 
         echo json_encode([
             'success' => true,
-            'message' => "Hasil ujian (" . ($data['details']['peserta'] ?? count($peserta)) . " nilai siswa) dari laptop lokal berhasil terkirim dan tersinkronisasi di Server Pusat!",
-            'details' => $data['details'] ?? ['peserta' => count($peserta)]
+            'message' => "Hasil ujian ({$totalSent} nilai siswa dalam " . count($chunks) . " batch) berhasil terkirim dan tersinkronisasi di Server Pusat!",
+            'details' => ['peserta' => $totalSent]
         ]);
         exit;
     }
